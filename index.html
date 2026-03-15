@@ -1428,6 +1428,21 @@ nav.tabs.header-hidden button {
     </div>
   </div>
 
+  <!-- ── 3b. CHANGE ACCESS CODE ── -->
+  <div class="card" style="margin-bottom:14px;">
+    <label>&#128274; Change Access Code</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Change your login access code. Make sure to remember the new one.</p>
+    <div style="display:flex;gap:8px;">
+      <input id="change-pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="New code (4+ digits)" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.9rem;background:white;color:var(--ink);outline:none;">
+      <button class="btn btn-primary" style="padding:10px 18px;font-size:0.8rem;" onclick="changePin()">Save</button>
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">Fix wrong auto-categories</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:10px;line-height:1.6;">If categories keep reverting to wrong values, click this to clean up learned keyword rules.</div>
+      <button class="btn btn-ghost" style="font-size:0.72rem;padding:8px 14px;" onclick="cleanupCustomRules()">&#9881; Clean up category rules</button>
+    </div>
+  </div>
+
   <!-- ── 4. DANGER ZONE ── -->
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
