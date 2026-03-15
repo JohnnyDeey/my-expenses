@@ -428,7 +428,12 @@ function renderSyncSetupUI() {
       '<div><div style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:#166534;">Signed in as ' + (_userName||'') + '</div>' +
       '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:#4a7c59;margin-top:2px;">Live sync active · data is private</div></div>' +
     '</div>' +
-    '<div style="font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);line-height:1.7;margin-bottom:14px;">Phone number and access code required. Each person data is completely private.</div>' +
+    '<div style="font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);line-height:1.7;margin-bottom:14px;">Phone number and access code required. Each person data is completely private.</div>
+    <div style="background:#fff8e6;border:1px solid var(--gold);border-radius:4px;padding:12px 14px;margin-bottom:12px;">
+      <div style="font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Fix wrong auto-categories</div>
+      <div style="font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);margin-bottom:10px;">If categories keep reverting to wrong values, click this to clean up learned keyword rules.</div>
+      <button class="btn btn-ghost" style="font-size:0.72rem;padding:8px 14px;" onclick="cleanupCustomRules()">&#9881; Clean up category rules</button>
+    </div>' +
     '<div style="background:var(--paper2);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:12px;">' +
       '<div style="font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Change access code</div>' +
       '<div style="display:flex;gap:8px;">' +
@@ -1273,7 +1278,7 @@ nav.tabs.header-hidden button {
     </select>
     <select id="led-cat" onchange="renderLedger()"><option value="all">All Categories</option></select>
     <input type="text" id="led-search" placeholder="Search..." oninput="renderLedger()">
-    <button class="btn btn-danger" onclick="clearAll()">Clear All</button>
+    <button class="btn btn-danger" onclick="clearLedgerFilters()">Clear All</button>
   </div>
 
   <!-- Ledger bulk assign bar -->
@@ -1570,15 +1575,16 @@ function extractWords(desc) {
 // Learn keywords from user-assigned descriptions, for ANY category.
 // This means even built-in categories get smarter from your own data.
 function learnKeywordsFromEntry(desc, cat) {
-  if (!desc || !cat) return;
+  if (!desc || !cat || cat === 'Other') return;
   var rules = loadCustomRules();
   var existing = null;
   for (var i = 0; i < rules.length; i++) { if (rules[i].cat === cat) { existing = rules[i]; break; } }
   if (!existing) { existing = {cat: cat, kw: []}; rules.push(existing); }
-  // Use same word extraction as trainer - 3+ chars, no stopwords
   var words = extractWords(desc);
+  // Only learn SPECIFIC words (5+ chars) to avoid generic words like "rice", "food" 
+  // poisoning unrelated categories
   words.forEach(function(w) {
-    if (existing.kw.indexOf(w) === -1) existing.kw.push(w);
+    if (w.length >= 5 && existing.kw.indexOf(w) === -1) existing.kw.push(w);
   });
   localStorage.setItem('custom_cat_rules', JSON.stringify(rules));
 }
@@ -3639,6 +3645,30 @@ function ledgerExpandAll() {
   }
 }
 
+
+
+function cleanupCustomRules() {
+  // Remove learned keywords shorter than 5 chars that may be causing wrong assignments
+  var rules = loadCustomRules();
+  rules.forEach(function(r) {
+    r.kw = r.kw.filter(function(w) { return w.length >= 5; });
+  });
+  // Remove empty rules
+  rules = rules.filter(function(r) { return r.kw.length > 0; });
+  localStorage.setItem('custom_cat_rules', JSON.stringify(rules));
+  showToast('Category rules cleaned up — ' + rules.length + ' rules kept');
+}
+function clearLedgerFilters() {
+  document.getElementById('led-year').value     = String(new Date().getFullYear());
+  document.getElementById('led-month').value    = 'all';
+  document.getElementById('led-currency').value = 'all';
+  document.getElementById('led-cat').value      = 'all';
+  var s = document.getElementById('led-search'); if(s) s.value = '';
+  var b = document.getElementById('led-bulk-search'); if(b) b.value = '';
+  ledgerBulkFilter = '';
+  var m = document.getElementById('led-bulk-match'); if(m) m.textContent = '';
+  renderLedger();
+}
 function renderLedger(){
   var allData = loadData();
   var year     = document.getElementById('led-year').value;
@@ -3668,8 +3698,9 @@ function renderLedger(){
 
   var sorted = data.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
 
-  // ── FLAT LIST when search is active ──
-  if (ledgerBulkFilter) {
+  // ── FLAT LIST when any search is active ──
+  var activeSearch = ledgerBulkFilter || search;
+  if (activeSearch) {
     var container2 = document.getElementById('ledger-accordion');
     container2.innerHTML = '';
     var flatWrap = document.createElement('div');
@@ -3686,21 +3717,30 @@ function renderLedger(){
           '<div style="font-size:0.87rem;font-weight:500;word-break:break-word;">'+item.desc+'</div>'+
           '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-top:2px;">'+item.date+'</div>'+
         '</div>';
-      // Category inline editor
+      // Category inline editor — simple select for flat list
       var catTd = document.createElement('div');
-      catTd.style.cssText = 'flex-shrink:0;';
-      var wrap = document.createElement('div');
-      wrap.className = 'cat-wrapper'; wrap.id = 'led-wrap-'+item.id; wrap.style.cssText = 'min-width:140px;max-width:200px;width:40%;';
-      var inp = document.createElement('input');
-      inp.type='text'; inp.className='cat-input'; inp.id='led-catinput-'+item.id;
-      inp.value=item.category; inp.setAttribute('autocomplete','off');
-      inp.addEventListener('focus',function(){ inp.select(); openLedCatDropdown(item.id); });
-      inp.addEventListener('input',function(){ filterLedCatDropdown(item.id); });
-      inp.addEventListener('keydown',function(e){ ledCatKeyNav(e,item.id); });
-      var arrowEl=document.createElement('span'); arrowEl.className='cat-input-arrow'; arrowEl.textContent='▾';
-      var drop=document.createElement('div'); drop.className='cat-dropdown'; drop.id='led-catdrop-'+item.id;
-      wrap.appendChild(inp); wrap.appendChild(arrowEl); wrap.appendChild(drop);
-      catTd.appendChild(wrap);
+      catTd.style.cssText = 'flex-shrink:0;min-width:140px;max-width:200px;width:40%;';
+      var sel = document.createElement('select');
+      sel.style.cssText = 'width:100%;font-family:DM Sans,sans-serif;font-size:0.82rem;padding:6px 8px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);cursor:pointer;outline:none;';
+      var allCats2 = getAllCategories();
+      allCats2.forEach(function(c){
+        var opt = document.createElement('option');
+        opt.value = c; opt.textContent = c;
+        if (c === item.category) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', function() {
+        var newCat = sel.value;
+        var data = loadData();
+        data.forEach(function(d){ if(String(d.id)===String(item.id)){ d.category=newCat; } });
+        saveData(data);
+        item.category = newCat;
+        // Update the dot color
+        var dot = row.querySelector('span');
+        if(dot) dot.style.background = getCatColor(newCat, 0);
+        showToast('Updated to "'+newCat+'"');
+      });
+      catTd.appendChild(sel);
       row.appendChild(catTd);
       flatWrap.appendChild(row);
     });
