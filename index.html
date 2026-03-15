@@ -4043,6 +4043,21 @@ function renderManagePanel(){
   var data = loadData();
   document.getElementById('manage-total').textContent = data.length;
 
+  // Always render sync card — logged in or not
+  if (_userId) {
+    renderSyncSetupUI();
+  } else {
+    var el = document.getElementById('sync-setup-content');
+    if (el) el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 14px;background:#fef9e7;border:1px solid var(--gold);border-radius:4px;">' +
+        '<span style="font-size:1.1rem;">&#9888;</span>' +
+        '<div><div style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:var(--gold);">Not signed in</div>' +
+        '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-top:2px;">Sign in to sync your data</div></div>' +
+      '</div>' +
+      '<button class="btn btn-primary" style="width:100%;padding:12px;margin-bottom:8px;" onclick="showPinScreen();showLoginStep();">&#128275; Sign In</button>' +
+      '<button class="btn btn-ghost" style="width:100%;padding:12px;" onclick="showPinScreen();showRegisterStep();">New user? Create account</button>';
+  }
+
   var curFilter = document.getElementById('manage-cur-filter') ? document.getElementById('manage-cur-filter').value : 'all';
 
   // Group by year → month
