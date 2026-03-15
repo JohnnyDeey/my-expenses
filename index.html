@@ -103,13 +103,18 @@ function syncSetStatus(state) {
     off:        { color:'#555',    text:'Not signed in' },
     connecting: { color:'#c8962e', text:'Connecting...' },
     live:       { color:'#4a7c59', text:'Live sync' },
-    syncing:    { color:'#3d5a73', text:'Syncing...'    },
+    syncing:    { color:'#4a7c59', text:'Live sync' },  // keep green while syncing
     error:      { color:'#b5451b', text:'Sync error'    }
   };
   var s = map[state] || map.off;
   dot.style.background = s.color;
   label.style.color    = s.color;
   label.textContent    = s.text;
+  // Also update user bar status dot
+  var barDot = document.getElementById('hdr-user-bar-dot');
+  var barStatus = document.getElementById('hdr-user-bar-status');
+  if (barDot) barDot.style.background = s.color;
+  if (barStatus) { barStatus.textContent = s.text; barStatus.style.color = s.color; }
 }
 
 function syncLoadSDK(callback) {
@@ -413,6 +418,12 @@ function submitLogin() {
 function updateUserDisplay() {
   var el = document.getElementById('sync-user-display');
   if (el && _userName) { el.textContent = _userName; el.style.display = 'inline'; }
+  // Also update the always-visible user bar
+  var nameEl = document.getElementById('hdr-user-bar-name');
+  if (nameEl && _userName) nameEl.textContent = _userName;
+  // Show user bar if header is collapsed
+  var userBar = document.getElementById('hdr-user-bar');
+  if (userBar && _userId && _headerCollapsed) userBar.style.display = 'flex';
 }
 
 function logOut() {
@@ -468,10 +479,7 @@ function renderSyncSetupUI() {
         '<button class="btn btn-ghost" style="padding:8px 14px;font-size:0.72rem;" onclick="changePin()">Save</button>' +
       '</div>' +
     '</div>' +
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-      '<button class="btn btn-ghost" style="font-size:0.72rem;padding:8px 14px;" onclick="logOut()">&#128275; Log out</button>' +
-      '<button class="btn btn-ghost" style="font-size:0.72rem;padding:8px 14px;color:var(--rust);border-color:var(--rust);" onclick="switchUser()">Switch user</button>' +
-    '</div>';
+    '';
 }
 
 function changePin() {
@@ -612,7 +620,7 @@ tbody td{padding:9px 12px;vertical-align:middle;}
 .dash-section-label::after{content:'';flex:1;height:1px;background:var(--border);}
 
 /* Stat cards */
-.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:32px;}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:32px;}
 .stat-card{background:white;border:1px solid var(--border);border-radius:6px;padding:18px 20px;box-shadow:3px 3px 0 var(--shadow);position:relative;overflow:hidden;transition:transform 0.15s;}
 .stat-card:hover{transform:translateY(-2px);}
 .stat-card::after{content:'';position:absolute;top:0;left:0;width:4px;height:100%;}
@@ -1031,6 +1039,23 @@ nav.tabs.header-hidden button {
 <div id="hdr-collapse-strip" onclick="toggleHeaderCollapse()">
   <span>&#9660; SHOW HEADER</span>
 </div>
+<!-- Always-visible user bar -->
+<div id="hdr-user-bar" style="display:none;background:var(--ink);padding:5px 14px;align-items:center;justify-content:space-between;border-bottom:1px solid #2e2620;">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:0.9rem;">&#128100;</span>
+    <div>
+      <div id="hdr-user-bar-name" style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--gold2);"></div>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <span id="hdr-user-bar-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4a7c59;"></span>
+        <span id="hdr-user-bar-status" style="font-family:DM Mono,monospace;font-size:0.6rem;color:#4a7c59;">Live sync active</span>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;">
+    <button onclick="logOut()" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; LOG OUT</button>
+    <button onclick="switchUser()" style="background:none;border:1px solid rgba(181,69,27,0.5);border-radius:4px;color:var(--rust);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">SWITCH USER</button>
+  </div>
+</div>
 <nav class="tabs" id="main-nav">
   <button class="active" onclick="switchTab('import',this)"><span class="tab-icon">&#128221;</span><span class="tab-label"> Import</span></button>
   <button onclick="switchTab('categorize',this)"><span class="tab-icon">&#127991;</span><span class="tab-label"> Categorize</span></button>
@@ -1323,7 +1348,7 @@ nav.tabs.header-hidden button {
     </div>
     <button class="btn btn-success" style="padding:8px 16px;font-size:0.8rem;white-space:nowrap;" onclick="ledgerBulkAssign()">&#10003; Assign</button>
     <button class="btn btn-ghost" style="padding:8px 10px;font-size:0.8rem;" onclick="clearLedgerBulkSearch()">&#10005;</button>
-    <button class="btn btn-ghost" id="btn-expand-all" onclick="ledgerExpandAll()" style="padding:8px 14px;font-size:0.8rem;white-space:nowrap;">&#8597; Expand All</button>
+
   </div>
 
   <div id="ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No saved entries yet.</p></div>
@@ -1334,11 +1359,33 @@ nav.tabs.header-hidden button {
 
 <!-- ══ MANAGE DATA ══ -->
 <div class="panel" id="panel-manage">
+
   <div class="section-title">Manage Data</div>
-  <div class="manage-grid">
+
+  <div id="sync-setup-content" style="display:none;"></div>
+
+  <!-- ── 2. DATA OVERVIEW + ACTIONS ── -->
+  <div class="manage-grid" style="margin-bottom:14px;">
+    <div class="card">
+      <label>Data Overview</label>
+      <div style="padding:14px;background:var(--paper);border:1px solid var(--border);border-radius:3px;margin-bottom:14px;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:6px;">TOTAL ENTRIES IN LEDGER</div>
+        <div id="manage-total" style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--gold);">0</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="exportCSV()">&#8595; Export as CSV</button>
+        <label style="display:block;">
+          <div class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;cursor:pointer;text-align:center;font-family:'DM Mono',monospace;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;">&#8593; Import from CSV</div>
+          <input type="file" accept=".csv" onchange="importCSV(event)" style="display:none;">
+        </label>
+
+      </div>
+    </div>
+
+    <!-- ── 3. DELETE BY MONTH ── -->
     <div class="card">
       <label>Delete by Month</label>
-      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:16px;line-height:1.7;">Click Delete next to a month to remove all its entries.</p>
+      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Deleted months go to the Recycle Bin — you can restore them.</p>
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
         <select id="manage-year-filter" onchange="renderManagePanel()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
           <option value="all">All Years</option>
@@ -1352,38 +1399,50 @@ nav.tabs.header-hidden button {
       </div>
       <div id="manage-month-list"></div>
     </div>
-    <div class="card" id="sync-setup-card">
-      <label>&#9729; Cloud Sync</label>
-      <div id="sync-setup-content"></div>
-    </div>
-    <div class="card">
-      <label>Quick Actions</label>
-      <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
-        <div style="padding:14px;background:var(--paper);border:1px solid var(--border);border-radius:3px;">
-          <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:8px;">TOTAL ENTRIES IN LEDGER</div>
-          <div id="manage-total" style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--gold);">0</div>
-        </div>
-        <button id="clear-all-btn" class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="clearAll()">Delete ALL Data</button>
-        <div id="clear-all-confirm" style="display:none;flex-direction:column;gap:8px;padding:12px;background:#fff0f0;border:1px solid var(--rust);border-radius:4px;">
-          <div style="font-family:DM Mono,monospace;font-size:0.75rem;color:var(--rust);font-weight:600;">Delete ALL data? Cannot be undone.</div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-danger" style="flex:1;padding:8px;justify-content:center;" onclick="clearAllConfirmed()">Yes, delete everything</button>
-            <button class="btn btn-ghost" style="flex:1;padding:8px;justify-content:center;" onclick="clearAllCancel()">Cancel</button>
-          </div>
-        </div>
-        <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="exportCSV()">Export as CSV</button>
-        <label style="display:block;">
-          <div class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;cursor:pointer;text-align:center;font-family:'DM Mono',monospace;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;">&#8593; Import from CSV</div>
-          <input type="file" accept=".csv" onchange="importCSV(event)" style="display:none;">
-        </label>
-        <div style="font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);text-align:center;line-height:1.6;padding:4px 0;">Import a previously exported CSV to restore all your data</div>
-        <button class="btn btn-success" style="width:100%;padding:12px;justify-content:center;" onclick="saveHtmlWithData()" title="Download this file with all your data baked in — open it on any device">&#128190; Save file with data</button>
-        <div style="font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);text-align:center;line-height:1.6;padding:4px 0;">Opens on any device · no internet needed · all data included</div>
+  </div>
+
+  <!-- ── 4. DANGER ZONE ── -->
+  <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
+    <label style="color:var(--rust);">&#9888; Danger Zone</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Delete ALL data moves everything to the Recycle Bin first — you can still restore from there.</p>
+    <button id="clear-all-btn" class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="clearAll()">&#128465; Delete ALL Data</button>
+    <div id="clear-all-confirm" style="display:none;flex-direction:column;gap:8px;padding:12px;background:#fff0f0;border:1px solid var(--rust);border-radius:4px;margin-top:10px;">
+      <div style="font-family:DM Mono,monospace;font-size:0.75rem;color:var(--rust);font-weight:600;">Delete ALL data? Items go to Recycle Bin first.</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-danger" style="flex:1;padding:8px;justify-content:center;" onclick="clearAllConfirmed()">Yes, delete everything</button>
+        <button class="btn btn-ghost" style="flex:1;padding:8px;justify-content:center;" onclick="clearAllCancel()">Cancel</button>
       </div>
     </div>
   </div>
-</div>
 
+  <!-- ── 5. RECYCLE BIN (last) ── -->
+  <div class="card" style="border-color:var(--rust);">
+    <label style="display:flex;align-items:center;gap:8px;">
+      &#128465; Recycle Bin
+      <span id="trash-count-badge" style="font-family:DM Mono,monospace;font-size:0.7rem;background:var(--rust);color:white;padding:2px 7px;border-radius:10px;"></span>
+    </label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Deleted and skipped entries land here. Restore anytime or permanently delete.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+      <select id="trash-year-filter" onchange="renderTrashPanel()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:6px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
+        <option value="all">All Years</option>
+      </select>
+      <select id="trash-month-filter" onchange="renderTrashPanel()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:6px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
+        <option value="all">All Months</option>
+        <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+        <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+        <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+        <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+      </select>
+      <select id="trash-source-filter" onchange="renderTrashPanel()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:6px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
+        <option value="all">All Sources</option>
+        <option value="deleted">Deleted entries</option>
+        <option value="skipped">Skipped (parse errors)</option>
+      </select>
+    </div>
+    <div id="trash-content"></div>
+  </div>
+
+</div>
 </main>
 
 <!-- Floating scroll buttons -->
@@ -1859,10 +1918,11 @@ function toggleHeaderCollapse() {
 }
 
 function applyHeaderState() {
-  var header = document.getElementById('main-header');
-  var strip  = document.getElementById('hdr-collapse-strip');
-  var nav    = document.getElementById('main-nav');
-  var btn    = document.getElementById('hdr-collapse-btn');
+  var header  = document.getElementById('main-header');
+  var strip   = document.getElementById('hdr-collapse-strip');
+  var nav     = document.getElementById('main-nav');
+  var btn     = document.getElementById('hdr-collapse-btn');
+  var userBar = document.getElementById('hdr-user-bar');
   if (!header) return;
 
   if (_headerCollapsed) {
@@ -1870,11 +1930,15 @@ function applyHeaderState() {
     if (strip) strip.classList.add('visible');
     if (nav)   nav.classList.add('header-hidden');
     if (btn)   btn.innerHTML = '&#9660; SHOW';
+    // Show user bar when header hidden (only if logged in)
+    if (userBar && _userId) userBar.style.display = 'flex';
   } else {
     header.classList.remove('collapsed');
     if (strip) strip.classList.remove('visible');
     if (nav)   nav.classList.remove('header-hidden');
     if (btn)   btn.innerHTML = '&#9650; HIDE';
+    // Hide user bar when header visible (info already in header)
+    if (userBar) userBar.style.display = 'none';
   }
 }
 
@@ -2049,6 +2113,9 @@ function parseInput() {
   function cleanLine(s) {
     return s.replace(/[\u2705\u2713\u2714\u2611\u2714\ufe0f\*]+\s*$/, '').trim();
   }
+  function hasDecorator(s) {
+    return /[\u2705\u2713\u2714\u2611\u2714\ufe0f\*]+\s*$/.test(s.trim());
+  }
 
   // Extract currency+amount from the END of a string
   // Returns {desc, amtStr, currency} or null
@@ -2081,6 +2148,14 @@ function parseInput() {
 
     var cleaned = line.replace(/^[\t ]+/, '');
     if (!cleaned) return;
+    // Catch *** lines that had decorator stripped — they had no price
+    if (hasDecorator(rawLine) && currentDate) {
+      var strippedLine = cleanLine(rawLine.replace(/^[\t ]+/, ''));
+      if (strippedLine && !/[€₦$£#]/.test(strippedLine) && !/\d/.test(strippedLine)) {
+        skippedLines.push({ line: rawLine.trim(), reason: 'No amount recorded' });
+        return;
+      }
+    }
 
     var desc, amtStr, currency;
     var parsed = false;
@@ -2190,7 +2265,14 @@ function parseInput() {
   catViewMode = 'pending';
 
   validateParsedDates();
-  showToast('Parsed ' + pendingItems.length + ' items' + (skippedLines.length ? ' · ' + skippedLines.length + ' skipped' : ''));
+  // Send skipped lines to trash
+  if (skippedLines.length) {
+    var skippedItems = skippedLines.map(function(s){
+      return { _raw_line: s.line, _reason: s.reason, date: currentDate||'', desc: s.line, amount: null, currency: '', category: '' };
+    });
+    addToTrash(skippedItems, 'skipped');
+  }
+  showToast('Parsed ' + pendingItems.length + ' items' + (skippedLines.length ? ' · ' + skippedLines.length + ' skipped → recycle bin' : ''));
 }
 
 
@@ -2805,8 +2887,18 @@ function renderDashboard(){
 
 function renderStats(data){
   var byCur={};data.forEach(function(i){byCur[i.currency]=(byCur[i.currency]||0)+i.amount;});
-  var items=[{label:'Total Entries',value:data.length,sub:'transactions',cls:'total',sym:'',isCur:false},{label:'Euro Spent',value:byCur['EUR']||0,sub:'EUR',cls:'euro',sym:'€',isCur:true},{label:'Naira Spent',value:byCur['NGN']||0,sub:'NGN',cls:'naira',sym:'₦',isCur:true},{label:'Dollar Spent',value:byCur['USD']||0,sub:'USD',cls:'dollar',sym:'$',isCur:true}];
-  document.getElementById('stats-row').innerHTML=items.map(function(s){return '<div class="stat-card '+s.cls+'"><div class="stat-label">'+s.label+'</div><div class="stat-value">'+(s.isCur?s.sym+fmtNum(s.value):s.value)+'</div><div class="stat-sub">'+s.sub+'</div></div>';}).join('');
+  var items=[
+    {label:'Total Entries',value:data.length,sub:'transactions',cls:'total',sym:'',isCur:false},
+    {label:'Euro Spent',value:byCur['EUR']||0,sub:'EUR',cls:'euro',sym:'€',isCur:true},
+    {label:'Naira Spent',value:byCur['NGN']||0,sub:'NGN',cls:'naira',sym:'₦',isCur:true},
+    {label:'Dollar Spent',value:byCur['USD']||0,sub:'USD',cls:'dollar',sym:'$',isCur:true},
+    {label:'Pound Spent',value:byCur['GBP']||0,sub:'GBP',cls:'pound',sym:'£',isCur:true}
+  ];
+  // Only show currencies that have data (hide zero ones except Total)
+  var visItems = items.filter(function(s){ return !s.isCur || s.value > 0; });
+  document.getElementById('stats-row').innerHTML=visItems.map(function(s){
+    return '<div class="stat-card '+s.cls+'"><div class="stat-label">'+s.label+'</div><div class="stat-value">'+(s.isCur?s.sym+fmtNum(s.value):s.value)+'</div><div class="stat-sub">'+s.sub+'</div></div>';
+  }).join('');
 }
 function renderCategoryBars(data){
   var container = document.getElementById('cat-bars-container');
@@ -3429,16 +3521,18 @@ function toggleDailySort() {
 // ════════════════════════════════
 var ledgerBulkFilter = '';
 var _ledSearchTimer = null;
+var _ledExcludedIds = {}; // IDs excluded from current search view
 
 function debouncedLedgerSearch() {
   clearTimeout(_ledSearchTimer);
   _ledSearchTimer = setTimeout(function() {
-    // Reset pagination when search changes
+    // Reset pagination + exclusions when search changes
     var acc = document.getElementById('ledger-accordion');
-    if (acc) acc._flatShown = 100;
+    if (acc) { acc._flatShown = 100; acc._page = 0; }
+    _ledExcludedIds = {}; // clear exclusions on new search
     ledgerBulkFilter = (document.getElementById('led-bulk-search').value || '').trim().toLowerCase();
     renderLedger();
-  }, 350); // wait 350ms after user stops typing
+  }, 350);
 }
 
 function applyLedgerBulkSearch() {
@@ -3678,29 +3772,7 @@ document.addEventListener('click', function(e) {
 //  LEDGER EXPAND / COLLAPSE ALL
 // ════════════════════════════════
 var _ledAllExpanded = false;
-function ledgerExpandAll() {
-  _ledAllExpanded = !_ledAllExpanded;
-  var btn = document.getElementById('btn-expand-all');
-  if (btn) btn.innerHTML = _ledAllExpanded ? '&#8854; Collapse All' : '&#8597; Expand All';
-
-  if (_ledAllExpanded) {
-    // Set all years/months as open in state, then re-render
-    var data = loadData();
-    data.forEach(function(i) {
-      var y = i.date.substring(0,4);
-      var m = i.date.substring(0,7);
-      if (!window._ledOpenYears)  window._ledOpenYears  = {};
-      if (!window._ledOpenMonths) window._ledOpenMonths = {};
-      window._ledOpenYears[y]  = true;
-      window._ledOpenMonths[m] = true;
-    });
-    renderLedger();
-  } else {
-    window._ledOpenYears  = {};
-    window._ledOpenMonths = {};
-    renderLedger();
-  }
-}
+function ledgerExpandAll() { /* no longer needed — flat table */ }
 
 
 
@@ -3723,6 +3795,7 @@ function clearLedgerFilters() {
   var s = document.getElementById('led-search'); if(s) s.value = '';
   var b = document.getElementById('led-bulk-search'); if(b) b.value = '';
   ledgerBulkFilter = '';
+  _ledExcludedIds = {};
   var m = document.getElementById('led-bulk-match'); if(m) m.textContent = '';
   renderLedger();
 }
@@ -3732,7 +3805,7 @@ function renderLedger(){
   var month    = document.getElementById('led-month').value;
   var currency = document.getElementById('led-currency').value;
   var cat      = document.getElementById('led-cat').value;
-  var search   = document.getElementById('led-search').value.toLowerCase();
+  var search   = document.getElementById('led-search').value.toLowerCase().trim();
 
   var data = allData.slice();
   if(year!=='all')     data=data.filter(function(i){return i.date.indexOf(year)===0;});
@@ -3741,305 +3814,209 @@ function renderLedger(){
   if(cat!=='all')      data=data.filter(function(i){return i.category===cat;});
   if(search)           data=data.filter(function(i){return i.desc.toLowerCase().indexOf(search)!==-1||i.category.toLowerCase().indexOf(search)!==-1;});
   if(ledgerBulkFilter) data=data.filter(function(i){return i.desc.toLowerCase().indexOf(ledgerBulkFilter)!==-1;});
+  // Filter out manually excluded items
+  if(Object.keys(_ledExcludedIds).length) data=data.filter(function(i){return !_ledExcludedIds[String(i.id)];});
 
   var matchEl=document.getElementById('led-bulk-match');
   if(matchEl) matchEl.textContent=ledgerBulkFilter?(data.length+' match'+(data.length===1?'':'es')):'';
 
+  var acc = document.getElementById('ledger-accordion');
+
   if(!data.length){
     document.getElementById('ledger-empty').style.display='block';
     document.getElementById('ledger-wrap').style.display='none';
+    acc.innerHTML='';
     return;
   }
   document.getElementById('ledger-empty').style.display='none';
   document.getElementById('ledger-wrap').style.display='block';
 
-  var sorted = data.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
+  // Sort newest first
+  data.sort(function(a,b){return b.date.localeCompare(a.date);});
 
-  // ── FLAT LIST when any search is active ──
-  var activeSearch = ledgerBulkFilter || search;
-  if (activeSearch) {
-    var container2 = document.getElementById('ledger-accordion');
-    container2.innerHTML = '';
+  // Pagination
+  var PAGE = 200;
+  var page = acc._page || 0;
+  // Reset page if data changed (search/filter changed)
+  var dataKey = year+month+currency+cat+search+ledgerBulkFilter;
+  if (acc._dataKey !== dataKey) { page = 0; acc._page = 0; acc._dataKey = dataKey; }
 
-    var PAGE_SIZE = 100;
-    var shownCount = container2._flatShown || PAGE_SIZE;
-    container2._flatShown = shownCount;
-    var allCats2 = getAllCategories(); // build once, not per row
+  var start = page * PAGE;
+  var end2  = Math.min(start + PAGE, data.length);
+  var pageData = data.slice(start, end2);
+  var allCats2 = getAllCategories();
 
-    var flatWrap = document.createElement('div');
-    flatWrap.style.cssText = 'background:white;border:1px solid var(--border);border-radius:4px;box-shadow:3px 3px 0 var(--shadow);overflow:hidden;';
+  acc.innerHTML = '';
 
-    // Header count
-    var countBar = document.createElement('div');
-    countBar.style.cssText = 'padding:8px 14px;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);border-bottom:1px solid var(--border);background:var(--paper2);';
-    countBar.textContent = 'Showing ' + Math.min(shownCount, sorted.length) + ' of ' + sorted.length + ' matches';
-    flatWrap.appendChild(countBar);
+  // ── Summary bar ──
+  var sumBar = document.createElement('div');
+  sumBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--paper2);border:1px solid var(--border);border-radius:4px 4px 0 0;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);flex-wrap:wrap;gap:6px;';
+  var totals = {};
+  data.forEach(function(i){ if(i.amount>0) totals[i.currency]=(totals[i.currency]||0)+i.amount; });
+  var totStr = Object.keys(totals).map(function(c){ return '<span class="currency-badge currency-'+c+'" style="font-size:0.7rem;">'+(SYMS[c]||'')+fmtNum(totals[c])+'</span>'; }).join(' ');
+  var excludedCount = Object.keys(_ledExcludedIds).length;
+  var excludedNote = excludedCount > 0
+    ? ' <span style="color:var(--rust);cursor:pointer;" onclick="_ledExcludedIds={};renderLedger();" title="Click to restore">· '+excludedCount+' hidden (restore)</span>'
+    : '';
+  sumBar.innerHTML =
+    '<span>'+data.length+' entries · showing '+(start+1)+'–'+end2+excludedNote+'</span>'+
+    '<span style="display:flex;gap:6px;flex-wrap:wrap;">'+totStr+'</span>';
+  acc.appendChild(sumBar);
 
-    var toShow = sorted.slice(0, shownCount);
-    toShow.forEach(function(item) {
-      var color = getCatColor(item.category, 0);
-      var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);transition:background 0.1s;';
-      row.onmouseover = function(){ this.style.background='#faf6ee'; };
-      row.onmouseout  = function(){ this.style.background=''; };
+  // ── Table ──
+  var tbl = document.createElement('table');
+  tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.84rem;background:white;border:1px solid var(--border);border-top:none;';
 
-      // Left: dot + description + date
-      var left = document.createElement('div');
-      left.style.cssText = 'display:flex;align-items:center;gap:8px;flex:1;min-width:0;';
-      left.innerHTML =
-        '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+color+';flex-shrink:0;"></span>'+
-        '<div style="min-width:0;">'+
-          '<div style="font-size:0.85rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+item.desc+'</div>'+
-          '<div style="font-family:DM Mono,monospace;font-size:0.63rem;color:var(--muted);">'+item.date+'</div>'+
-        '</div>';
-      row.appendChild(left);
+  // Header
+  var thead = document.createElement('thead');
+  thead.innerHTML =
+    '<tr style="background:var(--ink);color:var(--paper);">'+
+      '<th style="padding:8px 12px;text-align:left;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:1px;font-weight:600;white-space:nowrap;">DATE</th>'+
+      '<th style="padding:8px 12px;text-align:left;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:1px;font-weight:600;">DESCRIPTION</th>'+
+      '<th style="padding:8px 12px;text-align:right;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:1px;font-weight:600;white-space:nowrap;">AMOUNT</th>'+
+      '<th style="padding:8px 12px;text-align:left;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:1px;font-weight:600;">CATEGORY</th>'+
+      '<th style="padding:8px 4px;width:28px;"></th>'+
+    '</tr>';
+  tbl.appendChild(thead);
 
-      // Right: category label — click to open select
-      var catDiv = document.createElement('div');
-      catDiv.style.cssText = 'flex-shrink:0;font-family:DM Mono,monospace;font-size:0.72rem;color:'+color+';cursor:pointer;padding:4px 8px;border:1px solid '+color+'44;border-radius:10px;background:'+color+'11;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;';
-      catDiv.title = 'Click to change category';
-      catDiv.textContent = item.category;
+  var tbody = document.createElement('tbody');
+  pageData.forEach(function(item, idx2) {
+    var color = getCatColor(item.category, 0);
+    var tr = document.createElement('tr');
+    tr.style.cssText = 'border-bottom:1px solid var(--border);transition:background 0.1s;'+(idx2%2===0?'background:white;':'background:#fafaf7;');
+    tr.onmouseover = function(){ this.style.background='#faf6ee'; };
+    tr.onmouseout  = function(){ this.style.background=idx2%2===0?'white':'#fafaf7'; };
 
-      catDiv.addEventListener('click', function() {
-        // Replace label with select on click
-        var sel = document.createElement('select');
-        sel.style.cssText = 'font-family:DM Sans,sans-serif;font-size:0.8rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);cursor:pointer;outline:none;max-width:160px;';
-        allCats2.forEach(function(c){
-          var opt = document.createElement('option');
-          opt.value = c; opt.textContent = c;
-          if (c === item.category) opt.selected = true;
-          sel.appendChild(opt);
-        });
-        sel.addEventListener('change', function() {
-          var newCat = sel.value;
-          var d2 = loadData();
-          d2.forEach(function(d){ if(String(d.id)===String(item.id)){ d.category=newCat; } });
-          saveData(d2);
-          item.category = newCat;
-          var newColor = getCatColor(newCat, 0);
-          catDiv.textContent = newCat;
-          catDiv.style.color = newColor;
-          catDiv.style.borderColor = newColor+'44';
-          catDiv.style.background = newColor+'11';
-          row.querySelector('span').style.background = newColor;
-          catDiv.replaceChild? catDiv.parentNode.replaceChild(catDiv, sel): null;
-          sel.replaceWith(catDiv);
-          showToast('Updated to "'+newCat+'"');
-        });
-        sel.addEventListener('blur', function(){ sel.replaceWith(catDiv); });
-        catDiv.replaceWith(sel);
-        sel.focus();
+    // Date cell
+    var dateTd = document.createElement('td');
+    dateTd.style.cssText = 'padding:8px 12px;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;';
+    dateTd.textContent = item.date;
+
+    // Desc cell
+    var descTd = document.createElement('td');
+    descTd.style.cssText = 'padding:8px 12px;';
+    descTd.textContent = item.desc;
+
+    // Amount cell
+    var amtTd = document.createElement('td');
+    amtTd.style.cssText = 'padding:8px 12px;font-family:DM Mono,monospace;font-size:0.8rem;font-weight:600;text-align:right;white-space:nowrap;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';';
+    amtTd.textContent = fmtAmt(item.amount, item.currency);
+
+    // Category cell — pill, click to open select
+    var catTd = document.createElement('td');
+    catTd.style.cssText = 'padding:6px 12px;';
+
+    var catPill = document.createElement('span');
+    catPill.style.cssText = 'font-family:DM Mono,monospace;font-size:0.68rem;padding:3px 8px;border-radius:10px;background:'+color+'18;color:'+color+';border:1px solid '+color+'44;cursor:pointer;white-space:nowrap;display:inline-block;max-width:160px;overflow:hidden;text-overflow:ellipsis;';
+    catPill.title = 'Click to change';
+    catPill.textContent = item.category;
+
+    catPill.addEventListener('click', function() {
+      var sel = document.createElement('select');
+      sel.style.cssText = 'font-family:DM Sans,sans-serif;font-size:0.8rem;padding:3px 6px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);outline:none;max-width:160px;';
+      allCats2.forEach(function(c){
+        var o = document.createElement('option');
+        o.value=c; o.textContent=c;
+        if(c===item.category) o.selected=true;
+        sel.appendChild(o);
       });
+      sel.addEventListener('change', function(){
+        var nc = sel.value;
+        var d2 = loadData();
+        d2.forEach(function(d){ if(String(d.id)===String(item.id)) d.category=nc; });
+        saveData(d2); item.category=nc;
+        var nc2 = getCatColor(nc,0);
+        catPill.textContent=nc;
+        catPill.style.color=nc2;
+        catPill.style.background=nc2+'18';
+        catPill.style.borderColor=nc2+'44';
+        sel.replaceWith(catPill);
+        showToast('Updated to "'+nc+'"');
+      });
+      sel.addEventListener('blur', function(){ sel.replaceWith(catPill); });
+      catPill.replaceWith(sel); sel.focus();
+    });
+    catTd.appendChild(catPill);
 
-      row.appendChild(catDiv);
-      flatWrap.appendChild(row);
+    // Action cells - minus (exclude) + delete
+    var delTd = document.createElement('td');
+    delTd.style.cssText = 'padding:4px;text-align:center;white-space:nowrap;';
+
+    // Minus button - exclude from current search results
+    var minusBtn = document.createElement('button');
+    minusBtn.className = 'btn btn-ghost';
+    minusBtn.style.cssText = 'padding:3px 7px;font-size:0.85rem;color:var(--muted);margin-right:3px;font-weight:700;line-height:1;';
+    minusBtn.textContent = '−';
+    minusBtn.title = 'Hide from current results (does not delete)';
+    minusBtn.addEventListener('click', function(){
+      _ledExcludedIds[String(item.id)] = true;
+      renderLedger();
     });
 
-    // Load more button
-    if (sorted.length > shownCount) {
-      var moreBtn = document.createElement('button');
-      moreBtn.className = 'btn btn-ghost';
-      moreBtn.style.cssText = 'width:100%;padding:12px;border-radius:0;border:none;border-top:1px solid var(--border);font-size:0.75rem;';
-      moreBtn.textContent = 'Load ' + Math.min(PAGE_SIZE, sorted.length - shownCount) + ' more (' + (sorted.length - shownCount) + ' remaining)';
-      moreBtn.addEventListener('click', function() {
-        container2._flatShown = (container2._flatShown || PAGE_SIZE) + PAGE_SIZE;
-        renderLedger();
-      });
-      flatWrap.appendChild(moreBtn);
+    // Delete button
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-danger';
+    delBtn.style.cssText = 'padding:3px 7px;font-size:0.72rem;';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', function(){ deleteEntry(String(item.id)); });
+
+    delTd.appendChild(minusBtn);
+    delTd.appendChild(delBtn);
+
+    tr.appendChild(dateTd);
+    tr.appendChild(descTd);
+    tr.appendChild(amtTd);
+    tr.appendChild(catTd);
+    tr.appendChild(delTd);
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  acc.appendChild(tbl);
+
+  // ── Pagination bar ──
+  if (data.length > PAGE) {
+    var totalPages = Math.ceil(data.length / PAGE);
+    var pagBar = document.createElement('div');
+    pagBar.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:1px solid var(--border);border-top:none;background:var(--paper2);border-radius:0 0 4px 4px;flex-wrap:wrap;';
+
+    // Prev button
+    if (page > 0) {
+      var prev = document.createElement('button');
+      prev.className = 'btn btn-ghost';
+      prev.style.cssText = 'padding:6px 14px;font-size:0.75rem;';
+      prev.textContent = '← Prev';
+      prev.addEventListener('click', function(){ acc._page = page-1; renderLedger(); window.scrollTo(0,0); });
+      pagBar.appendChild(prev);
     }
 
-    container2.appendChild(flatWrap);
-    return;
+    // Page numbers
+    var pageInfo = document.createElement('span');
+    pageInfo.style.cssText = 'font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);padding:0 8px;';
+    pageInfo.textContent = 'Page '+(page+1)+' of '+totalPages;
+    pagBar.appendChild(pageInfo);
+
+    // Next button
+    if (end2 < data.length) {
+      var nxt = document.createElement('button');
+      nxt.className = 'btn btn-ghost';
+      nxt.style.cssText = 'padding:6px 14px;font-size:0.75rem;';
+      nxt.textContent = 'Next →';
+      nxt.addEventListener('click', function(){ acc._page = page+1; renderLedger(); window.scrollTo(0,0); });
+      pagBar.appendChild(nxt);
+    }
+    acc.appendChild(pagBar);
   }
-
-  // Group by year → month
-  var byYear = {};
-  sorted.forEach(function(item){
-    var y = item.date.substring(0,4);
-    var m = item.date.substring(0,7);
-    if(!byYear[y]) byYear[y] = {};
-    if(!byYear[y][m]) byYear[y][m] = [];
-    byYear[y][m].push(item);
-  });
-
-  var years = Object.keys(byYear).sort().reverse();
-  var container = document.getElementById('ledger-accordion');
-  container.innerHTML = '';
-
-  // Track open states
-  if(!window._ledOpenYears)  window._ledOpenYears  = {};
-  if(!window._ledOpenMonths) window._ledOpenMonths = {};
-
-  // If filtering by year or month, auto-open that level
-  if(year!=='all')  window._ledOpenYears[year] = true;
-  if(month!=='all' && year!=='all') window._ledOpenMonths[year+'-'+month] = true;
-
-  years.forEach(function(y){
-    var months    = Object.keys(byYear[y]).sort().reverse();
-    var yearItems = [];
-    months.forEach(function(m){ yearItems = yearItems.concat(byYear[y][m]); });
-
-    // Year totals
-    var yTotals = {};
-    yearItems.forEach(function(i){ if(i.amount>0) yTotals[i.currency]=(yTotals[i.currency]||0)+i.amount; });
-    var yTotalStr = Object.keys(yTotals).map(function(c){
-      return '<span class="currency-badge currency-'+c+'" style="font-size:0.72rem;">'+(SYMS[c]||'')+fmtNum(yTotals[c])+'</span>';
-    }).join(' ');
-
-    var isYearOpen = !!window._ledOpenYears[y] || !!ledgerBulkFilter;
-
-    // Year block
-    var yearBlock = document.createElement('div');
-    yearBlock.style.cssText = 'margin-bottom:8px;border-radius:5px;overflow:hidden;border:1px solid var(--border);box-shadow:2px 2px 0 var(--shadow);';
-
-    var yearHeader = document.createElement('div');
-    yearHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;user-select:none;transition:background 0.15s;'+(isYearOpen?'background:var(--ink);color:var(--paper);':'background:white;');
-    yearHeader.innerHTML =
-      '<div style="display:flex;align-items:center;gap:14px;">' +
-        '<div style="font-family:\'Playfair Display\',serif;font-size:1.6rem;font-weight:900;color:'+(isYearOpen?'var(--gold2)':'var(--gold)')+';">'+y+'</div>' +
-        '<div>' +
-          '<div style="font-family:\'DM Mono\',monospace;font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;color:'+(isYearOpen?'#9e8e7e':'var(--muted)')+';">'+yearItems.length+' entries · '+months.length+' months</div>' +
-          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">'+yTotalStr+'</div>' +
-        '</div>' +
-      '</div>' +
-      '<span class="yr-arrow" style="font-size:0.75rem;display:inline-block;color:'+(isYearOpen?'var(--gold2)':'var(--muted)')+'">&#9660;</span>';
-
-    var yearBody = document.createElement('div');
-    yearBody.style.cssText = 'display:'+(isYearOpen?'block':'none')+';background:#fafaf7;border-top:1px solid var(--border);padding:10px;';
-
-    yearHeader.addEventListener('click', function(){
-      var open = yearBody.style.display !== 'none';
-      yearBody.style.display = open ? 'none' : 'block';
-      window._ledOpenYears[y] = !open;
-      yearHeader.style.background = open ? 'white' : 'var(--ink)';
-      yearHeader.style.color = open ? '' : 'var(--paper)';
-      var arrow = yearHeader.querySelector('.yr-arrow');
-      if(arrow) arrow.style.transform = open ? 'rotate(0)' : 'rotate(180deg)';
-      var numEl = yearHeader.querySelector('[data-year-num]');
-    });
-
-    // Month blocks inside year
-    months.forEach(function(ym){
-      var items = byYear[y][ym];
-      var p = ym.split('-');
-      var monthLabel = MONTHS[parseInt(p[1])-1]+' '+p[0];
-      var isMonthOpen = !!window._ledOpenMonths[ym] || !!ledgerBulkFilter;
-
-      var mTotals = {};
-      items.forEach(function(i){ if(i.amount>0) mTotals[i.currency]=(mTotals[i.currency]||0)+i.amount; });
-      var mTotalStr = Object.keys(mTotals).map(function(c){
-        return '<span class="currency-badge currency-'+c+'" style="font-size:0.7rem;">'+(SYMS[c]||'')+fmtNum(mTotals[c])+'</span>';
-      }).join(' ');
-
-      var monthBlock = document.createElement('div');
-      monthBlock.style.cssText = 'margin-bottom:6px;border-radius:4px;overflow:hidden;border:1px solid var(--border);';
-
-      var monthHeader = document.createElement('div');
-      monthHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none;background:'+(isMonthOpen?'var(--paper2)':'white')+';transition:background 0.15s;';
-      // Build category summary for this month
-      var mCatCounts = {};
-      items.forEach(function(i){ mCatCounts[i.category]=(mCatCounts[i.category]||0)+1; });
-      var topCats = Object.keys(mCatCounts).sort(function(a,b){return mCatCounts[b]-mCatCounts[a];}).slice(0,3);
-      var catPillsHtml = topCats.map(function(c){
-        var color = getCatColor(c,0);
-        return '<span style="font-family:DM Mono,monospace;font-size:0.62rem;padding:2px 7px;border-radius:10px;background:'+color+'22;color:'+color+';border:1px solid '+color+'44;">'+c+'</span>';
-      }).join('');
-      monthHeader.innerHTML =
-        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-          '<div style="font-family:\'DM Mono\',monospace;font-size:0.78rem;font-weight:700;color:var(--ink);">'+monthLabel+'</div>' +
-          '<div style="font-family:\'DM Mono\',monospace;font-size:0.68rem;color:var(--muted);">'+items.length+' items</div>' +
-          '<div style="display:flex;gap:4px;flex-wrap:wrap;">'+mTotalStr+'</div>' +
-          '<div style="display:flex;gap:4px;flex-wrap:wrap;">'+catPillsHtml+'</div>' +
-        '</div>' +
-        '<span class="mo-arrow" style="font-size:0.7rem;display:inline-block;color:var(--muted);">&#9660;</span>';
-
-      var monthBody = document.createElement('div');
-      monthBody.style.cssText = 'display:'+(isMonthOpen?'block':'none')+';';
-
-      // Lazy-load: only build rows when month is first opened
-      var monthLoaded = false;
-      function buildMonthRows() {
-        if (monthLoaded) return;
-        monthLoaded = true;
-        var tbl = document.createElement('table');
-        tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.85rem;';
-        items.forEach(function(item){
-        var tr = document.createElement('tr');
-        tr.style.cssText = 'border-bottom:1px solid var(--border);transition:background 0.1s;';
-        tr.onmouseover = function(){ this.style.background='#faf6ee'; };
-        tr.onmouseout  = function(){ this.style.background=''; };
-
-        // Category cell with inline editor
-        var catTd = document.createElement('td');
-        catTd.setAttribute('data-label','Category');
-        catTd.style.cssText = 'padding:8px 12px;vertical-align:middle;';
-        var wrap = document.createElement('div');
-        wrap.className = 'cat-wrapper';
-        wrap.id = 'led-wrap-'+item.id;
-        var inp = document.createElement('input');
-        inp.type='text'; inp.className='cat-input'; inp.id='led-catinput-'+item.id;
-        inp.value=item.category; inp.setAttribute('autocomplete','off');
-        inp.addEventListener('focus',function(){ inp.select(); openLedCatDropdown(item.id); });
-        inp.addEventListener('input',function(){ filterLedCatDropdown(item.id); });
-        inp.addEventListener('keydown',function(e){ ledCatKeyNav(e,item.id); });
-        var arrow=document.createElement('span'); arrow.className='cat-input-arrow'; arrow.textContent='\u25be';
-        var drop=document.createElement('div'); drop.className='cat-dropdown'; drop.id='led-catdrop-'+item.id;
-        wrap.appendChild(inp); wrap.appendChild(arrow); wrap.appendChild(drop);
-        catTd.appendChild(wrap);
-
-        // Category color dot for visual scan
-        var catColor = getCatColor(item.category, 0);
-        tr.innerHTML =
-          '<td class="date-cell" data-label="Date" style="padding:8px 12px;font-family:\'DM Mono\',monospace;font-size:0.75rem;color:var(--muted);white-space:nowrap;">'+item.date+'</td>'+
-          '<td class="desc-cell" data-label="Description" style="padding:8px 12px;max-width:280px;">'+
-            '<div>'+item.desc+'</div>'+
-            '<div style="display:flex;align-items:center;gap:4px;margin-top:3px;">'+
-              '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+catColor+';flex-shrink:0;"></span>'+
-              '<span style="font-family:\'DM Mono\',monospace;font-size:0.68rem;color:'+catColor+';">'+item.category+'</span>'+
-            '</div>'+
-          '</td>'+
-          '<td class="amount-cell" data-label="Amount" style="padding:8px 12px;font-family:\'DM Mono\',monospace;font-weight:500;white-space:nowrap;text-align:right;"'+(item.amount<0?' style="color:var(--sage)"':'')+'>'+fmtAmt(item.amount,item.currency)+'</td>'+
-          '<td data-label="Currency" style="padding:8px 12px;"><span class="currency-badge currency-'+item.currency+'">'+item.currency+'</span></td>'+
-          '<td data-label="Delete" style="padding:8px 12px;"><button class="btn btn-danger" data-id="'+item.id+'">x</button></td>';
-
-        tr.querySelector('button').addEventListener('click',function(){
-          deleteEntry(this.getAttribute('data-id'));
-        });
-
-        // Insert category td before delete td
-        tr.insertBefore(catTd, tr.querySelector('[data-label="Delete"]'));
-        tbl.appendChild(tr);
-      });
-
-        monthBody.appendChild(tbl);
-      } // end buildMonthRows
-
-      monthHeader.addEventListener('click', function(){
-        var open = monthBody.style.display !== 'none';
-        monthBody.style.display = open ? 'none' : 'block';
-        window._ledOpenMonths[ym] = !open;
-        monthHeader.style.background = open ? 'white' : 'var(--paper2)';
-        var arrow = monthHeader.querySelector('.mo-arrow');
-        if(arrow) arrow.style.transform = open ? 'rotate(0)' : 'rotate(180deg)';
-        if (!open) buildMonthRows(); // build rows only on first open
-      });
-
-      // Auto-open if filter says so
-      if (isMonthOpen) buildMonthRows();
-
-      monthBlock.appendChild(monthHeader);
-      monthBlock.appendChild(monthBody);
-      yearBody.appendChild(monthBlock);
-    });
-
-    yearBlock.appendChild(yearHeader);
-    yearBlock.appendChild(yearBody);
-    container.appendChild(yearBlock);
-  });
 }
 
 
-function deleteEntry(id){saveData(loadData().filter(function(i){return String(i.id)!==String(id);}));renderLedger();updateHeader();showToast('Entry deleted');}
+function deleteEntry(id){
+  var data = loadData();
+  var item = data.filter(function(i){ return String(i.id)===String(id); })[0];
+  if (item) addToTrash([item], 'deleted');
+  saveData(data.filter(function(i){ return String(i.id)!==String(id); }));
+  renderLedger(); updateHeader();
+  showToast('Moved to recycle bin · ↩ restore in Manage');
+}
 
 function openLedgerCatDropdown(id, item) {
   var inp = document.getElementById('ledinp-'+id);
@@ -4125,6 +4102,8 @@ function clearAll(){
   if (conf) conf.style.display = 'flex';
 }
 function clearAllConfirmed(){
+  var all = loadData();
+  if (all.length) addToTrash(all, 'deleted');
   localStorage.removeItem('expense_ledger');
   var btn = document.getElementById('clear-all-btn');
   var conf = document.getElementById('clear-all-confirm');
@@ -4143,24 +4122,37 @@ function clearAllCancel(){
 // ════════════════════════════════
 //  MANAGE
 // ════════════════════════════════
+
+function renderManageUserBar() {
+  var nameEl   = document.getElementById('manage-user-name');
+  var statusEl = document.getElementById('manage-sync-status-mini');
+  var btnsEl   = document.getElementById('manage-auth-btns');
+  if (!btnsEl) return;
+
+  if (_userId && _userName) {
+    if (nameEl)   nameEl.textContent   = _userName;
+    if (statusEl) statusEl.textContent = '● Live sync active';
+    btnsEl.innerHTML =
+      '<button class="btn btn-ghost" style="font-size:0.72rem;padding:7px 14px;" onclick="logOut()">&#128275; Log out</button>' +
+      '<button class="btn btn-ghost" style="font-size:0.72rem;padding:7px 14px;color:var(--rust);border-color:var(--rust);" onclick="switchUser()">Switch user</button>';
+  } else {
+    if (nameEl)   nameEl.textContent   = 'Not signed in';
+    if (statusEl) statusEl.textContent = 'Sign in to sync your data';
+    btnsEl.innerHTML =
+      '<button class="btn btn-ghost" style="font-size:0.72rem;padding:7px 14px;color:var(--gold);border-color:var(--gold);" onclick="showPinScreen();showLoginStep();">&#128275; Sign In</button>' +
+      '<button class="btn btn-ghost" style="font-size:0.72rem;padding:7px 14px;" onclick="showPinScreen();showRegisterStep();">New user</button>';
+  }
+}
 function renderManagePanel(){
   var data = loadData();
   document.getElementById('manage-total').textContent = data.length;
+  renderTrashPanel();
+  renderManageUserBar();
 
-  // Always render sync card — logged in or not
-  if (_userId) {
-    renderSyncSetupUI();
-  } else {
-    var el = document.getElementById('sync-setup-content');
-    if (el) el.innerHTML =
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 14px;background:#fef9e7;border:1px solid var(--gold);border-radius:4px;">' +
-        '<span style="font-size:1.1rem;">&#9888;</span>' +
-        '<div><div style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:var(--gold);">Not signed in</div>' +
-        '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-top:2px;">Sign in to sync your data</div></div>' +
-      '</div>' +
-      '<button class="btn btn-primary" style="width:100%;padding:12px;margin-bottom:8px;" onclick="showPinScreen();showLoginStep();">&#128275; Sign In</button>' +
-      '<button class="btn btn-ghost" style="width:100%;padding:12px;" onclick="showPinScreen();showRegisterStep();">New user? Create account</button>';
-  }
+  // Hide/show sync details card
+  var syncCard = document.getElementById('sync-setup-card');
+  if (syncCard) syncCard.style.display = _userId ? 'block' : 'none';
+  if (_userId) renderSyncSetupUI();
 
   var curFilter = document.getElementById('manage-cur-filter') ? document.getElementById('manage-cur-filter').value : 'all';
 
@@ -4304,8 +4296,11 @@ function renderManagePanel(){
         btn.style.display = 'inline-flex';
       });
       yesBtn.addEventListener('click', function(){
-        saveData(loadData().filter(function(i){ return i.date.substring(0,7)!==key; }));
-        showToast(MONTHS[mIdx]+' '+y+' deleted');
+        var all = loadData();
+        var toDelete = all.filter(function(i){ return i.date.substring(0,7)===key; });
+        if (toDelete.length) addToTrash(toDelete, 'deleted');
+        saveData(all.filter(function(i){ return i.date.substring(0,7)!==key; }));
+        showToast(MONTHS[mIdx]+' '+y+' moved to recycle bin ('+toDelete.length+' entries)');
         renderManagePanel(); updateHeaderContext(); renderMonthPicker();
       });
 
@@ -4564,6 +4559,206 @@ function hideInactivityWarning() {
     if (_userId) resetInactivityTimer();
   }, { passive: true });
 });
+
+
+// ════════════════════════════════
+//  RECYCLE BIN
+// ════════════════════════════════
+var TRASH_KEY = 'expense_trash';
+
+function loadTrash() {
+  try { return JSON.parse(localStorage.getItem(TRASH_KEY) || '[]'); } catch(e){ return []; }
+}
+function saveTrash(data) {
+  localStorage.setItem(TRASH_KEY, JSON.stringify(data));
+}
+function addToTrash(items, source) {
+  // source: 'deleted' | 'skipped'
+  var trash = loadTrash();
+  var now = new Date().toISOString().substring(0,10);
+  items.forEach(function(item) {
+    trash.push(Object.assign({}, item, {
+      _trash_source: source || 'deleted',
+      _trash_date:   now,
+      _trash_id:     Date.now() + Math.random()
+    }));
+  });
+  saveTrash(trash);
+}
+function restoreFromTrash(trashId) {
+  var trash = loadTrash();
+  var item = null;
+  trash = trash.filter(function(t){
+    if (String(t._trash_id) === String(trashId)) { item = t; return false; }
+    return true;
+  });
+  if (item) {
+    // Clean trash fields before restoring
+    var restored = {};
+    Object.keys(item).forEach(function(k){
+      if (k.indexOf('_trash_') === -1) restored[k] = item[k];
+    });
+    if (restored.id && restored.date) {
+      // Restore to ledger
+      var data = loadData();
+      data.push(restored);
+      data.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+      saveData(data);
+    }
+    saveTrash(trash);
+    renderTrashPanel();
+    renderManagePanel();
+    updateHeaderContext();
+    showToast('Entry restored to ledger');
+  }
+}
+function permanentDelete(trashId) {
+  var trash = loadTrash();
+  trash = trash.filter(function(t){ return String(t._trash_id) !== String(trashId); });
+  saveTrash(trash);
+  renderTrashPanel();
+}
+function clearAllTrash() {
+  saveTrash([]);
+  renderTrashPanel();
+  showToast('Recycle bin emptied');
+}
+
+function renderTrashPanel() {
+  var el = document.getElementById('trash-content');
+  if (!el) return;
+  var trash = loadTrash();
+
+  // Update count badge
+  var badge = document.getElementById('trash-count-badge');
+  if (badge) badge.textContent = trash.length > 0 ? trash.length : '';
+
+  if (!trash.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);">&#128465; Recycle bin is empty</div>';
+    return;
+  }
+
+  // Filters
+  var yearSel  = document.getElementById('trash-year-filter');
+  var monthSel = document.getElementById('trash-month-filter');
+  var srcSel   = document.getElementById('trash-source-filter');
+  var yearVal  = yearSel  ? yearSel.value  : 'all';
+  var monthVal = monthSel ? monthSel.value : 'all';
+  var srcVal   = srcSel   ? srcSel.value   : 'all';
+
+  // Populate year filter
+  var years = [];
+  trash.forEach(function(t){ if(t.date){ var y=t.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }});
+  years.sort().reverse();
+  if (yearSel) {
+    var cy = yearSel.value;
+    yearSel.innerHTML = '<option value="all">All Years</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join('');
+  }
+
+  // Filter
+  var filtered = trash.slice();
+  if (yearVal  !== 'all') filtered = filtered.filter(function(t){ return t.date && t.date.indexOf(yearVal)===0; });
+  if (monthVal !== 'all') filtered = filtered.filter(function(t){ return t.date && t.date.substring(5,7)===monthVal; });
+  if (srcVal   !== 'all') filtered = filtered.filter(function(t){ return t._trash_source === srcVal; });
+
+  // Sort newest deleted first
+  filtered.sort(function(a,b){ return (b._trash_date||'').localeCompare(a._trash_date||''); });
+
+  el.innerHTML = '';
+
+  // Summary
+  var sumDiv = document.createElement('div');
+  sumDiv.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--paper2);border:1px solid var(--border);border-radius:4px 4px 0 0;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);flex-wrap:wrap;gap:6px;';
+  sumDiv.innerHTML = '<span>'+filtered.length+' of '+trash.length+' items</span>';
+  if (trash.length > 0) {
+    var emptyBtn = document.createElement('button');
+    emptyBtn.className = 'btn btn-danger';
+    emptyBtn.style.cssText = 'padding:4px 10px;font-size:0.7rem;';
+    emptyBtn.textContent = '🗑 Empty bin';
+    emptyBtn.addEventListener('click', function(){
+      if (trash.length > 0) clearAllTrash();
+    });
+    sumDiv.appendChild(emptyBtn);
+  }
+  el.appendChild(sumDiv);
+
+  // Table
+  var tbl = document.createElement('table');
+  tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.83rem;background:white;border:1px solid var(--border);border-top:none;';
+  tbl.innerHTML =
+    '<thead><tr style="background:var(--ink);color:var(--paper);">'+
+      '<th style="padding:7px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DATE</th>'+
+      '<th style="padding:7px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DESCRIPTION</th>'+
+      '<th style="padding:7px 10px;text-align:right;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">AMOUNT</th>'+
+      '<th style="padding:7px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">CATEGORY</th>'+
+      '<th style="padding:7px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">SOURCE</th>'+
+      '<th style="padding:7px 6px;width:90px;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">ACTION</th>'+
+    '</tr></thead>';
+
+  var tbody = document.createElement('tbody');
+  filtered.forEach(function(item, idx) {
+    var tr = document.createElement('tr');
+    tr.style.cssText = 'border-bottom:1px solid var(--border);'+(idx%2===0?'background:white;':'background:#fafaf7;');
+
+    var isSkipped = item._trash_source === 'skipped';
+
+    var dateTd = document.createElement('td');
+    dateTd.style.cssText = 'padding:7px 10px;font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
+    dateTd.textContent = item.date || '—';
+
+    var descTd = document.createElement('td');
+    descTd.style.cssText = 'padding:7px 10px;max-width:240px;word-break:break-word;';
+    descTd.textContent = item.desc || item._raw_line || '—';
+
+    var amtTd = document.createElement('td');
+    amtTd.style.cssText = 'padding:7px 10px;font-family:DM Mono,monospace;font-size:0.75rem;text-align:right;white-space:nowrap;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';';
+    amtTd.textContent = item.amount !== undefined && item.amount !== null ? fmtAmt(item.amount, item.currency||'') : '—';
+
+    var catTd = document.createElement('td');
+    catTd.style.cssText = 'padding:7px 10px;font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);';
+    catTd.textContent = item.category || '—';
+
+    var srcTd = document.createElement('td');
+    srcTd.style.cssText = 'padding:7px 10px;';
+    var srcBadge = document.createElement('span');
+    srcBadge.style.cssText = 'font-family:DM Mono,monospace;font-size:0.62rem;padding:2px 6px;border-radius:8px;'+(isSkipped?'background:#fef3c7;color:#92400e;border:1px solid #fcd34d;':'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;');
+    srcBadge.textContent = isSkipped ? 'skipped' : 'deleted';
+    srcTd.appendChild(srcBadge);
+
+    var actionTd = document.createElement('td');
+    actionTd.style.cssText = 'padding:5px 6px;white-space:nowrap;';
+
+    // Restore button (only for deleted entries with valid data)
+    if (!isSkipped && item.date && item.desc) {
+      var restoreBtn = document.createElement('button');
+      restoreBtn.className = 'btn btn-ghost';
+      restoreBtn.style.cssText = 'padding:3px 7px;font-size:0.68rem;color:var(--sage);border-color:var(--sage);margin-right:4px;';
+      restoreBtn.textContent = '↩';
+      restoreBtn.title = 'Restore to ledger';
+      restoreBtn.addEventListener('click', function(){ restoreFromTrash(item._trash_id); });
+      actionTd.appendChild(restoreBtn);
+    }
+
+    // Permanent delete button
+    var permBtn = document.createElement('button');
+    permBtn.style.cssText = 'padding:3px 8px;font-size:0.68rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:3px;cursor:pointer;font-family:DM Mono,monospace;letter-spacing:0.5px;';
+    permBtn.textContent = 'DEL';
+    permBtn.title = 'Permanently delete — no recovery';
+    permBtn.addEventListener('click', function(){ permanentDelete(item._trash_id); });
+    actionTd.appendChild(permBtn);
+
+    tr.appendChild(dateTd);
+    tr.appendChild(descTd);
+    tr.appendChild(amtTd);
+    tr.appendChild(catTd);
+    tr.appendChild(srcTd);
+    tr.appendChild(actionTd);
+    tbody.appendChild(tr);
+  });
+
+  tbl.appendChild(tbody);
+  el.appendChild(tbl);
+}
 
 // INIT
 renderMonthPicker();
