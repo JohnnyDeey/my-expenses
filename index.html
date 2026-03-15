@@ -601,8 +601,7 @@ header h1 span{color:var(--gold2);}
 .hdr-pill.NGN{background:rgba(74,124,89,0.4);color:#8dd4a8;}
 .hdr-pill.USD{background:rgba(139,94,60,0.4);color:#f0c090;}
 .hdr-pill.GBP{background:rgba(107,61,140,0.4);color:#d4aaff;}
-.header-meta{font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);text-align:right;flex-shrink:0;}
-.header-meta strong{color:var(--gold2);}
+.header-meta{display:none;}
 
 /* TABS */
 nav.tabs{background:var(--ink);display:flex;padding:0 40px;border-bottom:1px solid #2e2620;}
@@ -1132,20 +1131,15 @@ nav.tabs.header-hidden button {
     </div>
     </div><!-- end header-center inner -->
   </div>
-  <div class="header-meta">
-    <!-- Sync status + stats row -->
-    <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
-      <div id="sync-status" style="display:flex;align-items:center;gap:4px;">
-        <span id="sync-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#555;transition:background 0.3s;"></span>
-        <span id="sync-label" style="font-family:DM Mono,monospace;font-size:0.6rem;color:#555;letter-spacing:0.5px;">Not synced</span>
-      </div>
-      <span id="hdr-entries" style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);">0 entries</span>
-      <span id="hdr-total-eur" style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--gold2);">EUR —</span>
-      <span id="hdr-total-ngn" style="font-family:DM Mono,monospace;font-size:0.65rem;color:#8dd4a8;">NGN —</span>
-    </div>
-    <!-- HIDE button -->
-    <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" title="Collapse header" style="background:none;border:1px solid rgba(200,150,46,0.3);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.68rem;font-family:DM Mono,monospace;letter-spacing:1px;transition:all 0.2s;white-space:nowrap;">&#9650; HIDE</button>
-    <span id="sync-user-display" style="display:none;font-family:DM Mono,monospace;font-size:0.65rem;color:var(--gold2);"></span>
+  <!-- hidden elements kept for JS compatibility -->
+  <div style="display:none;">
+    <span id="sync-dot"></span>
+    <span id="sync-label"></span>
+    <span id="hdr-entries"></span>
+    <span id="hdr-total-eur"></span>
+    <span id="hdr-total-ngn"></span>
+    <span id="sync-user-display"></span>
+    <button id="hdr-collapse-btn"></button>
   </div>
 </header>
 
