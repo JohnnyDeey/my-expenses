@@ -5067,24 +5067,31 @@ function renderBudget() {
   var now = new Date();
   var curY = now.getFullYear();
   var curM = now.getMonth(); // 0-indexed
-  // Only initialise if empty
-  if (yrSel.options.length === 0) {
-    // Include all years with data + current + 2 future
-    var dataYears = [];
-    loadData().forEach(function(i){
-      var y = parseInt(i.date.substring(0,4));
-      if (dataYears.indexOf(y) === -1) dataYears.push(y);
-    });
-    dataYears.push(curY, curY+1, curY+2);
-    dataYears = dataYears.filter(function(y,i,a){ return a.indexOf(y)===i; });
-    dataYears.sort(function(a,b){ return b-a; }); // newest first
-    yrSel.innerHTML = dataYears.map(function(y){
-      return '<option value="'+y+'"'+(y===curY?' selected':'')+'>'+y+'</option>';
-    }).join('');
+  // Always rebuild year dropdown with all years from data
+  var savedYr  = yrSel.value  || String(curY);
+  var savedMo  = moSel.value  || pad(curM+1);
+  var dataYears = [];
+  loadData().forEach(function(i){
+    var y = parseInt(i.date.substring(0,4));
+    if (dataYears.indexOf(y) === -1) dataYears.push(y);
+  });
+  // Always include current + 2 future years
+  [curY, curY+1, curY+2].forEach(function(y){
+    if (dataYears.indexOf(y) === -1) dataYears.push(y);
+  });
+  dataYears.sort(function(a,b){ return b-a; }); // newest first
+  yrSel.innerHTML = dataYears.map(function(y){
+    return '<option value="'+y+'"'+(String(y)===savedYr?' selected':'')+'>'+y+'</option>';
+  }).join('');
+  // Keep saved year selection
+  if (savedYr) yrSel.value = savedYr;
+  // Init months only once
+  if (moSel.options.length === 0) {
     moSel.innerHTML = MONTHS.map(function(m,i){
       return '<option value="'+pad(i+1)+'"'+(i===curM?' selected':'')+'>'+m+'</option>';
     }).join('');
   }
+  if (savedMo) moSel.value = savedMo;
 
   var year     = yrSel.value;
   var month    = moSel.value;
