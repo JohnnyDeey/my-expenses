@@ -589,7 +589,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);m
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.6;}
 
 /* HEADER */
-header{background:var(--ink);color:var(--paper);padding:22px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);}
+header{background:var(--ink);color:var(--paper);padding:18px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);}
 header h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;letter-spacing:-0.5px;line-height:1;}
 header h1 span{color:var(--gold2);}
 .header-center{flex:1;display:flex;justify-content:center;}
@@ -601,7 +601,7 @@ header h1 span{color:var(--gold2);}
 .hdr-pill.NGN{background:rgba(74,124,89,0.4);color:#8dd4a8;}
 .hdr-pill.USD{background:rgba(139,94,60,0.4);color:#f0c090;}
 .hdr-pill.GBP{background:rgba(107,61,140,0.4);color:#d4aaff;}
-.header-meta{font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);text-align:right;line-height:1.9;}
+.header-meta{font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);text-align:right;flex-shrink:0;}
 .header-meta strong{color:var(--gold2);}
 
 /* TABS */
@@ -610,7 +610,7 @@ nav.tabs button{font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing
 nav.tabs button:hover{color:var(--paper);}
 nav.tabs button.active{color:var(--gold2);border-bottom-color:var(--gold);}
 
-#sticky-topbar{position:sticky;top:0;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
+#sticky-topbar{position:sticky;top:0;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.4);background:var(--ink);}
 main{max-width:1300px;margin:0 auto;padding:36px 40px;}
 .panel{display:none;}.panel.active{display:block;}
 .section-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:12px;}
@@ -1012,8 +1012,8 @@ nav.tabs{position:relative;}
 
 
 /* ── Collapsible header ── */
-#main-header { transition: padding 0.25s ease, max-height 0.3s ease; overflow: hidden; }
-#main-header.collapsed { padding-top: 0; padding-bottom: 0; max-height: 0; }
+#main-header { transition: padding 0.25s ease, max-height 0.3s ease; overflow: hidden; background: var(--ink); }
+#main-header.collapsed { padding-top: 0; padding-bottom: 0; max-height: 0; border: none; }
 #main-header.collapsed > * { display: none !important; }
 
 /* Toggle button always visible — shown as a small strip above tabs when collapsed */
@@ -1024,6 +1024,7 @@ nav.tabs{position:relative;}
   padding: 3px 0;
   cursor: pointer;
   border-bottom: 1px solid #2e2620;
+  margin: 0;
 }
 #hdr-collapse-strip span {
   font-family: DM Mono, monospace;
@@ -1132,17 +1133,19 @@ nav.tabs.header-hidden button {
     </div><!-- end header-center inner -->
   </div>
   <div class="header-meta">
-    <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" title="Collapse header" style="background:none;border:1px solid rgba(200,150,46,0.3);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 8px;font-size:0.7rem;font-family:DM Mono,monospace;margin-bottom:6px;display:block;width:100%;text-align:center;letter-spacing:1px;transition:all 0.2s;">&#9650; HIDE</button>
-    <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:4px;">
-      <span id="sync-user-display" style="display:none;font-family:DM Mono,monospace;font-size:0.65rem;color:var(--gold2);"></span>
+    <!-- Sync status + stats row -->
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+      <div id="sync-status" style="display:flex;align-items:center;gap:4px;">
+        <span id="sync-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#555;transition:background 0.3s;"></span>
+        <span id="sync-label" style="font-family:DM Mono,monospace;font-size:0.6rem;color:#555;letter-spacing:0.5px;">Not synced</span>
+      </div>
+      <span id="hdr-entries" style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);">0 entries</span>
+      <span id="hdr-total-eur" style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--gold2);">EUR —</span>
+      <span id="hdr-total-ngn" style="font-family:DM Mono,monospace;font-size:0.65rem;color:#8dd4a8;">NGN —</span>
     </div>
-    <div id="sync-status" style="display:flex;align-items:center;justify-content:flex-end;gap:5px;margin-bottom:4px;">
-      <span id="sync-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#555;transition:background 0.3s;"></span>
-      <span id="sync-label" style="font-family:DM Mono,monospace;font-size:0.62rem;color:#555;letter-spacing:0.5px;">Not synced</span>
-    </div>
-    <div id="hdr-entries">0 entries</div>
-    <div id="hdr-total-eur" style="color:var(--gold2);">EUR —</div>
-    <div id="hdr-total-ngn" style="color:#8dd4a8;">NGN —</div>
+    <!-- HIDE button -->
+    <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" title="Collapse header" style="background:none;border:1px solid rgba(200,150,46,0.3);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.68rem;font-family:DM Mono,monospace;letter-spacing:1px;transition:all 0.2s;white-space:nowrap;">&#9650; HIDE</button>
+    <span id="sync-user-display" style="display:none;font-family:DM Mono,monospace;font-size:0.65rem;color:var(--gold2);"></span>
   </div>
 </header>
 
