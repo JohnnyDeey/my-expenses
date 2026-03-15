@@ -1130,6 +1130,8 @@ nav.tabs.header-hidden button {
     </div>
     </div><!-- end header-center inner -->
   </div>
+  <!-- HIDE button top-right of big header -->
+  <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" style="background:none;border:1px solid rgba(200,150,46,0.3);border-radius:4px;color:var(--gold);cursor:pointer;padding:6px 14px;font-size:0.72rem;font-family:'DM Mono',monospace;letter-spacing:1px;white-space:nowrap;align-self:flex-start;">&#9650; HIDE</button>
   <!-- hidden elements kept for JS compatibility -->
   <div style="display:none;">
     <span id="sync-dot"></span>
@@ -1138,7 +1140,6 @@ nav.tabs.header-hidden button {
     <span id="hdr-total-eur"></span>
     <span id="hdr-total-ngn"></span>
     <span id="sync-user-display"></span>
-    <button id="hdr-collapse-btn"></button>
   </div>
 </header>
 
@@ -1158,7 +1159,7 @@ nav.tabs.header-hidden button {
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;">
-    <button onclick="toggleHeaderCollapse()" style="background:none;border:1px solid rgba(200,150,46,0.2);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;" id="hdr-user-bar-toggle">&#9650; HIDE</button>
+    <span id="hdr-user-bar-toggle" style="display:none;"></span>
     <button onclick="logOut()" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; LOG OUT</button>
     <button onclick="switchUser()" style="background:none;border:1px solid rgba(181,69,27,0.5);border-radius:4px;color:var(--rust);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">SWITCH</button>
   </div>
@@ -2100,9 +2101,9 @@ function applyHeaderState() {
   // User bar: always show when logged in
   if (userBar) userBar.style.display = _userId ? 'flex' : 'none';
 
-  // Update HIDE/SHOW label in user bar toggle button
-  var ubToggle = document.getElementById('hdr-user-bar-toggle');
-  if (ubToggle) ubToggle.innerHTML = _headerCollapsed ? '&#9660; SHOW' : '&#9650; HIDE';
+  // Update HIDE/SHOW label on the big header button
+  var hdrBtn = document.getElementById('hdr-collapse-btn');
+  if (hdrBtn) hdrBtn.innerHTML = _headerCollapsed ? '&#9660; SHOW' : '&#9650; HIDE';
 }
 
 // Restore state on load
@@ -5068,28 +5069,21 @@ function renderBudget() {
   var moSel = document.getElementById('budget-month');
   var data = loadData();
 
-  // Always refresh year/month to show current + future only
   var now = new Date();
   var curY = now.getFullYear();
   var curM = now.getMonth(); // 0-indexed
-  // Show current year and next 2 years
-  var budgetYears = [curY, curY+1, curY+2];
-  var savedYr = yrSel.value || String(curY);
-  var savedMo = moSel.value || pad(curM+1);
-  yrSel.innerHTML = budgetYears.map(function(y){
-    return '<option value="'+y+'"'+(String(y)===savedYr?' selected':'')+'>'+y+'</option>';
-  }).join('');
-  // Months: if current year, only current month onwards; future years all months
-  var selectedYear = parseInt(yrSel.value);
-  moSel.innerHTML = MONTHS.map(function(m,i){
-    var v = pad(i+1);
-    var disabled = (selectedYear === curY && i < curM);
-    return '<option value="'+v+'"'+(disabled?' disabled style="color:#ccc;"':'')+
-      (v===savedMo && !disabled?' selected':'')+'>'+m+'</option>';
-  }).join('');
-  // Auto-select current month if previously selected is now in the past
-  if (parseInt(moSel.value) < curM+1 && selectedYear === curY) {
-    moSel.value = pad(curM+1);
+  // Only initialise if empty
+  if (yrSel.options.length === 0) {
+    var budgetYears = [curY, curY+1, curY+2];
+    yrSel.innerHTML = budgetYears.map(function(y){
+      return '<option value="'+y+'"'+(y===curY?' selected':'')+'>'+y+'</option>';
+    }).join('');
+    moSel.innerHTML = MONTHS.map(function(m,i){
+      var v = pad(i+1);
+      var disabled = (i < curM);
+      return '<option value="'+v+'"'+(disabled?' disabled style="color:#ccc;"':'')+
+        (i===curM?' selected':'')+'>'+m+'</option>';
+    }).join('');
   }
 
   var year     = yrSel.value;
