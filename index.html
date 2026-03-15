@@ -224,6 +224,11 @@ function syncPush() {
       custom_categories: cats, custom_cat_rules: rules,
       display_name: _userName, updated: Date.now()
     });
+    // Push trash
+    var trashData = localStorage.getItem(getTrashKey()) || '[]';
+    batch.set(userCol('settings').doc('trash'), {
+      items: trashData, updated: Date.now()
+    });
     batch.commit()
       .then(function(){ syncSetStatus('live'); })
       .catch(function(e){ console.error('Push error:', e); syncSetStatus('error'); });
@@ -270,6 +275,26 @@ function syncStartListener() {
     var d = doc.data();
     if (d.custom_categories) localStorage.setItem('custom_categories', d.custom_categories);
     if (d.custom_cat_rules)  localStorage.setItem('custom_cat_rules',  d.custom_cat_rules);
+  }, function(){});
+
+  // Sync trash from Firebase
+  userCol('settings').doc('trash').onSnapshot(function(doc) {
+    if (!doc.exists || _isMerging) return;
+    var d = doc.data();
+    if (d.items) {
+      var localTrash  = loadTrash();
+      var remoteTrash = [];
+      try { remoteTrash = JSON.parse(d.items); } catch(e){}
+      // Merge: keep all unique items by _trash_id
+      var seen = {};
+      var merged = [];
+      localTrash.concat(remoteTrash).forEach(function(t) {
+        var key = String(t._trash_id);
+        if (!seen[key]) { seen[key] = true; merged.push(t); }
+      });
+      saveTrash(merged);
+      renderTrashPanel();
+    }
   }, function(){});
 }
 
@@ -428,13 +453,13 @@ function updateUserDisplay() {
 
 function logOut() {
   if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
-  _db = null; _userId = null;
-  // Keep phone so login can remember it, but clear UID so we don't auto-login
-  localStorage.removeItem(UID_KEY);
-  // Clear local data for security
+  // Clear local data for security before clearing userId
   localStorage.removeItem('expense_ledger');
   localStorage.removeItem('custom_categories');
   localStorage.removeItem('custom_cat_rules');
+  localStorage.removeItem(TRASH_KEY + '_' + _userId); // clear this user's trash from device
+  _db = null; _userId = null;
+  localStorage.removeItem(UID_KEY);
   showPinScreen();
   showLoginStep();
   syncSetStatus('off');
@@ -444,13 +469,15 @@ function logOut() {
 
 function switchUser() {
   if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
+  // Clear this user's local data before switching
+  localStorage.removeItem('expense_ledger');
+  localStorage.removeItem('custom_categories');
+  localStorage.removeItem('custom_cat_rules');
+  if (_userId) localStorage.removeItem(TRASH_KEY + '_' + _userId);
   _db = null; _userId = null; _userName = null; _userPhone = null;
   localStorage.removeItem(UID_KEY);
   localStorage.removeItem(NAME_KEY);
   localStorage.removeItem(PHONE_KEY);
-  localStorage.removeItem('expense_ledger');
-  localStorage.removeItem('custom_categories');
-  localStorage.removeItem('custom_cat_rules');
   showPinScreen();
   showRegisterStep();
   syncSetStatus('off');
@@ -4564,13 +4591,17 @@ function hideInactivityWarning() {
 // ════════════════════════════════
 //  RECYCLE BIN
 // ════════════════════════════════
-var TRASH_KEY = 'expense_trash';
+var TRASH_KEY = 'expense_trash'; // base key, actual key is per-user
 
+function getTrashKey() {
+  // Use user-specific key so each user has their own recycle bin
+  return _userId ? TRASH_KEY + '_' + _userId : TRASH_KEY;
+}
 function loadTrash() {
-  try { return JSON.parse(localStorage.getItem(TRASH_KEY) || '[]'); } catch(e){ return []; }
+  try { return JSON.parse(localStorage.getItem(getTrashKey()) || '[]'); } catch(e){ return []; }
 }
 function saveTrash(data) {
-  localStorage.setItem(TRASH_KEY, JSON.stringify(data));
+  localStorage.setItem(getTrashKey(), JSON.stringify(data));
 }
 function addToTrash(items, source) {
   // source: 'deleted' | 'skipped'
