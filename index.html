@@ -280,6 +280,7 @@ function showPinScreen() {
 function hidePinScreen() {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'none';
+  setTimeout(resetInactivityTimer, 1000); // start timer after login
 }
 function showRegisterStep() {
   document.getElementById('pin-step-register').style.display = 'block';
@@ -1303,14 +1304,14 @@ nav.tabs.header-hidden button {
       <option value="USD">USD</option><option value="GBP">GBP</option>
     </select>
     <select id="led-cat" onchange="renderLedger()"><option value="all">All Categories</option></select>
-    <input type="text" id="led-search" placeholder="Search..." oninput="renderLedger()">
+    <input type="text" id="led-search" placeholder="Search..." oninput="debouncedLedgerSearch()">
     <button class="btn btn-danger" onclick="clearLedgerFilters()">Clear All</button>
   </div>
 
   <!-- Ledger bulk assign bar -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
     <span class="filter-label">Search desc:</span>
-    <input type="text" id="led-bulk-search" placeholder="Filter by description..." oninput="applyLedgerBulkSearch()"
+    <input type="text" id="led-bulk-search" placeholder="Filter by description..." oninput="debouncedLedgerSearch()"
       style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
     <span id="led-bulk-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
     <span class="filter-label" style="margin-left:4px;">Assign all filtered to:</span>
@@ -1490,6 +1491,22 @@ nav.tabs.header-hidden button {
       </div>
     </div>
 
+  </div>
+</div>
+
+
+<!-- ══ INACTIVITY WARNING ══ -->
+<div id="inactivity-warning" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99998;background:var(--ink);border:2px solid var(--gold);border-radius:8px;padding:20px 28px;min-width:300px;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.4);flex-direction:column;align-items:center;gap:12px;">
+  <div style="font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);">Still there?</div>
+  <div style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--paper);text-align:center;line-height:1.5;">
+    You'll be logged out in <span id="inactivity-countdown" style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--gold);">60</span> seconds
+  </div>
+  <div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">
+    <div id="inactivity-bar" style="height:100%;width:100%;background:var(--gold);border-radius:2px;transition:width 1s linear;"></div>
+  </div>
+  <div style="display:flex;gap:10px;width:100%;">
+    <button onclick="stayLoggedIn()" style="flex:1;padding:10px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;font-weight:700;color:var(--ink);cursor:pointer;">&#10003; Stay logged in</button>
+    <button onclick="logOut()" style="padding:10px 14px;background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:rgba(255,255,255,0.5);cursor:pointer;">Log out</button>
   </div>
 </div>
 
@@ -3411,8 +3428,22 @@ function toggleDailySort() {
 //  LEDGER — BULK ASSIGN
 // ════════════════════════════════
 var ledgerBulkFilter = '';
+var _ledSearchTimer = null;
+
+function debouncedLedgerSearch() {
+  clearTimeout(_ledSearchTimer);
+  _ledSearchTimer = setTimeout(function() {
+    // Reset pagination when search changes
+    var acc = document.getElementById('ledger-accordion');
+    if (acc) acc._flatShown = 100;
+    ledgerBulkFilter = (document.getElementById('led-bulk-search').value || '').trim().toLowerCase();
+    renderLedger();
+  }, 350); // wait 350ms after user stops typing
+}
 
 function applyLedgerBulkSearch() {
+  var acc = document.getElementById('ledger-accordion');
+  if (acc) acc._flatShown = 100;
   ledgerBulkFilter = document.getElementById('led-bulk-search').value.trim().toLowerCase();
   renderLedger();
 }
@@ -3729,47 +3760,94 @@ function renderLedger(){
   if (activeSearch) {
     var container2 = document.getElementById('ledger-accordion');
     container2.innerHTML = '';
+
+    var PAGE_SIZE = 100;
+    var shownCount = container2._flatShown || PAGE_SIZE;
+    container2._flatShown = shownCount;
+    var allCats2 = getAllCategories(); // build once, not per row
+
     var flatWrap = document.createElement('div');
     flatWrap.style.cssText = 'background:white;border:1px solid var(--border);border-radius:4px;box-shadow:3px 3px 0 var(--shadow);overflow:hidden;';
-    sorted.forEach(function(item) {
+
+    // Header count
+    var countBar = document.createElement('div');
+    countBar.style.cssText = 'padding:8px 14px;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);border-bottom:1px solid var(--border);background:var(--paper2);';
+    countBar.textContent = 'Showing ' + Math.min(shownCount, sorted.length) + ' of ' + sorted.length + ' matches';
+    flatWrap.appendChild(countBar);
+
+    var toShow = sorted.slice(0, shownCount);
+    toShow.forEach(function(item) {
       var color = getCatColor(item.category, 0);
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);transition:background 0.1s;flex-wrap:wrap;';
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);transition:background 0.1s;';
       row.onmouseover = function(){ this.style.background='#faf6ee'; };
       row.onmouseout  = function(){ this.style.background=''; };
-      row.innerHTML =
-        '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;margin-top:3px;"></span>'+
-        '<div style="flex:1;min-width:0;">'+
-          '<div style="font-size:0.87rem;font-weight:500;word-break:break-word;">'+item.desc+'</div>'+
-          '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-top:2px;">'+item.date+'</div>'+
+
+      // Left: dot + description + date
+      var left = document.createElement('div');
+      left.style.cssText = 'display:flex;align-items:center;gap:8px;flex:1;min-width:0;';
+      left.innerHTML =
+        '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+color+';flex-shrink:0;"></span>'+
+        '<div style="min-width:0;">'+
+          '<div style="font-size:0.85rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+item.desc+'</div>'+
+          '<div style="font-family:DM Mono,monospace;font-size:0.63rem;color:var(--muted);">'+item.date+'</div>'+
         '</div>';
-      // Category inline editor — simple select for flat list
-      var catTd = document.createElement('div');
-      catTd.style.cssText = 'flex-shrink:0;min-width:140px;max-width:200px;width:40%;';
-      var sel = document.createElement('select');
-      sel.style.cssText = 'width:100%;font-family:DM Sans,sans-serif;font-size:0.82rem;padding:6px 8px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);cursor:pointer;outline:none;';
-      var allCats2 = getAllCategories();
-      allCats2.forEach(function(c){
-        var opt = document.createElement('option');
-        opt.value = c; opt.textContent = c;
-        if (c === item.category) opt.selected = true;
-        sel.appendChild(opt);
+      row.appendChild(left);
+
+      // Right: category label — click to open select
+      var catDiv = document.createElement('div');
+      catDiv.style.cssText = 'flex-shrink:0;font-family:DM Mono,monospace;font-size:0.72rem;color:'+color+';cursor:pointer;padding:4px 8px;border:1px solid '+color+'44;border-radius:10px;background:'+color+'11;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;';
+      catDiv.title = 'Click to change category';
+      catDiv.textContent = item.category;
+
+      catDiv.addEventListener('click', function() {
+        // Replace label with select on click
+        var sel = document.createElement('select');
+        sel.style.cssText = 'font-family:DM Sans,sans-serif;font-size:0.8rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);cursor:pointer;outline:none;max-width:160px;';
+        allCats2.forEach(function(c){
+          var opt = document.createElement('option');
+          opt.value = c; opt.textContent = c;
+          if (c === item.category) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener('change', function() {
+          var newCat = sel.value;
+          var d2 = loadData();
+          d2.forEach(function(d){ if(String(d.id)===String(item.id)){ d.category=newCat; } });
+          saveData(d2);
+          item.category = newCat;
+          var newColor = getCatColor(newCat, 0);
+          catDiv.textContent = newCat;
+          catDiv.style.color = newColor;
+          catDiv.style.borderColor = newColor+'44';
+          catDiv.style.background = newColor+'11';
+          row.querySelector('span').style.background = newColor;
+          catDiv.replaceChild? catDiv.parentNode.replaceChild(catDiv, sel): null;
+          sel.replaceWith(catDiv);
+          showToast('Updated to "'+newCat+'"');
+        });
+        sel.addEventListener('blur', function(){ sel.replaceWith(catDiv); });
+        catDiv.replaceWith(sel);
+        sel.focus();
       });
-      sel.addEventListener('change', function() {
-        var newCat = sel.value;
-        var data = loadData();
-        data.forEach(function(d){ if(String(d.id)===String(item.id)){ d.category=newCat; } });
-        saveData(data);
-        item.category = newCat;
-        // Update the dot color
-        var dot = row.querySelector('span');
-        if(dot) dot.style.background = getCatColor(newCat, 0);
-        showToast('Updated to "'+newCat+'"');
-      });
-      catTd.appendChild(sel);
-      row.appendChild(catTd);
+
+      row.appendChild(catDiv);
       flatWrap.appendChild(row);
     });
+
+    // Load more button
+    if (sorted.length > shownCount) {
+      var moreBtn = document.createElement('button');
+      moreBtn.className = 'btn btn-ghost';
+      moreBtn.style.cssText = 'width:100%;padding:12px;border-radius:0;border:none;border-top:1px solid var(--border);font-size:0.75rem;';
+      moreBtn.textContent = 'Load ' + Math.min(PAGE_SIZE, sorted.length - shownCount) + ' more (' + (sorted.length - shownCount) + ' remaining)';
+      moreBtn.addEventListener('click', function() {
+        container2._flatShown = (container2._flatShown || PAGE_SIZE) + PAGE_SIZE;
+        renderLedger();
+      });
+      flatWrap.appendChild(moreBtn);
+    }
+
     container2.appendChild(flatWrap);
     return;
   }
@@ -4421,6 +4499,71 @@ function populateFilters(){
   document.getElementById('led-cat').innerHTML='<option value="all">All Categories</option>'+cats.map(function(c){return'<option value="'+c+'">'+c+'</option>';}).join('');
   document.getElementById('led-month').innerHTML='<option value="all">All Months</option>'+MONTHS.map(function(m,i){return'<option value="'+pad(i+1)+'">'+m+'</option>';}).join('');
 }
+
+
+// ════════════════════════════════
+//  INACTIVITY AUTO-LOGOUT TIMER
+// ════════════════════════════════
+var _inactivityTimer   = null;
+var _countdownTimer    = null;
+var _countdownSeconds  = 0;
+var INACTIVE_MINUTES   = 20;
+var COUNTDOWN_SECONDS  = 60;
+
+function resetInactivityTimer() {
+  if (!_userId) return; // only track if logged in
+  clearTimeout(_inactivityTimer);
+  clearInterval(_countdownTimer);
+  hideInactivityWarning();
+  _inactivityTimer = setTimeout(function() {
+    startInactivityCountdown();
+  }, (INACTIVE_MINUTES * 60 - COUNTDOWN_SECONDS) * 1000);
+}
+
+function startInactivityCountdown() {
+  _countdownSeconds = COUNTDOWN_SECONDS;
+  showInactivityWarning(_countdownSeconds);
+  _countdownTimer = setInterval(function() {
+    _countdownSeconds--;
+    updateInactivityWarning(_countdownSeconds);
+    if (_countdownSeconds <= 0) {
+      clearInterval(_countdownTimer);
+      hideInactivityWarning();
+      logOut();
+      showToast('Logged out due to inactivity');
+    }
+  }, 1000);
+}
+
+function stayLoggedIn() {
+  clearInterval(_countdownTimer);
+  hideInactivityWarning();
+  resetInactivityTimer();
+}
+
+function showInactivityWarning(secs) {
+  var w = document.getElementById('inactivity-warning');
+  if (w) { w.style.display = 'flex'; updateInactivityWarning(secs); }
+}
+
+function updateInactivityWarning(secs) {
+  var el = document.getElementById('inactivity-countdown');
+  if (el) el.textContent = secs;
+  var bar = document.getElementById('inactivity-bar');
+  if (bar) bar.style.width = (secs / COUNTDOWN_SECONDS * 100) + '%';
+}
+
+function hideInactivityWarning() {
+  var w = document.getElementById('inactivity-warning');
+  if (w) w.style.display = 'none';
+}
+
+// Track user activity
+['click','keydown','touchstart','scroll','mousemove'].forEach(function(evt) {
+  document.addEventListener(evt, function() {
+    if (_userId) resetInactivityTimer();
+  }, { passive: true });
+});
 
 // INIT
 renderMonthPicker();
