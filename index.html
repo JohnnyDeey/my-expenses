@@ -1015,6 +1015,32 @@ nav.tabs.header-hidden button {
   padding: 13px 6px;
 }
 
+
+/* ── Ledger table mobile ── */
+@media (max-width: 600px) {
+  .col-date { display: none !important; }
+  .col-amt  { display: none !important; }
+  .mob-sub  { display: block !important; }
+  .led-thead th.col-date,
+  .led-thead th.col-amt { display: none !important; }
+}
+@media (min-width: 601px) {
+  .mob-sub { display: none !important; }
+}
+
+/* ── Recycle bin mobile ── */
+@media (max-width: 600px) {
+  #trash-content table thead th:nth-child(1),
+  #trash-content table tbody td:nth-child(1) { display: none; }
+  #trash-content table thead th:nth-child(3),
+  #trash-content table tbody td:nth-child(3) { display: none; }
+  #trash-content table thead th:nth-child(4),
+  #trash-content table tbody td:nth-child(4) { display: none; }
+  #trash-content table { font-size: 0.78rem; }
+  #trash-content table td { padding: 6px 6px; }
+  #trash-content .btn, #trash-content button { padding: 5px 8px !important; font-size: 0.68rem !important; }
+}
+
 </style>
 </head>
 <body>
@@ -3912,13 +3938,14 @@ function renderLedger(){
 
   // Header
   var thead = document.createElement('thead');
+  thead.className = 'led-thead';
   thead.innerHTML =
     '<tr style="background:var(--ink);color:var(--paper);">'+
-      '<th style="padding:8px 12px;text-align:left;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:1px;font-weight:600;white-space:nowrap;">DATE</th>'+
-      '<th style="padding:8px 12px;text-align:left;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:1px;font-weight:600;">DESCRIPTION</th>'+
-      '<th style="padding:8px 12px;text-align:right;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:1px;font-weight:600;white-space:nowrap;">AMOUNT</th>'+
-      '<th style="padding:8px 12px;text-align:left;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:1px;font-weight:600;">CATEGORY</th>'+
-      '<th style="padding:8px 4px;width:28px;"></th>'+
+      '<th class="col-date" style="padding:8px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;font-weight:600;white-space:nowrap;">DATE</th>'+
+      '<th style="padding:8px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;font-weight:600;">DESCRIPTION</th>'+
+      '<th class="col-amt" style="padding:8px 10px;text-align:right;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;font-weight:600;white-space:nowrap;">AMOUNT</th>'+
+      '<th style="padding:8px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;font-weight:600;">CATEGORY</th>'+
+      '<th style="padding:6px 4px;width:32px;"></th>'+
     '</tr>';
   tbl.appendChild(thead);
 
@@ -3930,19 +3957,23 @@ function renderLedger(){
     tr.onmouseover = function(){ this.style.background='#faf6ee'; };
     tr.onmouseout  = function(){ this.style.background=idx2%2===0?'white':'#fafaf7'; };
 
-    // Date cell
+    // Date cell — hidden on mobile (shown inside desc)
     var dateTd = document.createElement('td');
-    dateTd.style.cssText = 'padding:8px 12px;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;';
+    dateTd.className = 'col-date';
+    dateTd.style.cssText = 'padding:7px 8px;font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
     dateTd.textContent = item.date;
 
-    // Desc cell
+    // Desc cell — on mobile shows date + amount underneath
     var descTd = document.createElement('td');
-    descTd.style.cssText = 'padding:8px 12px;';
-    descTd.textContent = item.desc;
+    descTd.style.cssText = 'padding:7px 8px;max-width:0;';
+    descTd.innerHTML =
+      '<div style="font-size:0.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+item.desc+'</div>'+
+      '<div class="mob-sub" style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-top:2px;">'+item.date+' · '+fmtAmt(item.amount,item.currency)+'</div>';
 
-    // Amount cell
+    // Amount cell — hidden on mobile
     var amtTd = document.createElement('td');
-    amtTd.style.cssText = 'padding:8px 12px;font-family:DM Mono,monospace;font-size:0.8rem;font-weight:600;text-align:right;white-space:nowrap;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';';
+    amtTd.className = 'col-amt';
+    amtTd.style.cssText = 'padding:7px 8px;font-family:DM Mono,monospace;font-size:0.78rem;font-weight:600;text-align:right;white-space:nowrap;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';';
     amtTd.textContent = fmtAmt(item.amount, item.currency);
 
     // Category cell — pill, click to open select
@@ -3950,7 +3981,7 @@ function renderLedger(){
     catTd.style.cssText = 'padding:6px 12px;';
 
     var catPill = document.createElement('span');
-    catPill.style.cssText = 'font-family:DM Mono,monospace;font-size:0.68rem;padding:3px 8px;border-radius:10px;background:'+color+'18;color:'+color+';border:1px solid '+color+'44;cursor:pointer;white-space:nowrap;display:inline-block;max-width:160px;overflow:hidden;text-overflow:ellipsis;';
+    catPill.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;padding:2px 7px;border-radius:10px;background:'+color+'18;color:'+color+';border:1px solid '+color+'44;cursor:pointer;white-space:nowrap;display:inline-block;max-width:130px;overflow:hidden;text-overflow:ellipsis;';
     catPill.title = 'Click to change';
     catPill.textContent = item.category;
 
@@ -3983,12 +4014,12 @@ function renderLedger(){
 
     // Action cells - minus (exclude) + delete
     var delTd = document.createElement('td');
-    delTd.style.cssText = 'padding:4px;text-align:center;white-space:nowrap;';
+    delTd.style.cssText = 'padding:4px 6px;text-align:center;white-space:nowrap;vertical-align:middle;';
 
     // Minus button - exclude from current search results
     var minusBtn = document.createElement('button');
     minusBtn.className = 'btn btn-ghost';
-    minusBtn.style.cssText = 'padding:3px 7px;font-size:0.85rem;color:var(--muted);margin-right:3px;font-weight:700;line-height:1;';
+    minusBtn.style.cssText = 'padding:5px 9px;font-size:0.9rem;color:var(--muted);margin-right:3px;font-weight:700;line-height:1;background:none;border:1px solid var(--border);border-radius:3px;cursor:pointer;';
     minusBtn.textContent = '−';
     minusBtn.title = 'Hide from current results (does not delete)';
     minusBtn.addEventListener('click', function(){
@@ -3999,7 +4030,7 @@ function renderLedger(){
     // Delete button
     var delBtn = document.createElement('button');
     delBtn.className = 'btn btn-danger';
-    delBtn.style.cssText = 'padding:3px 7px;font-size:0.72rem;';
+    delBtn.style.cssText = 'padding:5px 9px;font-size:0.72rem;';
     delBtn.textContent = '×';
     delBtn.addEventListener('click', function(){ deleteEntry(String(item.id)); });
 
