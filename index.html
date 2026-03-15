@@ -3983,7 +3983,7 @@ function renderLedger(){
 
   // ── Table ──
   var tbl = document.createElement('table');
-  tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.84rem;background:white;border:1px solid var(--border);border-top:none;';
+  tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.72rem;background:white;border:1px solid #c0c0c0;border-top:none;';
 
   // Header
   var isMobHeader = window.innerWidth < 600;
@@ -3991,12 +3991,12 @@ function renderLedger(){
   thead.className = 'led-thead';
   if (isMobHeader) thead.style.display = 'none';
   thead.innerHTML =
-    '<tr style="background:var(--ink);color:var(--paper);">'+
-      '<th class="col-date" style="padding:8px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;font-weight:600;white-space:nowrap;">DATE</th>'+
-      '<th style="padding:8px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;font-weight:600;">DESCRIPTION</th>'+
-      '<th class="col-amt" style="padding:8px 10px;text-align:right;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;font-weight:600;white-space:nowrap;">AMOUNT</th>'+
-      '<th style="padding:8px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;font-weight:600;">CATEGORY</th>'+
-      '<th style="padding:6px 4px;width:32px;"></th>'+
+    '<tr style="background:#2e2620;color:white;">'+
+      '<th style="padding:4px 8px;text-align:left;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;white-space:nowrap;border-right:1px solid #4a3e35;">DATE</th>'+
+      '<th style="padding:4px 8px;text-align:left;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;border-right:1px solid #4a3e35;">DESCRIPTION</th>'+
+      '<th style="padding:4px 8px;text-align:right;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;white-space:nowrap;border-right:1px solid #4a3e35;">AMOUNT</th>'+
+      '<th style="padding:4px 8px;text-align:left;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;border-right:1px solid #4a3e35;">CATEGORY</th>'+
+      '<th style="padding:4px 4px;width:60px;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;"></th>'+
     '</tr>';
   tbl.appendChild(thead);
 
@@ -4087,26 +4087,26 @@ function renderLedger(){
     } else {
       // ── DESKTOP: standard table row ──
       var tr = document.createElement('tr');
-      tr.style.cssText = 'border-bottom:1px solid var(--border);transition:background 0.1s;'+(idx2%2===0?'background:white;':'background:#fafaf7;');
-      tr.onmouseover = function(){ this.style.background='#faf6ee'; };
-      tr.onmouseout  = function(){ this.style.background=idx2%2===0?'white':'#fafaf7'; };
+      tr.style.cssText = 'border-bottom:1px solid #d0d0d0;'+(idx2%2===0?'background:white;':'background:#f8f8f5;');
+      tr.onmouseover = function(){ this.style.background='#fff8ee'; };
+      tr.onmouseout  = function(){ this.style.background=idx2%2===0?'white':'#f8f8f5'; };
 
       var dateTd = document.createElement('td');
-      dateTd.style.cssText = 'padding:7px 10px;font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
+      dateTd.style.cssText = 'padding:3px 8px;font-family:Arial,sans-serif;font-size:0.72rem;color:#555;white-space:nowrap;border-right:1px solid #e0e0e0;';
       dateTd.textContent = item.date;
 
       var descTd = document.createElement('td');
-      descTd.style.cssText = 'padding:7px 10px;max-width:240px;word-break:break-word;';
+      descTd.style.cssText = 'padding:3px 8px;font-family:Arial,sans-serif;font-size:0.72rem;max-width:280px;border-right:1px solid #e0e0e0;';
       descTd.textContent = item.desc;
 
       var amtTd = document.createElement('td');
-      amtTd.style.cssText = 'padding:7px 10px;font-family:DM Mono,monospace;font-size:0.78rem;font-weight:600;text-align:right;white-space:nowrap;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';';
+      amtTd.style.cssText = 'padding:3px 8px;font-family:Arial,monospace;font-size:0.72rem;font-weight:normal;text-align:right;white-space:nowrap;border-right:1px solid #e0e0e0;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';';
       amtTd.textContent = fmtAmt(item.amount, item.currency);
 
       var catTd = document.createElement('td');
-      catTd.style.cssText = 'padding:6px 10px;';
+      catTd.style.cssText = 'padding:3px 8px;border-right:1px solid #e0e0e0;';
       var catPill = document.createElement('span');
-      catPill.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;padding:2px 8px;border-radius:10px;background:'+color+'18;color:'+color+';border:1px solid '+color+'44;cursor:pointer;white-space:nowrap;display:inline-block;max-width:140px;overflow:hidden;text-overflow:ellipsis;';
+      catPill.style.cssText = 'font-family:Arial,sans-serif;font-size:0.7rem;padding:1px 6px;border-radius:3px;background:'+color+'15;color:'+color+';border:1px solid '+color+'33;cursor:pointer;white-space:nowrap;display:inline-block;max-width:140px;overflow:hidden;text-overflow:ellipsis;';
       catPill.title = 'Click to change';
       catPill.textContent = item.category;
       catPill.addEventListener('click', function(){
@@ -4127,14 +4127,14 @@ function renderLedger(){
       catTd.appendChild(catPill);
 
       var delTd = document.createElement('td');
-      delTd.style.cssText = 'padding:4px 6px;text-align:center;white-space:nowrap;';
+      delTd.style.cssText = 'padding:2px 4px;text-align:center;white-space:nowrap;';
       var minusBtn = document.createElement('button');
-      minusBtn.style.cssText = 'padding:4px 8px;font-size:0.85rem;color:var(--muted);margin-right:3px;font-weight:700;background:none;border:1px solid var(--border);border-radius:3px;cursor:pointer;';
+      minusBtn.style.cssText = 'padding:1px 6px;font-size:0.8rem;color:#888;margin-right:2px;font-weight:700;background:none;border:1px solid #ccc;border-radius:2px;cursor:pointer;';
       minusBtn.textContent = '−';
       minusBtn.addEventListener('click', function(){ _ledExcludedIds[String(item.id)]=true; renderLedger(); });
       var delBtn = document.createElement('button');
       delBtn.className = 'btn btn-danger';
-      delBtn.style.cssText = 'padding:4px 8px;font-size:0.72rem;';
+      delBtn.style.cssText = 'padding:1px 7px;font-size:0.7rem;border-radius:2px;';
       delBtn.textContent = '×';
       delBtn.addEventListener('click', function(){ deleteEntry(String(item.id)); });
       delTd.appendChild(minusBtn);
@@ -4864,20 +4864,19 @@ function renderTrashPanel() {
 
   // Table
   var tbl = document.createElement('table');
-  tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.83rem;background:white;border:1px solid var(--border);border-top:none;';
+  tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.72rem;background:white;border:1px solid #c0c0c0;border-top:none;';
   tbl.innerHTML =
-    '<thead><tr style="background:var(--ink);color:var(--paper);">'+
-      '<th style="padding:7px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DATE</th>'+
-      '<th style="padding:7px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DESCRIPTION</th>'+
-      '<th style="padding:7px 10px;text-align:right;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">AMOUNT</th>'+
-      '<th style="padding:7px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">CATEGORY</th>'+
-      '<th style="padding:7px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">SOURCE</th>'+
-      '<th style="padding:7px 6px;width:90px;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">ACTION</th>'+
+    '<thead id="trash-thead"><tr style="background:#2e2620;color:white;'+(isMobTrash?'display:none;':'')+'">'+
+      '<th style="padding:4px 8px;text-align:left;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;border-right:1px solid #4a3e35;">DATE</th>'+
+      '<th style="padding:4px 8px;text-align:left;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;border-right:1px solid #4a3e35;">DESCRIPTION</th>'+
+      '<th style="padding:4px 8px;text-align:right;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;border-right:1px solid #4a3e35;">AMOUNT</th>'+
+      '<th style="padding:4px 8px;text-align:left;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;border-right:1px solid #4a3e35;">CATEGORY</th>'+
+      '<th style="padding:4px 8px;text-align:left;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;border-right:1px solid #4a3e35;">SOURCE</th>'+
+      '<th style="padding:4px 6px;width:90px;font-family:Arial,sans-serif;font-size:0.7rem;font-weight:600;">ACTION</th>'+
     '</tr></thead>';
 
   var tbody = document.createElement('tbody');
   var isMobTrash = window.innerWidth < 600;
-  if (isMobTrash) tbl.querySelector('thead').style.display = 'none';
 
   filtered.forEach(function(item, idx) {
     var isSkipped = item._trash_source === 'skipped';
@@ -4932,16 +4931,16 @@ function renderTrashPanel() {
     } else {
       // Desktop table row
       var dateTd = document.createElement('td');
-      dateTd.style.cssText = 'padding:7px 10px;font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
+      dateTd.style.cssText = 'padding:3px 8px;font-family:Arial,sans-serif;font-size:0.7rem;color:#555;white-space:nowrap;border-right:1px solid #e0e0e0;';
       dateTd.textContent = item.date || '—';
       var descTd = document.createElement('td');
-      descTd.style.cssText = 'padding:7px 10px;max-width:240px;word-break:break-word;';
+      descTd.style.cssText = 'padding:3px 8px;font-family:Arial,sans-serif;font-size:0.7rem;max-width:240px;word-break:break-word;border-right:1px solid #e0e0e0;';
       descTd.textContent = item.desc || item._raw_line || '—';
       var amtTd = document.createElement('td');
-      amtTd.style.cssText = 'padding:7px 10px;font-family:DM Mono,monospace;font-size:0.75rem;text-align:right;white-space:nowrap;';
+      amtTd.style.cssText = 'padding:3px 8px;font-family:Arial,monospace;font-size:0.7rem;text-align:right;white-space:nowrap;border-right:1px solid #e0e0e0;';
       amtTd.textContent = item.amount!=null ? fmtAmt(item.amount, item.currency||'') : '—';
       var catTd = document.createElement('td');
-      catTd.style.cssText = 'padding:7px 10px;font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);';
+      catTd.style.cssText = 'padding:3px 8px;font-family:Arial,sans-serif;font-size:0.7rem;color:#555;border-right:1px solid #e0e0e0;';
       catTd.textContent = item.category || '—';
       var srcTd = document.createElement('td');
       var srcBadge = document.createElement('span');
