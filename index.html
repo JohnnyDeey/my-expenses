@@ -500,7 +500,6 @@ function updateUserDisplay() {
   // Also update the always-visible user bar
   var nameEl = document.getElementById('hdr-user-bar-name');
   if (nameEl && _userName) nameEl.textContent = _userName;
-  // Always show user bar when logged in
   var userBar = document.getElementById('hdr-user-bar');
   if (userBar) userBar.style.display = _userId ? 'flex' : 'none';
 }
@@ -1578,7 +1577,7 @@ nav.tabs.header-hidden button {
   <!-- Month selector -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
     <span class="filter-label">View month:</span>
-    <select id="budget-year" onchange="renderBudget()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;"></select>
+    <select id="budget-year" onchange="budgetYearChanged()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;"></select>
     <select id="budget-month" onchange="renderBudget()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;"></select>
     <select id="budget-currency" onchange="renderBudget()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
       <option value="EUR">EUR €</option>
@@ -2083,24 +2082,25 @@ function applyHeaderState() {
   var header  = document.getElementById('main-header');
   var strip   = document.getElementById('hdr-collapse-strip');
   var nav     = document.getElementById('main-nav');
-  var btn     = document.getElementById('hdr-collapse-btn');
   var userBar = document.getElementById('hdr-user-bar');
   if (!header) return;
 
+  // Only collapse the BIG header — nav tabs and user bar always stay visible
   if (_headerCollapsed) {
     header.classList.add('collapsed');
     if (strip) strip.classList.add('visible');
-    if (nav)   nav.classList.add('header-hidden');
-    if (btn)   btn.innerHTML = '&#9660; SHOW';
   } else {
     header.classList.remove('collapsed');
     if (strip) strip.classList.remove('visible');
-    if (nav)   nav.classList.remove('header-hidden');
-    if (btn)   btn.innerHTML = '&#9650; HIDE';
   }
-  // User bar always visible when logged in, regardless of header state
+
+  // Nav tabs: NEVER hide — always fixed
+  if (nav) { nav.classList.remove('header-hidden'); nav.style.display = ''; }
+
+  // User bar: always show when logged in
   if (userBar) userBar.style.display = _userId ? 'flex' : 'none';
-  // Update toggle button label in user bar
+
+  // Update HIDE/SHOW label in user bar toggle button
   var ubToggle = document.getElementById('hdr-user-bar-toggle');
   if (ubToggle) ubToggle.innerHTML = _headerCollapsed ? '&#9660; SHOW' : '&#9650; HIDE';
 }
@@ -5041,6 +5041,24 @@ function getBudgetKey(year, month, currency) {
   return year + '-' + pad(parseInt(month)) + '|' + currency;
 }
 
+function budgetYearChanged() {
+  // When year changes, refresh month dropdown to reflect allowed months
+  var yrSel = document.getElementById('budget-year');
+  var moSel = document.getElementById('budget-month');
+  if (!yrSel || !moSel) return;
+  var now = new Date();
+  var curY = now.getFullYear();
+  var curM = now.getMonth();
+  var selectedYear = parseInt(yrSel.value);
+  moSel.innerHTML = MONTHS.map(function(m,i){
+    var v = pad(i+1);
+    var disabled = (selectedYear === curY && i < curM);
+    return '<option value="'+v+'"'+(disabled?' disabled style="color:#ccc;"':'')+
+      (i === (selectedYear===curY ? curM : 0) ?' selected':'')+'>'+m+'</option>';
+  }).join('');
+  renderBudget();
+}
+
 function renderBudget() {
   var el = document.getElementById('budget-content');
   if (!el) return;
@@ -5050,17 +5068,28 @@ function renderBudget() {
   var moSel = document.getElementById('budget-month');
   var data = loadData();
 
-  if (yrSel.options.length === 0) {
-    var years = [];
-    data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); });
-    years.sort().reverse();
-    var curY = new Date().getFullYear();
-    yrSel.innerHTML = years.map(function(y){ return '<option value="'+y+'"'+(y==curY?' selected':'')+'>'+y+'</option>'; }).join('');
-    moSel.innerHTML = MONTHS.map(function(m,i){
-      var v = pad(i+1);
-      var now = new Date();
-      return '<option value="'+v+'"'+(i===now.getMonth()?' selected':'')+'>'+m+'</option>';
-    }).join('');
+  // Always refresh year/month to show current + future only
+  var now = new Date();
+  var curY = now.getFullYear();
+  var curM = now.getMonth(); // 0-indexed
+  // Show current year and next 2 years
+  var budgetYears = [curY, curY+1, curY+2];
+  var savedYr = yrSel.value || String(curY);
+  var savedMo = moSel.value || pad(curM+1);
+  yrSel.innerHTML = budgetYears.map(function(y){
+    return '<option value="'+y+'"'+(String(y)===savedYr?' selected':'')+'>'+y+'</option>';
+  }).join('');
+  // Months: if current year, only current month onwards; future years all months
+  var selectedYear = parseInt(yrSel.value);
+  moSel.innerHTML = MONTHS.map(function(m,i){
+    var v = pad(i+1);
+    var disabled = (selectedYear === curY && i < curM);
+    return '<option value="'+v+'"'+(disabled?' disabled style="color:#ccc;"':'')+
+      (v===savedMo && !disabled?' selected':'')+'>'+m+'</option>';
+  }).join('');
+  // Auto-select current month if previously selected is now in the past
+  if (parseInt(moSel.value) < curM+1 && selectedYear === curY) {
+    moSel.value = pad(curM+1);
   }
 
   var year     = yrSel.value;
