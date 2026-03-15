@@ -1111,6 +1111,7 @@ nav.tabs.header-hidden button {
   </div>
   <!-- Right: auth buttons only (HIDE is on big header) -->
   <div style="display:flex;gap:6px;align-items:center;">
+    <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:'DM Mono',monospace;letter-spacing:1px;white-space:nowrap;">&#9650; HIDE</button>
     <div id="hdr-user-bar-btns">
       <button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; SIGN IN</button>
     </div>
@@ -1169,7 +1170,7 @@ nav.tabs.header-hidden button {
     </div>
     </div><!-- end header-center inner -->
   </div>
-  <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:6px 14px;font-size:0.72rem;font-family:'DM Mono',monospace;letter-spacing:1px;white-space:nowrap;align-self:center;">&#9650; HIDE</button>
+
   <!-- hidden elements kept for JS compatibility -->
   <div style="display:none;">
     <span id="sync-dot"></span>
@@ -5159,9 +5160,10 @@ function renderBudget() {
       : 'No budget set';
 
     var safeKey = key; var safeCat = cat;
-    html += '<div data-budget-key="'+safeKey+'" data-budget-cat="'+safeCat+'" style="background:white;border:1px solid var(--border);border-radius:5px;padding:14px 16px;box-shadow:2px 2px 0 var(--shadow);">' +
+    html += '<div data-budget-key="'+safeKey+'" data-budget-cat="'+safeCat+'" style="background:white;border:1px solid var(--border);border-radius:5px;padding:14px 16px;box-shadow:2px 2px 0 var(--shadow);position:relative;">' +
+      '<button onclick="removeBudgetCat(this)" style="position:absolute;top:8px;left:8px;background:none;border:none;color:var(--rust);font-size:1rem;cursor:pointer;font-weight:700;line-height:1;padding:0 4px;" title="Remove">&#10005;</button>' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap;">' +
-        '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;padding-left:22px;">' +
           '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;"></span>' +
           '<span style="font-size:0.88rem;font-weight:500;">'+cat+'</span>' +
         '</div>' +
@@ -5277,6 +5279,24 @@ function addBudgetCategory() {
   document.getElementById('budget-cat-drop').classList.remove('open');
   renderBudget();
   showToast('"'+cat+'" added — set a limit below');
+}
+
+function removeBudgetCat(btn) {
+  var row = btn.closest('[data-budget-key]');
+  if (!row) return;
+  var key = row.getAttribute('data-budget-key');
+  var cat = row.getAttribute('data-budget-cat');
+  var budgets = loadBudgets();
+  if (budgets[key]) {
+    delete budgets[key][cat];
+    // Also remove from pinned
+    if (budgets[key]._pinned) {
+      budgets[key]._pinned = budgets[key]._pinned.filter(function(c){ return c !== cat; });
+    }
+    saveBudgets(budgets);
+  }
+  row.remove();
+  showToast('"'+cat+'" removed from budget');
 }
 
 function budgetInputChange(inp) {
@@ -5434,9 +5454,15 @@ function generatePDFReport() {
 // INIT - adjust main padding to account for fixed nav bar
 function adjustMainPadding() {
   var fixedBar = document.getElementById('fixed-topbar');
+  var bigHeader = document.getElementById('big-header-wrap');
   var main = document.querySelector('main');
-  if (fixedBar && main) {
-    main.style.paddingTop = (fixedBar.offsetHeight + 10) + 'px';
+  var h = fixedBar ? fixedBar.offsetHeight : 82;
+  // Push big header below the fixed bar
+  if (bigHeader) bigHeader.style.marginTop = h + 'px';
+  // Push main content below fixed bar + big header
+  if (main) {
+    var bh = (!_headerCollapsed && bigHeader) ? bigHeader.offsetHeight : 0;
+    main.style.paddingTop = (h + bh + 16) + 'px';
   }
 }
 window.addEventListener('resize', adjustMainPadding);
