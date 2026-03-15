@@ -630,7 +630,7 @@ nav.tabs button.active{color:var(--gold2);border-bottom-color:var(--gold);}
 #sticky-topbar{background:var(--ink);}
 /* Account for fixed nav bar */
 #sticky-topbar + main, main { margin-top: 0; }
-main{max-width:1300px;margin:0 auto;padding:36px 40px;}
+main{max-width:1300px;margin:0 auto;padding:20px 40px;}
 .panel{display:none;}.panel.active{display:block;}
 .section-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:12px;}
 .section-title::before{content:'';display:inline-block;width:8px;height:28px;background:var(--gold);border-radius:2px;}
@@ -5046,20 +5046,12 @@ function getBudgetKey(year, month, currency) {
 }
 
 function budgetYearChanged() {
-  // When year changes, refresh month dropdown to reflect allowed months
-  var yrSel = document.getElementById('budget-year');
+  // All months available for any year
   var moSel = document.getElementById('budget-month');
-  if (!yrSel || !moSel) return;
+  if (!moSel) return;
   var now = new Date();
-  var curY = now.getFullYear();
   var curM = now.getMonth();
-  var selectedYear = parseInt(yrSel.value);
-  moSel.innerHTML = MONTHS.map(function(m,i){
-    var v = pad(i+1);
-    var disabled = (selectedYear === curY && i < curM);
-    return '<option value="'+v+'"'+(disabled?' disabled style="color:#ccc;"':'')+
-      (i === (selectedYear===curY ? curM : 0) ?' selected':'')+'>'+m+'</option>';
-  }).join('');
+  if (!moSel.value) moSel.value = pad(curM+1);
   renderBudget();
 }
 
@@ -5077,15 +5069,20 @@ function renderBudget() {
   var curM = now.getMonth(); // 0-indexed
   // Only initialise if empty
   if (yrSel.options.length === 0) {
-    var budgetYears = [curY, curY+1, curY+2];
-    yrSel.innerHTML = budgetYears.map(function(y){
+    // Include all years with data + current + 2 future
+    var dataYears = [];
+    loadData().forEach(function(i){
+      var y = parseInt(i.date.substring(0,4));
+      if (dataYears.indexOf(y) === -1) dataYears.push(y);
+    });
+    dataYears.push(curY, curY+1, curY+2);
+    dataYears = dataYears.filter(function(y,i,a){ return a.indexOf(y)===i; });
+    dataYears.sort(function(a,b){ return b-a; }); // newest first
+    yrSel.innerHTML = dataYears.map(function(y){
       return '<option value="'+y+'"'+(y===curY?' selected':'')+'>'+y+'</option>';
     }).join('');
     moSel.innerHTML = MONTHS.map(function(m,i){
-      var v = pad(i+1);
-      var disabled = (i < curM);
-      return '<option value="'+v+'"'+(disabled?' disabled style="color:#ccc;"':'')+
-        (i===curM?' selected':'')+'>'+m+'</option>';
+      return '<option value="'+pad(i+1)+'"'+(i===curM?' selected':'')+'>'+m+'</option>';
     }).join('');
   }
 
@@ -5336,7 +5333,7 @@ function generatePDFReport() {
     return i.date.substring(0,7) === monthKey && i.amount > 0;
   });
 
-  if (!data.length) { showToast('No data for ' + monthLabel); return; }
+  if (!data.length) { showToast('No data for ' + monthLabel + ' — try a different month or currency'); return; }
 
   var budgets = loadBudgets();
   var budgetKey = getBudgetKey(year, month, currency);
@@ -5457,12 +5454,13 @@ function adjustMainPadding() {
   var bigHeader = document.getElementById('big-header-wrap');
   var main = document.querySelector('main');
   var h = fixedBar ? fixedBar.offsetHeight : 82;
-  // Push big header below the fixed bar
+  // Push big header immediately below fixed bar
   if (bigHeader) bigHeader.style.marginTop = h + 'px';
-  // Push main content below fixed bar + big header
+  // Push main content immediately below big header (or fixed bar if hidden)
   if (main) {
-    var bh = (!_headerCollapsed && bigHeader) ? bigHeader.offsetHeight : 0;
-    main.style.paddingTop = (h + bh + 16) + 'px';
+    var bh = bigHeader ? bigHeader.offsetHeight : 0;
+    main.style.paddingTop = bh + 'px';
+    main.style.marginTop = '0';
   }
 }
 window.addEventListener('resize', adjustMainPadding);
