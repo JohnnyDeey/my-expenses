@@ -1014,24 +1014,7 @@ nav.tabs{position:relative;}
 #main-header.collapsed { padding-top: 0; padding-bottom: 0; max-height: 0; border: none; }
 #main-header.collapsed > * { display: none !important; }
 
-/* Toggle button always visible — shown as a small strip above tabs when collapsed */
-#hdr-collapse-strip {
-  display: none;
-  background: var(--ink);
-  text-align: center;
-  padding: 3px 0;
-  cursor: pointer;
-  border-bottom: 1px solid #2e2620;
-  margin: 0;
-}
-#hdr-collapse-strip span {
-  font-family: DM Mono, monospace;
-  font-size: 0.6rem;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--gold);
-}
-#hdr-collapse-strip.visible { display: block; }
+
 
 /* When header collapsed, tabs take full width with even icon spacing */
 nav.tabs.header-hidden {
@@ -1143,9 +1126,7 @@ nav.tabs.header-hidden button {
   </div>
 </header>
 
-<div id="hdr-collapse-strip" onclick="toggleHeaderCollapse()">
-  <span>&#9660; SHOW HEADER</span>
-</div>
+
 <!-- Always-visible user bar -->
 <div id="hdr-user-bar" style="display:none;background:var(--ink);padding:5px 14px;align-items:center;justify-content:space-between;border-bottom:1px solid #2e2620;">
   <div style="display:flex;align-items:center;gap:8px;">
@@ -1592,12 +1573,9 @@ nav.tabs.header-hidden button {
   <!-- Add custom category for budget -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;padding:12px 16px;background:white;border:1px solid var(--border);border-radius:4px;flex-wrap:wrap;">
     <span class="filter-label">Add category:</span>
-    <div class="cat-wrapper" style="width:220px;">
-      <input type="text" class="cat-input" id="budget-new-cat" placeholder="Type name..." autocomplete="off"
-        oninput="filterBudgetCatDrop()" onfocus="this.select();filterBudgetCatDrop()">
-      <span class="cat-input-arrow">&#9662;</span>
-      <div class="cat-dropdown" id="budget-cat-drop"></div>
-    </div>
+    <select id="budget-new-cat" style="font-family:'DM Mono',monospace;font-size:0.8rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);outline:none;min-width:220px;">
+      <option value="">-- Select category --</option>
+    </select>
     <button class="btn btn-success" style="padding:8px 16px;font-size:0.78rem;" onclick="addBudgetCategory()">+ Add</button>
     <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">Add any category to set a budget limit even before spending</span>
   </div>
@@ -2081,7 +2059,7 @@ function toggleHeaderCollapse() {
 
 function applyHeaderState() {
   var header  = document.getElementById('main-header');
-  var strip   = document.getElementById('hdr-collapse-strip');
+
   var nav     = document.getElementById('main-nav');
   var userBar = document.getElementById('hdr-user-bar');
   if (!header) return;
@@ -2089,10 +2067,10 @@ function applyHeaderState() {
   // Only collapse the BIG header — nav tabs and user bar always stay visible
   if (_headerCollapsed) {
     header.classList.add('collapsed');
-    if (strip) strip.classList.add('visible');
+
   } else {
     header.classList.remove('collapsed');
-    if (strip) strip.classList.remove('visible');
+
   }
 
   // Nav tabs: NEVER hide — always fixed
@@ -2492,6 +2470,7 @@ function updateMonthFilterPill() {
   if (!yrSel || !moSel || !pills) return;
 
   // Populate year options if empty
+  populateBudgetCatSelect();
   if (yrSel.options.length === 0) {
     var years = [];
     data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); });
@@ -5120,7 +5099,8 @@ function renderBudget() {
   Object.keys(monthBudgets).forEach(function(c){
     if (c !== '_pinned' && visible.indexOf(c)===-1) visible.push(c);
   });
-  allCats = visible;
+  // Use visible list directly - includes pinned even if not in getAllCategories yet
+  allCats = visible.filter(function(c){ return c && c !== '_pinned'; });
 
   var html = '';
 
@@ -5146,6 +5126,7 @@ function renderBudget() {
   allCats.forEach(function(cat) {
     var spent  = spending[cat] || 0;
     var budget = monthBudgets[cat] || 0;
+    if (cat === '_pinned') return; // skip internal key
     if (spent === 0 && budget === 0 && pinned.indexOf(cat) === -1) return;
     var color  = getCatColor(cat, 0);
     var pct    = budget > 0 ? Math.min(100, spent/budget*100) : 0;
@@ -5184,8 +5165,9 @@ function renderBudget() {
 
   html += '</div>';
 
-  if (allCats.filter(function(c){ return (spending[c]||0)>0 || (monthBudgets[c]||0)>0; }).length === 0) {
-    html = '<div class="empty-state"><div class="big">&#127919;</div><p>No spending data for '+MONTHS_FULL[parseInt(month)-1]+' '+year+'.<br>Select a month with data to set budgets.</p></div>';
+  // Only show empty state if nothing to display (no spending, no budget, no pinned)
+  if (allCats.length === 0) {
+    html = '<div class="empty-state"><div class="big">&#127919;</div><p>No spending data for '+MONTHS_FULL[parseInt(month)-1]+' '+year+'.<br>Use the dropdown above to add a category and set a budget limit.</p></div>';
   }
 
   el.innerHTML = html;
@@ -5237,11 +5219,23 @@ function filterBudgetCatDrop() {
   }, 0);
 }
 
+function populateBudgetCatSelect() {
+  var sel = document.getElementById('budget-new-cat');
+  if (!sel) return;
+  var current = sel.value;
+  sel.innerHTML = '<option value="">-- Select category --</option>';
+  getAllCategories().forEach(function(c) {
+    var opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    if (c === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
 function addBudgetCategory() {
   var inp = document.getElementById('budget-new-cat');
   var cat = inp ? inp.value.trim() : '';
-  if (!cat) { showToast('Type a category name first'); return; }
-  saveCustomCategory(cat);
+  if (!cat) { showToast('Select a category first'); return; }
 
   // Pin this category to the current budget key so it shows up
   var year     = document.getElementById('budget-year').value;
