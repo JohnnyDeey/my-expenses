@@ -628,6 +628,8 @@ nav.tabs button:hover{color:var(--paper);}
 nav.tabs button.active{color:var(--gold2);border-bottom-color:var(--gold);}
 
 #sticky-topbar{background:var(--ink);}
+/* Account for fixed nav bar */
+#sticky-topbar + main, main { margin-top: 0; }
 main{max-width:1300px;margin:0 auto;padding:36px 40px;}
 .panel{display:none;}.panel.active{display:block;}
 .section-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:12px;}
@@ -1093,7 +1095,7 @@ nav.tabs.header-hidden button {
 
 <div id="sticky-topbar">
 <!-- Always-fixed top: user bar + nav tabs -->
-<div style="position:sticky;top:0;z-index:300;background:var(--ink);">
+<div id="fixed-topbar" style="position:fixed;top:0;left:0;right:0;z-index:300;background:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,0.4);">
 <!-- Always-visible user bar — always shown -->
 <div id="hdr-user-bar" style="display:flex;background:var(--ink);padding:5px 14px;align-items:center;justify-content:space-between;border-bottom:1px solid #2e2620;">
   <!-- Left: user info or sign-in prompt -->
@@ -1107,9 +1109,9 @@ nav.tabs.header-hidden button {
       </div>
     </div>
   </div>
-  <!-- Right: HIDE btn + auth buttons -->
+  <!-- Right: auth buttons only (HIDE is on big header) -->
   <div style="display:flex;gap:6px;align-items:center;">
-<div id="hdr-user-bar-btns">
+    <div id="hdr-user-bar-btns">
       <button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; SIGN IN</button>
     </div>
   </div>
@@ -1123,10 +1125,10 @@ nav.tabs.header-hidden button {
   <button onclick="switchTab('budget',this)"><span class="tab-icon">&#127919;</span><span class="tab-label"> Budget</span></button>
   <button onclick="switchTab('manage',this)"><span class="tab-icon">&#9881;</span><span class="tab-label"> Manage</span></button>
 </nav>
-</div>
+</div><!-- end fixed-topbar -->
 
-<!-- Collapsible big header below -->
-<div id="big-header-wrap" style="background:var(--ink);overflow:hidden;transition:max-height 0.3s ease;">
+<!-- Collapsible big header — scrolls with page, sits under fixed bar -->
+<div id="big-header-wrap" style="background:var(--ink);overflow:hidden;transition:max-height 0.3s ease;border-bottom:3px solid var(--gold);">
 <header id="main-header">
   <div style="display:flex;align-items:center;gap:0;">
     <div>
@@ -2080,6 +2082,7 @@ function toggleHeaderCollapse() {
   _headerCollapsed = !_headerCollapsed;
   applyHeaderState();
   localStorage.setItem(HDR_STATE_KEY, _headerCollapsed ? '1' : '0');
+  setTimeout(adjustMainPadding, 350); // after transition completes
 }
 
 function applyHeaderState() {
@@ -5428,7 +5431,17 @@ function generatePDFReport() {
 }
 
 
-// INIT
+// INIT - adjust main padding to account for fixed nav bar
+function adjustMainPadding() {
+  var fixedBar = document.getElementById('fixed-topbar');
+  var main = document.querySelector('main');
+  if (fixedBar && main) {
+    main.style.paddingTop = (fixedBar.offsetHeight + 10) + 'px';
+  }
+}
+window.addEventListener('resize', adjustMainPadding);
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(adjustMainPadding, 100); });
+
 renderMonthPicker();
 updateHeader();
 populateFilters();
