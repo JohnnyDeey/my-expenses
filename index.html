@@ -278,6 +278,24 @@ function syncStartListener() {
   }, function(){});
 
   // Sync trash from Firebase
+  userCol('settings').doc('trash').get().then(function(doc) {
+    if (!doc.exists) return;
+    var d = doc.data();
+    if (d.items) {
+      var localTrash  = loadTrash();
+      var remoteTrash = [];
+      try { remoteTrash = JSON.parse(d.items); } catch(e){}
+      var seen = {};
+      var merged = [];
+      localTrash.concat(remoteTrash).forEach(function(t) {
+        var key = String(t._trash_id);
+        if (!seen[key]) { seen[key] = true; merged.push(t); }
+      });
+      saveTrash(merged);
+      renderTrashPanel();
+    }
+  });
+  // Also listen for realtime updates
   userCol('settings').doc('trash').onSnapshot(function(doc) {
     if (!doc.exists || _isMerging) return;
     var d = doc.data();
@@ -285,7 +303,6 @@ function syncStartListener() {
       var localTrash  = loadTrash();
       var remoteTrash = [];
       try { remoteTrash = JSON.parse(d.items); } catch(e){}
-      // Merge: keep all unique items by _trash_id
       var seen = {};
       var merged = [];
       localTrash.concat(remoteTrash).forEach(function(t) {
@@ -321,6 +338,10 @@ function showLoginStep() {
   document.getElementById('pin-step-register').style.display = 'none';
   document.getElementById('pin-step-code').style.display    = 'none';
   document.getElementById('pin-step-login').style.display   = 'block';
+  // Clear fields on every show
+  var ph = document.getElementById('login-phone'); if(ph) ph.value = '';
+  var cd = document.getElementById('login-code');  if(cd) cd.value = '';
+  var er = document.getElementById('login-error'); if(er) er.textContent = '';
   setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
 }
 function showCodeStep() {
@@ -3937,8 +3958,10 @@ function renderLedger(){
   tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.84rem;background:white;border:1px solid var(--border);border-top:none;';
 
   // Header
+  var isMobHeader = window.innerWidth < 600;
   var thead = document.createElement('thead');
   thead.className = 'led-thead';
+  if (isMobHeader) thead.style.display = 'none';
   thead.innerHTML =
     '<tr style="background:var(--ink);color:var(--paper);">'+
       '<th class="col-date" style="padding:8px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;font-weight:600;white-space:nowrap;">DATE</th>'+
@@ -3952,97 +3975,150 @@ function renderLedger(){
   var tbody = document.createElement('tbody');
   pageData.forEach(function(item, idx2) {
     var color = getCatColor(item.category, 0);
-    var tr = document.createElement('tr');
-    tr.style.cssText = 'border-bottom:1px solid var(--border);transition:background 0.1s;'+(idx2%2===0?'background:white;':'background:#fafaf7;');
-    tr.onmouseover = function(){ this.style.background='#faf6ee'; };
-    tr.onmouseout  = function(){ this.style.background=idx2%2===0?'white':'#fafaf7'; };
+    var isMob = window.innerWidth < 600;
 
-    // Date cell — hidden on mobile (shown inside desc)
-    var dateTd = document.createElement('td');
-    dateTd.className = 'col-date';
-    dateTd.style.cssText = 'padding:7px 8px;font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
-    dateTd.textContent = item.date;
+    if (isMob) {
+      // ── MOBILE: card row ──
+      var tr = document.createElement('tr');
+      tr.style.cssText = 'border-bottom:2px solid var(--border);'+(idx2%2===0?'background:white;':'background:#fafaf7;');
 
-    // Desc cell — on mobile shows date + amount underneath
-    var descTd = document.createElement('td');
-    descTd.style.cssText = 'padding:7px 8px;max-width:0;';
-    descTd.innerHTML =
-      '<div style="font-size:0.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+item.desc+'</div>'+
-      '<div class="mob-sub" style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-top:2px;">'+item.date+' · '+fmtAmt(item.amount,item.currency)+'</div>';
+      // Single cell spanning all columns
+      var cardTd = document.createElement('td');
+      cardTd.setAttribute('colspan','5');
+      cardTd.style.cssText = 'padding:8px 10px;';
 
-    // Amount cell — hidden on mobile
-    var amtTd = document.createElement('td');
-    amtTd.className = 'col-amt';
-    amtTd.style.cssText = 'padding:7px 8px;font-family:DM Mono,monospace;font-size:0.78rem;font-weight:600;text-align:right;white-space:nowrap;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';';
-    amtTd.textContent = fmtAmt(item.amount, item.currency);
+      // Row 1: description + action buttons
+      var row1 = document.createElement('div');
+      row1.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:5px;';
 
-    // Category cell — pill, click to open select
-    var catTd = document.createElement('td');
-    catTd.style.cssText = 'padding:6px 12px;';
+      var descDiv = document.createElement('div');
+      descDiv.style.cssText = 'font-size:0.87rem;font-weight:600;line-height:1.3;flex:1;word-break:break-word;';
+      descDiv.textContent = item.desc;
 
-    var catPill = document.createElement('span');
-    catPill.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;padding:2px 7px;border-radius:10px;background:'+color+'18;color:'+color+';border:1px solid '+color+'44;cursor:pointer;white-space:nowrap;display:inline-block;max-width:130px;overflow:hidden;text-overflow:ellipsis;';
-    catPill.title = 'Click to change';
-    catPill.textContent = item.category;
+      var actDiv = document.createElement('div');
+      actDiv.style.cssText = 'display:flex;gap:4px;flex-shrink:0;';
 
-    catPill.addEventListener('click', function() {
-      var sel = document.createElement('select');
-      sel.style.cssText = 'font-family:DM Sans,sans-serif;font-size:0.8rem;padding:3px 6px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);outline:none;max-width:160px;';
-      allCats2.forEach(function(c){
-        var o = document.createElement('option');
-        o.value=c; o.textContent=c;
-        if(c===item.category) o.selected=true;
-        sel.appendChild(o);
+      var minusB = document.createElement('button');
+      minusB.style.cssText = 'padding:4px 8px;font-size:0.9rem;color:var(--muted);font-weight:700;background:none;border:1px solid var(--border);border-radius:3px;cursor:pointer;line-height:1;';
+      minusB.textContent = '−';
+      minusB.addEventListener('click', function(){ _ledExcludedIds[String(item.id)]=true; renderLedger(); });
+
+      var delB = document.createElement('button');
+      delB.className = 'btn btn-danger';
+      delB.style.cssText = 'padding:4px 8px;font-size:0.78rem;';
+      delB.textContent = '×';
+      delB.addEventListener('click', function(){ deleteEntry(String(item.id)); });
+
+      actDiv.appendChild(minusB);
+      actDiv.appendChild(delB);
+      row1.appendChild(descDiv);
+      row1.appendChild(actDiv);
+
+      // Row 2: date + amount + category pill
+      var row2 = document.createElement('div');
+      row2.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+
+      var dateSpan = document.createElement('span');
+      dateSpan.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);';
+      dateSpan.textContent = item.date;
+
+      var amtSpan = document.createElement('span');
+      amtSpan.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';';
+      amtSpan.textContent = fmtAmt(item.amount, item.currency);
+
+      var catPillM = document.createElement('span');
+      catPillM.style.cssText = 'font-family:DM Mono,monospace;font-size:0.62rem;padding:2px 7px;border-radius:10px;background:'+color+'18;color:'+color+';border:1px solid '+color+'44;cursor:pointer;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;';
+      catPillM.textContent = item.category;
+      catPillM.title = 'Tap to change';
+
+      catPillM.addEventListener('click', function(){
+        var sel = document.createElement('select');
+        sel.style.cssText = 'font-family:DM Sans,sans-serif;font-size:0.82rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);outline:none;max-width:180px;';
+        allCats2.forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; if(c===item.category) o.selected=true; sel.appendChild(o); });
+        sel.addEventListener('change', function(){
+          var nc=sel.value; var d2=loadData();
+          d2.forEach(function(d){ if(String(d.id)===String(item.id)) d.category=nc; });
+          saveData(d2); item.category=nc;
+          var nc2=getCatColor(nc,0);
+          catPillM.textContent=nc; catPillM.style.color=nc2; catPillM.style.background=nc2+'18'; catPillM.style.borderColor=nc2+'44';
+          sel.replaceWith(catPillM); showToast('Updated to "'+nc+'"');
+        });
+        sel.addEventListener('blur', function(){ sel.replaceWith(catPillM); });
+        catPillM.replaceWith(sel); sel.focus();
       });
-      sel.addEventListener('change', function(){
-        var nc = sel.value;
-        var d2 = loadData();
-        d2.forEach(function(d){ if(String(d.id)===String(item.id)) d.category=nc; });
-        saveData(d2); item.category=nc;
-        var nc2 = getCatColor(nc,0);
-        catPill.textContent=nc;
-        catPill.style.color=nc2;
-        catPill.style.background=nc2+'18';
-        catPill.style.borderColor=nc2+'44';
-        sel.replaceWith(catPill);
-        showToast('Updated to "'+nc+'"');
+
+      row2.appendChild(dateSpan);
+      row2.appendChild(amtSpan);
+      row2.appendChild(catPillM);
+
+      cardTd.appendChild(row1);
+      cardTd.appendChild(row2);
+      tr.appendChild(cardTd);
+      tbody.appendChild(tr);
+
+    } else {
+      // ── DESKTOP: standard table row ──
+      var tr = document.createElement('tr');
+      tr.style.cssText = 'border-bottom:1px solid var(--border);transition:background 0.1s;'+(idx2%2===0?'background:white;':'background:#fafaf7;');
+      tr.onmouseover = function(){ this.style.background='#faf6ee'; };
+      tr.onmouseout  = function(){ this.style.background=idx2%2===0?'white':'#fafaf7'; };
+
+      var dateTd = document.createElement('td');
+      dateTd.style.cssText = 'padding:7px 10px;font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
+      dateTd.textContent = item.date;
+
+      var descTd = document.createElement('td');
+      descTd.style.cssText = 'padding:7px 10px;max-width:240px;word-break:break-word;';
+      descTd.textContent = item.desc;
+
+      var amtTd = document.createElement('td');
+      amtTd.style.cssText = 'padding:7px 10px;font-family:DM Mono,monospace;font-size:0.78rem;font-weight:600;text-align:right;white-space:nowrap;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';';
+      amtTd.textContent = fmtAmt(item.amount, item.currency);
+
+      var catTd = document.createElement('td');
+      catTd.style.cssText = 'padding:6px 10px;';
+      var catPill = document.createElement('span');
+      catPill.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;padding:2px 8px;border-radius:10px;background:'+color+'18;color:'+color+';border:1px solid '+color+'44;cursor:pointer;white-space:nowrap;display:inline-block;max-width:140px;overflow:hidden;text-overflow:ellipsis;';
+      catPill.title = 'Click to change';
+      catPill.textContent = item.category;
+      catPill.addEventListener('click', function(){
+        var sel = document.createElement('select');
+        sel.style.cssText = 'font-family:DM Sans,sans-serif;font-size:0.8rem;padding:3px 6px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);outline:none;max-width:160px;';
+        allCats2.forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; if(c===item.category) o.selected=true; sel.appendChild(o); });
+        sel.addEventListener('change', function(){
+          var nc=sel.value; var d2=loadData();
+          d2.forEach(function(d){ if(String(d.id)===String(item.id)) d.category=nc; });
+          saveData(d2); item.category=nc;
+          var nc2=getCatColor(nc,0);
+          catPill.textContent=nc; catPill.style.color=nc2; catPill.style.background=nc2+'18'; catPill.style.borderColor=nc2+'44';
+          sel.replaceWith(catPill); showToast('Updated to "'+nc+'"');
+        });
+        sel.addEventListener('blur', function(){ sel.replaceWith(catPill); });
+        catPill.replaceWith(sel); sel.focus();
       });
-      sel.addEventListener('blur', function(){ sel.replaceWith(catPill); });
-      catPill.replaceWith(sel); sel.focus();
-    });
-    catTd.appendChild(catPill);
+      catTd.appendChild(catPill);
 
-    // Action cells - minus (exclude) + delete
-    var delTd = document.createElement('td');
-    delTd.style.cssText = 'padding:4px 6px;text-align:center;white-space:nowrap;vertical-align:middle;';
+      var delTd = document.createElement('td');
+      delTd.style.cssText = 'padding:4px 6px;text-align:center;white-space:nowrap;';
+      var minusBtn = document.createElement('button');
+      minusBtn.style.cssText = 'padding:4px 8px;font-size:0.85rem;color:var(--muted);margin-right:3px;font-weight:700;background:none;border:1px solid var(--border);border-radius:3px;cursor:pointer;';
+      minusBtn.textContent = '−';
+      minusBtn.addEventListener('click', function(){ _ledExcludedIds[String(item.id)]=true; renderLedger(); });
+      var delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-danger';
+      delBtn.style.cssText = 'padding:4px 8px;font-size:0.72rem;';
+      delBtn.textContent = '×';
+      delBtn.addEventListener('click', function(){ deleteEntry(String(item.id)); });
+      delTd.appendChild(minusBtn);
+      delTd.appendChild(delBtn);
 
-    // Minus button - exclude from current search results
-    var minusBtn = document.createElement('button');
-    minusBtn.className = 'btn btn-ghost';
-    minusBtn.style.cssText = 'padding:5px 9px;font-size:0.9rem;color:var(--muted);margin-right:3px;font-weight:700;line-height:1;background:none;border:1px solid var(--border);border-radius:3px;cursor:pointer;';
-    minusBtn.textContent = '−';
-    minusBtn.title = 'Hide from current results (does not delete)';
-    minusBtn.addEventListener('click', function(){
-      _ledExcludedIds[String(item.id)] = true;
-      renderLedger();
-    });
-
-    // Delete button
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-danger';
-    delBtn.style.cssText = 'padding:5px 9px;font-size:0.72rem;';
-    delBtn.textContent = '×';
-    delBtn.addEventListener('click', function(){ deleteEntry(String(item.id)); });
-
-    delTd.appendChild(minusBtn);
-    delTd.appendChild(delBtn);
-
-    tr.appendChild(dateTd);
-    tr.appendChild(descTd);
-    tr.appendChild(amtTd);
-    tr.appendChild(catTd);
-    tr.appendChild(delTd);
-    tbody.appendChild(tr);
+      tr.appendChild(dateTd);
+      tr.appendChild(descTd);
+      tr.appendChild(amtTd);
+      tr.appendChild(catTd);
+      tr.appendChild(delTd);
+      tbody.appendChild(tr);
+    }
   });
   tbl.appendChild(tbody);
   acc.appendChild(tbl);
