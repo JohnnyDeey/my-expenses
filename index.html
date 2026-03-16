@@ -2551,19 +2551,12 @@ function updateHeaderContext() {
   if (entriesEl) entriesEl.textContent = data.length + ' entries';
   if (eurEl) eurEl.textContent = 'EUR ' + fmtNum(eur);
   if (ngnEl) ngnEl.textContent = 'NGN ' + fmtNum(ngn);
-  // Update center context pill
+  // Pill 1: ALWAYS all-time totals
   var label = document.getElementById('hdr-context-label');
   var pills  = document.getElementById('hdr-context-pills');
-  if (!label || !pills) return;
-  if (!pickerMonth) {
-    label.textContent = 'All Time';
-    renderHeaderPills(pills, data);
-  } else {
-    var key = pickerYear + '-' + pad(pickerMonth);
-    label.textContent = MONTHS_FULL[pickerMonth-1] + ' ' + pickerYear;
-    renderHeaderPills(pills, data.filter(function(i){ return i.date.substring(0,7)===key; }));
-  }
-  // Update month filter pill
+  if (label) label.textContent = 'All Time';
+  if (pills) renderHeaderPills(pills, data);
+  // Pill 2: current month (or last month with data)
   updateMonthFilterPill();
 }
 
@@ -2586,18 +2579,38 @@ function updateMonthFilterPill() {
   var pills  = document.getElementById('hdr-filter-pills');
   if (!yrSel || !moSel || !pills) return;
 
-  // Populate year options if empty
   populateBudgetCatSelect();
+  // Always rebuild to include all years with data
+  var years2 = [];
+  data.forEach(function(i){ var y=i.date.substring(0,4); if(years2.indexOf(y)===-1) years2.push(y); });
+  years2.sort().reverse();
+
+  var now2 = new Date();
+  var curYear2  = now2.getFullYear();
+  var curMonth2 = now2.getMonth() + 1; // 1-indexed
+
+  // Determine best default month: current month if has data, else last month with data
+  var curKey2 = String(curYear2) + '-' + pad(curMonth2);
+  var hasCurrentMonth = data.some(function(i){ return i.amount>0 && i.date.substring(0,7)===curKey2; });
+
+  var defYear2, defMonth2;
+  if (hasCurrentMonth) {
+    defYear2  = curYear2;
+    defMonth2 = curMonth2;
+  } else {
+    // Find last month with data
+    var allMonths = [];
+    data.forEach(function(i){ if(i.amount>0 && allMonths.indexOf(i.date.substring(0,7))===-1) allMonths.push(i.date.substring(0,7)); });
+    allMonths.sort();
+    var lastKey = allMonths[allMonths.length-1] || curKey2;
+    defYear2  = parseInt(lastKey.substring(0,4));
+    defMonth2 = parseInt(lastKey.substring(5,7));
+  }
+
+  // Only init if empty, preserve user selection otherwise
   if (yrSel.options.length === 0) {
-    var years = [];
-    data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); });
-    years.sort().reverse();
-    // Default: previous month
-    var now = new Date();
-    var defYear  = now.getMonth()===0 ? now.getFullYear()-1 : now.getFullYear();
-    var defMonth = now.getMonth()===0 ? 12 : now.getMonth(); // previous month (1-indexed)
-    yrSel.innerHTML  = years.map(function(y){ return '<option value="'+y+'"'+(String(defYear)===y?' selected':'')+'>'+y+'</option>'; }).join('');
-    moSel.innerHTML  = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'"'+(pad(defMonth)===pad(i+1)?' selected':'')+'>'+m+'</option>'; }).join('');
+    yrSel.innerHTML = years2.map(function(y){ return '<option value="'+y+'"'+(y===String(defYear2)?' selected':'')+'>'+y+'</option>'; }).join('');
+    moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'"'+(pad(i+1)===pad(defMonth2)?' selected':'')+'>'+m+'</option>'; }).join('');
   }
 
   var selYear  = yrSel.value;
