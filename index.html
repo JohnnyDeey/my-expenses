@@ -168,11 +168,9 @@ function syncInit() {
 function startSync() {
   syncSetStatus('connecting');
   getDB(function() {
-    // Verify this user actually exists in registry before proceeding
     if (_userPhone && _userId) {
       _db.collection('user_registry').doc(_userPhone).get().then(function(doc) {
         if (!doc.exists || doc.data().user_id !== _userId) {
-          // Credentials stale or invalid — force re-login
           localStorage.removeItem(UID_KEY);
           localStorage.removeItem(NAME_KEY);
           localStorage.removeItem(PHONE_KEY);
@@ -181,23 +179,68 @@ function startSync() {
           syncSetStatus('off');
           return;
         }
-        syncSetStatus('live');
-        syncPush();
-        setTimeout(syncStartListener, 3000);
-        renderSyncSetupUI();
+        // ALWAYS load from Firebase first on login, THEN push
+        syncLoadFromFirebase(function() {
+          renderSyncSetupUI();
+        });
       }).catch(function() {
-        // Network error — still proceed with local data
+        // Network error — keep local, start listener
         syncSetStatus('live');
         syncPush();
-        setTimeout(syncStartListener, 3000);
         renderSyncSetupUI();
       });
     } else {
-      syncSetStatus('live');
-      syncPush();
-      setTimeout(syncStartListener, 3000);
-      renderSyncSetupUI();
+      syncLoadFromFirebase(function() {
+        renderSyncSetupUI();
+      });
     }
+  });
+}
+
+function syncLoadFromFirebase(callback) {
+  // Step 1: Load data from Firebase
+  syncSetStatus('syncing');
+  userCol('expense_months').get().then(function(snapshot) {
+    var allEntries = [];
+    var fbMonths = [];
+    snapshot.forEach(function(doc) {
+      fbMonths.push(doc.id);
+      var d = doc.data();
+      if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
+    });
+    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    window._knownFirebaseMonths = fbMonths;
+
+    var local      = localStorage.getItem('expense_ledger') || '[]';
+    var localArr   = []; try { localArr = JSON.parse(local); } catch(e){}
+    var localCount = localArr.length;
+    var remoteCount = allEntries.length;
+
+    if (remoteCount > 0 && localCount === 0) {
+      // Fresh login — load from Firebase
+      localStorage.setItem('expense_ledger', JSON.stringify(allEntries));
+      populateFilters();
+      updateHeaderContext();
+      renderMonthPicker();
+      showToast('Data loaded · ' + allEntries.length + ' entries');
+    } else if (localCount > 0) {
+      // Has local data — push it to Firebase (local is source of truth)
+      syncPushNow();
+    }
+    // Load settings (categories)
+    userCol('settings').doc('default').get().then(function(doc) {
+      if (doc.exists) {
+        var d = doc.data();
+        if (d.custom_categories) localStorage.setItem('custom_categories', d.custom_categories);
+        if (d.custom_cat_rules)  localStorage.setItem('custom_cat_rules',  d.custom_cat_rules);
+      }
+    });
+    syncSetStatus('live');
+    if (callback) callback();
+  }).catch(function(err) {
+    console.error('Load error:', err);
+    syncSetStatus('error');
+    if (callback) callback();
   });
 }
 
@@ -305,78 +348,7 @@ function syncPush() {
 }
 
 function syncStartListener() {
-  if (_syncUnsubscribe) _syncUnsubscribe();
-  if (!_db || !_userId) return;
-  // Load data from Firebase ONCE on login — no realtime listener
-  // This prevents deleted items from ever being restored by a listener
-  userCol('expense_months').get().then(function(snapshot) {
-    var allEntries = [];
-    snapshot.forEach(function(doc) {
-      var d = doc.data();
-      if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
-    });
-    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
-    // Track which months exist in Firebase
-    window._knownFirebaseMonths = [];
-    snapshot.forEach(function(doc){ window._knownFirebaseMonths.push(doc.id); });
-    var local      = localStorage.getItem('expense_ledger') || '[]';
-    var localCount = 0; try { localCount = JSON.parse(local).length; } catch(e){}
-    var remoteCount = allEntries.length;
-    if (remoteCount === 0) { syncPush(); return; }
-    // Only load from remote if local is empty (fresh login)
-    if (localCount === 0) {
-      localStorage.setItem('expense_ledger', JSON.stringify(allEntries));
-      var active = document.querySelector('.panel.active');
-      if (active) {
-        var id = active.id;
-        if (id==='panel-ledger')    renderLedger();
-        if (id==='panel-daily')     renderDailyView();
-        if (id==='panel-dashboard') renderDashboard();
-        if (id==='panel-manage')    renderManagePanel();
-        updateHeaderContext();
-      }
-    } else {
-      // Local has data — push local to Firebase (local is source of truth)
-      syncPush();
-    }
-    syncSetStatus('live');
-  }).catch(function(err){ console.error('Load error:', err); syncSetStatus('error'); });
-
-  userCol('settings').doc('default').onSnapshot(function(doc) {
-    if (!doc.exists || _isMerging) return;
-    var d = doc.data();
-    if (d.custom_categories) localStorage.setItem('custom_categories', d.custom_categories);
-    if (d.custom_cat_rules)  localStorage.setItem('custom_cat_rules',  d.custom_cat_rules);
-  }, function(){});
-
-  // Sync budgets from Firebase
-  userCol('settings').doc('budgets').get().then(function(doc) {
-    if (!doc.exists) return;
-    var d = doc.data();
-    if (d.data) { localStorage.setItem('expense_budgets', d.data); }
-  });
-
-  // Sync trash from Firebase (also called immediately on login via fetchTrashFromFirebase)
-  fetchTrashFromFirebase();
-  // Also listen for realtime updates
-  userCol('settings').doc('trash').onSnapshot(function(doc) {
-    if (!doc.exists || _isMerging) return;
-    if (window._trashDeletePending) return; // permanent delete in progress — ignore remote
-    var d = doc.data();
-    if (d.items) {
-      var localTrash  = loadTrash();
-      var remoteTrash = [];
-      try { remoteTrash = JSON.parse(d.items); } catch(e){}
-      var seen = {};
-      var merged = [];
-      localTrash.concat(remoteTrash).forEach(function(t) {
-        var key = String(t._trash_id);
-        if (!seen[key]) { seen[key] = true; merged.push(t); }
-      });
-      saveTrash(merged);
-      renderTrashPanel();
-    }
-  }, function(){});
+  // Handled by syncLoadFromFirebase in startSync
 }
 
 // ── Registration ──
