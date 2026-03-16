@@ -4856,7 +4856,7 @@ function populateFilters(){
 var _inactivityTimer   = null;
 var _countdownTimer    = null;
 var _countdownSeconds  = 0;
-var INACTIVE_MINUTES   = 20;
+var INACTIVE_MINUTES   = 5;
 var COUNTDOWN_SECONDS  = 60;
 
 function resetInactivityTimer() {
@@ -4919,6 +4919,15 @@ function hideInactivityWarning() {
 //  RECYCLE BIN
 // ════════════════════════════════
 var TRASH_KEY = 'expense_trash'; // base key, actual key is per-user
+
+function pushTrashToFirebase() {
+  if (!_db || !_userId) return;
+  window._trashDeletePending = true;
+  var trashData = localStorage.getItem(getTrashKey()) || '[]';
+  userCol('settings').doc('trash').set({ items: trashData, updated: Date.now() })
+    .then(function(){ setTimeout(function(){ window._trashDeletePending = false; }, 5000); })
+    .catch(function(){ window._trashDeletePending = false; });
+}
 
 function fetchTrashFromFirebase() {
   if (!_db || !_userId) return;
@@ -5015,10 +5024,7 @@ function restoreFromTrash(trashId) {
       }
       saveTrash(trash);
       renderTrashPanel();
-      // Switch to Import tab
-      var importBtn = document.querySelector('nav.tabs button:first-child');
-      switchTab('import', importBtn);
-      showToast('Line sent back to Import — fix and re-parse');
+      showToast('Line sent back to Import notepad — go to Import tab when ready to fix');
     } else {
       // Normal deleted item — restore to ledger
       var restored = {};
@@ -5032,6 +5038,7 @@ function restoreFromTrash(trashId) {
         saveData(data);
       }
       saveTrash(trash);
+      pushTrashToFirebase();
       renderTrashPanel();
       renderManagePanel();
       updateHeaderContext();
@@ -6014,6 +6021,45 @@ function dismissBackupPrompt() {
 
 // Override exportCSV to track last backup date
 var _origExportCSV = null;
+
+// Re-sync when user returns to the app (tab focus, phone unlock)
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible' && _userId && _db) {
+    // Fetch latest trash from Firebase
+    if (!window._trashDeletePending) fetchTrashFromFirebase();
+    // Fetch latest ledger data
+    if (!window._deletePending) {
+      userCol('expense_months').get().then(function(snapshot) {
+        var allEntries = [];
+        var fbMonths = [];
+        snapshot.forEach(function(doc) {
+          fbMonths.push(doc.id);
+          var d = doc.data();
+          if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
+        });
+        allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+        window._knownFirebaseMonths = fbMonths;
+        var local = localStorage.getItem('expense_ledger') || '[]';
+        var localArr = []; try { localArr = JSON.parse(local); } catch(e){}
+        // Only update if Firebase has different data
+        var remote = JSON.stringify(allEntries);
+        if (remote !== local && allEntries.length > 0) {
+          localStorage.setItem('expense_ledger', allEntries.length >= localArr.length ? remote : local);
+          updateHeaderContext();
+          renderMonthPicker();
+          var active = document.querySelector('.panel.active');
+          if (active) {
+            var id = active.id;
+            if (id==='panel-ledger')    renderLedger();
+            if (id==='panel-daily')     renderDailyView();
+            if (id==='panel-dashboard') renderDashboard();
+            if (id==='panel-manage')    renderManagePanel();
+          }
+        }
+      }).catch(function(){});
+    }
+  }
+});
 
 // INIT - adjust main padding
 // INIT - adjust main padding to account for fixed nav bar
