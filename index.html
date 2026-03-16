@@ -566,7 +566,12 @@ function logOut() {
   localStorage.removeItem('expense_ledger');
   localStorage.removeItem('custom_categories');
   localStorage.removeItem('custom_cat_rules');
-  localStorage.removeItem(TRASH_KEY + '_' + _userId); // clear this user's trash from device
+  localStorage.removeItem(TRASH_KEY + '_' + _userId);
+  // Reset pill 2 dropdowns so they re-init on next login
+  var yrSel = document.getElementById('hdr-filter-year');
+  var moSel = document.getElementById('hdr-filter-month');
+  if (yrSel) yrSel.innerHTML = '';
+  if (moSel) moSel.innerHTML = '';
   _db = null; _userId = null;
   localStorage.removeItem(UID_KEY);
   showPinScreen();
@@ -2239,6 +2244,24 @@ function selectMonth(monthNum) {
   pickerMonth = monthNum;
   renderMonthPicker();
   loadMonthIntoTextarea();
+  // Sync pill 2 to the selected month
+  var yrSel = document.getElementById('hdr-filter-year');
+  var moSel = document.getElementById('hdr-filter-month');
+  if (yrSel && moSel) {
+    // Make sure the year option exists
+    var found = false;
+    for (var i=0; i<yrSel.options.length; i++) {
+      if (yrSel.options[i].value === String(pickerYear)) { yrSel.selectedIndex = i; found = true; break; }
+    }
+    if (!found) {
+      var opt = document.createElement('option');
+      opt.value = String(pickerYear); opt.textContent = String(pickerYear);
+      yrSel.appendChild(opt);
+      yrSel.value = String(pickerYear);
+    }
+    moSel.value = pad(monthNum);
+    // Reset options length so pill 2 will re-init with correct data next time
+  }
   updateHeaderContext();
 }
 
