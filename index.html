@@ -565,8 +565,7 @@ function updateUserDisplay() {
     if (_userId) {
       btns.innerHTML =
         '<button id="mode-switch-btn" onclick="showModeOverlay()" style="background:none;border:1px solid rgba(74,124,89,0.6);border-radius:4px;color:#8dd4a8;cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128260; SWITCH</button>' +
-        ' <button onclick="logOut()" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; LOG OUT</button>' +
-        ' <button onclick="switchUser()" style="background:none;border:1px solid rgba(181,69,27,0.5);border-radius:4px;color:var(--rust);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">USER</button>';
+        ' <button onclick="logOut()" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; LOG OUT</button>';
     } else {
       btns.innerHTML =
         '<button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; SIGN IN</button>';
@@ -6325,7 +6324,167 @@ function autoCategoryIncome(desc) {
 }
 
 // ── Income parser ── supports both : and tab separators
+var _incomeImportMode = 'month'; // 'month' | 'year'
+
+function setIncomeImportMode(mode) {
+  _incomeImportMode = mode;
+  var mBtn = document.getElementById('inc-mode-month-btn');
+  var yBtn = document.getElementById('inc-mode-year-btn');
+  var picker = document.getElementById('inc-months-grid');
+  if (mode === 'month') {
+    mBtn.style.background = 'var(--ink)'; mBtn.style.color = 'var(--gold2)';
+    yBtn.style.background = 'transparent'; yBtn.style.color = 'var(--muted)';
+    if (picker) picker.style.opacity = '1'; picker.style.pointerEvents = '';
+    document.getElementById('inc-import-period-label').textContent = 'Select a month';
+    document.getElementById('inc-import-status').textContent = 'Select a month on the left to begin';
+    document.getElementById('inc-parse-btn').textContent = '▼ Parse Income';
+  } else {
+    yBtn.style.background = 'var(--ink)'; yBtn.style.color = 'var(--gold2)';
+    mBtn.style.background = 'transparent'; mBtn.style.color = 'var(--muted)';
+    if (picker) { picker.style.opacity = '0.3'; picker.style.pointerEvents = 'none'; }
+    document.getElementById('inc-import-period-label').textContent = incPickerYear + ' (Full Year)';
+    document.getElementById('inc-import-status').textContent = 'Paste your full year of income data below';
+    document.getElementById('inc-parse-btn').textContent = '▼ Parse Full Year';
+    document.getElementById('inc-raw-input').value = '';
+  }
+}
+
+// Year mode parser — parses all months, splits by detected dates
+function parseIncomeYear() {
+  var raw = document.getElementById('inc-raw-input').value.trim();
+  if (!raw) { showToast('Paste your full year data first'); return; }
+
+  var lines   = raw.split(/[\r\n]+/);
+  var dateRe  = /^\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\s*$/;
+  var currentDate = null;
+  var byMonth = {}; // { 'YYYY-MM': [{date,desc,amount,currency}...] }
+  var skipped = [];
+  var dateErrors = []; // dates outside incPickerYear
+
+  function extractIncAmt(s) {
+    var m = s.match(/^(.+?)[:\s]+([€₦$£#])\s*([\d,]+\.?\d*)\s*$/);
+    if (m) {
+      var sym = m[2];
+      return { desc: m[1].trim(), amtStr: m[3].replace(/,/g,''), currency: (sym==='€')?'EUR':(sym==='₦'||sym==='#')?'NGN':(sym==='$')?'USD':'GBP' };
+    }
+    return null;
+  }
+
+  lines.forEach(function(rawLine) {
+    var line = rawLine.replace(/[✅✓✔☑*]+\s*$/, '').trim();
+    var dm = line.match(dateRe);
+    if (dm) {
+      var p = dm[1].split(/[-\/]/);
+      var d = (p[0].length===4)
+        ? p[0]+'-'+pad(parseInt(p[1]))+'-'+pad(parseInt(p[2]))
+        : p[2]+'-'+pad(parseInt(p[1]))+'-'+pad(parseInt(p[0]));
+      currentDate = d;
+      var yr = parseInt(d.substring(0,4));
+      if (yr !== incPickerYear) {
+        dateErrors.push({ line: rawLine.trim(), date: d, year: yr });
+      }
+      return;
+    }
+    if (!currentDate || !line) return;
+    var result = extractIncAmt(line);
+    if (result && result.desc) {
+      var amt = parseFloat(result.amtStr);
+      if (!isNaN(amt) && amt > 0) {
+        var mKey = currentDate.substring(0,7);
+        if (!byMonth[mKey]) byMonth[mKey] = [];
+        byMonth[mKey].push({ id: Date.now()+Math.random(), date: currentDate, desc: result.desc, amount: amt, currency: result.currency, category: autoCategoryIncome(result.desc) });
+      } else {
+        skipped.push(rawLine.trim());
+      }
+    } else if (/\d/.test(line)) {
+      skipped.push(rawLine.trim());
+    }
+  });
+
+  var months = Object.keys(byMonth);
+  var totalItems = months.reduce(function(s,m){ return s+byMonth[m].length; }, 0);
+
+  // Show date errors if any — user must confirm or fix
+  if (dateErrors.length > 0) {
+    var errDiv = document.getElementById('inc-parse-stats');
+    errDiv.style.display = 'block';
+    var html = '<div style="background:#fff3cd;border:1.5px solid #e8a020;border-radius:4px;padding:12px 16px;margin-bottom:10px;">' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;color:#7a4800;margin-bottom:8px;">⚠ ' + dateErrors.length + ' dates are outside ' + incPickerYear + '</div>' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.7rem;color:#7a4800;max-height:120px;overflow-y:auto;margin-bottom:10px;">';
+    dateErrors.slice(0,10).forEach(function(e){ html += '<div>→ '+e.date+' (year '+e.year+')</div>'; });
+    if (dateErrors.length > 10) html += '<div>...and '+(dateErrors.length-10)+' more</div>';
+    html += '</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button class="btn btn-ghost" style="font-size:0.72rem;padding:6px 12px;border-color:#e8a020;color:#7a4800;" onclick="incYearProceedWithSkip()">Skip wrong-year dates, parse rest</button>' +
+        '<button class="btn btn-success" style="font-size:0.72rem;padding:6px 12px;" onclick="incYearProceedAll()">Parse all anyway</button>' +
+      '</div>' +
+    '</div>';
+    html += '<div style="font-family:DM Mono,monospace;font-size:0.75rem;color:var(--muted);">Found <strong style="color:var(--gold);">'+totalItems+'</strong> items across '+months.length+' months</div>';
+    errDiv.innerHTML = html;
+    // Store parsed data temporarily
+    window._incYearParsed  = byMonth;
+    window._incYearSkipped = skipped;
+    return;
+  }
+
+  // No errors — proceed directly
+  window._incYearParsed  = byMonth;
+  window._incYearSkipped = skipped;
+  incYearProceedAll();
+}
+
+function incYearProceedWithSkip() {
+  var byMonth = window._incYearParsed || {};
+  // Remove entries whose year !== incPickerYear
+  var cleaned = {};
+  Object.keys(byMonth).forEach(function(ym) {
+    if (ym.substring(0,4) === String(incPickerYear)) {
+      cleaned[ym] = byMonth[ym];
+    } else {
+      (window._incYearSkipped = window._incYearSkipped||[]).push(
+        byMonth[ym].map(function(i){ return i.date+': '+i.desc; })
+      );
+    }
+  });
+  window._incYearParsed = cleaned;
+  incYearSaveAll();
+}
+
+function incYearProceedAll() {
+  incYearSaveAll();
+}
+
+function incYearSaveAll() {
+  var byMonth = window._incYearParsed || {};
+  var skipped = window._incYearSkipped || [];
+  var allNew  = [];
+  Object.values(byMonth).forEach(function(items){ allNew = allNew.concat(items); });
+
+  if (!allNew.length) { showToast('No valid income entries found'); return; }
+
+  // Add to income pending for categorization
+  incPendingItems = allNew;
+
+  // Send skipped to trash
+  if (skipped.length) {
+    var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+    var now = new Date().toISOString().substring(0,10);
+    skipped.forEach(function(s) {
+      if (typeof s === 'string') incTrash.push({ _raw_line:s, date:'', _trash_source:'skipped', _trash_date:now, _trash_id:Date.now()+Math.random() });
+    });
+    localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+  }
+
+  var months = Object.keys(byMonth).length;
+  document.getElementById('inc-ps-count').textContent = allNew.length;
+  document.getElementById('inc-parse-stats').style.display = 'block';
+  document.getElementById('inc-ps-ok-row').style.display = 'flex';
+  showToast('Parsed ' + allNew.length + ' items across ' + months + ' months' + (skipped.length?' · '+skipped.length+' skipped':''));
+  renderIncomeCatTable();
+}
+
 function parseIncomeInput() {
+  if (_incomeImportMode === 'year') { parseIncomeYear(); return; }
   var raw = document.getElementById('inc-raw-input').value.trim();
   if (!raw) { showToast('Paste your income data first'); return; }
   if (!incPickerMonth) { showToast('Select a month first'); return; }
