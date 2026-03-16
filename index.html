@@ -364,7 +364,23 @@ function hidePinScreen() {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'none';
   setTimeout(resetInactivityTimer, 1000);
-  setTimeout(checkBackupReminder, 3000); // check backup reminder after login
+  setTimeout(checkBackupReminder, 3000);
+  // Show mode selection overlay
+  setTimeout(function(){
+    var savedMode = localStorage.getItem(APP_MODE_KEY);
+    if (savedMode) {
+      _appMode = savedMode;
+      applyMode();
+    } else {
+      showModeOverlay();
+    }
+    // Load income data from Firebase
+    loadIncomeFromFirebase(function(){
+      if (_appMode === 'income') {
+        renderIncomeMonthPicker(); incPopulateFilters(); renderIncomeLedger();
+      }
+    });
+  }, 500);
 }
 function showRegisterStep() {
   document.getElementById('pin-step-register').style.display = 'block';
@@ -548,8 +564,9 @@ function updateUserDisplay() {
   if (btns) {
     if (_userId) {
       btns.innerHTML =
-        '<button onclick="logOut()" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; LOG OUT</button>' +
-        ' <button onclick="switchUser()" style="background:none;border:1px solid rgba(181,69,27,0.5);border-radius:4px;color:var(--rust);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">SWITCH</button>';
+        '<button id="mode-switch-btn" onclick="showModeOverlay()" style="background:none;border:1px solid rgba(74,124,89,0.6);border-radius:4px;color:#8dd4a8;cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128260; SWITCH</button>' +
+        ' <button onclick="logOut()" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; LOG OUT</button>' +
+        ' <button onclick="switchUser()" style="background:none;border:1px solid rgba(181,69,27,0.5);border-radius:4px;color:var(--rust);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">USER</button>';
     } else {
       btns.innerHTML =
         '<button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; SIGN IN</button>';
@@ -1169,6 +1186,15 @@ nav.tabs.header-hidden button {
   <button onclick="switchTab('budget',this)"><span class="tab-icon">&#127919;</span><span class="tab-label"> Budget</span></button>
   <button onclick="switchTab('manage',this)"><span class="tab-icon">&#9881;</span><span class="tab-label"> Manage</span></button>
 </nav>
+<!-- Income nav -->
+<nav class="tabs" id="income-nav" style="display:none;">
+  <button class="active" onclick="switchIncomeTab('inc-import',this)"><span class="tab-icon">&#128221;</span><span class="tab-label"> Import</span></button>
+  <button onclick="switchIncomeTab('inc-categorize',this)"><span class="tab-icon">&#127991;</span><span class="tab-label"> Categorize</span></button>
+  <button onclick="switchIncomeTab('inc-monthly',this)"><span class="tab-icon">&#128197;</span><span class="tab-label"> Monthly</span></button>
+  <button onclick="switchIncomeTab('inc-dashboard',this)"><span class="tab-icon">&#128200;</span><span class="tab-label"> Dashboard</span></button>
+  <button onclick="switchIncomeTab('inc-ledger',this)"><span class="tab-icon">&#128220;</span><span class="tab-label"> Ledger</span></button>
+  <button onclick="switchIncomeTab('inc-manage',this)"><span class="tab-icon">&#9881;</span><span class="tab-label"> Manage</span></button>
+</nav>
 </div><!-- end fixed-topbar -->
 
 <!-- Collapsible big header — scrolls with page, sits under fixed bar -->
@@ -1736,6 +1762,26 @@ nav.tabs.header-hidden button {
 
 
 <!-- ══ PIN LOGIN OVERLAY ══ -->
+<!-- ══ MODE SELECTION OVERLAY ══ -->
+<div id="mode-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+  <div style="text-align:center;max-width:500px;width:100%;">
+    <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My <span style="color:var(--gold);">Finance</span> Ledger</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;letter-spacing:2px;margin-bottom:36px;">WHAT WOULD YOU LIKE TO MANAGE?</div>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+      <button onclick="selectMode('expenses')" style="flex:1;min-width:180px;max-width:220px;padding:28px 20px;background:rgba(200,150,46,0.1);border:2px solid var(--gold);border-radius:8px;cursor:pointer;transition:all 0.2s;text-align:center;" onmouseover="this.style.background='rgba(200,150,46,0.2)'" onmouseout="this.style.background='rgba(200,150,46,0.1)'">
+        <div style="font-size:2.5rem;margin-bottom:10px;">💸</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--gold2);margin-bottom:6px;">Expenses</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;line-height:1.6;">Track your spending<br>across all currencies</div>
+      </button>
+      <button onclick="selectMode('income')" style="flex:1;min-width:180px;max-width:220px;padding:28px 20px;background:rgba(74,124,89,0.1);border:2px solid var(--sage);border-radius:8px;cursor:pointer;transition:all 0.2s;text-align:center;" onmouseover="this.style.background='rgba(74,124,89,0.2)'" onmouseout="this.style.background='rgba(74,124,89,0.1)'">
+        <div style="font-size:2.5rem;margin-bottom:10px;">💰</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#8dd4a8;margin-bottom:6px;">Income</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;line-height:1.6;">Track your earnings<br>and receipts</div>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="pin-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
   <div style="text-align:center;max-width:400px;width:100%;">
     <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My <span style="color:var(--gold);">Expense</span> Ledger</div>
@@ -6018,6 +6064,980 @@ function dismissBackupPrompt() {
 
 // Override exportCSV to track last backup date
 var _origExportCSV = null;
+
+
+// ════════════════════════════════════════════════════
+//  INCOME MODULE
+// ════════════════════════════════════════════════════
+
+var _appMode = 'expenses'; // 'expenses' | 'income'
+var APP_MODE_KEY = 'expense_app_mode';
+
+var INC_CATS = ['Salary','Stipends/Allowance','Commission','Tips','Gift','Loan Received','Refund','Business/Freelance','Other'];
+var INC_CAT_COLORS = {
+  'Salary':'#3d5a73','Stipends/Allowance':'#4a7c59','Commission':'#c8962e',
+  'Tips':'#2e7d8a','Gift':'#6b3d8c','Loan Received':'#b5451b',
+  'Refund':'#5a6b3d','Business/Freelance':'#7c4a4a','Other':'#6b5e50'
+};
+var INC_CAT_RULES = [
+  {cat:'Salary', kw:['salary','fbn insurance','first bank salary','fbni salary','monthly pay']},
+  {cat:'Stipends/Allowance', kw:['npower','stipend','allowance','bursary']},
+  {cat:'Commission', kw:['commission','deal','closed deals','fbni commission']},
+  {cat:'Tips', kw:['tip','dashed','gave me','treat']},
+  {cat:'Gift', kw:['gift','present','souvenir','rice','birthday','christmas']},
+  {cat:'Loan Received', kw:['loan','lend me','borrowed me','lent me','borrow']},
+  {cat:'Refund', kw:['refund','repay','repayment','paid back','return']},
+  {cat:'Business/Freelance', kw:['website','design','freelance','payment from','proceeds','business','invest']}
+];
+
+var incPickerYear  = new Date().getFullYear();
+var incPickerMonth = new Date().getMonth() + 1;
+var incPendingItems = [];
+
+// ── Storage ──
+var INC_LEDGER_KEY = 'income_ledger';
+var INC_TRASH_KEY  = 'income_trash';
+var INC_CATS_KEY   = 'income_custom_categories';
+
+function loadIncomeData() {
+  try { return JSON.parse(localStorage.getItem(INC_LEDGER_KEY) || '[]'); } catch(e){ return []; }
+}
+function saveIncomeData(data) {
+  localStorage.setItem(INC_LEDGER_KEY, JSON.stringify(data));
+  syncIncomeToFirebase();
+}
+function loadIncomeCustomCats() {
+  try { return JSON.parse(localStorage.getItem(INC_CATS_KEY) || '[]'); } catch(e){ return []; }
+}
+function saveIncomeCustomCat(cat) {
+  if (!cat || INC_CATS.indexOf(cat) !== -1) return;
+  var saved = loadIncomeCustomCats();
+  if (saved.indexOf(cat) === -1) { saved.push(cat); localStorage.setItem(INC_CATS_KEY, JSON.stringify(saved)); }
+}
+function getAllIncomeCats() {
+  var saved = loadIncomeCustomCats();
+  var all = INC_CATS.concat(saved);
+  loadIncomeData().forEach(function(i){ if(i.category && all.indexOf(i.category)===-1) all.push(i.category); });
+  return all.filter(function(c,i,a){ return a.indexOf(c)===i; }).sort();
+}
+function getIncCatColor(cat) {
+  return INC_CAT_COLORS[cat] || '#6b5e50';
+}
+
+// ── Firebase sync for income ──
+function syncIncomeToFirebase() {
+  if (!_db || !_userId) return;
+  var data = loadIncomeData();
+  var byMonth = {};
+  data.forEach(function(e) {
+    var k = e.date ? e.date.substring(0,7) : 'unknown';
+    if (!byMonth[k]) byMonth[k] = [];
+    byMonth[k].push(e);
+  });
+  var batch = _db.batch();
+  var localMonths = Object.keys(byMonth);
+  localMonths.forEach(function(ym) {
+    batch.set(userCol('income_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
+  });
+  var knownMonths = window._knownIncomeMonths || [];
+  knownMonths.forEach(function(ym) {
+    if (localMonths.indexOf(ym) === -1) batch.delete(userCol('income_months').doc(ym));
+  });
+  window._knownIncomeMonths = localMonths;
+  batch.commit().catch(function(e){ console.error('Income sync error:', e); });
+}
+
+function loadIncomeFromFirebase(cb) {
+  if (!_db || !_userId) { if(cb) cb(); return; }
+  userCol('income_months').get().then(function(snapshot) {
+    var allEntries = [];
+    var fbMonths = [];
+    snapshot.forEach(function(doc) {
+      fbMonths.push(doc.id);
+      var d = doc.data();
+      if (d.entries) allEntries = allEntries.concat(d.entries);
+    });
+    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    window._knownIncomeMonths = fbMonths;
+    var local = loadIncomeData();
+    if (allEntries.length > 0 && local.length === 0) {
+      localStorage.setItem(INC_LEDGER_KEY, JSON.stringify(allEntries));
+    } else if (local.length > 0) {
+      syncIncomeToFirebase();
+    }
+    if (cb) cb();
+  }).catch(function(){ if(cb) cb(); });
+}
+
+// ── Mode switching ──
+function showModeOverlay() {
+  var o = document.getElementById('mode-overlay');
+  if (o) o.style.display = 'flex';
+}
+function hideModeOverlay() {
+  var o = document.getElementById('mode-overlay');
+  if (o) o.style.display = 'none';
+}
+function selectMode(mode) {
+  _appMode = mode;
+  localStorage.setItem(APP_MODE_KEY, mode);
+  hideModeOverlay();
+  applyMode();
+}
+function applyMode() {
+  var expMain  = document.querySelector('main > *:not(#income-main)');
+  var incMain  = document.getElementById('income-main');
+  var mainNav  = document.getElementById('main-nav');
+  var incNav   = document.getElementById('income-nav');
+  var modBtn   = document.getElementById('mode-switch-btn');
+
+  if (_appMode === 'income') {
+    // Hide all expense panels
+    document.querySelectorAll('#main-nav ~ * .panel').forEach(function(p){ p.style.display='none'; });
+    if (mainNav) mainNav.style.display = 'none';
+    if (incNav)  incNav.style.display  = '';
+    if (incMain) incMain.style.display = 'block';
+    if (modBtn)  { modBtn.textContent = '💸 Expenses'; modBtn.style.borderColor='rgba(200,150,46,0.6)'; modBtn.style.color='var(--gold2)'; }
+    // Re-init income
+    renderIncomeMonthPicker();
+    incPopulateFilters();
+    renderIncomeLedger();
+    var incManageTotal = document.getElementById('inc-manage-total');
+    if (incManageTotal) incManageTotal.textContent = loadIncomeData().length;
+  } else {
+    if (mainNav) mainNav.style.display = '';
+    if (incNav)  incNav.style.display  = 'none';
+    if (incMain) incMain.style.display = 'none';
+    // Restore expense panels
+    document.querySelectorAll('.panel').forEach(function(p){
+      if (!p.closest('#income-main')) p.style.display = '';
+    });
+    if (modBtn) { modBtn.textContent = '💰 Income'; modBtn.style.borderColor='rgba(74,124,89,0.6)'; modBtn.style.color='#8dd4a8'; }
+    updateHeaderContext();
+  }
+}
+
+// ── Income tab switching ──
+function switchIncomeTab(name, btn) {
+  document.querySelectorAll('#income-main .panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('#income-nav button').forEach(function(b){ b.classList.remove('active'); });
+  var panel = document.getElementById('panel-' + name);
+  if (panel) panel.classList.add('active');
+  if (btn)   btn.classList.add('active');
+  if (name === 'inc-categorize')  renderIncomeCatTable();
+  if (name === 'inc-monthly')     { incPopulateDailyFilters(); renderIncomeMonthly(); }
+  if (name === 'inc-dashboard')   renderIncomeDashboard();
+  if (name === 'inc-ledger')      { incPopulateFilters(); renderIncomeLedger(); }
+  if (name === 'inc-manage')      renderIncomeManage();
+}
+
+// ── Income month picker ──
+function changeIncomeYear(delta) {
+  incPickerYear += delta;
+  document.getElementById('inc-picker-year-display').textContent = incPickerYear;
+  renderIncomeMonthPicker();
+}
+function renderIncomeMonthPicker() {
+  var data = loadIncomeData();
+  var hasKeys = {};
+  data.forEach(function(i){ hasKeys[i.date.substring(0,7)] = true; });
+  var grid = document.getElementById('inc-months-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  MONTHS.forEach(function(m, idx) {
+    var mn  = idx + 1;
+    var key = incPickerYear + '-' + pad(mn);
+    var btn = document.createElement('button');
+    btn.className = 'month-btn';
+    btn.textContent = m;
+    if (hasKeys[key]) btn.classList.add('has-data');
+    if (incPickerMonth === mn) btn.classList.add('selected');
+    btn.addEventListener('click', function(){ incPickerMonth = mn; renderIncomeMonthPicker(); loadIncomeMonthIntoTextarea(); });
+    grid.appendChild(btn);
+  });
+}
+function loadIncomeMonthIntoTextarea() {
+  var key   = incPickerYear + '-' + pad(incPickerMonth);
+  var label = MONTHS_FULL[incPickerMonth-1] + ' ' + incPickerYear;
+  document.getElementById('inc-import-period-label').textContent = label;
+  var data      = loadIncomeData();
+  var monthData = data.filter(function(i){ return i.date.substring(0,7)===key; });
+  var ta        = document.getElementById('inc-raw-input');
+  var statusEl  = document.getElementById('inc-import-status');
+  var clearBtn  = document.getElementById('inc-btn-clear-month');
+  if (monthData.length > 0) {
+    var byDate = {};
+    monthData.forEach(function(i){ if(!byDate[i.date]) byDate[i.date]=[]; byDate[i.date].push(i); });
+    var lines = [];
+    Object.keys(byDate).sort().forEach(function(date) {
+      var p = date.split('-');
+      lines.push(p[2]+'-'+p[1]+'-'+p[0]);
+      byDate[date].forEach(function(item) {
+        lines.push(item.desc + ': ' + (SYMS[item.currency]||'') + fmtNum(item.amount));
+      });
+      lines.push('');
+    });
+    ta.value = lines.join(String.fromCharCode(10));
+    statusEl.textContent = monthData.length + ' entries saved — edit and re-parse';
+    if (clearBtn) clearBtn.style.display = 'inline-flex';
+  } else {
+    ta.value = '';
+    statusEl.textContent = 'No income for this month yet';
+    if (clearBtn) clearBtn.style.display = 'none';
+  }
+  document.getElementById('inc-parse-stats').style.display = 'none';
+}
+function clearIncomeMonthData() {
+  var key = incPickerYear + '-' + pad(incPickerMonth);
+  saveIncomeData(loadIncomeData().filter(function(i){ return i.date.substring(0,7)!==key; }));
+  loadIncomeMonthIntoTextarea();
+  renderIncomeMonthPicker();
+}
+function loadIncomeSample() {
+  document.getElementById('inc-raw-input').value =
+    '01-03-2026' + String.fromCharCode(10) +
+    'Monthly salary: ₦70,000' + String.fromCharCode(10) +
+    'Freelance website job: $150' + String.fromCharCode(10) +
+    '' + String.fromCharCode(10) +
+    '15-03-2026' + String.fromCharCode(10) +
+    'Commission on closed deal: ₦8,500' + String.fromCharCode(10) +
+    'Tip from customer: ₦2,000' + String.fromCharCode(10) +
+    'Gift from uncle: ₦5,000';
+  incPickerYear = 2026; incPickerMonth = 3;
+  document.getElementById('inc-picker-year-display').textContent = 2026;
+  renderIncomeMonthPicker();
+  document.getElementById('inc-import-period-label').textContent = 'March 2026';
+}
+
+// ── Income auto-category ──
+function autoCategoryIncome(desc) {
+  var d = desc.toLowerCase();
+  // Check custom rules first
+  var custom = loadIncomeCustomCats();
+  // Built-in rules
+  for (var i=0; i<INC_CAT_RULES.length; i++) {
+    var rule = INC_CAT_RULES[i];
+    for (var j=0; j<rule.kw.length; j++) {
+      if (d.indexOf(rule.kw[j]) !== -1) return rule.cat;
+    }
+  }
+  return 'Other';
+}
+
+// ── Income parser ── supports both : and tab separators
+function parseIncomeInput() {
+  var raw = document.getElementById('inc-raw-input').value.trim();
+  if (!raw) { showToast('Paste your income data first'); return; }
+  if (!incPickerMonth) { showToast('Select a month first'); return; }
+
+  incPendingItems = [];
+  var skipped = [];
+  var lines = raw.split(/[\r\n]+/);
+  var currentDate = null;
+  var dateRe = /^\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\s*$/;
+
+  function extractIncomeAmt(s) {
+    // Try currency symbol
+    var m = s.match(/^(.*?)[\s:]*([€₦$£#])\s*([\d,]+\.?\d*)\s*$/);
+    if (m) {
+      var sym = m[2];
+      return {
+        desc: m[1].trim().replace(/[:\s]+$/, '').trim(),
+        amtStr: m[3].replace(/,/g,''),
+        currency: (sym==='€')?'EUR':(sym==='₦'||sym==='#')?'NGN':(sym==='$')?'USD':'GBP'
+      };
+    }
+    // Try colon separator: "desc: amount" or "desc: #amount"
+    var colonM = s.match(/^(.+?):\s*([€₦$£#])\s*([\d,]+\.?\d*)\s*$/);
+    if (colonM) {
+      var sym2 = colonM[2];
+      return {
+        desc: colonM[1].trim(),
+        amtStr: colonM[3].replace(/,/g,''),
+        currency: (sym2==='€')?'EUR':(sym2==='₦'||sym2==='#')?'NGN':(sym2==='$')?'USD':'GBP'
+      };
+    }
+    return null;
+  }
+
+  lines.forEach(function(rawLine) {
+    var line = rawLine.replace(/[✅✓✔☑*]+\s*$/, '').trim();
+    var dm = line.match(dateRe);
+    if (dm) {
+      var p = dm[1].split(/[-\/]/);
+      currentDate = (p[0].length===4)
+        ? p[0]+'-'+pad(parseInt(p[1]))+'-'+pad(parseInt(p[2]))
+        : p[2]+'-'+pad(parseInt(p[1]))+'-'+pad(parseInt(p[0]));
+      return;
+    }
+    if (!currentDate || !line) return;
+
+    var result = extractIncomeAmt(line);
+    if (result && result.desc) {
+      var amt = parseFloat(result.amtStr);
+      if (!isNaN(amt) && amt > 0) {
+        incPendingItems.push({
+          id: Date.now() + Math.random(),
+          date: currentDate,
+          desc: result.desc,
+          amount: amt,
+          currency: result.currency,
+          category: autoCategoryIncome(result.desc)
+        });
+      } else {
+        skipped.push(rawLine.trim());
+      }
+    } else if (/\d/.test(line)) {
+      // Has numbers but no currency symbol
+      skipped.push(rawLine.trim());
+    }
+    // Lines with no numbers at all are silently ignored
+  });
+
+  // Send skipped to income trash
+  if (skipped.length) {
+    var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY) || '[]');
+    var now = new Date().toISOString().substring(0,10);
+    skipped.forEach(function(s) {
+      incTrash.push({ _raw_line:s, date:currentDate||'', _trash_source:'skipped', _trash_date:now, _trash_id:Date.now()+Math.random() });
+    });
+    localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+    showToast('Parsed ' + incPendingItems.length + ' · ' + skipped.length + ' skipped to recycle bin');
+  } else {
+    showToast('Parsed ' + incPendingItems.length + ' income entries');
+  }
+
+  document.getElementById('inc-ps-count').textContent = incPendingItems.length;
+  document.getElementById('inc-parse-stats').style.display = 'block';
+  document.getElementById('inc-ps-ok-row').style.display = incPendingItems.length ? 'flex' : 'none';
+  renderIncomeCatTable();
+}
+
+// ── Income categorize ──
+var incCatViewMode = 'pending';
+var incCatEditItems = [];
+
+function applyIncomeCatFilter() {
+  var val = document.getElementById('inc-cat-year-filter').value;
+  if (val === 'pending') {
+    incCatViewMode = 'pending';
+    incCatEditItems = incPendingItems;
+  } else {
+    var data = loadIncomeData().filter(function(i){ return i.date.substring(0,4)===val; });
+    incCatEditItems = data.map(function(i){ return Object.assign({},i); });
+    incCatViewMode = val;
+    document.getElementById('inc-btn-save-pending').textContent = 'Update Categories';
+  }
+  renderIncomeCatTable();
+}
+
+function renderIncomeCatTable() {
+  var data  = loadIncomeData();
+  var years = []; data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }); years.sort().reverse();
+  var ySel  = document.getElementById('inc-cat-year-filter');
+  var curY  = ySel.value;
+  ySel.innerHTML = '<option value="pending">Pending</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  if (curY && curY !== 'pending' && years.indexOf(curY)!==-1) ySel.value = curY;
+
+  var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
+  document.getElementById('inc-cat-filter-count').textContent = items.length + ' items';
+  if (!items.length) {
+    document.getElementById('inc-categorize-empty').style.display = 'block';
+    document.getElementById('inc-categorize-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('inc-categorize-empty').style.display = 'none';
+  document.getElementById('inc-categorize-content').style.display = 'block';
+  document.getElementById('inc-cat-count').textContent = items.length;
+
+  var tbody = document.getElementById('inc-categorize-tbody');
+  tbody.innerHTML = '';
+  var allCats = getAllIncomeCats();
+
+  items.forEach(function(item, idx) {
+    var tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+
+    // Description + amount cell
+    var mainTd = document.createElement('td');
+    mainTd.style.cssText = 'padding:5px 8px;border-right:1px solid #eee;';
+    mainTd.innerHTML =
+      '<div style="font-size:0.75rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;margin-bottom:2px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+
+      ' <span style="font-family:DM Mono,monospace;font-size:0.68rem;font-weight:700;color:var(--sage);">'+(SYMS[item.currency]||'')+fmtNum(item.amount)+'</span></div>'+
+      '<div style="font-family:DM Mono,monospace;font-size:0.6rem;color:var(--muted);">'+item.date+'</div>';
+    tr.appendChild(mainTd);
+
+    // Category dropdown
+    var catTd = document.createElement('td');
+    catTd.style.cssText = 'padding:4px 6px;';
+    var sel = document.createElement('select');
+    sel.style.cssText = 'font-family:DM Sans,sans-serif;font-size:0.78rem;padding:5px 8px;border:1.5px solid var(--border);border-radius:3px;background:white;width:100%;outline:none;cursor:pointer;';
+    allCats.forEach(function(c) {
+      var o = document.createElement('option'); o.value = c; o.textContent = c;
+      if (c === item.category) o.selected = true;
+      sel.appendChild(o);
+    });
+    // Custom category option
+    var customOpt = document.createElement('option'); customOpt.value = '__new__'; customOpt.textContent = '+ New category...';
+    sel.appendChild(customOpt);
+    sel.addEventListener('change', function() {
+      if (sel.value === '__new__') {
+        var newCat = prompt('Enter new category name:');
+        if (newCat && newCat.trim()) {
+          saveIncomeCustomCat(newCat.trim());
+          item.category = newCat.trim();
+          renderIncomeCatTable();
+        } else { sel.value = item.category; }
+      } else {
+        item.category = sel.value;
+      }
+    });
+    catTd.appendChild(sel);
+    tr.appendChild(catTd);
+    tbody.appendChild(tr);
+  });
+}
+
+function autoCategorizePendingIncome() {
+  var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
+  items.forEach(function(i){ i.category = autoCategoryIncome(i.desc); });
+  renderIncomeCatTable();
+  showToast('Auto-categorized all income items');
+}
+
+function saveAllPendingIncome() {
+  if (incCatViewMode === 'pending') {
+    if (!incPendingItems.length) return;
+    var existing = loadIncomeData();
+    var toAdd = incPendingItems.filter(function(i) {
+      return !existing.some(function(e){ return e.date===i.date && e.desc===i.desc && e.amount===i.amount; });
+    });
+    saveIncomeData(existing.concat(toAdd));
+    showToast('Saved ' + toAdd.length + ' income entries');
+    incPendingItems = [];
+  } else {
+    var data = loadIncomeData();
+    var updMap = {};
+    incCatEditItems.forEach(function(i){ updMap[String(i.id)] = i.category; });
+    var changed = 0;
+    data.forEach(function(i){ if(updMap[String(i.id)] && updMap[String(i.id)]!==i.category){ i.category=updMap[String(i.id)]; changed++; } });
+    saveIncomeData(data);
+    showToast('Updated ' + changed + ' categories');
+  }
+  renderIncomeCatTable();
+  renderIncomeMonthPicker();
+  incPopulateFilters();
+}
+
+// ── Income Monthly View ──
+function incPopulateDailyFilters() {
+  var data = loadIncomeData();
+  var years = []; data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }); years.sort().reverse();
+  var ySel = document.getElementById('inc-month-year');
+  ySel.innerHTML = '<option value="all">All Years</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  var mSel = document.getElementById('inc-month-month');
+  mSel.innerHTML = '<option value="all">All Months</option>' + MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
+}
+
+function renderIncomeMonthly() {
+  var data   = loadIncomeData();
+  var year   = document.getElementById('inc-month-year').value;
+  var month  = document.getElementById('inc-month-month').value;
+  if (year  !== 'all') data = data.filter(function(i){ return i.date.indexOf(year)===0; });
+  if (month !== 'all') data = data.filter(function(i){ return i.date.substring(5,7)===month; });
+  data.sort(function(a,b){ return b.date.localeCompare(a.date); });
+
+  var container = document.getElementById('inc-monthly-content');
+  if (!data.length) {
+    document.getElementById('inc-monthly-empty').style.display = 'block';
+    container.innerHTML = '';
+    return;
+  }
+  document.getElementById('inc-monthly-empty').style.display = 'none';
+
+  // Group by month
+  var byMonth = {};
+  data.forEach(function(i) {
+    var k = i.date.substring(0,7);
+    if (!byMonth[k]) byMonth[k] = [];
+    byMonth[k].push(i);
+  });
+
+  container.innerHTML = '';
+  Object.keys(byMonth).sort().reverse().forEach(function(ym) {
+    var items = byMonth[ym];
+    var p = ym.split('-');
+    var mLabel = MONTHS_FULL[parseInt(p[1])-1] + ' ' + p[0];
+    var totals = {};
+    items.forEach(function(i){ totals[i.currency]=(totals[i.currency]||0)+i.amount; });
+    var pillsHtml = Object.keys(totals).map(function(c){
+      return '<span class="day-total-pill '+c+'" style="background:rgba(74,124,89,0.15);color:var(--sage);">'+(SYMS[c]||'')+fmtNum(totals[c])+'</span>';
+    }).join('');
+
+    var block = document.createElement('div');
+    block.style.cssText = 'margin-bottom:10px;border-radius:5px;overflow:hidden;border:1px solid var(--border);box-shadow:2px 2px 0 var(--shadow);';
+
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;user-select:none;background:white;';
+    hdr.innerHTML =
+      '<div style="display:flex;align-items:center;gap:14px;">'+
+        '<div style="font-family:Playfair Display,serif;font-size:1.3rem;font-weight:900;color:var(--sage);">'+mLabel+'</div>'+
+        '<div style="font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);">'+items.length+' entries</div>'+
+        '<div style="display:flex;gap:6px;">'+pillsHtml+'</div>'+
+      '</div>'+
+      '<span style="font-size:0.75rem;color:var(--muted);">&#9660;</span>';
+
+    var body = document.createElement('div');
+    body.style.display = 'none';
+    body.style.cssText += 'background:#fafaf7;border-top:1px solid var(--border);';
+
+    // Items table
+    var tbl = document.createElement('table');
+    tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.8rem;';
+    items.forEach(function(item, ii) {
+      var color = getIncCatColor(item.category);
+      var tr = document.createElement('tr');
+      tr.style.cssText = 'border-bottom:1px solid #f0e8d8;'+(ii%2===0?'':'background:#fdf8f2;');
+      tr.innerHTML =
+        '<td style="padding:6px 12px;font-family:DM Mono,monospace;font-size:0.7rem;color:#666;white-space:nowrap;">'+item.date+'</td>'+
+        '<td style="padding:6px 12px;font-size:0.8rem;">'+item.desc+'</td>'+
+        '<td style="padding:6px 12px;"><span style="font-size:0.68rem;padding:2px 7px;border-radius:10px;background:'+color+'15;color:'+color+';border:1px solid '+color+'30;">'+item.category+'</span></td>'+
+        '<td style="padding:6px 12px;font-family:DM Mono,monospace;font-weight:600;text-align:right;color:var(--sage);">'+(SYMS[item.currency]||'')+fmtNum(item.amount)+'</td>';
+      tbl.appendChild(tr);
+    });
+    body.appendChild(tbl);
+
+    hdr.addEventListener('click', function(){
+      var open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      hdr.style.background = open ? 'white' : 'var(--ink)';
+      hdr.style.color = open ? '' : 'var(--paper)';
+    });
+    block.appendChild(hdr); block.appendChild(body);
+    container.appendChild(block);
+  });
+}
+
+// ── Income Dashboard ──
+var incCharts = {};
+function renderIncomeDashboard() {
+  var data = loadIncomeData();
+  if (!data.length) {
+    document.getElementById('inc-dash-empty').style.display = 'block';
+    document.getElementById('inc-dash-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('inc-dash-empty').style.display = 'none';
+  document.getElementById('inc-dash-content').style.display = 'block';
+
+  var yrSel = document.getElementById('inc-dash-year');
+  var years = []; data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }); years.sort().reverse();
+  var savedYr = yrSel.value;
+  yrSel.innerHTML = '<option value="all">All Years</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  if (savedYr) yrSel.value = savedYr;
+
+  var year = yrSel.value;
+  var cur  = document.getElementById('inc-dash-currency').value;
+  var filtered = data.filter(function(i){ return i.amount > 0; });
+  if (year !== 'all') filtered = filtered.filter(function(i){ return i.date.indexOf(year)===0; });
+  if (cur  !== 'all') filtered = filtered.filter(function(i){ return i.currency===cur; });
+
+  // Stats
+  var byCur = {};
+  filtered.forEach(function(i){ byCur[i.currency]=(byCur[i.currency]||0)+i.amount; });
+  var statsRow = document.getElementById('inc-stats-row');
+  var statItems = [{label:'Total Entries',value:filtered.length,sym:'',isCur:false,cls:'total'}];
+  Object.keys(byCur).forEach(function(c){
+    statItems.push({label:'Total '+c,value:byCur[c],sym:SYMS[c]||'',isCur:true,cls:'naira'});
+  });
+  statsRow.innerHTML = statItems.map(function(s){
+    return '<div class="stat-card '+s.cls+'"><div class="stat-label">'+s.label+'</div><div class="stat-value" style="color:var(--sage);">'+(s.isCur?s.sym+fmtNum(s.value):s.value)+'</div></div>';
+  }).join('');
+
+  // Monthly trend chart
+  var mCur = document.getElementById('inc-monthly-currency').value;
+  var mData = filtered.filter(function(i){ return i.currency===mCur; });
+  var byMonth = {};
+  mData.forEach(function(i){ var k=i.date.substring(0,7); byMonth[k]=(byMonth[k]||0)+i.amount; });
+  var mKeys = Object.keys(byMonth).sort();
+  var mLabels = mKeys.map(function(k){ var p=k.split('-'); return MONTHS[parseInt(p[1])-1]+' '+p[0].slice(2); });
+  var mVals   = mKeys.map(function(k){ return +byMonth[k].toFixed(2); });
+  var subEl = document.getElementById('inc-monthly-sub');
+  if (subEl) subEl.textContent = mLabels.length + ' months in ' + mCur;
+  if (incCharts['inc-chart-monthly']) { incCharts['inc-chart-monthly'].destroy(); }
+  if (mKeys.length) {
+    var ctx = document.getElementById('inc-chart-monthly').getContext('2d');
+    incCharts['inc-chart-monthly'] = new Chart(ctx, {type:'line', data:{labels:mLabels,datasets:[{label:mCur,data:mVals,borderColor:'#4a7c59',backgroundColor:'rgba(74,124,89,0.08)',tension:0.4,fill:true,pointBackgroundColor:'#4a7c59',pointRadius:3}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return (SYMS[mCur]||'')+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
+  }
+
+  // Yearly chart
+  var yCur = document.getElementById('inc-yearly-currency').value;
+  var yData = data.filter(function(i){ return i.amount>0 && i.currency===yCur; });
+  var byYear = {};
+  yData.forEach(function(i){ var y=i.date.substring(0,4); byYear[y]=(byYear[y]||0)+i.amount; });
+  var yKeys = Object.keys(byYear).sort();
+  var yVals = yKeys.map(function(y){ return +byYear[y].toFixed(2); });
+  var ySubEl = document.getElementById('inc-yearly-sub');
+  if (ySubEl) ySubEl.textContent = yKeys.length + ' years in ' + yCur;
+  if (incCharts['inc-chart-yearly']) { incCharts['inc-chart-yearly'].destroy(); }
+  if (yKeys.length) {
+    var ctx2 = document.getElementById('inc-chart-yearly').getContext('2d');
+    incCharts['inc-chart-yearly'] = new Chart(ctx2, {type:'line', data:{labels:yKeys,datasets:[{label:yCur,data:yVals,borderColor:'#4a7c59',backgroundColor:'rgba(74,124,89,0.08)',tension:0.4,fill:true,pointBackgroundColor:'#4a7c59',pointRadius:5,pointHoverRadius:7}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return (SYMS[yCur]||'')+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
+  }
+
+  // Category bars
+  var catCur = document.getElementById('inc-cat-dash-currency').value;
+  var catData = filtered.filter(function(i){ return catCur==='all' || i.currency===catCur; });
+  var byCat = {};
+  catData.forEach(function(i){ byCat[i.category]=(byCat[i.category]||0)+i.amount; });
+  var cats = Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; });
+  var maxVal = cats.length ? Math.max.apply(null, cats.map(function(c){ return byCat[c]; })) : 1;
+  var catCont = document.getElementById('inc-cat-bars-container');
+  catCont.innerHTML = '';
+  cats.forEach(function(cat) {
+    var color = getIncCatColor(cat);
+    var pct   = (byCat[cat]/maxVal*100).toFixed(1);
+    var row   = document.createElement('div');
+    row.style.cssText = 'margin-bottom:10px;';
+    row.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'+
+        '<span style="display:flex;align-items:center;gap:6px;font-size:0.82rem;"><span style="width:9px;height:9px;border-radius:50%;background:'+color+';display:inline-block;"></span>'+cat+'</span>'+
+        '<span style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:600;">'+fmtCompact(byCat[cat])+'</span>'+
+      '</div>'+
+      '<div style="height:7px;background:#ede7d9;border-radius:4px;overflow:hidden;">'+
+        '<div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:4px;transition:width 0.5s;"></div>'+
+      '</div>';
+    catCont.appendChild(row);
+  });
+}
+
+// ── Income Ledger ──
+function incPopulateFilters() {
+  var data = loadIncomeData();
+  var years = []; data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }); years.sort().reverse();
+  var cats  = []; data.forEach(function(i){ if(cats.indexOf(i.category)===-1) cats.push(i.category); }); cats.sort();
+  ['inc-led-year','inc-dash-year'].forEach(function(id){
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = '<option value="all">All Years</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+    if (years.indexOf(cur)!==-1) sel.value = cur;
+  });
+  var catSel = document.getElementById('inc-led-cat');
+  if (catSel) {
+    catSel.innerHTML = '<option value="all">All Categories</option>' + cats.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+  }
+  var moSel = document.getElementById('inc-led-month');
+  if (moSel && moSel.options.length < 2) {
+    moSel.innerHTML = '<option value="all">All Months</option>' + MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
+  }
+}
+
+function renderIncomeLedger() {
+  var data = loadIncomeData();
+  var year = document.getElementById('inc-led-year').value;
+  var month= document.getElementById('inc-led-month').value;
+  var cur  = document.getElementById('inc-led-currency').value;
+  var cat  = document.getElementById('inc-led-cat').value;
+  var srch = document.getElementById('inc-led-search').value.toLowerCase().trim();
+  if (year  !== 'all') data = data.filter(function(i){ return i.date.indexOf(year)===0; });
+  if (month !== 'all') data = data.filter(function(i){ return i.date.substring(5,7)===month; });
+  if (cur   !== 'all') data = data.filter(function(i){ return i.currency===cur; });
+  if (cat   !== 'all') data = data.filter(function(i){ return i.category===cat; });
+  if (srch)            data = data.filter(function(i){ return i.desc.toLowerCase().indexOf(srch)!==-1; });
+  data.sort(function(a,b){ return b.date.localeCompare(a.date); });
+
+  if (!data.length) {
+    document.getElementById('inc-ledger-empty').style.display = 'block';
+    document.getElementById('inc-ledger-wrap').style.display  = 'none';
+    return;
+  }
+  document.getElementById('inc-ledger-empty').style.display = 'none';
+  document.getElementById('inc-ledger-wrap').style.display  = 'block';
+
+  var acc = document.getElementById('inc-ledger-accordion');
+  acc.innerHTML = '';
+
+  // Summary bar
+  var totals = {};
+  data.forEach(function(i){ totals[i.currency]=(totals[i.currency]||0)+i.amount; });
+  var totStr = Object.keys(totals).map(function(c){ return '<span class="currency-badge" style="background:rgba(74,124,89,0.1);color:var(--sage);">'+(SYMS[c]||'')+fmtNum(totals[c])+' '+c+'</span>'; }).join(' ');
+  var sumBar = document.createElement('div');
+  sumBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--paper2);border:1px solid var(--border);border-radius:4px 4px 0 0;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);flex-wrap:wrap;gap:6px;';
+  sumBar.innerHTML = '<span>'+data.length+' entries</span><span style="display:flex;gap:6px;">'+totStr+'</span>';
+  acc.appendChild(sumBar);
+
+  var PAGE = 200;
+  var page = acc._page || 0;
+  var pageData = data.slice(page*PAGE, (page+1)*PAGE);
+  var allCats = getAllIncomeCats();
+
+  var tbl = document.createElement('table');
+  tbl.style.cssText = 'width:100%;border-collapse:collapse;background:white;border:1px solid var(--border);border-top:none;';
+  var thead = document.createElement('thead');
+  thead.innerHTML = '<tr style="background:var(--ink);color:var(--paper);"><th style="padding:6px 8px;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DATE</th><th style="padding:6px 8px;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DESCRIPTION</th><th style="padding:6px 8px;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;text-align:right;">AMOUNT</th><th style="padding:6px 8px;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">CATEGORY</th><th style="padding:6px 4px;width:40px;"></th></tr>';
+  tbl.appendChild(thead);
+
+  var tbody = document.createElement('tbody');
+  pageData.forEach(function(item, idx) {
+    var color = getIncCatColor(item.category);
+    var tr = document.createElement('tr');
+    tr.style.cssText = (idx%2===0?'background:white;':'background:#f9f7f3;');
+
+    var dateTd = document.createElement('td');
+    dateTd.style.cssText = 'padding:4px 7px;font-family:DM Mono,monospace;font-size:0.7rem;color:#666;white-space:nowrap;border-right:1px solid #eee;';
+    dateTd.textContent = item.date;
+
+    var descTd = document.createElement('td');
+    descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;max-width:160px;';
+    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div><div style="font-family:DM Mono,monospace;font-size:0.6rem;color:#999;" class="mob-date-sub">'+item.date+'</div>';
+
+    var amtTd = document.createElement('td');
+    amtTd.style.cssText = 'padding:4px 7px;font-family:DM Mono,monospace;font-size:0.78rem;font-weight:600;text-align:right;white-space:nowrap;border-right:1px solid #eee;color:var(--sage);';
+    amtTd.textContent = (SYMS[item.currency]||'')+fmtNum(item.amount);
+
+    var catTd = document.createElement('td');
+    catTd.style.cssText = 'padding:4px 7px;border-right:1px solid #eee;';
+    var pill = document.createElement('span');
+    pill.style.cssText = 'font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+color+'15;color:'+color+';border:1px solid '+color+'30;cursor:pointer;white-space:nowrap;';
+    pill.textContent = item.category;
+    pill.addEventListener('click', function() {
+      var sel = document.createElement('select');
+      sel.style.cssText = 'font-size:0.78rem;padding:3px 6px;border:1.5px solid var(--sage);border-radius:3px;background:white;outline:none;';
+      allCats.forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; if(c===item.category) o.selected=true; sel.appendChild(o); });
+      sel.addEventListener('change', function(){
+        var nc=sel.value; var d2=loadIncomeData();
+        d2.forEach(function(d){ if(String(d.id)===String(item.id)) d.category=nc; });
+        saveIncomeData(d2); item.category=nc;
+        pill.textContent=nc; pill.style.color=getIncCatColor(nc); sel.replaceWith(pill);
+        showToast('Updated to "'+nc+'"');
+      });
+      sel.addEventListener('blur', function(){ sel.replaceWith(pill); });
+      pill.replaceWith(sel); sel.focus();
+    });
+    catTd.appendChild(pill);
+
+    var actTd = document.createElement('td');
+    actTd.style.cssText = 'padding:3px 6px;text-align:center;';
+    var delBtn = document.createElement('button');
+    delBtn.style.cssText = 'padding:2px 7px;font-size:0.7rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', function() {
+      var d3 = loadIncomeData();
+      var toTrash = d3.filter(function(i){ return String(i.id)===String(item.id); });
+      if (toTrash.length) {
+        var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+        var now = new Date().toISOString().substring(0,10);
+        toTrash.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random()})); });
+        localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+      }
+      saveIncomeData(d3.filter(function(i){ return String(i.id)!==String(item.id); }));
+      renderIncomeLedger();
+      showToast('Moved to income recycle bin');
+    });
+    actTd.appendChild(delBtn);
+
+    tr.appendChild(dateTd); tr.appendChild(descTd); tr.appendChild(amtTd);
+    tr.appendChild(catTd); tr.appendChild(actTd);
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  acc.appendChild(tbl);
+}
+
+function clearIncomeLedgerFilters() {
+  document.getElementById('inc-led-year').value = String(new Date().getFullYear());
+  document.getElementById('inc-led-month').value = 'all';
+  document.getElementById('inc-led-currency').value = 'all';
+  document.getElementById('inc-led-cat').value = 'all';
+  var s = document.getElementById('inc-led-search'); if(s) s.value = '';
+  renderIncomeLedger();
+}
+
+// ── Income Manage ──
+function renderIncomeManage() {
+  var data = loadIncomeData();
+  var totalEl = document.getElementById('inc-manage-total');
+  if (totalEl) totalEl.textContent = data.length;
+
+  var listEl = document.getElementById('inc-manage-month-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  var byMonth = {};
+  data.forEach(function(i){ var k=i.date.substring(0,7); if(!byMonth[k]) byMonth[k]=[]; byMonth[k].push(i); });
+  Object.keys(byMonth).sort().reverse().forEach(function(key) {
+    var p = key.split('-');
+    var mLabel = MONTHS[parseInt(p[1])-1] + ' ' + p[0];
+    var items  = byMonth[key];
+    var row = document.createElement('div');
+    row.className = 'manage-month-row';
+    row.style.marginBottom = '6px';
+    var info = document.createElement('div');
+    info.innerHTML = '<div class="manage-month-name">'+mLabel+'</div><div class="manage-month-meta">'+items.length+' entries</div>';
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-warn';
+    delBtn.textContent = 'Delete';
+    (function(k2, lbl, its) {
+      delBtn.addEventListener('click', function() {
+        var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+        var now = new Date().toISOString().substring(0,10);
+        var gid = 'incgrp_'+Date.now();
+        its.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:lbl})); });
+        localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+        saveIncomeData(loadIncomeData().filter(function(i){ return i.date.substring(0,7)!==k2; }));
+        renderIncomeManage();
+        showToast(lbl + ' moved to income recycle bin');
+      });
+    })(key, mLabel, items);
+    row.appendChild(info); row.appendChild(delBtn);
+    listEl.appendChild(row);
+  });
+
+  // Render income trash
+  renderIncomeTrash();
+}
+
+function clearAllIncome() {
+  if (!confirm('Delete ALL income data? It will go to the recycle bin.')) return;
+  var all = loadIncomeData();
+  if (all.length) {
+    var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+    var now = new Date().toISOString().substring(0,10);
+    var gid = 'incgrp_'+Date.now();
+    all.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:'All Income Data'})); });
+    localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+  }
+  saveIncomeData([]);
+  renderIncomeManage();
+  showToast('All income data cleared');
+}
+
+function exportIncomeCSV() {
+  var data = loadIncomeData();
+  if (!data.length) { showToast('No income data to export'); return; }
+  var rows = [['Date','Description','Amount','Currency','Category']];
+  data.forEach(function(i){ rows.push([i.date,'"'+i.desc.replace(/"/g,'""')+'"',i.amount,i.currency,i.category]); });
+  var csv = rows.map(function(r){ return r.join(','); }).join(String.fromCharCode(10));
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'income_export.csv'; a.click();
+  showToast('Income CSV exported');
+}
+
+function renderIncomeTrash() {
+  var el = document.getElementById('inc-trash-content');
+  if (!el) return;
+  var trash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+  var badge = document.getElementById('inc-trash-count-badge');
+  if (badge) badge.textContent = trash.length > 0 ? trash.length : '';
+  if (!trash.length) { el.innerHTML = '<div style="text-align:center;padding:20px;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);">Recycle bin is empty</div>'; return; }
+
+  el.innerHTML = '';
+  // Groups
+  var groups = {};
+  var singles = [];
+  trash.forEach(function(t) {
+    if (t._group_id) {
+      if (!groups[t._group_id]) groups[t._group_id] = {label:t._group_label,items:[],date:t._trash_date};
+      groups[t._group_id].items.push(t);
+    } else { singles.push(t); }
+  });
+
+  var tbl = document.createElement('table');
+  tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.72rem;background:white;border:1px solid #c0c0c0;';
+  tbl.innerHTML = '<thead><tr style="background:var(--ink);color:var(--paper);"><th style="padding:5px 7px;font-size:0.65rem;">DATE</th><th style="padding:5px 7px;font-size:0.65rem;">DESCRIPTION</th><th style="padding:5px 7px;font-size:0.65rem;text-align:right;">AMOUNT</th><th style="padding:5px 7px;font-size:0.65rem;">ACTION</th></tr></thead>';
+  var tbody = document.createElement('tbody');
+
+  // Group rows
+  Object.keys(groups).forEach(function(gid) {
+    var grp = groups[gid];
+    var tr = document.createElement('tr');
+    tr.style.cssText = 'background:#fffbf0;border-bottom:2px solid var(--gold);';
+    var td = document.createElement('td'); td.setAttribute('colspan','4'); td.style.cssText = 'padding:8px 10px;';
+    var rowDiv = document.createElement('div');
+    rowDiv.style.cssText = 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;';
+    rowDiv.innerHTML = '<div><span style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--gold);">&#128197; '+grp.label+'</span><span style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-left:8px;">'+grp.items.length+' entries · '+grp.date+'</span></div>';
+    var btnWrap = document.createElement('div'); btnWrap.style.cssText = 'display:flex;gap:6px;';
+    var rb = document.createElement('button'); rb.style.cssText = 'padding:3px 8px;font-size:0.68rem;color:var(--sage);border:1px solid var(--sage);border-radius:2px;background:none;cursor:pointer;'; rb.textContent = '↩ Restore All';
+    (function(g){ rb.addEventListener('click', function(){ restoreIncomeGroup(g); }); })(gid);
+    var db = document.createElement('button'); db.style.cssText = 'padding:3px 8px;font-size:0.68rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;'; db.textContent = 'DEL ALL';
+    (function(g){ db.addEventListener('click', function(){ deleteIncomeGroup(g); }); })(gid);
+    btnWrap.appendChild(rb); btnWrap.appendChild(db);
+    rowDiv.appendChild(btnWrap); td.appendChild(rowDiv); tr.appendChild(td);
+    tbody.appendChild(tr);
+  });
+
+  // Single rows
+  singles.sort(function(a,b){ return (b._trash_date||'').localeCompare(a._trash_date||''); });
+  singles.forEach(function(item, idx) {
+    var tr = document.createElement('tr');
+    tr.style.cssText = (idx%2===0?'background:white;':'background:#f8f8f5;')+'border-bottom:1px solid #ddd;';
+    var dateTd = document.createElement('td'); dateTd.style.cssText = 'padding:3px 7px;font-family:DM Mono,monospace;font-size:0.68rem;color:#666;'; dateTd.textContent = item.date||'—';
+    var descTd = document.createElement('td'); descTd.style.cssText = 'padding:3px 7px;font-size:0.68rem;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; descTd.textContent = item.desc||item._raw_line||'—';
+    var amtTd  = document.createElement('td'); amtTd.style.cssText  = 'padding:3px 7px;font-family:DM Mono,monospace;font-size:0.68rem;text-align:right;color:var(--sage);'; amtTd.textContent = item.amount ? (SYMS[item.currency]||'')+fmtNum(item.amount) : '—';
+    var actTd  = document.createElement('td'); actTd.style.cssText  = 'padding:2px 5px;white-space:nowrap;';
+    if (item._trash_source !== 'skipped' && item.date && item.desc) {
+      var rb2 = document.createElement('button'); rb2.style.cssText = 'padding:1px 5px;font-size:0.65rem;color:var(--sage);border:1px solid var(--sage);border-radius:2px;background:none;cursor:pointer;margin-right:3px;';
+      rb2.textContent = '↩';
+      (function(t){ rb2.addEventListener('click', function(){ restoreIncomeItem(t._trash_id); }); })(item);
+      actTd.appendChild(rb2);
+    }
+    var pb = document.createElement('button'); pb.style.cssText = 'padding:1px 6px;font-size:0.65rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;'; pb.textContent = 'DEL';
+    (function(t){ pb.addEventListener('click', function(){
+      var tr2 = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
+      localStorage.setItem(INC_TRASH_KEY, JSON.stringify(tr2));
+      renderIncomeTrash();
+    }); })(item);
+    actTd.appendChild(pb);
+    tr.appendChild(dateTd); tr.appendChild(descTd); tr.appendChild(amtTd); tr.appendChild(actTd);
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  el.appendChild(tbl);
+}
+
+function restoreIncomeItem(trashId) {
+  var trash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+  var item  = null;
+  trash = trash.filter(function(t){ if(String(t._trash_id)===String(trashId)){item=t;return false;} return true; });
+  if (item) {
+    var restored = {};
+    Object.keys(item).forEach(function(k){ if(k.indexOf('_trash_')===-1 && k.indexOf('_group')===-1) restored[k]=item[k]; });
+    if (restored.id && restored.date) {
+      var data = loadIncomeData();
+      data.push(restored);
+      data.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+      saveIncomeData(data);
+    }
+    localStorage.setItem(INC_TRASH_KEY, JSON.stringify(trash));
+    renderIncomeTrash();
+    showToast('Income entry restored');
+  }
+}
+function restoreIncomeGroup(gid) {
+  var trash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+  var toRestore = trash.filter(function(t){ return t._group_id===gid; });
+  var remaining = trash.filter(function(t){ return t._group_id!==gid; });
+  var data = loadIncomeData();
+  toRestore.forEach(function(item) {
+    var r = {};
+    Object.keys(item).forEach(function(k){ if(k.indexOf('_trash_')===-1&&k.indexOf('_group')===-1) r[k]=item[k]; });
+    if (r.id && r.date) data.push(r);
+  });
+  data.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+  saveIncomeData(data);
+  localStorage.setItem(INC_TRASH_KEY, JSON.stringify(remaining));
+  renderIncomeTrash();
+  renderIncomeManage();
+  showToast(toRestore.length + ' income entries restored');
+}
+function deleteIncomeGroup(gid) {
+  var trash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]').filter(function(t){ return t._group_id!==gid; });
+  localStorage.setItem(INC_TRASH_KEY, JSON.stringify(trash));
+  renderIncomeTrash();
+  showToast('Group permanently deleted');
+}
+
 
 // Re-sync when user returns to the app (tab focus, phone unlock)
 document.addEventListener('visibilitychange', function() {
