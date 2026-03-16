@@ -293,10 +293,19 @@ function syncStartListener() {
     var remoteCount = allEntries.length;
     if (remoteCount === 0) { _isMerging = false; syncPush(); return; }
     if (remote !== local) {
-      // NEVER overwrite local with remote if remote has MORE entries
-      // This prevents deleted items from being restored
-      if (localCount <= remoteCount) { _isMerging = false; return; }
-      localStorage.setItem('expense_ledger', remote);
+      // If local is empty (just logged in / cleared), always load from remote
+      if (localCount === 0 && remoteCount > 0) {
+        localStorage.setItem('expense_ledger', remote);
+      } else if (localCount > remoteCount) {
+        // Local has MORE entries than remote = user just deleted something, push local
+        _isMerging = false; syncPush(); return;
+      } else if (localCount < remoteCount) {
+        // Remote has more = sync down from remote
+        localStorage.setItem('expense_ledger', remote);
+      } else {
+        // Same count but different content - use remote
+        localStorage.setItem('expense_ledger', remote);
+      }
       var active = document.querySelector('.panel.active');
       if (active) {
         var id = active.id;
