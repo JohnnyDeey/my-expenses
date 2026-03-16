@@ -1203,15 +1203,6 @@ nav.tabs.header-hidden button {
     </div>
   </div>
   <div class="header-center">
-    <!-- Header quick search -->
-    <div id="hdr-search-wrap" style="position:relative;margin-bottom:8px;">
-      <input id="hdr-search-input" type="text" placeholder="&#128269; Search all expenses..." 
-        oninput="hdrSearchInput(this.value)"
-        onfocus="hdrSearchShow()"
-        style="width:100%;max-width:360px;padding:8px 14px;font-family:'DM Mono',monospace;font-size:0.78rem;background:rgba(255,255,255,0.08);border:1px solid rgba(200,150,46,0.3);border-radius:20px;color:var(--paper);outline:none;transition:all 0.2s;"
-        onblur="setTimeout(hdrSearchHide,200)">
-      <div id="hdr-search-results" style="display:none;position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);width:380px;max-width:95vw;background:var(--ink);border:1px solid rgba(200,150,46,0.4);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:5000;max-height:320px;overflow-y:auto;"></div>
-    </div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
       <!-- Pill 1: context (follows import picker) -->
       <div class="header-context">
@@ -3396,7 +3387,7 @@ function renderYearlyChart(data, cur) {
       },
       scales: {
         y: {
-          ticks: { callback: function(v){ return sym + v.toLocaleString(); } },
+          ticks: { callback: function(v){ return sym + fmtCompact(v); } },
           grid: { color: 'rgba(0,0,0,0.04)' }
         },
         x: { grid: { display: false } }
@@ -3422,7 +3413,7 @@ function renderMonthlyChart(data, cur){
     tension:0.4,fill:true,pointBackgroundColor:'#c8962e',pointRadius:3
   }]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
     tooltip:{callbacks:{label:function(c){return sym+c.parsed.y.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}}}},
-    scales:{y:{ticks:{callback:function(v){return sym+v.toLocaleString();}},grid:{color:'rgba(0,0,0,0.04)'}},
+    scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},
     x:{grid:{display:false}}}}});
 }
 
@@ -4756,6 +4747,13 @@ function parseCSVLine(line) {
 
 
 function fmtNum(n){return Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});}
+function fmtCompact(n) {
+  var abs = Math.abs(n);
+  if (abs >= 1000000000) return (n/1000000000).toFixed(1).replace(/\.0$/,'') + 'B';
+  if (abs >= 1000000)    return (n/1000000).toFixed(1).replace(/\.0$/,'') + 'M';
+  if (abs >= 1000)       return (n/1000).toFixed(1).replace(/\.0$/,'') + 'K';
+  return fmtNum(n);
+}
 function fmtAmt(amount,currency){return(SYMS[currency]||'')+fmtNum(Math.abs(amount))+(amount<0?' (refund)':'');}
 function pad(n){return String(n).padStart(2,'0');}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2800);}
