@@ -1240,9 +1240,9 @@ nav.tabs.header-hidden button {
       <!-- Pill 2: manual month filter -->
       <div class="header-context" id="hdr-month-filter-pill">
         <div style="display:flex;align-items:center;gap:6px;justify-content:center;margin-bottom:6px;">
-          <select id="hdr-filter-year" onchange="updateMonthFilterPill()" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:2px 6px;border:1px solid rgba(200,150,46,0.3);border-radius:3px;background:transparent;color:var(--gold);outline:none;cursor:pointer;">
+          <select id="hdr-filter-year" onchange="if(_appMode==='expenses') updateMonthFilterPill(); else updateIncomeHeaderContext();" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:2px 6px;border:1px solid rgba(200,150,46,0.3);border-radius:3px;background:transparent;color:var(--gold);outline:none;cursor:pointer;">
           </select>
-          <select id="hdr-filter-month" onchange="updateMonthFilterPill()" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:2px 6px;border:1px solid rgba(200,150,46,0.3);border-radius:3px;background:transparent;color:var(--gold);outline:none;cursor:pointer;">
+          <select id="hdr-filter-month" onchange="if(_appMode==='expenses') updateMonthFilterPill(); else updateIncomeHeaderContext();" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:2px 6px;border:1px solid rgba(200,150,46,0.3);border-radius:3px;background:transparent;color:var(--gold);outline:none;cursor:pointer;">
           </select>
         </div>
         <div class="header-context-pills" id="hdr-filter-pills">
@@ -2964,9 +2964,9 @@ function updateMonthFilterPill() {
   if (moSel.options.length < 2) {
     moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
   }
-  // Restore saved selection if valid, otherwise use default
-  yrSel.value = (savedYrVal && years2.indexOf(savedYrVal) !== -1) ? savedYrVal : String(defYear2);
-  moSel.value = savedMoVal || pad(defMonth2);
+  // Restore saved selection only - no auto-default
+  if (savedYrVal && years2.indexOf(savedYrVal) !== -1) yrSel.value = savedYrVal;
+  if (savedMoVal) moSel.value = savedMoVal;
 
   var selYear  = yrSel.value;
   var selMonth = moSel.value;
@@ -6623,14 +6623,14 @@ function updateIncomeHeaderContext() {
   if (yrSel) {
     yrSel.innerHTML = incYears.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
     // Restore saved selection if valid, else use latestKey
-    yrSel.value = (savedIncYr && incYears.indexOf(savedIncYr) !== -1) ? savedIncYr : (latestKey ? latestKey.substring(0,4) : '');
+    yrSel.value = (savedIncYr && incYears.indexOf(savedIncYr) !== -1) ? savedIncYr : '';
   }
   // Build month if empty
   if (moSel && moSel.options.length < 2) {
     moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
   }
-  if (moSel) {
-    moSel.value = savedIncMo || (latestKey ? latestKey.substring(5,7) : '');
+  if (moSel && savedIncMo) {
+    moSel.value = savedIncMo;
   }
 
   // Use CURRENT selection (what user just clicked) not always latestKey
@@ -7865,6 +7865,36 @@ function deleteIncomeGroup(gid) {
   showToast('Group permanently deleted');
 }
 
+
+// ── GitHub Pages update notifier ──
+var _appVersion = document.documentElement.innerHTML.length; // simple hash
+function checkForAppUpdate() {
+  if (!_userId) return;
+  fetch(window.location.href + '?v=' + Date.now(), {cache: 'no-store'})
+    .then(function(r){ return r.text(); })
+    .then(function(html) {
+      var newVersion = html.length;
+      if (newVersion !== _appVersion && Math.abs(newVersion - _appVersion) > 100) {
+        _appVersion = newVersion;
+        showUpdateBanner();
+      }
+    }).catch(function(){});
+}
+function showUpdateBanner() {
+  var existing = document.getElementById('update-banner');
+  if (existing) return;
+  var banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9995;background:var(--ink);border:2px solid var(--sage);border-radius:8px;padding:12px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.5);white-space:nowrap;';
+  banner.innerHTML =
+    '<span style="font-size:1rem;">🔄</span>'+
+    '<span style="font-family:DM Mono,monospace;font-size:0.75rem;color:var(--paper);">New update available!</span>'+
+    '<button onclick="window.location.reload()" style="padding:5px 14px;background:var(--sage);border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:white;cursor:pointer;">Reload</button>'+
+    '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:1rem;cursor:pointer;padding:0 4px;">×</button>';
+  document.body.appendChild(banner);
+}
+// Check for updates every 5 minutes
+setInterval(checkForAppUpdate, 5 * 60 * 1000);
 
 // Re-sync when user returns to the app (tab focus, phone unlock)
 document.addEventListener('visibilitychange', function() {
