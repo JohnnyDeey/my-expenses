@@ -1728,7 +1728,7 @@ nav.tabs.header-hidden button {
       <div class="year-nav">
         <button onclick="incChangeYear(-1)">&#8592;</button>
         <div id="inc-picker-year-display" class="year-display">2026</div>
-        <button id="inc-mode-year-btn" onclick="setIncomeImportMode('year')" title="Click to import a full year at once" style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;border:1.5px solid var(--border);border-radius:3px;cursor:pointer;background:white;color:var(--muted);padding:4px 10px;transition:all 0.2s;">YEAR</button>
+        <button id="inc-mode-year-btn" onclick="setIncomeImportMode(_incomeImportMode==='year'?'month':'year')" title="Toggle between Month and Year import mode" style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;border:1.5px solid var(--border);border-radius:3px;cursor:pointer;background:white;color:var(--muted);padding:4px 10px;transition:all 0.2s;">YEAR</button>
         <button onclick="incChangeYear(1)">&#8594;</button>
       </div>
       <div id="inc-months-grid" class="months-grid"></div>
@@ -2480,8 +2480,14 @@ function applyHeaderState() {
     wrap.style.overflow   = 'hidden';
   }
 
-  // Nav always visible, never hidden
-  if (nav) { nav.classList.remove('header-hidden'); nav.style.display = ''; }
+  // Nav visibility depends on current mode - don't override applyMode
+  if (nav) {
+    nav.classList.remove('header-hidden');
+    nav.style.display = (_appMode === 'income') ? 'none' : '';
+  }
+  // Income nav
+  var incNav = document.getElementById('income-nav');
+  if (incNav) incNav.style.display = (_appMode === 'income') ? '' : 'none';
 
   // User bar always flex
   var userBar = document.getElementById('hdr-user-bar');
@@ -2924,9 +2930,9 @@ function updateMonthFilterPill() {
     defMonth2 = parseInt(lastKey.substring(5,7));
   }
 
-  // Only init if empty, preserve user selection otherwise
-  if (yrSel.options.length === 0) {
-    yrSel.innerHTML = years2.map(function(y){ return '<option value="'+y+'"'+(y===String(defYear2)?' selected':'')+'>'+y+'</option>'; }).join('');
+  // Rebuild year options; preserve user month/year selection if already set
+  yrSel.innerHTML = years2.map(function(y){ return '<option value="'+y+'"'+(y===String(defYear2)?' selected':'')+'>'+y+'</option>'; }).join('');
+  if (moSel.options.length < 2) {
     moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'"'+(pad(i+1)===pad(defMonth2)?' selected':'')+'>'+m+'</option>'; }).join('');
   }
 
@@ -6696,13 +6702,12 @@ function setIncomeImportMode(mode) {
   var grid   = document.getElementById('inc-months-grid');
   var yNav   = document.getElementById('inc-picker-year-display');
   if (mode === 'month') {
-    // MONTH mode: YEAR button default, year display active
-    if (yBtn) { yBtn.style.background='white'; yBtn.style.color='var(--muted)'; yBtn.style.borderColor='var(--border)'; }
+    // MONTH mode active
+    if (yBtn) { yBtn.textContent='YEAR'; yBtn.style.background='white'; yBtn.style.color='var(--muted)'; yBtn.style.borderColor='var(--border)'; }
     var yrDisp = document.getElementById('inc-picker-year-display');
-    if (yrDisp) { yrDisp.style.opacity='1'; }
-    if (grid) { grid.style.opacity='1'; grid.style.pointerEvents=''; }
+    if (yrDisp) yrDisp.style.opacity = '1';
+    if (grid)  { grid.style.opacity = '1'; grid.style.pointerEvents = ''; }
     document.getElementById('inc-parse-btn').textContent = '▼ Parse Income';
-    // Reload current month data if a month is selected
     if (incPickerMonth) {
       loadIncomeMonthIntoTextarea();
     } else {
@@ -6711,16 +6716,15 @@ function setIncomeImportMode(mode) {
       document.getElementById('inc-raw-input').value = '';
     }
   } else {
-    // YEAR mode: YEAR button highlighted, year display slightly greyed
-    if (yBtn) { yBtn.style.background='var(--ink)'; yBtn.style.color='var(--gold2)'; yBtn.style.borderColor='var(--gold)'; }
+    // YEAR mode active
+    if (yBtn) { yBtn.textContent='MONTH'; yBtn.style.background='var(--ink)'; yBtn.style.color='var(--gold2)'; yBtn.style.borderColor='var(--gold)'; }
     var yrDisp2 = document.getElementById('inc-picker-year-display');
-    if (yrDisp2) { yrDisp2.style.opacity='0.5'; }
-    // Months still visible but greyed — for reference only
-    if (grid) { grid.style.opacity='0.35'; grid.style.pointerEvents='none'; }
+    if (yrDisp2) yrDisp2.style.opacity = '0.5';
+    if (grid)  { grid.style.opacity = '0.35'; grid.style.pointerEvents = 'none'; }
     document.getElementById('inc-import-period-label').textContent = incPickerYear + ' — Full Year';
     document.getElementById('inc-import-status').textContent = 'Paste all ' + incPickerYear + ' income — all months at once';
     document.getElementById('inc-parse-btn').textContent = '▼ Parse Full Year';
-    // Do NOT clear textarea - user keeps their data
+    document.getElementById('inc-raw-input').value = '';
   }
 }
 
