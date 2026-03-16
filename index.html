@@ -604,6 +604,8 @@ function logOut() {
   localStorage.removeItem('custom_categories');
   localStorage.removeItem('custom_cat_rules');
   localStorage.removeItem(TRASH_KEY + '_' + _userId);
+  localStorage.removeItem(getIncKey());
+  localStorage.removeItem(getIncTrashKey());
   // Reset pill 2 dropdowns so they re-init on next login
   var yrSel = document.getElementById('hdr-filter-year');
   var moSel = document.getElementById('hdr-filter-month');
@@ -6393,24 +6395,28 @@ var incPickerMonth = new Date().getMonth() + 1;
 var incPendingItems = [];
 
 // ── Storage ──
-var INC_LEDGER_KEY = 'income_ledger';
+var INC_LEDGER_KEY = 'income_ledger'; // base key - made user-specific via getIncKey()
 var INC_TRASH_KEY  = 'income_trash';
 var INC_CATS_KEY   = 'income_custom_categories';
 
+function getIncKey()      { return 'income_ledger_'      + (_userId||'default'); }
+function getIncTrashKey() { return 'income_trash_'       + (_userId||'default'); }
+function getIncCatsKey()  { return 'income_custom_cats_' + (_userId||'default'); }
+
 function loadIncomeData() {
-  try { return JSON.parse(localStorage.getItem(INC_LEDGER_KEY) || '[]'); } catch(e){ return []; }
+  try { return JSON.parse(localStorage.getItem(getIncKey()) || '[]'); } catch(e){ return []; }
 }
 function saveIncomeData(data) {
-  localStorage.setItem(INC_LEDGER_KEY, JSON.stringify(data));
+  localStorage.setItem(getIncKey(), JSON.stringify(data));
   syncIncomeToFirebase();
 }
 function loadIncomeCustomCats() {
-  try { return JSON.parse(localStorage.getItem(INC_CATS_KEY) || '[]'); } catch(e){ return []; }
+  try { return JSON.parse(localStorage.getItem(getIncCatsKey()) || '[]'); } catch(e){ return []; }
 }
 function saveIncomeCustomCat(cat) {
   if (!cat || INC_CATS.indexOf(cat) !== -1) return;
   var saved = loadIncomeCustomCats();
-  if (saved.indexOf(cat) === -1) { saved.push(cat); localStorage.setItem(INC_CATS_KEY, JSON.stringify(saved)); }
+  if (saved.indexOf(cat) === -1) { saved.push(cat); localStorage.setItem(getIncCatsKey(), JSON.stringify(saved)); }
 }
 function getAllIncomeCats() {
   var saved = loadIncomeCustomCats();
@@ -6459,7 +6465,7 @@ function loadIncomeFromFirebase(cb) {
     window._knownIncomeMonths = fbMonths;
     var local = loadIncomeData();
     if (allEntries.length > 0 && local.length === 0) {
-      localStorage.setItem(INC_LEDGER_KEY, JSON.stringify(allEntries));
+      localStorage.setItem(getIncKey(), JSON.stringify(allEntries));
     } else if (local.length > 0) {
       syncIncomeToFirebase();
     }
@@ -6920,12 +6926,12 @@ function incYearSaveAll() {
 
   // Send skipped to trash
   if (skipped.length) {
-    var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+    var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
     var now = new Date().toISOString().substring(0,10);
     skipped.forEach(function(s) {
       if (typeof s === 'string') incTrash.push({ _raw_line:s, date:'', _trash_source:'skipped', _trash_date:now, _trash_id:Date.now()+Math.random() });
     });
-    localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+    localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
   }
 
   var months = Object.keys(byMonth).length;
@@ -7008,12 +7014,12 @@ function parseIncomeInput() {
 
   // Send skipped to income trash
   if (skipped.length) {
-    var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY) || '[]');
+    var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey()) || '[]');
     var now = new Date().toISOString().substring(0,10);
     skipped.forEach(function(s) {
       incTrash.push({ _raw_line:s, date:currentDate||'', _trash_source:'skipped', _trash_date:now, _trash_id:Date.now()+Math.random() });
     });
-    localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+    localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
     showToast('Parsed ' + incPendingItems.length + ' · ' + skipped.length + ' skipped to recycle bin');
   } else {
     showToast('Parsed ' + incPendingItems.length + ' income entries');
@@ -7533,10 +7539,10 @@ function renderIncomeLedger() {
       var d3 = loadIncomeData();
       var toTrash = d3.filter(function(i){ return String(i.id)===String(item.id); });
       if (toTrash.length) {
-        var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+        var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
         var now = new Date().toISOString().substring(0,10);
         toTrash.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random()})); });
-        localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+        localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
       }
       saveIncomeData(d3.filter(function(i){ return String(i.id)!==String(item.id); }));
       renderIncomeLedger();
@@ -7646,11 +7652,11 @@ function renderIncomeManage() {
       delBtn.textContent = 'Delete';
       (function(k2, lbl, its) {
         delBtn.addEventListener('click', function() {
-          var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+          var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
           var now = new Date().toISOString().substring(0,10);
           var gid = 'incgrp_'+Date.now();
           its.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:lbl})); });
-          localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+          localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
           saveIncomeData(loadIncomeData().filter(function(i){ return i.date.substring(0,7)!==k2; }));
           renderIncomeManage();
           showToast(lbl+' moved to income recycle bin');
@@ -7671,11 +7677,11 @@ function clearAllIncome() {
   if (!confirm('Delete ALL income data? It will go to the recycle bin.')) return;
   var all = loadIncomeData();
   if (all.length) {
-    var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+    var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
     var now = new Date().toISOString().substring(0,10);
     var gid = 'incgrp_'+Date.now();
     all.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:'All Income Data'})); });
-    localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+    localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
   }
   saveIncomeData([]);
   renderIncomeManage();
@@ -7697,7 +7703,7 @@ function exportIncomeCSV() {
 function renderIncomeTrash() {
   var el = document.getElementById('inc-trash-content');
   if (!el) return;
-  var trash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+  var trash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
   var badge = document.getElementById('inc-trash-count-badge');
   if (badge) badge.textContent = trash.length > 0 ? trash.length : '';
   if (!trash.length) { el.innerHTML = '<div style="text-align:center;padding:20px;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);">Recycle bin is empty</div>'; return; }
@@ -7762,8 +7768,8 @@ function renderIncomeTrash() {
         var bufKey = 'import_pending_inc_' + (t.date||'').substring(0,7);
         var existing = localStorage.getItem(bufKey)||'';
         localStorage.setItem(bufKey, existing+(existing?String.fromCharCode(10):'')+( t._raw_line||t.desc||''));
-        var trash2 = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
-        localStorage.setItem(INC_TRASH_KEY, JSON.stringify(trash2));
+        var trash2 = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
+        localStorage.setItem(getIncTrashKey(), JSON.stringify(trash2));
         renderIncomeTrash();
         showToast('Saved to Import notepad for that month');
       } else {
@@ -7773,8 +7779,8 @@ function renderIncomeTrash() {
     actTd.appendChild(rb2);
     var pb = document.createElement('button'); pb.style.cssText = 'padding:1px 6px;font-size:0.65rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;'; pb.textContent = 'DEL';
     (function(t){ pb.addEventListener('click', function(){
-      var tr2 = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
-      localStorage.setItem(INC_TRASH_KEY, JSON.stringify(tr2));
+      var tr2 = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
+      localStorage.setItem(getIncTrashKey(), JSON.stringify(tr2));
       renderIncomeTrash();
     }); })(item);
     actTd.appendChild(pb);
@@ -7786,7 +7792,7 @@ function renderIncomeTrash() {
 }
 
 function restoreIncomeItem(trashId) {
-  var trash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+  var trash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
   var item  = null;
   trash = trash.filter(function(t){ if(String(t._trash_id)===String(trashId)){item=t;return false;} return true; });
   if (item) {
@@ -7798,13 +7804,13 @@ function restoreIncomeItem(trashId) {
       data.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
       saveIncomeData(data);
     }
-    localStorage.setItem(INC_TRASH_KEY, JSON.stringify(trash));
+    localStorage.setItem(getIncTrashKey(), JSON.stringify(trash));
     renderIncomeTrash();
     showToast('Income entry restored');
   }
 }
 function restoreIncomeGroup(gid) {
-  var trash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+  var trash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
   var toRestore = trash.filter(function(t){ return t._group_id===gid; });
   var remaining = trash.filter(function(t){ return t._group_id!==gid; });
   var data = loadIncomeData();
@@ -7815,14 +7821,14 @@ function restoreIncomeGroup(gid) {
   });
   data.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
   saveIncomeData(data);
-  localStorage.setItem(INC_TRASH_KEY, JSON.stringify(remaining));
+  localStorage.setItem(getIncTrashKey(), JSON.stringify(remaining));
   renderIncomeTrash();
   renderIncomeManage();
   showToast(toRestore.length + ' income entries restored');
 }
 function deleteIncomeGroup(gid) {
-  var trash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]').filter(function(t){ return t._group_id!==gid; });
-  localStorage.setItem(INC_TRASH_KEY, JSON.stringify(trash));
+  var trash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(t){ return t._group_id!==gid; });
+  localStorage.setItem(getIncTrashKey(), JSON.stringify(trash));
   renderIncomeTrash();
   showToast('Group permanently deleted');
 }
