@@ -567,7 +567,7 @@ function updateUserDisplay() {
   if (btns) {
     if (_userId) {
       btns.innerHTML =
-        '<button id="mode-switch-btn" onclick="showModeOverlay()" style="background:none;border:1px solid rgba(74,124,89,0.6);border-radius:4px;color:#8dd4a8;cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128260; SWITCH</button>' +
+        '<button id="mode-switch-btn" onclick="showModeSwitchPrompt()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.6);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">SWITCH</button>' +
         ' <button onclick="logOut()" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; LOG OUT</button>';
     } else {
       btns.innerHTML =
@@ -1174,7 +1174,7 @@ nav.tabs.header-hidden button {
   <!-- Right: auth buttons only (HIDE is on big header) -->
   <div style="display:flex;gap:6px;align-items:center;">
     <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.68rem;font-family:'DM Mono',monospace;letter-spacing:1px;white-space:nowrap;">&#9650; HIDE</button>
-    <span id="hdr-mode-label" style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;padding:4px 10px;border-radius:4px;background:rgba(200,150,46,0.15);color:var(--gold2);white-space:nowrap;">&#128184; EXPENSES</span>
+    <span id="hdr-mode-label" style="font-family:'DM Mono',monospace;font-size:0.68rem;font-weight:700;padding:4px 12px;border-radius:4px;background:rgba(200,150,46,0.15);color:var(--gold2);white-space:nowrap;letter-spacing:1px;">&#128184; EXPENSES</span>
     <div id="hdr-user-bar-btns">
       <button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; SIGN IN</button>
     </div>
@@ -6371,7 +6371,51 @@ function selectMode(mode) {
   _appMode = mode;
   localStorage.setItem(APP_MODE_KEY, mode);
   hideModeOverlay();
+  hideSwitchPrompt();
   applyMode();
+}
+
+// ── Inline switch prompt ──
+function showModeSwitchPrompt() {
+  var existing = document.getElementById('mode-switch-prompt');
+  if (existing) { existing.remove(); return; } // toggle off
+
+  var isIncome = _appMode === 'income';
+  var prompt = document.createElement('div');
+  prompt.id  = 'mode-switch-prompt';
+  prompt.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99997;background:rgba(26,20,16,0.92);display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 20px;border-bottom:2px solid var(--gold);';
+
+  var label = document.createElement('span');
+  label.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;color:rgba(255,255,255,0.5);letter-spacing:1px;';
+  label.textContent = 'SWITCH TO:';
+  prompt.appendChild(label);
+
+  var expBtn = document.createElement('button');
+  expBtn.style.cssText = 'padding:10px 28px;border-radius:5px;font-family:DM Mono,monospace;font-size:0.82rem;font-weight:700;letter-spacing:2px;cursor:pointer;' +
+    (isIncome ? 'background:rgba(200,150,46,0.15);border:2px solid rgba(200,150,46,0.35);color:rgba(200,150,46,0.5);' : 'background:rgba(200,150,46,0.9);border:2px solid var(--gold);color:var(--ink);');
+  expBtn.innerHTML = '&#128184; EXPENSES' + (!isIncome ? ' &#10003;' : '');
+  expBtn.addEventListener('click', function(){ selectMode('expenses'); });
+  prompt.appendChild(expBtn);
+
+  var incBtn = document.createElement('button');
+  incBtn.style.cssText = 'padding:10px 28px;border-radius:5px;font-family:DM Mono,monospace;font-size:0.82rem;font-weight:700;letter-spacing:2px;cursor:pointer;' +
+    (isIncome ? 'background:rgba(74,124,89,0.9);border:2px solid var(--sage);color:white;' : 'background:rgba(74,124,89,0.15);border:2px solid rgba(74,124,89,0.4);color:rgba(74,124,89,0.5);');
+  incBtn.innerHTML = '&#128176; INCOME' + (isIncome ? ' &#10003;' : '');
+  incBtn.addEventListener('click', function(){ selectMode('income'); });
+  prompt.appendChild(incBtn);
+
+  var closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.4);font-size:1.2rem;cursor:pointer;padding:0 6px;';
+  closeBtn.textContent = '×';
+  closeBtn.addEventListener('click', hideSwitchPrompt);
+  prompt.appendChild(closeBtn);
+
+  document.body.insertBefore(prompt, document.body.firstChild);
+}
+
+function hideSwitchPrompt() {
+  var p = document.getElementById('mode-switch-prompt');
+  if (p) p.remove();
 }
 function applyMode() {
   var expMain  = document.querySelector('main > *:not(#income-main)');
@@ -6385,7 +6429,6 @@ function applyMode() {
     if (mainNav) { mainNav.style.display = 'none'; }
     if (incNav)  { incNav.style.display  = ''; }
     if (incMain) { incMain.style.display = 'block'; }
-    if (modBtn)  { modBtn.textContent = '💸 Expenses'; modBtn.style.borderColor='rgba(200,150,46,0.6)'; modBtn.style.color='var(--gold2)'; }
     if (modeLabel) { modeLabel.textContent = '💰 INCOME'; modeLabel.style.background='rgba(74,124,89,0.2)'; modeLabel.style.color='#8dd4a8'; }
     // Re-init income
     renderIncomeMonthPicker();
@@ -6398,7 +6441,6 @@ function applyMode() {
     if (mainNav) mainNav.style.display = '';
     if (incNav)  { incNav.style.display = 'none'; }
     if (incMain) { incMain.style.display = 'none'; }
-    if (modBtn) { modBtn.textContent = '💰 Income'; modBtn.style.borderColor='rgba(74,124,89,0.6)'; modBtn.style.color='#8dd4a8'; }
     if (modeLabel) { modeLabel.textContent = '💸 EXPENSES'; modeLabel.style.background='rgba(200,150,46,0.15)'; modeLabel.style.color='var(--gold2)'; }
     updateHeaderContext();
   }
@@ -6445,6 +6487,8 @@ function renderIncomeMonthPicker() {
   });
 }
 function loadIncomeMonthIntoTextarea() {
+  // Only load if in month mode
+  if (_incomeImportMode === 'year') return;
   var key   = incPickerYear + '-' + pad(incPickerMonth);
   var label = MONTHS_FULL[incPickerMonth-1] + ' ' + incPickerYear;
   document.getElementById('inc-import-period-label').textContent = label;
@@ -6469,8 +6513,12 @@ function loadIncomeMonthIntoTextarea() {
     statusEl.textContent = monthData.length + ' entries saved — edit and re-parse';
     if (clearBtn) clearBtn.style.display = 'inline-flex';
   } else {
-    ta.value = '';
-    statusEl.textContent = 'No income for this month yet';
+    // Check pending buffer from recycle bin restore
+    var bufKey = 'import_pending_inc_' + key;
+    var pending = localStorage.getItem(bufKey) || '';
+    ta.value = pending;
+    if (pending) localStorage.removeItem(bufKey);
+    statusEl.textContent = pending ? 'Restored lines from recycle bin — fix and re-parse' : 'No income for this month yet — paste below';
     if (clearBtn) clearBtn.style.display = 'none';
   }
   document.getElementById('inc-parse-stats').style.display = 'none';
@@ -6526,9 +6574,15 @@ function setIncomeImportMode(mode) {
     var yrDisp = document.getElementById('inc-picker-year-display');
     if (yrDisp) { yrDisp.style.opacity='1'; }
     if (grid) { grid.style.opacity='1'; grid.style.pointerEvents=''; }
-    document.getElementById('inc-import-period-label').textContent = 'Select a month';
-    document.getElementById('inc-import-status').textContent = 'Select a month on the left to begin';
     document.getElementById('inc-parse-btn').textContent = '▼ Parse Income';
+    // Reload current month data if a month is selected
+    if (incPickerMonth) {
+      loadIncomeMonthIntoTextarea();
+    } else {
+      document.getElementById('inc-import-period-label').textContent = 'Select a month';
+      document.getElementById('inc-import-status').textContent = 'Select a month on the left to begin';
+      document.getElementById('inc-raw-input').value = '';
+    }
   } else {
     // YEAR mode: YEAR button highlighted, year display slightly greyed
     if (yBtn) { yBtn.style.background='var(--ink)'; yBtn.style.color='var(--gold2)'; yBtn.style.borderColor='var(--gold)'; }
@@ -6539,7 +6593,7 @@ function setIncomeImportMode(mode) {
     document.getElementById('inc-import-period-label').textContent = incPickerYear + ' — Full Year';
     document.getElementById('inc-import-status').textContent = 'Paste all ' + incPickerYear + ' income — all months at once';
     document.getElementById('inc-parse-btn').textContent = '▼ Parse Full Year';
-    document.getElementById('inc-raw-input').value = '';
+    // Do NOT clear textarea - user keeps their data
   }
 }
 
