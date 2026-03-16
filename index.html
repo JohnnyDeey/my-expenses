@@ -1693,7 +1693,8 @@ nav.tabs.header-hidden button {
 <div id="scroll-fab" style="
   position:fixed;
   right:22px;
-  bottom:30px;
+  top:50%;
+  transform:translateY(-50%);
   display:flex;
   flex-direction:column;
   gap:8px;
@@ -2460,13 +2461,14 @@ function parseInput() {
       rightPart = rightPart.replace(/^mon/i, '');
 
       // Case A: right side is a plain amount (possibly with currency prefix)
-      // e.g. "desc\t€2.48" or "desc\t:€2.48" or "desc\t2.48"
+      // e.g. "desc\t€2.48" or "desc\t:€2.48" — must have currency symbol
       var caseA = extractCurAmt(rightPart);
+      // Plain number with NO currency symbol → skip, flag for user
       if (!caseA) {
-        // try plain number
         var plainNum = rightPart.replace(/,/g,'');
         if (/^-?[\d.]+$/.test(plainNum)) {
-          caseA = { desc: leftPart, amtStr: plainNum, currency: 'EUR' };
+          skippedLines.push({ line: rawLine.trim(), reason: 'No currency symbol — unclear if EUR/NGN/USD/GBP' });
+          return;
         }
       }
       if (caseA && caseA.desc === '') caseA.desc = leftPart; // desc was blank, use left
@@ -2503,13 +2505,11 @@ function parseInput() {
         desc = m2.desc; amtStr = m2.amtStr; currency = m2.currency;
         parsed = true;
       } else {
-        // Strategy 3: plain number at end, no currency symbol
+        // Strategy 3: plain number at end but NO currency symbol → skip
         var m3 = cleaned.match(/^(.+?)\s+(mon)?(-?[\d,]+\.?\d*)\s*$/);
         if (m3) {
-          desc = m3[1].trim().replace(/[:\s]+$/, '').trim();
-          amtStr = ((m3[2]||'') + m3[3]).replace(/,/g,'');
-          currency = 'EUR';
-          parsed = true;
+          skippedLines.push({ line: rawLine.trim(), reason: 'No currency symbol — unclear if EUR/NGN/USD/GBP' });
+          return;
         } else {
           // Has digits but didn't parse? Flag it
           if (/\d/.test(cleaned)) {
