@@ -1741,8 +1741,18 @@ nav.tabs.header-hidden button {
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-ghost" id="inc-btn-clear-month" onclick="clearIncomeMonthData()" style="display:none;">Clear</button>
+          <button class="btn btn-ghost" onclick="toggleIncFnr()" style="font-family:'DM Mono',monospace;letter-spacing:1px;">&#128269; F&amp;R</button>
           <button class="btn btn-ghost" onclick="loadIncomeSample()">Sample</button>
         </div>
+      </div>
+      <!-- Income Find & Replace bar -->
+      <div id="inc-fnr-bar" style="display:none;background:var(--ink);border-radius:4px 4px 0 0;padding:10px 14px;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:2px solid var(--gold);">
+        <span style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Find &amp; Replace</span>
+        <input id="inc-fnr-find" type="text" placeholder="Find..." style="font-family:'DM Sans',sans-serif;font-size:0.83rem;padding:6px 10px;border:1.5px solid #3a3020;border-radius:3px;background:#2a2018;color:var(--paper);outline:none;width:160px;">
+        <input id="inc-fnr-replace" type="text" placeholder="Replace with..." style="font-family:'DM Sans',sans-serif;font-size:0.83rem;padding:6px 10px;border:1.5px solid #3a3020;border-radius:3px;background:#2a2018;color:var(--paper);outline:none;width:160px;">
+        <span id="inc-fnr-count" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);min-width:60px;"></span>
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.72rem;color:var(--gold);border-color:#3a3020;" onclick="incFnrReplaceAll()">Replace All</button>
+        <button onclick="toggleIncFnr()" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;margin-left:4px;">&#10005;</button>
       </div>
       <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150"></textarea>
       <div class="import-tip">
@@ -1799,6 +1809,9 @@ nav.tabs.header-hidden button {
     <span class="filter-label">Year:</span>
     <select id="inc-month-year" onchange="renderIncomeMonthly()"><option value="all">All Years</option></select>
     <select id="inc-month-month" onchange="renderIncomeMonthly()"><option value="all">All Months</option></select>
+    <button id="inc-sort-btn" onclick="toggleIncomeSort()" class="btn btn-ghost" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:0.72rem;padding:7px 14px;display:flex;align-items:center;gap:6px;">
+      <span id="inc-sort-icon">&#8595;</span> <span id="inc-sort-label">Newest First</span>
+    </button>
   </div>
   <div id="inc-monthly-empty" class="empty-state"><div class="big">&#128176;</div><p>No income data yet.</p></div>
   <div id="inc-monthly-content"></div>
@@ -1851,6 +1864,18 @@ nav.tabs.header-hidden button {
         <div class="chart-wrap"><canvas id="inc-chart-yearly"></canvas></div>
       </div>
     </div>
+    <!-- Income Heatmap -->
+    <div class="charts-grid wide">
+      <div class="chart-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+          <div><h3>Income Heatmap</h3><div class="chart-sub">Annual &times; monthly intensity</div></div>
+          <select id="inc-heatmap-currency" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
+            <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
+          </select>
+        </div>
+        <div id="inc-heatmap-container"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1868,6 +1893,19 @@ nav.tabs.header-hidden button {
     <select id="inc-led-cat" onchange="renderIncomeLedger()"><option value="all">All Categories</option></select>
     <input type="text" id="inc-led-search" placeholder="Search..." oninput="renderIncomeLedger()">
     <button class="btn btn-danger" onclick="clearIncomeLedgerFilters()">Clear All</button>
+  </div>
+  <!-- Bulk assign bar -->
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
+    <span class="filter-label">Search desc:</span>
+    <input type="text" id="inc-bulk-search" placeholder="Filter by description..." oninput="renderIncomeLedger()"
+      style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
+    <span id="inc-bulk-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
+    <span class="filter-label" style="margin-left:4px;">Assign all to:</span>
+    <select id="inc-bulk-cat-sel" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;min-width:160px;">
+      <option value="">Pick category...</option>
+    </select>
+    <button class="btn btn-success" style="padding:8px 16px;font-size:0.8rem;" onclick="incomeBulkAssign()">&#10003; Assign</button>
+    <button class="btn btn-ghost" style="padding:8px 10px;" onclick="document.getElementById('inc-bulk-search').value='';renderIncomeLedger();">&#10005;</button>
   </div>
   <div id="inc-ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No income entries yet.</p></div>
   <div id="inc-ledger-wrap" style="display:none;"><div id="inc-ledger-accordion"></div></div>
@@ -6610,6 +6648,34 @@ function autoCategoryIncome(desc) {
 }
 
 // ── Income parser ── supports both : and tab separators
+// Income F&R
+function toggleIncFnr() {
+  var bar = document.getElementById('inc-fnr-bar');
+  if (!bar) return;
+  bar.style.display = bar.style.display === 'flex' ? 'none' : 'flex';
+  if (bar.style.display === 'flex') { var f = document.getElementById('inc-fnr-find'); if(f) f.focus(); }
+}
+function incFnrReplaceAll() {
+  var query = document.getElementById('inc-fnr-find').value;
+  var repl  = document.getElementById('inc-fnr-replace').value;
+  if (!query) { showToast('Enter text to find'); return; }
+  var ta = document.getElementById('inc-raw-input');
+  var regex = new RegExp(query.replace(/[-[\]{}()*+?.,\\^$|#]/g,'\\$&'),'gi');
+  var count = (ta.value.match(regex)||[]).length;
+  if (!count) { showToast('No matches found'); return; }
+  ta.value = ta.value.replace(regex, repl);
+  document.getElementById('inc-fnr-count').textContent = '';
+  showToast('Replaced ' + count + ' occurrence' + (count===1?'':'s'));
+}
+
+var _incomeSortDesc = true; // newest first
+function toggleIncomeSort() {
+  _incomeSortDesc = !_incomeSortDesc;
+  document.getElementById('inc-sort-icon').textContent  = _incomeSortDesc ? '↓' : '↑';
+  document.getElementById('inc-sort-label').textContent = _incomeSortDesc ? 'Newest First' : 'Oldest First';
+  renderIncomeMonthly();
+}
+
 var _incomeImportMode = 'month'; // 'month' | 'year'
 
 function setIncomeImportMode(mode) {
@@ -6990,9 +7056,16 @@ function incPopulateDailyFilters() {
   var data = loadIncomeData();
   var years = []; data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }); years.sort().reverse();
   var ySel = document.getElementById('inc-month-year');
-  ySel.innerHTML = '<option value="all">All Years</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
   var mSel = document.getElementById('inc-month-month');
-  mSel.innerHTML = '<option value="all">All Months</option>' + MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
+  // Find latest month with data
+  var allMonthKeys = [];
+  data.forEach(function(i){ if(allMonthKeys.indexOf(i.date.substring(0,7))===-1) allMonthKeys.push(i.date.substring(0,7)); });
+  allMonthKeys.sort();
+  var latestKey = allMonthKeys[allMonthKeys.length-1] || '';
+  var defYear  = latestKey ? latestKey.substring(0,4) : String(new Date().getFullYear());
+  var defMonth = latestKey ? latestKey.substring(5,7) : pad(new Date().getMonth()+1);
+  ySel.innerHTML = '<option value="all">All Years</option>' + years.map(function(y){ return '<option value="'+y+'"'+(y===defYear?' selected':'')+'>'+y+'</option>'; }).join('');
+  mSel.innerHTML = '<option value="all">All Months</option>' + MONTHS.map(function(m,i){ var v=pad(i+1); return '<option value="'+v+'"'+(v===defMonth?' selected':'')+'>'+m+'</option>'; }).join('');
 }
 
 function renderIncomeMonthly() {
@@ -7001,7 +7074,7 @@ function renderIncomeMonthly() {
   var month  = document.getElementById('inc-month-month').value;
   if (year  !== 'all') data = data.filter(function(i){ return i.date.indexOf(year)===0; });
   if (month !== 'all') data = data.filter(function(i){ return i.date.substring(5,7)===month; });
-  data.sort(function(a,b){ return b.date.localeCompare(a.date); });
+  data.sort(function(a,b){ return _incomeSortDesc ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date); });
 
   var container = document.getElementById('inc-monthly-content');
   if (!data.length) {
@@ -7165,6 +7238,53 @@ function renderIncomeDashboard() {
       '</div>';
     catCont.appendChild(row);
   });
+
+  // Heatmap
+  var hmCur = document.getElementById('inc-heatmap-currency').value;
+  renderIncomeHeatmap(data.filter(function(i){ return i.amount>0; }), hmCur);
+}
+
+function renderIncomeHeatmap(data, cur) {
+  var sym = SYMS[cur]||'';
+  var filtered = data.filter(function(i){ return i.currency===cur; });
+  var byYM = {};
+  filtered.forEach(function(i){
+    var y=i.date.substring(0,4); var m=parseInt(i.date.substring(5,7))-1;
+    if(!byYM[y]) byYM[y]=new Array(12).fill(0);
+    byYM[y][m]+=i.amount;
+  });
+  var years = Object.keys(byYM).sort();
+  var hc = document.getElementById('inc-heatmap-container');
+  if (!hc) return;
+  hc.innerHTML='';
+  if (!years.length){ hc.innerHTML='<p style="color:var(--muted);font-family:DM Mono,monospace;font-size:0.78rem;">No income data for '+cur+'</p>'; return; }
+  var allVals=[]; years.forEach(function(y){ byYM[y].forEach(function(v){if(v>0)allVals.push(v);}); });
+  var maxVal=allVals.length?Math.max.apply(null,allVals):1;
+  // Green palette for income
+  var pal=['#eafaf1','#a9dfbf','#52be80','#1e8449','#0b5329'];
+  function getColor(v){ if(!v) return null; var r=Math.pow(v/maxVal,0.5); return pal[Math.min(Math.floor(r*(pal.length-1)),pal.length-1)]; }
+  var wrap=document.createElement('div'); wrap.className='heatmap-grid-wrap';
+  var tbl=document.createElement('table'); tbl.className='heatmap-tbl';
+  var thead=document.createElement('thead');
+  var hr=document.createElement('tr'); hr.innerHTML='<th style="text-align:left;">Year</th>';
+  MONTHS.forEach(function(m){ hr.innerHTML+='<th>'+m.substring(0,1)+'</th>'; });
+  hr.innerHTML+='<th style="text-align:right;padding-left:8px;">Total</th>';
+  thead.appendChild(hr); tbl.appendChild(thead);
+  var tbody=document.createElement('tbody');
+  years.forEach(function(y){
+    var row=document.createElement('tr');
+    var yt=byYM[y].reduce(function(s,v){return s+v;},0);
+    row.innerHTML='<td class="hy-label">'+y+'</td>';
+    byYM[y].forEach(function(val,mi){
+      var td=document.createElement('td'); td.className='heatmap-cell'+(val===0?' empty':'');
+      var c=getColor(val); if(c) td.style.background=c;
+      if(val>0){ td.title=MONTHS[mi]+' '+y+': '+sym+fmtNum(val); td.style.fontSize='0.58rem'; td.style.fontFamily='DM Mono,monospace'; td.style.textAlign='center'; td.style.color=val/maxVal>0.6?'#fff':'#333'; td.style.lineHeight='28px'; td.style.overflow='hidden'; }
+      row.appendChild(td);
+    });
+    var ttd=document.createElement('td'); ttd.style.cssText='font-family:DM Mono,monospace;font-size:0.7rem;font-weight:700;text-align:right;padding-left:8px;white-space:nowrap;color:var(--sage);'; ttd.textContent=sym+fmtNum(yt); row.appendChild(ttd);
+    tbody.appendChild(row);
+  });
+  tbl.appendChild(tbody); wrap.appendChild(tbl); hc.appendChild(wrap);
 }
 
 // ── Income Ledger ──
@@ -7190,6 +7310,8 @@ function incPopulateFilters() {
 }
 
 function renderIncomeLedger() {
+  populateIncBulkCatSel();
+  var incBulkSrch = (document.getElementById('inc-bulk-search')||{}).value||'';
   var data = loadIncomeData();
   var year = document.getElementById('inc-led-year').value;
   var month= document.getElementById('inc-led-month').value;
@@ -7201,6 +7323,9 @@ function renderIncomeLedger() {
   if (cur   !== 'all') data = data.filter(function(i){ return i.currency===cur; });
   if (cat   !== 'all') data = data.filter(function(i){ return i.category===cat; });
   if (srch)            data = data.filter(function(i){ return i.desc.toLowerCase().indexOf(srch)!==-1; });
+  if (incBulkSrch) data = data.filter(function(i){ return i.desc.toLowerCase().indexOf(incBulkSrch.toLowerCase())!==-1; });
+  var matchEl = document.getElementById('inc-bulk-match');
+  if (matchEl) matchEl.textContent = incBulkSrch ? data.length+' match'+(data.length===1?'':'es') : '';
   data.sort(function(a,b){ return b.date.localeCompare(a.date); });
 
   if (!data.length) {
@@ -7301,6 +7426,30 @@ function renderIncomeLedger() {
   acc.appendChild(tbl);
 }
 
+function incomeBulkAssign() {
+  var search = (document.getElementById('inc-bulk-search').value||'').trim().toLowerCase();
+  var newCat  = document.getElementById('inc-bulk-cat-sel').value;
+  if (!newCat)   { showToast('Select a category first'); return; }
+  if (!search)   { showToast('Enter a keyword to filter first'); return; }
+  var data = loadIncomeData();
+  var count = 0;
+  data.forEach(function(i){ if(i.desc.toLowerCase().indexOf(search)!==-1){ i.category=newCat; count++; } });
+  if (!count) { showToast('No matching entries'); return; }
+  saveIncomeData(data);
+  document.getElementById('inc-bulk-search').value='';
+  renderIncomeLedger();
+  showToast(count+' income entries assigned to "'+newCat+'"');
+}
+
+function populateIncBulkCatSel() {
+  var sel = document.getElementById('inc-bulk-cat-sel');
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">Pick category...</option>';
+  getAllIncomeCats().forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  if (cur) sel.value=cur;
+}
+
 function clearIncomeLedgerFilters() {
   document.getElementById('inc-led-year').value = String(new Date().getFullYear());
   document.getElementById('inc-led-month').value = 'all';
@@ -7319,37 +7468,76 @@ function renderIncomeManage() {
   var listEl = document.getElementById('inc-manage-month-list');
   if (!listEl) return;
   listEl.innerHTML = '';
+
+  // Group months by year
   var byMonth = {};
   data.forEach(function(i){ var k=i.date.substring(0,7); if(!byMonth[k]) byMonth[k]=[]; byMonth[k].push(i); });
-  Object.keys(byMonth).sort().reverse().forEach(function(key) {
-    var p = key.split('-');
-    var mLabel = MONTHS[parseInt(p[1])-1] + ' ' + p[0];
-    var items  = byMonth[key];
-    var row = document.createElement('div');
-    row.className = 'manage-month-row';
-    row.style.marginBottom = '6px';
-    var info = document.createElement('div');
-    info.innerHTML = '<div class="manage-month-name">'+mLabel+'</div><div class="manage-month-meta">'+items.length+' entries</div>';
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-warn';
-    delBtn.textContent = 'Delete';
-    (function(k2, lbl, its) {
-      delBtn.addEventListener('click', function() {
-        var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
-        var now = new Date().toISOString().substring(0,10);
-        var gid = 'incgrp_'+Date.now();
-        its.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:lbl})); });
-        localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
-        saveIncomeData(loadIncomeData().filter(function(i){ return i.date.substring(0,7)!==k2; }));
-        renderIncomeManage();
-        showToast(lbl + ' moved to income recycle bin');
-      });
-    })(key, mLabel, items);
-    row.appendChild(info); row.appendChild(delBtn);
-    listEl.appendChild(row);
+  var byYear = {};
+  Object.keys(byMonth).forEach(function(ym){
+    var y = ym.substring(0,4);
+    if (!byYear[y]) byYear[y] = [];
+    byYear[y].push(ym);
   });
 
-  // Render income trash
+  Object.keys(byYear).sort().reverse().forEach(function(year) {
+    var months = byYear[year].sort().reverse();
+    var yearTotal = months.reduce(function(s,m){ return s+byMonth[m].length; }, 0);
+
+    // Year header (foldable)
+    var yearDiv = document.createElement('div');
+    yearDiv.style.cssText = 'margin-bottom:8px;border:1px solid var(--border);border-radius:4px;overflow:hidden;';
+
+    var yearHdr = document.createElement('div');
+    yearHdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--ink);color:var(--paper);cursor:pointer;user-select:none;';
+    yearHdr.innerHTML =
+      '<div style="display:flex;align-items:center;gap:10px;">'+
+        '<span style="font-family:Playfair Display,serif;font-size:1.1rem;font-weight:900;color:var(--gold);">'+year+'</span>'+
+        '<span style="font-family:DM Mono,monospace;font-size:0.7rem;color:#9e8e7e;">'+months.length+' months · '+yearTotal+' entries</span>'+
+      '</div>'+
+      '<span class="yr-arr" style="font-size:0.75rem;color:var(--gold);">&#9660;</span>';
+
+    var yearBody = document.createElement('div');
+    yearBody.style.display = 'block';
+    yearBody.style.cssText += 'background:#fafaf7;';
+
+    yearHdr.addEventListener('click', function(){
+      var open = yearBody.style.display !== 'none';
+      yearBody.style.display = open ? 'none' : 'block';
+      yearHdr.querySelector('.yr-arr').style.transform = open ? 'rotate(-90deg)' : '';
+    });
+
+    months.forEach(function(key) {
+      var p = key.split('-');
+      var mLabel = MONTHS[parseInt(p[1])-1] + ' ' + p[0];
+      var items  = byMonth[key];
+      var row = document.createElement('div');
+      row.className = 'manage-month-row';
+      row.style.cssText = 'border-bottom:1px solid var(--border);padding:8px 14px;';
+      var info = document.createElement('div');
+      info.innerHTML = '<div class="manage-month-name">'+mLabel+'</div><div class="manage-month-meta">'+items.length+' entries</div>';
+      var delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-warn';
+      delBtn.textContent = 'Delete';
+      (function(k2, lbl, its) {
+        delBtn.addEventListener('click', function() {
+          var incTrash = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]');
+          var now = new Date().toISOString().substring(0,10);
+          var gid = 'incgrp_'+Date.now();
+          its.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:lbl})); });
+          localStorage.setItem(INC_TRASH_KEY, JSON.stringify(incTrash));
+          saveIncomeData(loadIncomeData().filter(function(i){ return i.date.substring(0,7)!==k2; }));
+          renderIncomeManage();
+          showToast(lbl+' moved to income recycle bin');
+        });
+      })(key, mLabel, items);
+      row.appendChild(info); row.appendChild(delBtn);
+      yearBody.appendChild(row);
+    });
+
+    yearDiv.appendChild(yearHdr); yearDiv.appendChild(yearBody);
+    listEl.appendChild(yearDiv);
+  });
+
   renderIncomeTrash();
 }
 
@@ -7423,7 +7611,7 @@ function renderIncomeTrash() {
     tbody.appendChild(tr);
   });
 
-  // Single rows
+  // Single rows - ALL get restore button
   singles.sort(function(a,b){ return (b._trash_date||'').localeCompare(a._trash_date||''); });
   singles.forEach(function(item, idx) {
     var tr = document.createElement('tr');
@@ -7432,12 +7620,31 @@ function renderIncomeTrash() {
     var descTd = document.createElement('td'); descTd.style.cssText = 'padding:3px 7px;font-size:0.68rem;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; descTd.textContent = item.desc||item._raw_line||'—';
     var amtTd  = document.createElement('td'); amtTd.style.cssText  = 'padding:3px 7px;font-family:DM Mono,monospace;font-size:0.68rem;text-align:right;color:var(--sage);'; amtTd.textContent = item.amount ? (SYMS[item.currency]||'')+fmtNum(item.amount) : '—';
     var actTd  = document.createElement('td'); actTd.style.cssText  = 'padding:2px 5px;white-space:nowrap;';
-    if (item._trash_source !== 'skipped' && item.date && item.desc) {
-      var rb2 = document.createElement('button'); rb2.style.cssText = 'padding:1px 5px;font-size:0.65rem;color:var(--sage);border:1px solid var(--sage);border-radius:2px;background:none;cursor:pointer;margin-right:3px;';
-      rb2.textContent = '↩';
-      (function(t){ rb2.addEventListener('click', function(){ restoreIncomeItem(t._trash_id); }); })(item);
-      actTd.appendChild(rb2);
+    // Restore button for ALL items
+    var rb2 = document.createElement('button');
+    if (item._trash_source === 'skipped') {
+      rb2.style.cssText = 'padding:1px 5px;font-size:0.65rem;color:var(--muted);border:1px solid var(--muted);border-radius:2px;background:none;cursor:pointer;margin-right:3px;';
+      rb2.title = 'Send back to Import notepad';
+    } else {
+      rb2.style.cssText = 'padding:1px 5px;font-size:0.65rem;color:var(--sage);border:1px solid var(--sage);border-radius:2px;background:none;cursor:pointer;margin-right:3px;';
+      rb2.title = 'Restore to ledger';
     }
+    rb2.textContent = '↩';
+    (function(t){ rb2.addEventListener('click', function(){
+      if (t._trash_source === 'skipped') {
+        // Send raw line back to import notepad buffer
+        var bufKey = 'import_pending_inc_' + (t.date||'').substring(0,7);
+        var existing = localStorage.getItem(bufKey)||'';
+        localStorage.setItem(bufKey, existing+(existing?String.fromCharCode(10):'')+( t._raw_line||t.desc||''));
+        var trash2 = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
+        localStorage.setItem(INC_TRASH_KEY, JSON.stringify(trash2));
+        renderIncomeTrash();
+        showToast('Saved to Import notepad for that month');
+      } else {
+        restoreIncomeItem(t._trash_id);
+      }
+    }); })(item);
+    actTd.appendChild(rb2);
     var pb = document.createElement('button'); pb.style.cssText = 'padding:1px 6px;font-size:0.65rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;'; pb.textContent = 'DEL';
     (function(t){ pb.addEventListener('click', function(){
       var tr2 = JSON.parse(localStorage.getItem(INC_TRASH_KEY)||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
@@ -7498,10 +7705,8 @@ function deleteIncomeGroup(gid) {
 // Re-sync when user returns to the app (tab focus, phone unlock)
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible' && _userId && _db) {
-    // Fetch latest trash from Firebase
     if (!window._trashDeletePending) fetchTrashFromFirebase();
-    // Fetch latest ledger data
-    if (!window._deletePending) {
+    if (!window._deletePending && _appMode === 'expenses') { // only sync expenses in expenses mode
       userCol('expense_months').get().then(function(snapshot) {
         var allEntries = [];
         var fbMonths = [];
@@ -7558,4 +7763,4 @@ populateFilters();
 syncInit();
 </script>
 </body>
-</html>
+</html>new RegExp(query.split('').map(function(c){return c;}).join('').replace(/[.*+?^${}()|\[\]\\]/g,'\\$&'), 'gi');
