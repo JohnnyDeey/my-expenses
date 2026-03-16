@@ -1166,7 +1166,7 @@ nav.tabs.header-hidden button {
 </div><!-- end fixed-topbar -->
 
 <!-- Collapsible big header — scrolls with page, sits under fixed bar -->
-<div id="big-header-wrap" style="background:var(--ink);overflow:hidden;transition:max-height 0.3s ease;border-bottom:3px solid var(--gold);">
+<div id="big-header-wrap" style="background:var(--ink);overflow:hidden;transition:max-height 0.3s ease;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;">
 <header id="main-header">
   <div style="display:flex;align-items:center;gap:0;">
     <div>
@@ -2200,7 +2200,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 var pickerYear = new Date().getFullYear();
-var pickerMonth = null;
+var pickerMonth = new Date().getMonth() + 1; // default to current month
 
 function renderMonthPicker() {
   var data = loadData();
@@ -5898,15 +5898,17 @@ function changeUsername() {
 // INIT - adjust main padding to account for fixed nav bar
 function adjustMainPadding() {
   var fixedBar = document.getElementById('fixed-topbar');
-  var bigHeader = document.getElementById('big-header-wrap');
   var main = document.querySelector('main');
   var h = fixedBar ? fixedBar.offsetHeight : 82;
-  // Push big header immediately below fixed bar
-  if (bigHeader) bigHeader.style.marginTop = h + 'px';
-  // Push main content immediately below big header (or fixed bar if hidden)
+  // Push big header below fixed bar
+  var bigHeader = document.getElementById('big-header-wrap');
+  if (bigHeader) {
+    bigHeader.style.marginTop = h + 'px';
+    bigHeader.style.top = h + 'px'; // sticky top = height of fixed bar
+  }
+  // Main just needs small top padding — sticky headers handle the rest
   if (main) {
-    var bh = bigHeader ? bigHeader.offsetHeight : 0;
-    main.style.paddingTop = bh + 'px';
+    main.style.paddingTop = '20px';
     main.style.marginTop = '0';
   }
 }
