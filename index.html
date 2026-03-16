@@ -2577,9 +2577,9 @@ function selectMonth(monthNum) {
       yrSel.value = String(pickerYear);
     }
     moSel.value = pad(monthNum);
-    // Reset options length so pill 2 will re-init with correct data next time
   }
   updateHeaderContext();
+  updateMonthFilterPill(); // update second pill immediately
 }
 
 function loadMonthIntoTextarea() {
@@ -6667,7 +6667,17 @@ function renderIncomeMonthPicker() {
     btn.textContent = m;
     if (hasKeys[key]) btn.classList.add('has-data');
     if (incPickerMonth === mn) btn.classList.add('selected');
-    btn.addEventListener('click', function(){ incPickerMonth = mn; renderIncomeMonthPicker(); loadIncomeMonthIntoTextarea(); });
+    btn.addEventListener('click', function(){
+      incPickerMonth = mn;
+      renderIncomeMonthPicker();
+      loadIncomeMonthIntoTextarea();
+      // Update header second pill to show this month's income
+      var yrSel = document.getElementById('hdr-filter-year');
+      var moSel = document.getElementById('hdr-filter-month');
+      if (yrSel) yrSel.value = String(incPickerYear);
+      if (moSel) moSel.value = pad(mn);
+      updateIncomeHeaderContext();
+    });
     grid.appendChild(btn);
   });
 }
