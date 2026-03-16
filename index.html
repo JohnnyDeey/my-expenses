@@ -2343,6 +2343,22 @@ document.addEventListener('DOMContentLoaded', function() {
       if (e.key === 'Escape') closeFnr();
     });
   }
+  // Income F&R keyboard listeners
+  var incFindInp = document.getElementById('inc-fnr-find');
+  if (incFindInp) {
+    incFindInp.addEventListener('input', incFnrHighlight);
+    incFindInp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.shiftKey ? incFnrPrev() : incFnrNext(); }
+      if (e.key === 'Escape') toggleIncFnr();
+    });
+  }
+  var incReplInp = document.getElementById('inc-fnr-replace');
+  if (incReplInp) {
+    incReplInp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') incFnrReplaceAll();
+      if (e.key === 'Escape') toggleIncFnr();
+    });
+  }
 });
 
 function fnrHighlight() {
@@ -6782,12 +6798,74 @@ function autoCategoryIncome(desc) {
 
 // ── Income parser ── supports both : and tab separators
 // Income F&R
+var incFnrMatches = [];
+var incFnrCurrent = -1;
+
 function toggleIncFnr() {
   var bar = document.getElementById('inc-fnr-bar');
   if (!bar) return;
-  bar.style.display = bar.style.display === 'flex' ? 'none' : 'flex';
-  if (bar.style.display === 'flex') { var f = document.getElementById('inc-fnr-find'); if(f) f.focus(); }
+  var visible = bar.style.display === 'flex';
+  bar.style.display = visible ? 'none' : 'flex';
+  if (!visible) {
+    var f = document.getElementById('inc-fnr-find');
+    if (f) { f.focus(); incFnrHighlight(); }
+  } else {
+    incFnrMatches = []; incFnrCurrent = -1;
+    document.getElementById('inc-fnr-count').textContent = '';
+  }
 }
+
+function incFnrCount() { incFnrHighlight(); }
+
+function incFnrHighlight() {
+  var query   = document.getElementById('inc-fnr-find').value;
+  var countEl = document.getElementById('inc-fnr-count');
+  if (!query) { countEl.textContent = ''; incFnrMatches = []; incFnrCurrent = -1; return; }
+  var text  = document.getElementById('inc-raw-input').value;
+  var lower = text.toLowerCase();
+  var lq    = query.toLowerCase();
+  incFnrMatches = [];
+  var idx = 0;
+  while ((idx = lower.indexOf(lq, idx)) !== -1) { incFnrMatches.push(idx); idx += lq.length; }
+  incFnrCurrent = incFnrMatches.length > 0 ? 0 : -1;
+  countEl.textContent = incFnrMatches.length ? (incFnrCurrent+1)+' / '+incFnrMatches.length : 'Not found';
+  if (incFnrCurrent >= 0) incFnrScrollTo(incFnrMatches[incFnrCurrent], query.length);
+}
+
+function incFnrNext() {
+  if (!incFnrMatches.length) { incFnrHighlight(); return; }
+  incFnrCurrent = (incFnrCurrent + 1) % incFnrMatches.length;
+  document.getElementById('inc-fnr-count').textContent = (incFnrCurrent+1)+' / '+incFnrMatches.length;
+  incFnrScrollTo(incFnrMatches[incFnrCurrent], document.getElementById('inc-fnr-find').value.length);
+}
+
+function incFnrPrev() {
+  if (!incFnrMatches.length) return;
+  incFnrCurrent = (incFnrCurrent - 1 + incFnrMatches.length) % incFnrMatches.length;
+  document.getElementById('inc-fnr-count').textContent = (incFnrCurrent+1)+' / '+incFnrMatches.length;
+  incFnrScrollTo(incFnrMatches[incFnrCurrent], document.getElementById('inc-fnr-find').value.length);
+}
+
+function incFnrScrollTo(start, len) {
+  var ta = document.getElementById('inc-raw-input');
+  ta.focus();
+  ta.setSelectionRange(start, start + len);
+  var lines = ta.value.substring(0, start).split('\n');
+  var lineH = ta.scrollHeight / (ta.value.split('\n').length || 1);
+  ta.scrollTop = Math.max(0, (lines.length - 3) * lineH);
+}
+
+function incFnrReplaceCurrent() {
+  var query = document.getElementById('inc-fnr-find').value;
+  var repl  = document.getElementById('inc-fnr-replace').value;
+  if (!query || incFnrCurrent < 0 || !incFnrMatches.length) return;
+  var ta   = document.getElementById('inc-raw-input');
+  var pos  = incFnrMatches[incFnrCurrent];
+  ta.value = ta.value.substring(0, pos) + repl + ta.value.substring(pos + query.length);
+  incFnrHighlight();
+  showToast('Replaced 1 occurrence');
+}
+
 function incFnrReplaceAll() {
   var query = document.getElementById('inc-fnr-find').value;
   var repl  = document.getElementById('inc-fnr-replace').value;
@@ -6797,6 +6875,7 @@ function incFnrReplaceAll() {
   var count = (ta.value.match(regex)||[]).length;
   if (!count) { showToast('No matches found'); return; }
   ta.value = ta.value.replace(regex, repl);
+  incFnrMatches = []; incFnrCurrent = -1;
   document.getElementById('inc-fnr-count').textContent = '';
   showToast('Replaced ' + count + ' occurrence' + (count===1?'':'s'));
 }
@@ -6886,7 +6965,12 @@ function parseIncomeYear() {
       if (!isNaN(amt) && amt > 0) {
         var mKey = currentDate.substring(0,7);
         if (!byMonth[mKey]) byMonth[mKey] = [];
-        byMonth[mKey].push({ id: Date.now()+Math.random(), date: currentDate, desc: result.desc, amount: amt, currency: result.currency, category: autoCategoryIncome(result.desc) });
+        // Only allow dates within incPickerYear
+        if (currentDate.substring(0,4) === String(incPickerYear)) {
+          byMonth[mKey].push({ id: Date.now()+Math.random(), date: currentDate, desc: result.desc, amount: amt, currency: result.currency, category: autoCategoryIncome(result.desc) });
+        } else {
+          skipped.push(rawLine.trim() + ' [wrong year: ' + currentDate.substring(0,4) + ']');
+        }
       } else {
         skipped.push(rawLine.trim());
       }
@@ -7021,6 +7105,12 @@ function parseIncomeInput() {
       currentDate = (p[0].length===4)
         ? p[0]+'-'+pad(parseInt(p[1]))+'-'+pad(parseInt(p[2]))
         : p[2]+'-'+pad(parseInt(p[1]))+'-'+pad(parseInt(p[0]));
+      // If date doesn't match selected year+month, mark as wrong
+      var expectedKey = incPickerYear + '-' + pad(incPickerMonth);
+      if (currentDate.substring(0,7) !== expectedKey) {
+        skipped.push(rawLine.trim() + ' [wrong date: ' + currentDate + ', expected ' + expectedKey + ']');
+        currentDate = null; // block items under this date
+      }
       return;
     }
     if (!currentDate || !line) return;
@@ -7896,8 +7986,7 @@ function showUpdateBanner() {
     '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:1rem;cursor:pointer;padding:0 4px;">×</button>';
   document.body.appendChild(banner);
 }
-// Check for updates every 5 minutes
-setInterval(checkForAppUpdate, 5 * 60 * 1000);
+// Update check disabled
 
 // Re-sync when user returns to the app (tab focus, phone unlock)
 document.addEventListener('visibilitychange', function() {
