@@ -5205,13 +5205,16 @@ function renderTrashPanel() {
 
     var actionTd = document.createElement('td');
     actionTd.style.cssText = 'padding:2px 4px;white-space:nowrap;';
-    if (!isSkipped && item.date && item.desc) {
-      var rb = document.createElement('button');
+    var rb = document.createElement('button');
+    if (isSkipped) {
+      rb.style.cssText = 'padding:1px 5px;font-size:0.65rem;color:var(--slate);border:1px solid var(--slate);border-radius:2px;background:none;cursor:pointer;margin-right:3px;font-weight:700;';
+      rb.textContent = '↩'; rb.title = 'Send back to Import notepad to fix';
+    } else {
       rb.style.cssText = 'padding:1px 5px;font-size:0.65rem;color:var(--sage);border:1px solid var(--sage);border-radius:2px;background:none;cursor:pointer;margin-right:3px;font-weight:700;';
-      rb.textContent = '↩'; rb.title = 'Restore';
-      rb.addEventListener('click', function(){ restoreFromTrash(item._trash_id); });
-      actionTd.appendChild(rb);
+      rb.textContent = '↩'; rb.title = 'Restore to ledger';
     }
+    rb.addEventListener('click', function(){ restoreFromTrash(item._trash_id); });
+    actionTd.appendChild(rb);
     var pb = document.createElement('button');
     pb.style.cssText = 'padding:1px 6px;font-size:0.65rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;';
     pb.textContent = 'DEL';
