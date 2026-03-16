@@ -1447,6 +1447,23 @@ nav.tabs.header-hidden button {
         <div id="cat-bars-container"></div>
       </div>
     </div>
+    <!-- Yearly Totals Bar Chart -->
+    <div class="charts-grid wide" style="margin-bottom:20px;">
+      <div class="chart-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <h3>Yearly Total Spending</h3>
+          <select id="yearly-currency" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
+            <option value="EUR">EUR €</option>
+            <option value="NGN">NGN ₦</option>
+            <option value="USD">USD $</option>
+            <option value="GBP">GBP £</option>
+          </select>
+        </div>
+        <div class="chart-sub" id="yearly-sub"></div>
+        <div class="chart-wrap"><canvas id="chart-yearly"></canvas></div>
+      </div>
+    </div>
+
     <!-- Spending Heatmap -->
     <div class="charts-grid wide">
       <div class="chart-card">
@@ -1739,12 +1756,12 @@ nav.tabs.header-hidden button {
 
         <!-- Step B: Choose username -->
         <div id="reg-step-username" style="display:none;">
-          <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:16px;">Choose a username (exactly 10 characters, letters + numbers only):</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:16px;">Choose a username (4–10 characters, letters + numbers):</div>
           <div id="reg-username-suggestions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
           <div style="border-top:1px solid #3a3020;padding-top:14px;margin-bottom:12px;">
-            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Or enter your own (10 chars, letters+numbers)</label>
+            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Or enter your own (4–10 chars, letters+numbers)</label>
             <div style="display:flex;gap:8px;">
-              <input id="reg-custom-username" type="text" maxlength="10" placeholder="e.g. jd02920123" style="flex:1;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;letter-spacing:2px;" oninput="validateCustomUsername(this)">
+              <input id="reg-custom-username" type="text" maxlength="10" placeholder="e.g. jd0292 (4–10 chars)" style="flex:1;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;letter-spacing:2px;" oninput="validateCustomUsername(this)">
               <button onclick="selectCustomUsername()" style="padding:10px 14px;background:#3a3020;border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;">Use this</button>
             </div>
             <div id="reg-username-error" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#b5451b;margin-top:6px;min-height:16px;"></div>
@@ -3121,6 +3138,10 @@ function renderDashboard(){
   // Category breakdown — passes full data, manages own filters internally
   renderCategoryBars(data.filter(function(i){return i.amount>0;}));
 
+  // Yearly totals chart
+  var yearlyCur = document.getElementById('yearly-currency').value;
+  renderYearlyChart(data.filter(function(i){return i.amount>0;}), yearlyCur);
+
   // Heatmap — own currency selector, uses full data
   var hmCur = document.getElementById('heatmap-currency').value;
   renderHeatmap(data.filter(function(i){return i.amount>0;}), hmCur);
@@ -3300,6 +3321,67 @@ function renderCategoryBars(data){
   container.appendChild(accordion);
 }
 
+
+function renderYearlyChart(data, cur) {
+  var sym = SYMS[cur] || '';
+  var filtered = data.filter(function(i){ return i.currency === cur && i.amount > 0; });
+  var byYear = {};
+  filtered.forEach(function(i){
+    var y = i.date.substring(0,4);
+    byYear[y] = (byYear[y] || 0) + i.amount;
+  });
+  var years  = Object.keys(byYear).sort();
+  var values = years.map(function(y){ return +byYear[y].toFixed(2); });
+  var sub = document.getElementById('yearly-sub');
+  if (sub) sub.textContent = years.length ? years.length + ' years in ' + cur : 'No data for ' + cur;
+  destroyChart('chart-yearly');
+  if (!years.length) return;
+
+  // Colour bars: last year gold, others muted
+  var colors = years.map(function(y, i){
+    return i === years.length - 1 ? 'rgba(200,150,46,0.9)' : 'rgba(200,150,46,0.4)';
+  });
+
+  var ctx = document.getElementById('chart-yearly').getContext('2d');
+  charts['chart-yearly'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [{
+        label: cur + ' Annual Spend',
+        data: values,
+        borderColor: '#c8962e',
+        backgroundColor: 'rgba(200,150,46,0.08)',
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: '#c8962e',
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(c) {
+              return sym + c.parsed.y.toLocaleString('en', {minimumFractionDigits:2, maximumFractionDigits:2});
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: { callback: function(v){ return sym + v.toLocaleString(); } },
+          grid: { color: 'rgba(0,0,0,0.04)' }
+        },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
 
 function renderMonthlyChart(data, cur){
   var sym = SYMS[cur]||'';
@@ -5554,27 +5636,27 @@ function generateUsernameOptions(fullName) {
     for (var i=0; i<n; i++) s += Math.floor(Math.random()*10);
     return s;
   }
-  function make(base) {
-    base = base.replace(/[^a-z0-9]/g,'').substring(0, 6);
-    var needed = 10 - base.length;
+  function make(base, targetLen) {
+    targetLen = targetLen || 8; // default 8 chars
+    base = base.replace(/[^a-z0-9]/g,'').substring(0, targetLen - 2);
+    var needed = targetLen - base.length;
     return base + randNum(needed);
   }
 
   // Keep it short and clean - first 2-3 chars + last 2-3 chars + numbers
   if (first && last) {
-    suggestions.push(make(first.substring(0,3) + last.substring(0,3))); // e.g. joh + doe + 1234
-    suggestions.push(make(first[0] + last.substring(0,4)));             // e.g. j + davi + 12345
-    suggestions.push(make(first.substring(0,2) + last.substring(0,2))); // e.g. jo + do + 123456
+    suggestions.push(make(first.substring(0,2) + last.substring(0,2), 6)); // e.g. jodo39
+    suggestions.push(make(first.substring(0,3) + last.substring(0,2), 8)); // e.g. johdo293
+    suggestions.push(make(first[0] + last.substring(0,3), 7));             // e.g. jdoe948
   } else {
-    suggestions.push(make(first.substring(0,4)));
-    suggestions.push(make(first.substring(0,3)));
-    suggestions.push(make(first.substring(0,5)));
+    suggestions.push(make(first.substring(0,3), 6));
+    suggestions.push(make(first.substring(0,4), 8));
+    suggestions.push(make(first.substring(0,2), 7));
   }
 
   var result = [];
   suggestions.forEach(function(s) {
     s = s.substring(0,10);
-    while (s.length < 10) s += randNum(1);
     if (!used[s]) { used[s] = true; result.push(s); }
   });
   return result.slice(0,3);
@@ -5622,10 +5704,11 @@ function validateCustomUsername(inp) {
   var val = inp.value.toLowerCase().replace(/[^a-z0-9]/g,'');
   inp.value = val;
   var errEl = document.getElementById('reg-username-error');
-  if (val.length > 0 && val.length < 10) {
-    errEl.textContent = val.length + '/10 — needs to be exactly 10 characters';
-  } else if (val.length === 10) {
-    errEl.textContent = '✓ Looks good!';
+  errEl.style.color = '#b5451b';
+  if (val.length > 0 && val.length < 4) {
+    errEl.textContent = val.length + ' chars — minimum 4 characters';
+  } else if (val.length >= 4 && val.length <= 10) {
+    errEl.textContent = '✓ ' + val.length + '/10 — looks good!';
     errEl.style.color = '#4a7c59';
   } else {
     errEl.textContent = '';
@@ -5636,8 +5719,8 @@ function selectCustomUsername() {
   var inp = document.getElementById('reg-custom-username');
   var val = inp.value.toLowerCase().replace(/[^a-z0-9]/g,'');
   var errEl = document.getElementById('reg-username-error');
-  if (val.length !== 10) {
-    errEl.textContent = 'Must be exactly 10 characters (letters and numbers)';
+  if (val.length < 4 || val.length > 10) {
+    errEl.textContent = 'Must be 4–10 characters (letters and numbers only)';
     errEl.style.color = '#b5451b';
     return;
   }
