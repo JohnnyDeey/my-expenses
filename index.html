@@ -2277,6 +2277,10 @@ function loadMonthIntoTextarea() {
   var statusEl = document.getElementById('import-status');
   var clearBtn = document.getElementById('btn-clear-month');
 
+  // Check if there are pending lines restored from recycle bin
+  var pendingBufKey = 'import_pending_' + key;
+  var pendingLines  = localStorage.getItem(pendingBufKey) || '';
+
   if (monthData.length > 0) {
     // Reconstruct text from saved data
     var byDate = {};
@@ -2292,14 +2296,19 @@ function loadMonthIntoTextarea() {
       lines.push('');
     });
     ta.value = lines.join('\n');
+    if (pendingLines) {
+      ta.value += (ta.value ? String.fromCharCode(10) : '') + pendingLines;
+      localStorage.removeItem(pendingBufKey);
+    }
     ta.className = 'textarea-existing';
     statusEl.textContent = monthData.length + ' entries saved for this month — you can edit and re-parse';
     statusEl.className = 'import-status has-data';
     clearBtn.style.display = 'inline-flex';
   } else {
-    ta.value = '';
+    ta.value = pendingLines || '';
+    if (pendingLines) localStorage.removeItem(pendingBufKey);
     ta.className = '';
-    statusEl.textContent = 'No data yet for this month — paste your expenses below';
+    statusEl.textContent = pendingLines ? 'Restored lines from recycle bin — edit and re-parse' : 'No data yet for this month — paste your expenses below';
     statusEl.className = 'import-status';
     clearBtn.style.display = 'none';
   }
@@ -5001,30 +5010,18 @@ function restoreFromTrash(trashId) {
   });
   if (item) {
     if (item._trash_source === 'skipped') {
-      // Skipped items go back to the Import textarea for fixing, NOT to ledger
-      var rawLine = item._raw_line || item.desc || '';
+      var rawLine  = item._raw_line || item.desc || '';
       var itemDate = item.date || '';
-      // Switch to import tab and load the month
-      if (itemDate) {
+      if (itemDate && rawLine) {
         var parts = itemDate.split('-');
-        if (parts.length === 3) {
-          pickerYear  = parseInt(parts[0]);
-          pickerMonth = parseInt(parts[1]);
-          document.getElementById('picker-year-display').textContent = pickerYear;
-          renderMonthPicker();
-          loadMonthIntoTextarea();
-        }
-      }
-      // Append the raw line to the textarea
-      var ta = document.getElementById('raw-input');
-      if (ta) {
-        var current = ta.value.trimEnd();
-        ta.value = current + (current ? String.fromCharCode(10) : '') + rawLine;
-        ta.className = '';
+        var bufKey = 'import_pending_' + itemDate.substring(0,7);
+        var existing = localStorage.getItem(bufKey) || '';
+        localStorage.setItem(bufKey, existing + (existing ? String.fromCharCode(10) : '') + rawLine);
       }
       saveTrash(trash);
+      pushTrashToFirebase();
       renderTrashPanel();
-      showToast('Line sent back to Import notepad — go to Import tab when ready to fix');
+      showToast('Saved to Import notepad — open that month when ready');
     } else {
       // Normal deleted item — restore to ledger
       var restored = {};
