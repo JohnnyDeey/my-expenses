@@ -1170,7 +1170,8 @@ nav.tabs.header-hidden button {
   </div>
   <!-- Right: auth buttons only (HIDE is on big header) -->
   <div style="display:flex;gap:6px;align-items:center;">
-    <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:'DM Mono',monospace;letter-spacing:1px;white-space:nowrap;">&#9650; HIDE</button>
+    <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.68rem;font-family:'DM Mono',monospace;letter-spacing:1px;white-space:nowrap;">&#9650; HIDE</button>
+    <span id="hdr-mode-label" style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;padding:4px 10px;border-radius:4px;background:rgba(200,150,46,0.15);color:var(--gold2);white-space:nowrap;">&#128184; EXPENSES</span>
     <div id="hdr-user-bar-btns">
       <button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 10px;font-size:0.65rem;font-family:DM Mono,monospace;letter-spacing:1px;">&#128275; SIGN IN</button>
     </div>
@@ -1711,6 +1712,197 @@ nav.tabs.header-hidden button {
 
   <div id="budget-content"></div>
 </div>
+
+<!-- ══ INCOME MODULE ══ -->
+<div id="income-main" style="display:none;">
+
+<!-- INCOME IMPORT -->
+<div class="panel active" id="panel-inc-import">
+  <div class="section-title">Import Income Data</div>
+  <div class="import-layout">
+    <div class="card month-picker-card">
+      <label>Select Period</label>
+      <div class="year-nav" style="position:relative;">
+        <button onclick="incChangeYear(-1)">&#8592;</button>
+        <div class="year-display" id="inc-picker-year-display">2026</div>
+        <button onclick="incChangeYear(1)">&#8594;</button>
+      </div>
+      <!-- YEAR button beside year nav -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0 12px;">
+        <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);">Mode:</span>
+        <button id="inc-mode-month-btn" onclick="setIncomeImportMode('month')" style="padding:4px 12px;font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;border:1.5px solid var(--gold);border-radius:3px;cursor:pointer;background:var(--ink);color:var(--gold2);">MONTH</button>
+        <button id="inc-mode-year-btn" onclick="setIncomeImportMode('year')" style="padding:4px 12px;font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;border:1.5px solid var(--border);border-radius:3px;cursor:pointer;background:white;color:var(--muted);">YEAR</button>
+      </div>
+      <div id="inc-months-grid" class="months-grid"></div>
+    </div>
+    <div class="import-right">
+      <div class="import-header-bar">
+        <div>
+          <div class="import-title">Income Journal &mdash; <span id="inc-import-period-label" style="color:var(--gold);">Select a period</span></div>
+          <div class="import-status" id="inc-import-status">Select a month or switch to YEAR mode</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" id="inc-btn-clear-month" onclick="clearIncomeMonthData()" style="display:none;">Clear</button>
+          <button class="btn btn-ghost" onclick="loadIncomeSample()">Sample</button>
+        </div>
+      </div>
+      <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150"></textarea>
+      <div class="import-tip">
+        Supported: <strong>&#8358; / # Naira</strong> &nbsp;&bull;&nbsp; <strong>$ Dollar</strong> &nbsp;&bull;&nbsp; <strong>&#8364; Euro</strong> &nbsp;&bull;&nbsp; <strong>&#163; Pound</strong>
+        &nbsp;&nbsp;|&nbsp;&nbsp; Colon or tab before amount &nbsp;&nbsp;|&nbsp;&nbsp; No currency symbol = skipped to recycle bin
+      </div>
+      <div class="parse-actions">
+        <button class="btn btn-primary" id="inc-parse-btn" onclick="parseIncomeInput()">&#9660; Parse Income</button>
+        <div id="inc-parse-stats" style="display:none;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);padding:6px 0;">
+            Parsed: <strong id="inc-ps-count" style="color:var(--gold);">0</strong> items
+          </div>
+          <div id="inc-ps-ok-row" style="display:none;align-items:center;gap:10px;padding:4px 0;">
+            <span style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--sage);">&#10003; Ready to categorize</span>
+            <button class="btn btn-success" style="padding:7px 16px;" onclick="switchIncomeTab('inc-categorize',null)">Go to Categorize &#8594;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INCOME CATEGORIZE -->
+<div class="panel" id="panel-inc-categorize">
+  <div class="section-title">Categorize Income</div>
+  <div class="cat-filter-bar">
+    <span class="filter-label">Period:</span>
+    <select id="inc-cat-year-filter" onchange="applyIncomeCatFilter()"><option value="pending">Pending (just parsed)</option></select>
+    <span id="inc-cat-filter-count" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-left:auto;"></span>
+  </div>
+  <div id="inc-categorize-empty" class="empty-state"><div class="big">&#9645;</div><p>No income items to categorize.</p></div>
+  <div id="inc-categorize-content" style="display:none;">
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+      <div class="parsed-count">Showing <strong id="inc-cat-count">0</strong> items</div>
+      <button class="btn btn-ghost" style="margin-left:auto;" onclick="autoCategorizePendingIncome()">&#9889; Auto-Assign All</button>
+      <button class="btn btn-primary" id="inc-btn-save-pending" onclick="saveAllPendingIncome()">&#10003; Save to Ledger</button>
+    </div>
+    <div class="ledger-wrap">
+      <table>
+        <thead><tr>
+          <th style="padding:6px 8px;font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;width:55%;">DESCRIPTION &middot; DATE &middot; AMOUNT</th>
+          <th style="padding:6px 8px;font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:1px;background:var(--ink);color:var(--paper);">CATEGORY</th>
+        </tr></thead>
+        <tbody id="inc-categorize-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- INCOME MONTHLY -->
+<div class="panel" id="panel-inc-monthly">
+  <div class="section-title">Monthly Income Breakdown</div>
+  <div class="daily-filters">
+    <span class="filter-label">Year:</span>
+    <select id="inc-month-year" onchange="renderIncomeMonthly()"><option value="all">All Years</option></select>
+    <select id="inc-month-month" onchange="renderIncomeMonthly()"><option value="all">All Months</option></select>
+  </div>
+  <div id="inc-monthly-empty" class="empty-state"><div class="big">&#128176;</div><p>No income data yet.</p></div>
+  <div id="inc-monthly-content"></div>
+</div>
+
+<!-- INCOME DASHBOARD -->
+<div class="panel" id="panel-inc-dashboard">
+  <div id="inc-dash-empty" class="empty-state"><div class="big">&#128200;</div><p>No income data yet.</p></div>
+  <div id="inc-dash-content" style="display:none;">
+    <div class="filter-bar">
+      <span class="filter-label">Filter:</span>
+      <select id="inc-dash-year" onchange="renderIncomeDashboard()"><option value="all">All Years</option></select>
+      <select id="inc-dash-currency" onchange="renderIncomeDashboard()">
+        <option value="all">All Currencies</option>
+        <option value="NGN">NGN &#8358;</option><option value="EUR">EUR &euro;</option>
+        <option value="USD">USD $</option><option value="GBP">GBP &pound;</option>
+      </select>
+    </div>
+    <div class="stats-row" id="inc-stats-row"></div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <h3>Monthly Income Trend</h3>
+          <select id="inc-monthly-currency" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
+            <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
+          </select>
+        </div>
+        <div class="chart-sub" id="inc-monthly-sub"></div>
+        <div class="chart-wrap"><canvas id="inc-chart-monthly"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h3>Income by Category</h3>
+          <select id="inc-cat-dash-currency" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
+            <option value="all">All</option><option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option>
+          </select>
+        </div>
+        <div id="inc-cat-bars-container"></div>
+      </div>
+    </div>
+    <div class="charts-grid wide" style="margin-bottom:20px;">
+      <div class="chart-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <h3>Yearly Income</h3>
+          <select id="inc-yearly-currency" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
+            <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
+          </select>
+        </div>
+        <div class="chart-sub" id="inc-yearly-sub"></div>
+        <div class="chart-wrap"><canvas id="inc-chart-yearly"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INCOME LEDGER -->
+<div class="panel" id="panel-inc-ledger">
+  <div class="section-title">Income Ledger</div>
+  <div class="filter-bar">
+    <span class="filter-label">Filter:</span>
+    <select id="inc-led-year" onchange="renderIncomeLedger()"><option value="all">All Years</option></select>
+    <select id="inc-led-month" onchange="renderIncomeLedger()"><option value="all">All Months</option></select>
+    <select id="inc-led-currency" onchange="renderIncomeLedger()">
+      <option value="all">All Currencies</option>
+      <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
+    </select>
+    <select id="inc-led-cat" onchange="renderIncomeLedger()"><option value="all">All Categories</option></select>
+    <input type="text" id="inc-led-search" placeholder="Search..." oninput="renderIncomeLedger()">
+    <button class="btn btn-danger" onclick="clearIncomeLedgerFilters()">Clear All</button>
+  </div>
+  <div id="inc-ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No income entries yet.</p></div>
+  <div id="inc-ledger-wrap" style="display:none;"><div id="inc-ledger-accordion"></div></div>
+</div>
+
+<!-- INCOME MANAGE -->
+<div class="panel" id="panel-inc-manage">
+  <div class="section-title">Manage Income Data</div>
+  <div class="manage-grid" style="margin-bottom:14px;">
+    <div class="card">
+      <label>Overview</label>
+      <div style="padding:14px;background:var(--paper);border:1px solid var(--border);border-radius:3px;margin-bottom:14px;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:6px;">TOTAL INCOME ENTRIES</div>
+        <div id="inc-manage-total" style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--sage);">0</div>
+      </div>
+      <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="exportIncomeCSV()">&#8595; Export Income CSV</button>
+    </div>
+    <div class="card">
+      <label>Delete by Month</label>
+      <div id="inc-manage-month-list"></div>
+    </div>
+  </div>
+  <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
+    <label style="color:var(--rust);">&#9888; Danger Zone</label>
+    <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="clearAllIncome()">&#128465; Delete ALL Income Data</button>
+  </div>
+  <div class="card" style="border-color:var(--rust);">
+    <label>&#128465; Income Recycle Bin <span id="inc-trash-count-badge" style="font-family:'DM Mono',monospace;font-size:0.7rem;background:var(--rust);color:white;padding:2px 7px;border-radius:10px;margin-left:6px;"></span></label>
+    <div id="inc-trash-content"></div>
+  </div>
+</div>
+
+</div><!-- end income-main -->
 
 </main>
 
@@ -6190,13 +6382,13 @@ function applyMode() {
   var incNav   = document.getElementById('income-nav');
   var modBtn   = document.getElementById('mode-switch-btn');
 
+  var modeLabel = document.getElementById('hdr-mode-label');
   if (_appMode === 'income') {
-    // Hide all expense panels
-    document.querySelectorAll('#main-nav ~ * .panel').forEach(function(p){ p.style.display='none'; });
     if (mainNav) mainNav.style.display = 'none';
     if (incNav)  incNav.style.display  = '';
     if (incMain) incMain.style.display = 'block';
     if (modBtn)  { modBtn.textContent = '💸 Expenses'; modBtn.style.borderColor='rgba(200,150,46,0.6)'; modBtn.style.color='var(--gold2)'; }
+    if (modeLabel) { modeLabel.textContent = '💰 INCOME'; modeLabel.style.background='rgba(74,124,89,0.2)'; modeLabel.style.color='#8dd4a8'; }
     // Re-init income
     renderIncomeMonthPicker();
     incPopulateFilters();
@@ -6212,6 +6404,7 @@ function applyMode() {
       if (!p.closest('#income-main')) p.style.display = '';
     });
     if (modBtn) { modBtn.textContent = '💰 Income'; modBtn.style.borderColor='rgba(74,124,89,0.6)'; modBtn.style.color='#8dd4a8'; }
+    if (modeLabel) { modeLabel.textContent = '💸 EXPENSES'; modeLabel.style.background='rgba(200,150,46,0.15)'; modeLabel.style.color='var(--gold2)'; }
     updateHeaderContext();
   }
 }
@@ -6231,11 +6424,12 @@ function switchIncomeTab(name, btn) {
 }
 
 // ── Income month picker ──
-function changeIncomeYear(delta) {
+function incChangeYear(delta) {
   incPickerYear += delta;
   document.getElementById('inc-picker-year-display').textContent = incPickerYear;
   renderIncomeMonthPicker();
 }
+function changeIncomeYear(delta) { incChangeYear(delta); } // alias
 function renderIncomeMonthPicker() {
   var data = loadIncomeData();
   var hasKeys = {};
@@ -6328,22 +6522,24 @@ var _incomeImportMode = 'month'; // 'month' | 'year'
 
 function setIncomeImportMode(mode) {
   _incomeImportMode = mode;
-  var mBtn = document.getElementById('inc-mode-month-btn');
-  var yBtn = document.getElementById('inc-mode-year-btn');
-  var picker = document.getElementById('inc-months-grid');
+  var mBtn   = document.getElementById('inc-mode-month-btn');
+  var yBtn   = document.getElementById('inc-mode-year-btn');
+  var grid   = document.getElementById('inc-months-grid');
+  var yNav   = document.getElementById('inc-picker-year-display');
   if (mode === 'month') {
-    mBtn.style.background = 'var(--ink)'; mBtn.style.color = 'var(--gold2)';
-    yBtn.style.background = 'transparent'; yBtn.style.color = 'var(--muted)';
-    if (picker) picker.style.opacity = '1'; picker.style.pointerEvents = '';
+    if (mBtn) { mBtn.style.background='var(--ink)'; mBtn.style.color='var(--gold2)'; mBtn.style.borderColor='var(--gold)'; }
+    if (yBtn) { yBtn.style.background='white'; yBtn.style.color='var(--muted)'; yBtn.style.borderColor='var(--border)'; }
+    if (grid) { grid.style.opacity='1'; grid.style.pointerEvents=''; }
     document.getElementById('inc-import-period-label').textContent = 'Select a month';
     document.getElementById('inc-import-status').textContent = 'Select a month on the left to begin';
     document.getElementById('inc-parse-btn').textContent = '▼ Parse Income';
   } else {
-    yBtn.style.background = 'var(--ink)'; yBtn.style.color = 'var(--gold2)';
-    mBtn.style.background = 'transparent'; mBtn.style.color = 'var(--muted)';
-    if (picker) { picker.style.opacity = '0.3'; picker.style.pointerEvents = 'none'; }
-    document.getElementById('inc-import-period-label').textContent = incPickerYear + ' (Full Year)';
-    document.getElementById('inc-import-status').textContent = 'Paste your full year of income data below';
+    if (yBtn) { yBtn.style.background='var(--ink)'; yBtn.style.color='var(--gold2)'; yBtn.style.borderColor='var(--gold)'; }
+    if (mBtn) { mBtn.style.background='white'; mBtn.style.color='var(--muted)'; mBtn.style.borderColor='var(--border)'; }
+    // Grey out month grid — year mode doesn't need month selection
+    if (grid) { grid.style.opacity='0.3'; grid.style.pointerEvents='none'; }
+    document.getElementById('inc-import-period-label').textContent = incPickerYear + ' — Full Year';
+    document.getElementById('inc-import-status').textContent = 'Paste all ' + incPickerYear + ' income data below (all months at once)';
     document.getElementById('inc-parse-btn').textContent = '▼ Parse Full Year';
     document.getElementById('inc-raw-input').value = '';
   }
