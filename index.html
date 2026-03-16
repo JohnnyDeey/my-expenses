@@ -1783,6 +1783,17 @@ nav.tabs.header-hidden button {
     <select id="inc-cat-year-filter" onchange="applyIncomeCatFilter()"><option value="pending">Pending (just parsed)</option></select>
     <span id="inc-cat-filter-count" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-left:auto;"></span>
   </div>
+  <!-- Bulk assign bar -->
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:12px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
+    <input type="text" id="inc-cat-desc-search" placeholder="Filter by description..." oninput="incCatDescSearch(this.value)"
+      style="flex:1;min-width:150px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
+    <span id="inc-cat-desc-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
+    <select id="inc-cat-bulk-sel" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;min-width:160px;">
+      <option value="">Assign all to...</option>
+    </select>
+    <button class="btn btn-success" style="padding:8px 14px;" onclick="incBulkAssignCat()">&#10003; Assign All</button>
+    <button class="btn btn-ghost" style="padding:8px 10px;" onclick="incCatDescSearch('');document.getElementById('inc-cat-desc-search').value='';">&#10005;</button>
+  </div>
   <div id="inc-categorize-empty" class="empty-state"><div class="big">&#9645;</div><p>No income items to categorize.</p></div>
   <div id="inc-categorize-content" style="display:none;">
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
@@ -6961,7 +6972,11 @@ function renderIncomeCatTable() {
   ySel.innerHTML = '<option value="pending">Pending</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
   if (curY && curY !== 'pending' && years.indexOf(curY)!==-1) ySel.value = curY;
 
+  populateIncCatBulkSel();
   var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
+  var filteredItems = _incCatDescFilter ? items.filter(function(i){ return i.desc.toLowerCase().indexOf(_incCatDescFilter)!==-1; }) : items;
+  var matchEl = document.getElementById('inc-cat-desc-match');
+  if (matchEl) matchEl.textContent = _incCatDescFilter ? filteredItems.length+' match'+(filteredItems.length===1?'':'es') : '';
   document.getElementById('inc-cat-filter-count').textContent = items.length + ' items';
   if (!items.length) {
     document.getElementById('inc-categorize-empty').style.display = 'block';
@@ -6970,13 +6985,13 @@ function renderIncomeCatTable() {
   }
   document.getElementById('inc-categorize-empty').style.display = 'none';
   document.getElementById('inc-categorize-content').style.display = 'block';
-  document.getElementById('inc-cat-count').textContent = items.length;
+  document.getElementById('inc-cat-count').textContent = filteredItems.length;
 
   var tbody = document.getElementById('inc-categorize-tbody');
   tbody.innerHTML = '';
   var allCats = getAllIncomeCats();
 
-  items.forEach(function(item, idx) {
+  filteredItems.forEach(function(item, idx) {
     var tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--border)';
 
@@ -7018,6 +7033,33 @@ function renderIncomeCatTable() {
     tr.appendChild(catTd);
     tbody.appendChild(tr);
   });
+}
+
+var _incCatDescFilter = '';
+function incCatDescSearch(val) {
+  _incCatDescFilter = val.toLowerCase().trim();
+  renderIncomeCatTable();
+}
+function incBulkAssignCat() {
+  var cat = document.getElementById('inc-cat-bulk-sel').value;
+  if (!cat) { showToast('Select a category first'); return; }
+  var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
+  var toUpdate = _incCatDescFilter
+    ? items.filter(function(i){ return i.desc.toLowerCase().indexOf(_incCatDescFilter) !== -1; })
+    : items;
+  if (!toUpdate.length) { showToast('No items to assign'); return; }
+  saveIncomeCustomCat(cat);
+  toUpdate.forEach(function(i){ i.category = cat; });
+  showToast(toUpdate.length + ' items assigned to "' + cat + '"');
+  renderIncomeCatTable();
+}
+function populateIncCatBulkSel() {
+  var sel = document.getElementById('inc-cat-bulk-sel');
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">Assign all to...</option>';
+  getAllIncomeCats().forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  if (cur) sel.value = cur;
 }
 
 function autoCategorizePendingIncome() {
@@ -7093,7 +7135,9 @@ function renderIncomeMonthly() {
   });
 
   container.innerHTML = '';
-  Object.keys(byMonth).sort().reverse().forEach(function(ym) {
+  var monthKeys = Object.keys(byMonth).sort();
+  if (_incomeSortDesc) monthKeys.reverse();
+  monthKeys.forEach(function(ym) {
     var items = byMonth[ym];
     var p = ym.split('-');
     var mLabel = MONTHS_FULL[parseInt(p[1])-1] + ' ' + p[0];
