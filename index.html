@@ -363,7 +363,8 @@ function showPinScreen() {
 function hidePinScreen() {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'none';
-  setTimeout(resetInactivityTimer, 1000); // start timer after login
+  setTimeout(resetInactivityTimer, 1000);
+  setTimeout(checkBackupReminder, 3000); // check backup reminder after login
 }
 function showRegisterStep() {
   document.getElementById('pin-step-register').style.display = 'block';
@@ -1166,7 +1167,7 @@ nav.tabs.header-hidden button {
 </div><!-- end fixed-topbar -->
 
 <!-- Collapsible big header — scrolls with page, sits under fixed bar -->
-<div id="big-header-wrap" style="background:var(--ink);overflow:hidden;transition:max-height 0.3s ease;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;">
+<div id="big-header-wrap" style="background:var(--ink);overflow:hidden;transition:max-height 0.3s ease;border-bottom:3px solid var(--gold);position:fixed;left:0;right:0;z-index:200;">
 <header id="main-header">
   <div style="display:flex;align-items:center;gap:0;">
     <div>
@@ -1539,6 +1540,19 @@ nav.tabs.header-hidden button {
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="exportCSV()">&#8595; Export as CSV</button>
+        <div style="margin-top:12px;padding:10px 12px;background:#fffbf0;border:1px solid var(--gold);border-radius:4px;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">&#128276; Backup Reminder</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:10px;line-height:1.6;">Back up your data regularly by downloading a CSV. How often should we remind you?</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="backup-frequency" onchange="saveBackupFrequency(this.value)" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:6px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
+              <option value="never">Never remind me</option>
+              <option value="weekly">Every week</option>
+              <option value="monthly">Every month</option>
+              <option value="yearly">Every year</option>
+            </select>
+            <span id="backup-last" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);"></span>
+          </div>
+        </div>
         <label style="display:block;">
           <div class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;cursor:pointer;text-align:center;font-family:'DM Mono',monospace;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;">&#8593; Import from CSV</div>
           <input type="file" accept=".csv" onchange="importCSV(event)" style="display:none;">
@@ -4439,6 +4453,7 @@ function renderManagePanel(){
   document.getElementById('manage-total').textContent = data.length;
   renderTrashPanel();
   renderManageUserBar();
+  updateBackupLastLabel();
 
   // Hide/show sync details card
   var syncCard = document.getElementById('sync-setup-card');
@@ -4618,6 +4633,8 @@ function deleteMonth(key){
 }
 function exportCSV(){
   var data=loadData();if(!data.length){showToast('No data to export');return;}
+  localStorage.setItem(BACKUP_LAST_KEY, new Date().toISOString().substring(0,10));
+  updateBackupLastLabel();
   var rows=[['Date','Description','Amount','Currency','Category']];
   data.forEach(function(i){rows.push([i.date,'"'+i.desc.replace(/"/g,'""')+'"',i.amount,i.currency,i.category]);});
   var csv=rows.map(function(r){return r.join(',');}).join('\n');
@@ -5894,22 +5911,87 @@ function changeUsername() {
     .catch(function(e) { showToast('Error: ' + e.message); });
 }
 
+
+// ════════════════════════════════
+//  CSV BACKUP REMINDER
+// ════════════════════════════════
+var BACKUP_FREQ_KEY      = 'expense_backup_frequency';
+var BACKUP_LAST_KEY      = 'expense_backup_last';
+
+function saveBackupFrequency(val) {
+  localStorage.setItem(BACKUP_FREQ_KEY, val);
+  showToast('Backup reminder set to: ' + val);
+  updateBackupLastLabel();
+}
+
+function updateBackupLastLabel() {
+  var last = localStorage.getItem(BACKUP_LAST_KEY);
+  var el   = document.getElementById('backup-last');
+  if (el) el.textContent = last ? 'Last backup: ' + last : 'Never backed up';
+  // Set frequency selector
+  var sel  = document.getElementById('backup-frequency');
+  if (sel) sel.value = localStorage.getItem(BACKUP_FREQ_KEY) || 'never';
+}
+
+function checkBackupReminder() {
+  var freq = localStorage.getItem(BACKUP_FREQ_KEY) || 'never';
+  if (freq === 'never') return;
+  var last = localStorage.getItem(BACKUP_LAST_KEY);
+  var now  = new Date();
+  if (!last) { showBackupPrompt(freq); return; }
+  var lastDate = new Date(last);
+  var diffDays = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+  var due = false;
+  if (freq === 'weekly'  && diffDays >= 7)   due = true;
+  if (freq === 'monthly' && diffDays >= 30)  due = true;
+  if (freq === 'yearly'  && diffDays >= 365) due = true;
+  if (due) showBackupPrompt(freq);
+}
+
+function showBackupPrompt(freq) {
+  var existing = document.getElementById('backup-prompt');
+  if (existing) return; // already showing
+  var prompt = document.createElement('div');
+  prompt.id = 'backup-prompt';
+  prompt.style.cssText = 'position:fixed;bottom:80px;right:24px;z-index:9990;background:var(--ink);border:2px solid var(--gold);border-radius:8px;padding:18px 22px;max-width:300px;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+  prompt.innerHTML =
+    '<div style="font-family:DM Mono,monospace;font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">&#128276; Backup Reminder</div>' +
+    '<div style="font-family:DM Sans,sans-serif;font-size:0.82rem;color:var(--paper);line-height:1.5;margin-bottom:14px;">Time for your ' + freq + ' backup! Download a CSV to keep your data safe.</div>' +
+    '<div style="display:flex;gap:8px;">' +
+      '<button onclick="exportCSVAndDismiss()" style="flex:1;padding:8px;background:var(--gold);border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--ink);cursor:pointer;">&#8595; Download CSV</button>' +
+      '<button onclick="dismissBackupPrompt()" style="padding:8px 10px;background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;font-family:DM Mono,monospace;font-size:0.72rem;color:rgba(255,255,255,0.5);cursor:pointer;">Later</button>' +
+    '</div>';
+  document.body.appendChild(prompt);
+}
+
+function exportCSVAndDismiss() {
+  exportCSV();
+  localStorage.setItem(BACKUP_LAST_KEY, new Date().toISOString().substring(0,10));
+  dismissBackupPrompt();
+  updateBackupLastLabel();
+}
+
+function dismissBackupPrompt() {
+  var p = document.getElementById('backup-prompt');
+  if (p) p.remove();
+}
+
+// Override exportCSV to track last backup date
+var _origExportCSV = null;
+
 // INIT - adjust main padding
 // INIT - adjust main padding to account for fixed nav bar
 function adjustMainPadding() {
-  var fixedBar = document.getElementById('fixed-topbar');
-  var main = document.querySelector('main');
-  var h = fixedBar ? fixedBar.offsetHeight : 82;
-  // Push big header below fixed bar
+  var fixedBar  = document.getElementById('fixed-topbar');
   var bigHeader = document.getElementById('big-header-wrap');
-  if (bigHeader) {
-    bigHeader.style.marginTop = h + 'px';
-    bigHeader.style.top = h + 'px'; // sticky top = height of fixed bar
-  }
-  // Main just needs small top padding — sticky headers handle the rest
+  var main      = document.querySelector('main');
+  var navH      = fixedBar ? fixedBar.offsetHeight : 82;
+  // Position big header immediately below fixed nav bar
+  if (bigHeader) bigHeader.style.top = navH + 'px';
+  // Push main content below both fixed bars
   if (main) {
-    main.style.paddingTop = '20px';
-    main.style.marginTop = '0';
+    var bigH = (!_headerCollapsed && bigHeader) ? bigHeader.offsetHeight : 0;
+    main.style.paddingTop = (navH + bigH + 16) + 'px';
   }
 }
 window.addEventListener('resize', adjustMainPadding);
