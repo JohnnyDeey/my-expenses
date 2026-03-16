@@ -2955,14 +2955,18 @@ function updateMonthFilterPill() {
     defMonth2 = parseInt(lastKey.substring(5,7));
   }
 
-  // Rebuild year options always; only set month default if dropdowns are empty
+  // Save current user selection before rebuild
+  var savedYrVal = yrSel.value;
+  var savedMoVal = moSel.value;
+  // Rebuild year options
   yrSel.innerHTML = years2.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  // Rebuild month if empty
   if (moSel.options.length < 2) {
     moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
   }
-  // Only set defaults if no user selection yet
-  if (!yrSel.value || years2.indexOf(yrSel.value) === -1) yrSel.value = String(defYear2);
-  if (!moSel.value) moSel.value = pad(defMonth2);
+  // Restore saved selection if valid, otherwise use default
+  yrSel.value = (savedYrVal && years2.indexOf(savedYrVal) !== -1) ? savedYrVal : String(defYear2);
+  moSel.value = savedMoVal || pad(defMonth2);
 
   var selYear  = yrSel.value;
   var selMonth = moSel.value;
@@ -6612,13 +6616,21 @@ function updateIncomeHeaderContext() {
   // Populate dropdowns if empty
   var incYears = [];
   data.forEach(function(i){ var y=i.date.substring(0,4); if(incYears.indexOf(y)===-1) incYears.push(y); }); incYears.sort().reverse();
-  if (yrSel && yrSel.options.length < 2) {
+  // Save current selection
+  var savedIncYr = yrSel ? yrSel.value : '';
+  var savedIncMo = moSel ? moSel.value : '';
+  // Always rebuild year dropdown
+  if (yrSel) {
     yrSel.innerHTML = incYears.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
-    if (latestKey) yrSel.value = latestKey.substring(0,4);
+    // Restore saved selection if valid, else use latestKey
+    yrSel.value = (savedIncYr && incYears.indexOf(savedIncYr) !== -1) ? savedIncYr : (latestKey ? latestKey.substring(0,4) : '');
   }
+  // Build month if empty
   if (moSel && moSel.options.length < 2) {
     moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
-    if (latestKey) moSel.value = latestKey.substring(5,7);
+  }
+  if (moSel) {
+    moSel.value = savedIncMo || (latestKey ? latestKey.substring(5,7) : '');
   }
 
   // Use CURRENT selection (what user just clicked) not always latestKey
