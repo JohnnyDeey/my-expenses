@@ -346,6 +346,7 @@ function syncStartListener() {
   // Also listen for realtime updates
   userCol('settings').doc('trash').onSnapshot(function(doc) {
     if (!doc.exists || _isMerging) return;
+    if (window._trashDeletePending) return; // permanent delete in progress — ignore remote
     var d = doc.data();
     if (d.items) {
       var localTrash  = loadTrash();
@@ -4880,6 +4881,7 @@ var TRASH_KEY = 'expense_trash'; // base key, actual key is per-user
 
 function fetchTrashFromFirebase() {
   if (!_db || !_userId) return;
+  if (window._trashDeletePending) return; // don't overwrite after permanent delete
   userCol('settings').doc('trash').get().then(function(doc) {
     window._trashFetched = true; // mark that we've fetched — safe to push now
     if (!doc.exists) { renderTrashPanel(); return; }
@@ -4956,10 +4958,23 @@ function permanentDelete(trashId) {
   var trash = loadTrash();
   trash = trash.filter(function(t){ return String(t._trash_id) !== String(trashId); });
   saveTrash(trash);
+  // Push updated trash to Firebase immediately and lock listener
+  window._trashDeletePending = true;
+  if (_db && _userId) {
+    userCol('settings').doc('trash').set({ items: JSON.stringify(trash), updated: Date.now() })
+      .then(function(){ setTimeout(function(){ window._trashDeletePending = false; }, 5000); })
+      .catch(function(){ window._trashDeletePending = false; });
+  }
   renderTrashPanel();
 }
 function clearAllTrash() {
   saveTrash([]);
+  window._trashDeletePending = true;
+  if (_db && _userId) {
+    userCol('settings').doc('trash').set({ items: '[]', updated: Date.now() })
+      .then(function(){ setTimeout(function(){ window._trashDeletePending = false; }, 5000); })
+      .catch(function(){ window._trashDeletePending = false; });
+  }
   renderTrashPanel();
   showToast('Recycle bin emptied');
 }
