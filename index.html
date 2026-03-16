@@ -293,7 +293,9 @@ function syncStartListener() {
     var remoteCount = allEntries.length;
     if (remoteCount === 0) { _isMerging = false; syncPush(); return; }
     if (remote !== local) {
-      if (localCount > remoteCount) { _isMerging = false; syncPush(); return; }
+      // NEVER overwrite local with remote if remote has MORE entries
+      // This prevents deleted items from being restored
+      if (localCount <= remoteCount) { _isMerging = false; return; }
       localStorage.setItem('expense_ledger', remote);
       var active = document.querySelector('.panel.active');
       if (active) {
@@ -386,11 +388,12 @@ function generateCode() {
   var phone = (document.getElementById('reg-phone') ||{}).value.trim();
   var errEl = document.getElementById('reg-error');
   if (!name)  { if(errEl) errEl.textContent='Please enter your name'; return; }
-  if (!phone || phone.replace(/\D/g,'').length < 7) {
+  if (!phone || phone.replace(/[^0-9]/g,'').length < 7) {
     if(errEl) errEl.textContent='Please enter a valid phone number'; return;
   }
+  if (!_selectedUsername) { showToast('Please select a username first'); return; }
   if(errEl) errEl.textContent = 'Checking...';
-  _pendingName  = name;
+  _pendingName  = _selectedUsername; // use chosen username as display name
   _pendingPhone = hashPhone(phone);
   _generatedCode = String(Math.floor(100000 + Math.random() * 900000));
 
@@ -444,53 +447,84 @@ function submitLogin() {
   var phoneEl = document.getElementById('login-phone');
   var codeEl  = document.getElementById('login-code');
   var errEl   = document.getElementById('login-error');
-  var phone   = phoneEl ? phoneEl.value.trim() : '';
-  var code    = codeEl  ? codeEl.value.trim()  : '';
-  if (!phone || phone.replace(/\D/g,'').length < 7) {
-    if(errEl) errEl.textContent = 'Please enter your phone number'; return;
+  var identifier = phoneEl ? phoneEl.value.trim() : '';
+  var code       = codeEl  ? codeEl.value.trim()  : '';
+  if (!identifier) {
+    if(errEl) errEl.textContent = 'Please enter your phone number or username'; return;
   }
   if (code.length < 4) {
     if(errEl) errEl.textContent = 'Please enter your access code'; return;
   }
   if(errEl) errEl.textContent = 'Verifying...';
 
-  var phoneHash = hashPhone(phone);
-  var pinHash   = hashPin(code);
+  var pinHash = hashPin(code);
+
+  function doLogin(doc, errEl) {
+    if (!doc.exists) return false;
+    var data = doc.data();
+    if (data.pin_hash !== pinHash) {
+      if(errEl) errEl.textContent = 'Incorrect access code. Please try again.';
+      return true; // found user but wrong code
+    }
+    var uid = data.user_id;
+    if (!uid) { if(errEl) errEl.textContent = 'Account error. Please contact admin.'; return true; }
+    _userId    = uid;
+    _userName  = data.name;
+    _userPhone = data._phone_key || doc.id;
+    localStorage.removeItem('expense_ledger');
+    localStorage.removeItem('custom_categories');
+    localStorage.removeItem('custom_cat_rules');
+    localStorage.setItem(UID_KEY,   _userId);
+    localStorage.setItem(NAME_KEY,  _userName);
+    localStorage.setItem(PHONE_KEY, _userPhone);
+    if(errEl) errEl.textContent = '';
+    hidePinScreen();
+    updateUserDisplay();
+    fetchTrashFromFirebase();
+    startSync();
+    return true;
+  }
 
   getDB(function(db) {
-    db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
-      if (!doc.exists) {
-        if(errEl) errEl.textContent = 'Phone number not found. Please register first.';
-        return;
-      }
-      var data = doc.data();
-      if (data.pin_hash !== pinHash) {
-        if(errEl) errEl.textContent = 'Incorrect access code. Please try again.';
-        return;
-      }
-      // Valid credentials — get the UUID (never exposed to user)
-      var uid = data.user_id;
-      if (!uid) { if(errEl) errEl.textContent = 'Account error. Please contact admin.'; return; }
+    // Phone = only digits, +, spaces, dashes, brackets
+    // Username = contains letters (mix of text and numbers)
+    var looksLikePhone = /^[+0-9\-\s()]+$/.test(identifier) && identifier.replace(/[^0-9]/g,'').length >= 7;
 
-      _userId    = uid;
-      _userName  = data.name;
-      _userPhone = phoneHash;
-      // Clear previous user data from this device before loading new user
-      localStorage.removeItem('expense_ledger');
-      localStorage.removeItem('custom_categories');
-      localStorage.removeItem('custom_cat_rules');
-      localStorage.setItem(UID_KEY,   _userId);
-      localStorage.setItem(NAME_KEY,  _userName);
-      localStorage.setItem(PHONE_KEY, _userPhone);
-      if(errEl) errEl.textContent = '';
-      hidePinScreen();
-      updateUserDisplay();
-      // Fetch trash BEFORE starting sync to prevent empty push overwriting Firebase
-      fetchTrashFromFirebase();
-      startSync();
-    }).catch(function(e) {
-      if(errEl) errEl.textContent = 'Connection error. Please check your internet.';
-    });
+    if (looksLikePhone) {
+      // Try phone hash first
+      var phoneHash = hashPhone(identifier);
+      db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
+        if (!doLogin(doc, errEl)) {
+          // Not found by phone — try as username
+          db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
+            if (snap.empty) {
+              if(errEl) errEl.textContent = 'Account not found. Please register first.';
+            } else {
+              doLogin(snap.docs[0], errEl);
+            }
+          });
+        }
+      }).catch(function(e) {
+        if(errEl) errEl.textContent = 'Connection error. Please check your internet.';
+      });
+    } else {
+      // Try as username directly
+      db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
+        if (!snap.empty) {
+          doLogin(snap.docs[0], errEl);
+        } else {
+          // Not found by username — try as phone just in case
+          var phoneHash = hashPhone(identifier);
+          db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
+            if (!doLogin(doc, errEl)) {
+              if(errEl) errEl.textContent = 'Account not found. Please register first.';
+            }
+          });
+        }
+      }).catch(function(e) {
+        if(errEl) errEl.textContent = 'Connection error. Please check your internet.';
+      });
+    }
   });
 }
 
@@ -1519,6 +1553,16 @@ nav.tabs.header-hidden button {
     </div>
   </div>
 
+  <!-- ── 3a. CHANGE USERNAME ── -->
+  <div class="card" style="margin-bottom:14px;">
+    <label>&#128100; Change Username</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Change your display username (e.g. from <strong>johndiarmy</strong> to <strong>jd0292</strong>).</p>
+    <div style="display:flex;gap:8px;">
+      <input id="change-username-input" type="text" placeholder="New username..." style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.9rem;background:white;color:var(--ink);outline:none;">
+      <button class="btn btn-primary" style="padding:10px 18px;font-size:0.8rem;" onclick="changeUsername()">Save</button>
+    </div>
+  </div>
+
   <!-- ── 3b. CHANGE ACCESS CODE ── -->
   <div class="card" style="margin-bottom:14px;">
     <label>&#128274; Change Access Code</label>
@@ -1668,17 +1712,39 @@ nav.tabs.header-hidden button {
     <div id="pin-step-register" style="display:none;">
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:left;">
         <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">First time? Create your account</div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">We'll generate a secure access code for you.</div>
-        <div style="margin-bottom:14px;">
-          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Your name</label>
-          <input id="reg-name" type="text" placeholder="e.g. David" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('reg-phone').focus()">
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Enter your full name and we'll suggest a unique username for you.</div>
+
+        <!-- Step A: Full name + phone -->
+        <div id="reg-step-name">
+          <div style="margin-bottom:14px;">
+            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Full name</label>
+            <input id="reg-name" type="text" placeholder="e.g. John David" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('reg-phone').focus()">
+          </div>
+          <div style="margin-bottom:20px;">
+            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number</label>
+            <input id="reg-phone" type="tel" placeholder="e.g. 07012345678" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')showUsernameStep()">
+          </div>
+          <div id="reg-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
+          <button onclick="showUsernameStep()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Next →</button>
         </div>
-        <div style="margin-bottom:20px;">
-          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number</label>
-          <input id="reg-phone" type="tel" placeholder="e.g. 07012345678" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')generateCode()">
+
+        <!-- Step B: Choose username -->
+        <div id="reg-step-username" style="display:none;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:16px;">Choose a username (exactly 10 characters, letters + numbers):</div>
+          <div id="reg-username-suggestions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+          <div style="border-top:1px solid #3a3020;padding-top:14px;margin-bottom:12px;">
+            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Or enter your own (10 chars, letters+numbers)</label>
+            <div style="display:flex;gap:8px;">
+              <input id="reg-custom-username" type="text" maxlength="10" placeholder="e.g. jd02920123" style="flex:1;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;letter-spacing:2px;" oninput="validateCustomUsername(this)">
+              <button onclick="selectCustomUsername()" style="padding:10px 14px;background:#3a3020;border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;">Use this</button>
+            </div>
+            <div id="reg-username-error" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#b5451b;margin-top:6px;min-height:16px;"></div>
+          </div>
+          <div id="reg-selected-username" style="display:none;padding:10px 14px;background:rgba(200,150,46,0.1);border:1px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--gold2);letter-spacing:2px;text-align:center;margin-bottom:14px;"></div>
+          <button onclick="generateCode()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Generate my access code</button>
+          <button onclick="document.getElementById('reg-step-name').style.display='block';document.getElementById('reg-step-username').style.display='none';" style="width:100%;padding:10px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;margin-top:8px;">← Back</button>
         </div>
-        <div id="reg-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
-        <button onclick="generateCode()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Generate my access code</button>
+
         <div style="text-align:center;margin-top:16px;">
           <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;">Already have a code? </span>
           <button onclick="showLoginStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--gold);cursor:pointer;text-decoration:underline;">Sign in</button>
@@ -1703,8 +1769,8 @@ nav.tabs.header-hidden button {
         <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">Welcome back</div>
         <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Enter your phone number and access code.</div>
         <div style="margin-bottom:14px;">
-          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number</label>
-          <input id="login-phone" type="tel" placeholder="e.g. 07012345678" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('login-code').focus()">
+          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number or Username</label>
+          <input id="login-phone" type="text" placeholder="e.g. 07012345678 or jd0292" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('login-code').focus()">
         </div>
         <div style="margin-bottom:20px;">
           <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Access code</label>
@@ -5450,11 +5516,163 @@ function generatePDFReport() {
 
   win.document.write('<div class="footer">My Expense Ledger · Personal Finance Tracker · Confidential</div>');
   win.document.write('</body></html>');
+  // Add save-as-PDF button instead of auto-printing
+  win.document.write('<div style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px;">');
+  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#1a1410;color:#e8b84b;border:2px solid #c8962e;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT</button>');
+  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#c8962e;color:#1a1410;border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.85rem;font-weight:700;cursor:pointer;letter-spacing:1px;">&#128229; SAVE AS PDF</button>');
+  win.document.write('</div>');
+  win.document.write('<style>@media print { .no-print { display:none!important; } }</style>');
   win.document.close();
-  setTimeout(function(){ win.print(); }, 500);
+  // Do NOT auto-print — let user choose Save as PDF or Print
 }
 
 
+
+// ════════════════════════════════
+//  USERNAME GENERATION
+// ════════════════════════════════
+var _selectedUsername = '';
+
+function generateUsernameOptions(fullName) {
+  var parts = fullName.trim().toLowerCase().split(/\s+/);
+  var first = parts[0] || '';
+  var last  = parts[1] || '';
+  var suggestions = [];
+  var used = {};
+
+  function randNum(n) {
+    var s = '';
+    for (var i=0; i<n; i++) s += Math.floor(Math.random()*10);
+    return s;
+  }
+  function randLetters(n) {
+    var chars = 'abcdefghjkmnpqrstuvwxyz';
+    var s = '';
+    for (var i=0; i<n; i++) s += chars[Math.floor(Math.random()*chars.length)];
+    return s;
+  }
+  function make(base) {
+    // Pad or trim to exactly 10 chars with numbers
+    base = base.replace(/[^a-z0-9]/g,'').substring(0,7);
+    var needed = 10 - base.length;
+    return base + randNum(needed);
+  }
+
+  // Option 1: first + last initial + numbers
+  if (first && last) suggestions.push(make(first + last[0]));
+  // Option 2: first initial + last + numbers
+  if (first && last) suggestions.push(make(first[0] + last));
+  // Option 3: first + numbers
+  suggestions.push(make(first));
+  // Option 4: first + last truncated
+  if (last) suggestions.push(make(first.substring(0,4) + last.substring(0,3)));
+
+  // Ensure uniqueness and exactly 10 chars
+  var result = [];
+  suggestions.forEach(function(s) {
+    s = s.substring(0,10);
+    while (s.length < 10) s += randNum(1);
+    if (!used[s]) { used[s] = true; result.push(s); }
+  });
+  while (result.length < 3) {
+    var r = randLetters(5) + randNum(5);
+    if (!used[r]) { used[r] = true; result.push(r); }
+  }
+  return result.slice(0,3);
+}
+
+function showUsernameStep() {
+  var name  = (document.getElementById('reg-name')  ||{}).value.trim();
+  var phone = (document.getElementById('reg-phone') ||{}).value.trim();
+  var errEl = document.getElementById('reg-error');
+  if (!name)  { if(errEl) errEl.textContent='Please enter your full name'; return; }
+  if (!phone || phone.replace(/\D/g,'').length < 7) {
+    if(errEl) errEl.textContent='Please enter a valid phone number'; return;
+  }
+  if(errEl) errEl.textContent = '';
+
+  // Generate 3 suggestions
+  var suggestions = generateUsernameOptions(name);
+  var sugDiv = document.getElementById('reg-username-suggestions');
+  sugDiv.innerHTML = '';
+  suggestions.forEach(function(s) {
+    var btn = document.createElement('button');
+    btn.style.cssText = 'width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:DM Mono,monospace;font-size:0.9rem;color:var(--gold2);cursor:pointer;letter-spacing:3px;text-align:center;transition:border-color 0.2s;';
+    btn.textContent = s;
+    btn.addEventListener('click', function() {
+      _selectedUsername = s;
+      // Highlight selected
+      sugDiv.querySelectorAll('button').forEach(function(b){ b.style.borderColor='#3a3020'; b.style.background='#2a2018'; });
+      btn.style.borderColor = 'var(--gold)';
+      btn.style.background = 'rgba(200,150,46,0.15)';
+      var selDiv = document.getElementById('reg-selected-username');
+      selDiv.textContent = '✓ ' + s;
+      selDiv.style.display = 'block';
+    });
+    sugDiv.appendChild(btn);
+  });
+
+  _selectedUsername = suggestions[0]; // default first
+  sugDiv.querySelectorAll('button')[0].click();
+
+  document.getElementById('reg-step-name').style.display = 'none';
+  document.getElementById('reg-step-username').style.display = 'block';
+}
+
+function validateCustomUsername(inp) {
+  var val = inp.value.toLowerCase().replace(/[^a-z0-9]/g,'');
+  inp.value = val;
+  var errEl = document.getElementById('reg-username-error');
+  if (val.length > 0 && val.length < 10) {
+    errEl.textContent = val.length + '/10 — needs to be exactly 10 characters';
+  } else if (val.length === 10) {
+    errEl.textContent = '✓ Looks good!';
+    errEl.style.color = '#4a7c59';
+  } else {
+    errEl.textContent = '';
+  }
+}
+
+function selectCustomUsername() {
+  var inp = document.getElementById('reg-custom-username');
+  var val = inp.value.toLowerCase().replace(/[^a-z0-9]/g,'');
+  var errEl = document.getElementById('reg-username-error');
+  if (val.length !== 10) {
+    errEl.textContent = 'Must be exactly 10 characters (letters and numbers)';
+    errEl.style.color = '#b5451b';
+    return;
+  }
+  _selectedUsername = val;
+  // Deselect suggestion buttons
+  var sugDiv = document.getElementById('reg-username-suggestions');
+  sugDiv.querySelectorAll('button').forEach(function(b){ b.style.borderColor='#3a3020'; b.style.background='#2a2018'; });
+  var selDiv = document.getElementById('reg-selected-username');
+  selDiv.textContent = '✓ ' + val;
+  selDiv.style.display = 'block';
+  errEl.textContent = '✓ Username selected!';
+  errEl.style.color = '#4a7c59';
+}
+
+// ════════════════════════════════
+//  CHANGE USERNAME IN MANAGE
+// ════════════════════════════════
+function changeUsername() {
+  var inp = document.getElementById('change-username-input');
+  var newName = inp ? inp.value.trim() : '';
+  if (!newName) { showToast('Enter a new username'); return; }
+  if (!_db || !_userPhone) { showToast('Not connected'); return; }
+  _db.collection('user_registry').doc(_userPhone).update({ name: newName })
+    .then(function() {
+      _userName = newName;
+      localStorage.setItem('expense_user_name', newName);
+      updateUserDisplay();
+      showToast('Username changed to "' + newName + '"');
+      if (inp) inp.value = '';
+    })
+    .catch(function(e) { showToast('Error: ' + e.message); });
+}
+
+// INIT - adjust main padding
 // INIT - adjust main padding to account for fixed nav bar
 function adjustMainPadding() {
   var fixedBar = document.getElementById('fixed-topbar');
