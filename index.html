@@ -6418,31 +6418,80 @@ function hideSwitchPrompt() {
   if (p) p.remove();
 }
 function applyMode() {
-  var expMain  = document.querySelector('main > *:not(#income-main)');
-  var incMain  = document.getElementById('income-main');
-  var mainNav  = document.getElementById('main-nav');
-  var incNav   = document.getElementById('income-nav');
-  var modBtn   = document.getElementById('mode-switch-btn');
-
+  var incMain   = document.getElementById('income-main');
+  var mainNav   = document.getElementById('main-nav');
+  var incNav    = document.getElementById('income-nav');
   var modeLabel = document.getElementById('hdr-mode-label');
+
   if (_appMode === 'income') {
-    if (mainNav) { mainNav.style.display = 'none'; }
-    if (incNav)  { incNav.style.display  = ''; }
-    if (incMain) { incMain.style.display = 'block'; }
-    if (modeLabel) { modeLabel.textContent = '💰 INCOME'; modeLabel.style.background='rgba(74,124,89,0.2)'; modeLabel.style.color='#8dd4a8'; }
-    // Re-init income
+    // Nav: hide expense tabs, show income tabs
+    if (mainNav) mainNav.style.display = 'none';
+    if (incNav)  incNav.style.display  = '';
+    // Panels: show income, hide expense
+    if (incMain) incMain.style.display = 'block';
+    document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = 'none'; });
+    // Mode label
+    if (modeLabel) { modeLabel.textContent='💰 INCOME'; modeLabel.style.background='rgba(74,124,89,0.2)'; modeLabel.style.color='#8dd4a8'; }
+    // Update big header with INCOME data
+    updateIncomeHeaderContext();
+    // Init income UI
     renderIncomeMonthPicker();
     incPopulateFilters();
-    renderIncomeLedger();
     var incManageTotal = document.getElementById('inc-manage-total');
     if (incManageTotal) incManageTotal.textContent = loadIncomeData().length;
   } else {
-    // Expenses mode
+    // Nav: show expense tabs, hide income tabs
     if (mainNav) mainNav.style.display = '';
-    if (incNav)  { incNav.style.display = 'none'; }
-    if (incMain) { incMain.style.display = 'none'; }
-    if (modeLabel) { modeLabel.textContent = '💸 EXPENSES'; modeLabel.style.background='rgba(200,150,46,0.15)'; modeLabel.style.color='var(--gold2)'; }
+    if (incNav)  incNav.style.display  = 'none';
+    // Panels: show expense, hide income
+    if (incMain) incMain.style.display = 'none';
+    document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = ''; });
+    // Mode label
+    if (modeLabel) { modeLabel.textContent='💸 EXPENSES'; modeLabel.style.background='rgba(200,150,46,0.15)'; modeLabel.style.color='var(--gold2)'; }
+    // Update big header with EXPENSE data
     updateHeaderContext();
+    adjustMainPadding();
+  }
+}
+
+function updateIncomeHeaderContext() {
+  var data = loadIncomeData();
+  var label = document.getElementById('hdr-context-label');
+  var pills = document.getElementById('hdr-context-pills');
+  if (label) label.textContent = 'All Time Income';
+  if (pills) {
+    if (!data.length) {
+      pills.innerHTML = '<span style="font-family:DM Mono,monospace;font-size:0.78rem;color:#6b5e50;">No income data yet</span>';
+    } else {
+      var byCur = {};
+      data.forEach(function(i){ if(i.amount>0) byCur[i.currency]=(byCur[i.currency]||0)+i.amount; });
+      pills.innerHTML = Object.keys(byCur).map(function(c){
+        return '<span class="hdr-pill" style="background:rgba(74,124,89,0.3);color:#8dd4a8;">'+(SYMS[c]||'')+fmtNum(byCur[c])+'</span>';
+      }).join('');
+    }
+  }
+  // Second pill - current month income
+  var now = new Date();
+  var curKey = now.getFullYear() + '-' + pad(now.getMonth()+1);
+  var yrSel = document.getElementById('hdr-filter-year');
+  var moSel = document.getElementById('hdr-filter-month');
+  var filterPills = document.getElementById('hdr-filter-pills');
+  var ctxLabel = document.getElementById('hdr-context-label');
+  if (yrSel && moSel) {
+    yrSel.value = String(now.getFullYear());
+    moSel.value = pad(now.getMonth()+1);
+  }
+  if (filterPills) {
+    var monthData = data.filter(function(i){ return i.amount>0 && i.date.substring(0,7)===curKey; });
+    if (!monthData.length) {
+      filterPills.innerHTML = '<span style="font-family:DM Mono,monospace;font-size:0.78rem;color:#6b5e50;">No data</span>';
+    } else {
+      var byCur2 = {};
+      monthData.forEach(function(i){ byCur2[i.currency]=(byCur2[i.currency]||0)+i.amount; });
+      filterPills.innerHTML = Object.keys(byCur2).map(function(c){
+        return '<span class="hdr-pill" style="background:rgba(74,124,89,0.3);color:#8dd4a8;">'+(SYMS[c]||'')+fmtNum(byCur2[c])+'</span>';
+      }).join('');
+    }
   }
 }
 
