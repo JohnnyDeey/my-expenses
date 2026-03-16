@@ -6588,7 +6588,7 @@ function applyMode() {
   }
 }
 
-function updateIncomeHeaderContext() {
+function updateIncomeHeaderContext(selYearParam, selMonthParam) {
   var data = loadIncomeData();
   var label = document.getElementById('hdr-context-label');
   var pills = document.getElementById('hdr-context-pills');
@@ -6633,10 +6633,13 @@ function updateIncomeHeaderContext() {
     moSel.value = savedIncMo;
   }
 
-  // Use CURRENT selection (what user just clicked) not always latestKey
-  var selYear  = yrSel  ? yrSel.value  : (latestKey ? latestKey.substring(0,4) : '');
-  var selMonth = moSel  ? moSel.value  : (latestKey ? latestKey.substring(5,7) : '');
+  // Use passed params if provided (from month click), else use dropdown values
+  var selYear  = selYearParam  ? String(selYearParam)  : (yrSel ? yrSel.value : '');
+  var selMonth = selMonthParam ? pad(selMonthParam)     : (moSel ? moSel.value : '');
   var selKey   = selYear && selMonth ? selYear + '-' + selMonth : latestKey;
+  // Update dropdowns to reflect current selection
+  if (yrSel && selYear) yrSel.value = selYear;
+  if (moSel && selMonth) moSel.value = selMonth;
 
   var filterPills = document.getElementById('hdr-filter-pills');
   if (filterPills) {
@@ -6672,6 +6675,10 @@ function incChangeYear(delta) {
   incPickerYear += delta;
   document.getElementById('inc-picker-year-display').textContent = incPickerYear;
   renderIncomeMonthPicker();
+  // If a month was already selected, update header for new year
+  if (incPickerMonth) {
+    updateIncomeHeaderContext(incPickerYear, incPickerMonth);
+  }
 }
 function changeIncomeYear(delta) { incChangeYear(delta); } // alias
 function renderIncomeMonthPicker() {
@@ -6693,12 +6700,8 @@ function renderIncomeMonthPicker() {
       incPickerMonth = mn;
       renderIncomeMonthPicker();
       loadIncomeMonthIntoTextarea();
-      // Update header second pill to show this month's income
-      var yrSel = document.getElementById('hdr-filter-year');
-      var moSel = document.getElementById('hdr-filter-month');
-      if (yrSel) yrSel.value = String(incPickerYear);
-      if (moSel) moSel.value = pad(mn);
-      updateIncomeHeaderContext();
+      // Update header second pill with the clicked month/year
+      updateIncomeHeaderContext(incPickerYear, mn);
     });
     grid.appendChild(btn);
   });
