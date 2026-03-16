@@ -149,6 +149,10 @@ function userCol(name) {
 
 // ── Init: restore session from localStorage ──
 function syncInit() {
+  // Restore app mode immediately — before anything else
+  var savedMode = localStorage.getItem(APP_MODE_KEY);
+  if (savedMode) { _appMode = savedMode; }
+
   var uid   = localStorage.getItem(UID_KEY);
   var name  = localStorage.getItem(NAME_KEY);
   var phone = localStorage.getItem(PHONE_KEY);
@@ -6526,21 +6530,20 @@ function updateIncomeHeaderContext() {
       }).join('');
     }
   }
-  // Second pill - current month income
-  var now = new Date();
-  var curKey = now.getFullYear() + '-' + pad(now.getMonth()+1);
+  // Second pill - latest month with income data
+  var allMonthKeys = [];
+  data.forEach(function(i){ if(i.amount>0 && allMonthKeys.indexOf(i.date.substring(0,7))===-1) allMonthKeys.push(i.date.substring(0,7)); });
+  allMonthKeys.sort();
+  var latestKey = allMonthKeys[allMonthKeys.length-1] || '';
   var yrSel = document.getElementById('hdr-filter-year');
   var moSel = document.getElementById('hdr-filter-month');
+  if (yrSel && latestKey) yrSel.value = latestKey.substring(0,4);
+  if (moSel && latestKey) moSel.value = latestKey.substring(5,7);
   var filterPills = document.getElementById('hdr-filter-pills');
-  var ctxLabel = document.getElementById('hdr-context-label');
-  if (yrSel && moSel) {
-    yrSel.value = String(now.getFullYear());
-    moSel.value = pad(now.getMonth()+1);
-  }
   if (filterPills) {
-    var monthData = data.filter(function(i){ return i.amount>0 && i.date.substring(0,7)===curKey; });
+    var monthData = latestKey ? data.filter(function(i){ return i.amount>0 && i.date.substring(0,7)===latestKey; }) : [];
     if (!monthData.length) {
-      filterPills.innerHTML = '<span style="font-family:DM Mono,monospace;font-size:0.78rem;color:#6b5e50;">No data</span>';
+      filterPills.innerHTML = '<span style="font-family:DM Mono,monospace;font-size:0.78rem;color:#6b5e50;">No income data yet</span>';
     } else {
       var byCur2 = {};
       monthData.forEach(function(i){ byCur2[i.currency]=(byCur2[i.currency]||0)+i.amount; });
