@@ -202,10 +202,10 @@ function startSync() {
 }
 
 function syncPushNow() {
-  // Immediate push — blocks listener until confirmed written to Firebase
+  // Immediate push — also deletes removed month documents from Firebase
   clearTimeout(_syncPushTimer);
   if (!_db || !_userId) return;
-  window._deletePending = true; // hard lock — listener ignores ALL remote data
+  window._deletePending = true;
   _isMerging = true;
   syncSetStatus('syncing');
   var data  = localStorage.getItem('expense_ledger')    || '[]';
@@ -218,10 +218,22 @@ function syncPushNow() {
     if (!byMonth[k]) byMonth[k] = [];
     byMonth[k].push(e);
   });
+  var localMonths = Object.keys(byMonth);
   var batch = _db.batch();
-  Object.keys(byMonth).forEach(function(ym) {
+  // Set all existing months
+  localMonths.forEach(function(ym) {
     batch.set(userCol('expense_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
   });
+  // DELETE Firebase docs for months no longer in local data
+  // We track which months were previously in Firebase via _knownFirebaseMonths
+  var knownMonths = window._knownFirebaseMonths || [];
+  knownMonths.forEach(function(ym) {
+    if (localMonths.indexOf(ym) === -1) {
+      batch.delete(userCol('expense_months').doc(ym));
+    }
+  });
+  // Update known months to current local months
+  window._knownFirebaseMonths = localMonths;
   batch.set(userCol('settings').doc('default'), {
     custom_categories: cats, custom_cat_rules: rules,
     display_name: _userName, updated: Date.now()
@@ -261,10 +273,19 @@ function syncPush() {
       if (!byMonth[k]) byMonth[k] = [];
       byMonth[k].push(e);
     });
+    var localMonths2 = Object.keys(byMonth);
     var batch = _db.batch();
-    Object.keys(byMonth).forEach(function(ym) {
+    localMonths2.forEach(function(ym) {
       batch.set(userCol('expense_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
     });
+    // Delete Firebase docs for months removed from local
+    var knownM = window._knownFirebaseMonths || [];
+    knownM.forEach(function(ym) {
+      if (localMonths2.indexOf(ym) === -1) {
+        batch.delete(userCol('expense_months').doc(ym));
+      }
+    });
+    window._knownFirebaseMonths = localMonths2;
     batch.set(userCol('settings').doc('default'), {
       custom_categories: cats, custom_cat_rules: rules,
       display_name: _userName, updated: Date.now()
@@ -295,6 +316,9 @@ function syncStartListener() {
       if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
     });
     allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    // Track which months exist in Firebase
+    window._knownFirebaseMonths = [];
+    snapshot.forEach(function(doc){ window._knownFirebaseMonths.push(doc.id); });
     var local      = localStorage.getItem('expense_ledger') || '[]';
     var localCount = 0; try { localCount = JSON.parse(local).length; } catch(e){}
     var remoteCount = allEntries.length;
@@ -4598,7 +4622,8 @@ function renderManagePanel(){
       yesBtn.addEventListener('click', function(){
         var all = loadData();
         var toDelete = all.filter(function(i){ return i.date.substring(0,7)===key; });
-        if (toDelete.length) addToTrash(toDelete, 'deleted');
+        var monthGroupLabel = MONTHS[mIdx] + ' ' + y;
+        if (toDelete.length) addToTrash(toDelete, 'deleted', monthGroupLabel);
         window._lastDeleteTime = Date.now();
         var remaining = all.filter(function(i){ return i.date.substring(0,7)!==key; });
         localStorage.setItem('expense_ledger', JSON.stringify(remaining));
@@ -4905,17 +4930,32 @@ function loadTrash() {
 function saveTrash(data) {
   localStorage.setItem(getTrashKey(), JSON.stringify(data));
 }
-function addToTrash(items, source) {
+function addToTrash(items, source, groupLabel) {
   // source: 'deleted' | 'skipped'
+  // groupLabel: optional e.g. 'January 2025' for month deletions
   var trash = loadTrash();
   var now = new Date().toISOString().substring(0,10);
-  items.forEach(function(item) {
-    trash.push(Object.assign({}, item, {
-      _trash_source: source || 'deleted',
-      _trash_date:   now,
-      _trash_id:     Date.now() + Math.random()
-    }));
-  });
+  if (groupLabel && items.length > 1) {
+    // Store as a group with a shared group_id
+    var groupId = 'grp_' + Date.now();
+    items.forEach(function(item) {
+      trash.push(Object.assign({}, item, {
+        _trash_source: source || 'deleted',
+        _trash_date:   now,
+        _trash_id:     Date.now() + Math.random(),
+        _group_id:     groupId,
+        _group_label:  groupLabel
+      }));
+    });
+  } else {
+    items.forEach(function(item) {
+      trash.push(Object.assign({}, item, {
+        _trash_source: source || 'deleted',
+        _trash_date:   now,
+        _trash_id:     Date.now() + Math.random()
+      }));
+    });
+  }
   saveTrash(trash);
 }
 function restoreFromTrash(trashId) {
@@ -4945,6 +4985,45 @@ function restoreFromTrash(trashId) {
     showToast('Entry restored to ledger');
   }
 }
+function restoreGroup(groupId) {
+  var trash = loadTrash();
+  var toRestore = trash.filter(function(t){ return t._group_id === groupId; });
+  var remaining = trash.filter(function(t){ return t._group_id !== groupId; });
+  var data = loadData();
+  toRestore.forEach(function(item) {
+    var restored = {};
+    Object.keys(item).forEach(function(k){ if (k.indexOf('_trash_')===-1 && k.indexOf('_group')===-1) restored[k]=item[k]; });
+    if (restored.id && restored.date) data.push(restored);
+  });
+  data.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+  saveData(data);
+  saveTrash(remaining);
+  if (_db && _userId) {
+    window._trashDeletePending = true;
+    userCol('settings').doc('trash').set({ items: JSON.stringify(remaining), updated: Date.now() })
+      .then(function(){ setTimeout(function(){ window._trashDeletePending = false; }, 5000); })
+      .catch(function(){ window._trashDeletePending = false; });
+  }
+  renderTrashPanel();
+  renderManagePanel();
+  updateHeaderContext();
+  showToast(toRestore.length + ' entries restored');
+}
+
+function deleteGroup(groupId) {
+  var trash = loadTrash();
+  var remaining = trash.filter(function(t){ return t._group_id !== groupId; });
+  saveTrash(remaining);
+  window._trashDeletePending = true;
+  if (_db && _userId) {
+    userCol('settings').doc('trash').set({ items: JSON.stringify(remaining), updated: Date.now() })
+      .then(function(){ setTimeout(function(){ window._trashDeletePending = false; }, 5000); })
+      .catch(function(){ window._trashDeletePending = false; });
+  }
+  renderTrashPanel();
+  showToast('Group permanently deleted');
+}
+
 function permanentDelete(trashId) {
   var trash = loadTrash();
   trash = trash.filter(function(t){ return String(t._trash_id) !== String(trashId); });
@@ -5019,6 +5098,18 @@ function renderTrashPanel() {
 
   el.innerHTML = '';
 
+  // Group items by _group_id
+  var groups = {}; // group_id -> {label, items}
+  var singles = [];
+  filtered.forEach(function(item) {
+    if (item._group_id) {
+      if (!groups[item._group_id]) groups[item._group_id] = { label: item._group_label, items: [], source: item._trash_source, date: item._trash_date };
+      groups[item._group_id].items.push(item);
+    } else {
+      singles.push(item);
+    }
+  });
+
   // Summary
   var sumDiv = document.createElement('div');
   sumDiv.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--paper2);border:1px solid var(--border);border-radius:4px 4px 0 0;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);flex-wrap:wrap;gap:6px;';
@@ -5048,10 +5139,40 @@ function renderTrashPanel() {
     '</tr></thead>';
 
   var tbody = document.createElement('tbody');
-  filtered.sort(function(a,b){ return (b._trash_date||'').localeCompare(a._trash_date||''); });
-
   var tbody = document.createElement('tbody');
-  filtered.forEach(function(item, idx) {
+
+  // Render groups first
+  var groupIds = Object.keys(groups).sort(function(a,b){ return (groups[b].date||'').localeCompare(groups[a].date||''); });
+  groupIds.forEach(function(gid, gIdx) {
+    var grp = groups[gid];
+    var tr = document.createElement('tr');
+    tr.style.cssText = 'background:#fffbf0;border-bottom:2px solid var(--gold);';
+    var td = document.createElement('td');
+    td.setAttribute('colspan','5');
+    td.style.cssText = 'padding:8px 10px;background:#fffbf0;';
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;';
+    row.innerHTML = '<div><span style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--gold);">&#128197; '+grp.label+'</span><span style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-left:8px;">'+grp.items.length+' entries · deleted '+grp.date+'</span></div>';
+    var btnWrap = document.createElement('div');
+    btnWrap.style.cssText = 'display:flex;gap:6px;';
+    var restoreBtn = document.createElement('button');
+    restoreBtn.style.cssText = 'padding:3px 8px;font-size:0.68rem;color:var(--sage);border:1px solid var(--sage);border-radius:2px;background:none;cursor:pointer;';
+    restoreBtn.textContent = '↩ Restore All';
+    (function(g){ restoreBtn.addEventListener('click', function(){ restoreGroup(g); }); })(gid);
+    var delBtn = document.createElement('button');
+    delBtn.style.cssText = 'padding:3px 8px;font-size:0.68rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;';
+    delBtn.textContent = 'DEL ALL';
+    (function(g){ delBtn.addEventListener('click', function(){ deleteGroup(g); }); })(gid);
+    btnWrap.appendChild(restoreBtn); btnWrap.appendChild(delBtn);
+    row.appendChild(btnWrap);
+    td.appendChild(row);
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  });
+
+  // Render individual items
+  singles.sort(function(a,b){ return (b._trash_date||'').localeCompare(a._trash_date||''); });
+  singles.forEach(function(item, idx) {
     var isSkipped = item._trash_source === 'skipped';
     var srcColor  = isSkipped ? '#92400e' : '#991b1b';
     var srcBg     = isSkipped ? '#fef3c7' : '#fee2e2';
@@ -5099,8 +5220,8 @@ function renderTrashPanel() {
     tr.appendChild(dateTd); tr.appendChild(descTd); tr.appendChild(amtTd);
     tr.appendChild(srcTd); tr.appendChild(actionTd);
     tbody.appendChild(tr);
-  });
-    tbl.appendChild(tbody);
+  }); // end singles
+  tbl.appendChild(tbody);
   el.appendChild(tbl);
 }
 
