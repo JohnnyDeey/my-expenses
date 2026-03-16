@@ -293,17 +293,19 @@ function syncStartListener() {
     var remoteCount = allEntries.length;
     if (remoteCount === 0) { _isMerging = false; syncPush(); return; }
     if (remote !== local) {
-      // If local is empty (just logged in / cleared), always load from remote
+      // If local is empty (fresh login), always load from remote
       if (localCount === 0 && remoteCount > 0) {
         localStorage.setItem('expense_ledger', remote);
+      } else if (window._lastDeleteTime && (Date.now() - window._lastDeleteTime) < 8000) {
+        // A deletion happened in last 8 seconds — ignore remote, keep local
+        _isMerging = false;
+        syncPush(); // re-push to make sure Firebase gets the deletion
+        return;
       } else if (localCount > remoteCount) {
-        // Local has MORE entries than remote = user just deleted something, push local
+        // Local has more — push to Firebase
         _isMerging = false; syncPush(); return;
-      } else if (localCount < remoteCount) {
-        // Remote has more = sync down from remote
-        localStorage.setItem('expense_ledger', remote);
       } else {
-        // Same count but different content - use remote
+        // Remote differs — load from remote
         localStorage.setItem('expense_ledger', remote);
       }
       var active = document.querySelector('.panel.active');
@@ -4309,6 +4311,7 @@ function renderLedger(){
 
 
 function deleteEntry(id){
+  window._lastDeleteTime = Date.now(); // block listener for 8s
   var data = loadData();
   var item = data.filter(function(i){ return String(i.id)===String(id); })[0];
   if (item) addToTrash([item], 'deleted');
@@ -4405,6 +4408,7 @@ function clearAll(){
 function clearAllConfirmed(){
   var all = loadData();
   if (all.length) addToTrash(all, 'deleted');
+  window._lastDeleteTime = Date.now();
   localStorage.removeItem('expense_ledger');
   syncPushNow();
   var btn = document.getElementById('clear-all-btn');
@@ -4599,6 +4603,7 @@ function renderManagePanel(){
         var all = loadData();
         var toDelete = all.filter(function(i){ return i.date.substring(0,7)===key; });
         if (toDelete.length) addToTrash(toDelete, 'deleted');
+        window._lastDeleteTime = Date.now();
         var remaining = all.filter(function(i){ return i.date.substring(0,7)!==key; });
         localStorage.setItem('expense_ledger', JSON.stringify(remaining));
         syncPushNow();
