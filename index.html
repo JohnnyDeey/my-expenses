@@ -286,32 +286,22 @@ function syncPush() {
 function syncStartListener() {
   if (_syncUnsubscribe) _syncUnsubscribe();
   if (!_db || !_userId) return;
-  _syncUnsubscribe = userCol('expense_months').onSnapshot(function(snapshot) {
-    if (_isMerging) return;
-    if (window._deletePending) return; // deletion in progress — never restore
-    _isMerging = true;
+  // Load data from Firebase ONCE on login — no realtime listener
+  // This prevents deleted items from ever being restored by a listener
+  userCol('expense_months').get().then(function(snapshot) {
     var allEntries = [];
     snapshot.forEach(function(doc) {
       var d = doc.data();
       if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
     });
     allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
-    var local       = localStorage.getItem('expense_ledger') || '[]';
-    var remote      = JSON.stringify(allEntries);
-    var localCount  = 0; try { localCount = JSON.parse(local).length; } catch(e){}
+    var local      = localStorage.getItem('expense_ledger') || '[]';
+    var localCount = 0; try { localCount = JSON.parse(local).length; } catch(e){}
     var remoteCount = allEntries.length;
-    if (remoteCount === 0) { _isMerging = false; syncPush(); return; }
-    if (remote !== local) {
-      if (localCount === 0 && remoteCount > 0) {
-        // Fresh login — load from remote
-        localStorage.setItem('expense_ledger', remote);
-      } else if (localCount > remoteCount) {
-        // Local has more entries — push local to Firebase
-        _isMerging = false; syncPush(); return;
-      } else {
-        // Remote is different — load from remote
-        localStorage.setItem('expense_ledger', remote);
-      }
+    if (remoteCount === 0) { syncPush(); return; }
+    // Only load from remote if local is empty (fresh login)
+    if (localCount === 0) {
+      localStorage.setItem('expense_ledger', JSON.stringify(allEntries));
       var active = document.querySelector('.panel.active');
       if (active) {
         var id = active.id;
@@ -321,11 +311,12 @@ function syncStartListener() {
         if (id==='panel-manage')    renderManagePanel();
         updateHeaderContext();
       }
-      showToast('Synced from another device');
+    } else {
+      // Local has data — push local to Firebase (local is source of truth)
+      syncPush();
     }
     syncSetStatus('live');
-    _isMerging = false;
-  }, function(err){ console.error('Listener error:', err); syncSetStatus('error'); });
+  }).catch(function(err){ console.error('Load error:', err); syncSetStatus('error'); });
 
   userCol('settings').doc('default').onSnapshot(function(doc) {
     if (!doc.exists || _isMerging) return;
