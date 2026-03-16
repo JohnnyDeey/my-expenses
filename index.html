@@ -6453,6 +6453,8 @@ function syncIncomeToFirebase() {
 
 function loadIncomeFromFirebase(cb) {
   if (!_db || !_userId) { if(cb) cb(); return; }
+  // Always clear local income first to prevent cross-user data leak
+  localStorage.removeItem(getIncKey());
   userCol('income_months').get().then(function(snapshot) {
     var allEntries = [];
     var fbMonths = [];
@@ -6463,11 +6465,9 @@ function loadIncomeFromFirebase(cb) {
     });
     allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
     window._knownIncomeMonths = fbMonths;
-    var local = loadIncomeData();
-    if (allEntries.length > 0 && local.length === 0) {
+    if (allEntries.length > 0) {
+      // Always load from Firebase on login - Firebase is source of truth
       localStorage.setItem(getIncKey(), JSON.stringify(allEntries));
-    } else if (local.length > 0) {
-      syncIncomeToFirebase();
     }
     if (cb) cb();
   }).catch(function(){ if(cb) cb(); });
@@ -6595,32 +6595,37 @@ function updateIncomeHeaderContext() {
       }).join('');
     }
   }
-  // Second pill - latest month with income data
+  // Second pill - use currently selected year/month (or default to latest with data)
   var allMonthKeys = [];
   data.forEach(function(i){ if(i.amount>0 && allMonthKeys.indexOf(i.date.substring(0,7))===-1) allMonthKeys.push(i.date.substring(0,7)); });
   allMonthKeys.sort();
   var latestKey = allMonthKeys[allMonthKeys.length-1] || '';
+
   var yrSel = document.getElementById('hdr-filter-year');
   var moSel = document.getElementById('hdr-filter-month');
-  // Repopulate year options with income years
-  if (yrSel && latestKey) {
-    var incYears = [];
-    data.forEach(function(i){ var y=i.date.substring(0,4); if(incYears.indexOf(y)===-1) incYears.push(y); }); incYears.sort().reverse();
+
+  // Populate dropdowns if empty
+  var incYears = [];
+  data.forEach(function(i){ var y=i.date.substring(0,4); if(incYears.indexOf(y)===-1) incYears.push(y); }); incYears.sort().reverse();
+  if (yrSel && yrSel.options.length < 2) {
     yrSel.innerHTML = incYears.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
-    yrSel.value = latestKey.substring(0,4);
+    if (latestKey) yrSel.value = latestKey.substring(0,4);
   }
-  // Repopulate month options
-  if (moSel && latestKey) {
-    if (moSel.options.length < 2) {
-      moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
-    }
-    moSel.value = latestKey.substring(5,7);
+  if (moSel && moSel.options.length < 2) {
+    moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
+    if (latestKey) moSel.value = latestKey.substring(5,7);
   }
+
+  // Use CURRENT selection (what user just clicked) not always latestKey
+  var selYear  = yrSel  ? yrSel.value  : (latestKey ? latestKey.substring(0,4) : '');
+  var selMonth = moSel  ? moSel.value  : (latestKey ? latestKey.substring(5,7) : '');
+  var selKey   = selYear && selMonth ? selYear + '-' + selMonth : latestKey;
+
   var filterPills = document.getElementById('hdr-filter-pills');
   if (filterPills) {
-    var monthData = latestKey ? data.filter(function(i){ return i.amount>0 && i.date.substring(0,7)===latestKey; }) : [];
+    var monthData = selKey ? data.filter(function(i){ return i.amount>0 && i.date.substring(0,7)===selKey; }) : [];
     if (!monthData.length) {
-      filterPills.innerHTML = '<span style="font-family:DM Mono,monospace;font-size:0.78rem;color:#6b5e50;">No income data yet</span>';
+      filterPills.innerHTML = '<span style="font-family:DM Mono,monospace;font-size:0.78rem;color:#6b5e50;">' + (selKey ? 'No data' : 'No income data yet') + '</span>';
     } else {
       var byCur2 = {};
       monthData.forEach(function(i){ byCur2[i.currency]=(byCur2[i.currency]||0)+i.amount; });
