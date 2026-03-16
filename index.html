@@ -202,10 +202,11 @@ function startSync() {
 }
 
 function syncPushNow() {
-  // Immediate push — used after deletions to prevent listener overwrite
+  // Immediate push — blocks listener until confirmed written to Firebase
   clearTimeout(_syncPushTimer);
-  _isMerging = true; // block listener from overwriting during push
   if (!_db || !_userId) return;
+  window._deletePending = true; // hard lock — listener ignores ALL remote data
+  _isMerging = true;
   syncSetStatus('syncing');
   var data  = localStorage.getItem('expense_ledger')    || '[]';
   var cats  = localStorage.getItem('custom_categories') || '[]';
@@ -233,9 +234,16 @@ function syncPushNow() {
   batch.commit()
     .then(function(){
       syncSetStatus('live');
-      setTimeout(function(){ _isMerging = false; }, 2000); // unblock after 2s
+      _isMerging = false;
+      // Keep delete lock for 5 more seconds after confirmed write
+      setTimeout(function(){ window._deletePending = false; }, 5000);
     })
-    .catch(function(e){ console.error('Push error:', e); syncSetStatus('error'); _isMerging = false; });
+    .catch(function(e){
+      console.error('Push error:', e);
+      syncSetStatus('error');
+      _isMerging = false;
+      window._deletePending = false;
+    });
 }
 
 function syncPush() {
@@ -280,6 +288,7 @@ function syncStartListener() {
   if (!_db || !_userId) return;
   _syncUnsubscribe = userCol('expense_months').onSnapshot(function(snapshot) {
     if (_isMerging) return;
+    if (window._deletePending) return; // deletion in progress — never restore
     _isMerging = true;
     var allEntries = [];
     snapshot.forEach(function(doc) {
@@ -293,19 +302,14 @@ function syncStartListener() {
     var remoteCount = allEntries.length;
     if (remoteCount === 0) { _isMerging = false; syncPush(); return; }
     if (remote !== local) {
-      // If local is empty (fresh login), always load from remote
       if (localCount === 0 && remoteCount > 0) {
+        // Fresh login — load from remote
         localStorage.setItem('expense_ledger', remote);
-      } else if (window._lastDeleteTime && (Date.now() - window._lastDeleteTime) < 8000) {
-        // A deletion happened in last 8 seconds — ignore remote, keep local
-        _isMerging = false;
-        syncPush(); // re-push to make sure Firebase gets the deletion
-        return;
       } else if (localCount > remoteCount) {
-        // Local has more — push to Firebase
+        // Local has more entries — push local to Firebase
         _isMerging = false; syncPush(); return;
       } else {
-        // Remote differs — load from remote
+        // Remote is different — load from remote
         localStorage.setItem('expense_ledger', remote);
       }
       var active = document.querySelector('.panel.active');
