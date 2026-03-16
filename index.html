@@ -1556,7 +1556,7 @@ nav.tabs.header-hidden button {
   <!-- ── 3a. CHANGE USERNAME ── -->
   <div class="card" style="margin-bottom:14px;">
     <label>&#128100; Change Username</label>
-    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Change your display username (e.g. from <strong>johndiarmy</strong> to <strong>jd0292</strong>).</p>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Change your username to a new one of your choice.</p>
     <div style="display:flex;gap:8px;">
       <input id="change-username-input" type="text" placeholder="New username..." style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.9rem;background:white;color:var(--ink);outline:none;">
       <button class="btn btn-primary" style="padding:10px 18px;font-size:0.8rem;" onclick="changeUsername()">Save</button>
@@ -1712,7 +1712,7 @@ nav.tabs.header-hidden button {
     <div id="pin-step-register" style="display:none;">
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:left;">
         <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">First time? Create your account</div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Enter your full name and we'll suggest a unique username for you.</div>
+
 
         <!-- Step A: Full name + phone -->
         <div id="reg-step-name">
@@ -1730,7 +1730,7 @@ nav.tabs.header-hidden button {
 
         <!-- Step B: Choose username -->
         <div id="reg-step-username" style="display:none;">
-          <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:16px;">Choose a username (exactly 10 characters, letters + numbers):</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:16px;">Choose a username (exactly 10 characters, letters + numbers only):</div>
           <div id="reg-username-suggestions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
           <div style="border-top:1px solid #3a3020;padding-top:14px;margin-bottom:12px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Or enter your own (10 chars, letters+numbers)</label>
@@ -5535,8 +5535,8 @@ var _selectedUsername = '';
 
 function generateUsernameOptions(fullName) {
   var parts = fullName.trim().toLowerCase().split(/\s+/);
-  var first = parts[0] || '';
-  var last  = parts[1] || '';
+  var first = (parts[0] || '').replace(/[^a-z]/g,'');
+  var last  = (parts[1] || '').replace(/[^a-z]/g,'');
   var suggestions = [];
   var used = {};
 
@@ -5545,39 +5545,29 @@ function generateUsernameOptions(fullName) {
     for (var i=0; i<n; i++) s += Math.floor(Math.random()*10);
     return s;
   }
-  function randLetters(n) {
-    var chars = 'abcdefghjkmnpqrstuvwxyz';
-    var s = '';
-    for (var i=0; i<n; i++) s += chars[Math.floor(Math.random()*chars.length)];
-    return s;
-  }
   function make(base) {
-    // Pad or trim to exactly 10 chars with numbers
-    base = base.replace(/[^a-z0-9]/g,'').substring(0,7);
+    base = base.replace(/[^a-z0-9]/g,'').substring(0, 6);
     var needed = 10 - base.length;
     return base + randNum(needed);
   }
 
-  // Option 1: first + last initial + numbers
-  if (first && last) suggestions.push(make(first + last[0]));
-  // Option 2: first initial + last + numbers
-  if (first && last) suggestions.push(make(first[0] + last));
-  // Option 3: first + numbers
-  suggestions.push(make(first));
-  // Option 4: first + last truncated
-  if (last) suggestions.push(make(first.substring(0,4) + last.substring(0,3)));
+  // Keep it short and clean - first 2-3 chars + last 2-3 chars + numbers
+  if (first && last) {
+    suggestions.push(make(first.substring(0,3) + last.substring(0,3))); // e.g. joh + doe + 1234
+    suggestions.push(make(first[0] + last.substring(0,4)));             // e.g. j + davi + 12345
+    suggestions.push(make(first.substring(0,2) + last.substring(0,2))); // e.g. jo + do + 123456
+  } else {
+    suggestions.push(make(first.substring(0,4)));
+    suggestions.push(make(first.substring(0,3)));
+    suggestions.push(make(first.substring(0,5)));
+  }
 
-  // Ensure uniqueness and exactly 10 chars
   var result = [];
   suggestions.forEach(function(s) {
     s = s.substring(0,10);
     while (s.length < 10) s += randNum(1);
     if (!used[s]) { used[s] = true; result.push(s); }
   });
-  while (result.length < 3) {
-    var r = randLetters(5) + randNum(5);
-    if (!used[r]) { used[r] = true; result.push(r); }
-  }
   return result.slice(0,3);
 }
 
