@@ -1301,9 +1301,11 @@ nav.tabs.header-hidden button {
               </span>
             </div>
             <div id="ps-mismatch-list" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#7a4800;display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto;margin-bottom:10px;"></div>
+            <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#7a4800;margin-bottom:8px;line-height:1.6;">
+              &#9888; Items with wrong dates <strong>cannot be saved</strong> to this month. Remove them, fix the dates in the text above, then re-parse.
+            </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button class="btn btn-ghost" style="font-size:0.72rem;padding:6px 12px;border-color:#e8a020;color:#7a4800;" onclick="removeMismatchedItems()">&#10005; Remove mismatched items</button>
-              <button class="btn btn-success" style="font-size:0.72rem;padding:6px 12px;" onclick="proceedWithAll()">&#10003; Keep all &amp; proceed</button>
             </div>
           </div>
           <div id="ps-ok-row" style="display:none;align-items:center;gap:10px;padding:4px 0;">
@@ -4936,23 +4938,52 @@ function restoreFromTrash(trashId) {
     return true;
   });
   if (item) {
-    // Clean trash fields before restoring
-    var restored = {};
-    Object.keys(item).forEach(function(k){
-      if (k.indexOf('_trash_') === -1) restored[k] = item[k];
-    });
-    if (restored.id && restored.date) {
-      // Restore to ledger
-      var data = loadData();
-      data.push(restored);
-      data.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
-      saveData(data);
+    if (item._trash_source === 'skipped') {
+      // Skipped items go back to the Import textarea for fixing, NOT to ledger
+      var rawLine = item._raw_line || item.desc || '';
+      var itemDate = item.date || '';
+      // Switch to import tab and load the month
+      if (itemDate) {
+        var parts = itemDate.split('-');
+        if (parts.length === 3) {
+          pickerYear  = parseInt(parts[0]);
+          pickerMonth = parseInt(parts[1]);
+          document.getElementById('picker-year-display').textContent = pickerYear;
+          renderMonthPicker();
+          loadMonthIntoTextarea();
+        }
+      }
+      // Append the raw line to the textarea
+      var ta = document.getElementById('raw-input');
+      if (ta) {
+        var current = ta.value.trimEnd();
+        ta.value = current + (current ? String.fromCharCode(10) : '') + rawLine;
+        ta.className = '';
+      }
+      saveTrash(trash);
+      renderTrashPanel();
+      // Switch to Import tab
+      var importBtn = document.querySelector('nav.tabs button:first-child');
+      switchTab('import', importBtn);
+      showToast('Line sent back to Import — fix and re-parse');
+    } else {
+      // Normal deleted item — restore to ledger
+      var restored = {};
+      Object.keys(item).forEach(function(k){
+        if (k.indexOf('_trash_') === -1) restored[k] = item[k];
+      });
+      if (restored.id && restored.date) {
+        var data = loadData();
+        data.push(restored);
+        data.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+        saveData(data);
+      }
+      saveTrash(trash);
+      renderTrashPanel();
+      renderManagePanel();
+      updateHeaderContext();
+      showToast('Entry restored to ledger');
     }
-    saveTrash(trash);
-    renderTrashPanel();
-    renderManagePanel();
-    updateHeaderContext();
-    showToast('Entry restored to ledger');
   }
 }
 function restoreGroup(groupId) {
