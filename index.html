@@ -2955,9 +2955,14 @@ function updateMonthFilterPill() {
     defMonth2 = parseInt(lastKey.substring(5,7));
   }
 
-  // Always rebuild both selects with correct default
-  yrSel.innerHTML = years2.map(function(y){ return '<option value="'+y+'"'+(y===String(defYear2)?' selected':'')+'>'+y+'</option>'; }).join('');
-  moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'"'+(pad(i+1)===pad(defMonth2)?' selected':'')+'>'+m+'</option>'; }).join('');
+  // Rebuild year options always; only set month default if dropdowns are empty
+  yrSel.innerHTML = years2.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  if (moSel.options.length < 2) {
+    moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
+  }
+  // Only set defaults if no user selection yet
+  if (!yrSel.value || years2.indexOf(yrSel.value) === -1) yrSel.value = String(defYear2);
+  if (!moSel.value) moSel.value = pad(defMonth2);
 
   var selYear  = yrSel.value;
   var selMonth = moSel.value;
