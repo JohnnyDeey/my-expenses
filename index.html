@@ -1788,6 +1788,12 @@ nav.tabs.header-hidden button {
   <div class="cat-filter-bar">
     <span class="filter-label">Period:</span>
     <select id="inc-cat-year-filter" onchange="applyIncomeCatFilter()"><option value="pending">Pending (just parsed)</option></select>
+    <select id="inc-cat-month-filter" onchange="applyIncomeCatFilter()" style="display:none;"><option value="all">All Months</option></select>
+    <span class="filter-label" style="margin-left:12px;">Category:</span>
+    <select id="inc-cat-cat-filter" onchange="applyIncomeCatFilter()">
+      <option value="all">All Categories</option>
+      <option value="Other">Other only</option>
+    </select>
     <span id="inc-cat-filter-count" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-left:auto;"></span>
   </div>
   <!-- Bulk assign bar -->
@@ -1831,6 +1837,7 @@ nav.tabs.header-hidden button {
       <span id="inc-sort-icon">&#8595;</span> <span id="inc-sort-label">Newest First</span>
     </button>
   </div>
+  <div id="inc-monthly-stats" style="display:none;margin-bottom:16px;"></div>
   <div id="inc-monthly-empty" class="empty-state"><div class="big">&#128176;</div><p>No income data yet.</p></div>
   <div id="inc-monthly-content"></div>
 </div>
@@ -1899,7 +1906,10 @@ nav.tabs.header-hidden button {
 
 <!-- INCOME LEDGER -->
 <div class="panel" id="panel-inc-ledger">
-  <div class="section-title">Income Ledger</div>
+  <div class="section-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <span style="display:flex;align-items:center;gap:12px;"><span style="display:inline-block;width:8px;height:28px;background:var(--sage);border-radius:2px;"></span>Full Income Ledger</span>
+    <button class="btn btn-ghost" onclick="openIncomeRenameModal()" style="font-size:0.72rem;padding:7px 14px;display:flex;align-items:center;gap:6px;">&#9998; Rename Category</button>
+  </div>
   <div class="filter-bar">
     <span class="filter-label">Filter:</span>
     <select id="inc-led-year" onchange="renderIncomeLedger()"><option value="all">All Years</option></select>
@@ -2148,6 +2158,29 @@ nav.tabs.header-hidden button {
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeRenameModal()">Cancel</button>
       <button class="btn btn-primary" onclick="applyRename()">&#10003; Apply to All Entries</button>
+    </div>
+  </div>
+</div>
+
+<!-- Income Rename Category Modal -->
+<div id="inc-rename-modal" style="display:none;position:fixed;inset:0;background:rgba(26,20,16,0.6);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:var(--paper);border:2px solid var(--sage);border-radius:6px;padding:32px;min-width:320px;max-width:460px;box-shadow:8px 8px 0 rgba(0,0,0,0.2);width:90%;">
+    <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-bottom:20px;">&#9998; Rename Income Category</div>
+    <div style="margin-bottom:14px;">
+      <label style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">From</label>
+      <select id="inc-rename-from" onchange="updateIncomeRenamePreview()" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.88rem;background:white;outline:none;"></select>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">To</label>
+      <input id="inc-rename-to" type="text" placeholder="New category name..." oninput="updateIncomeRenamePreview()" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.9rem;background:white;color:var(--ink);outline:none;box-sizing:border-box;">
+    </div>
+    <div id="inc-rename-preview" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--sage);min-height:20px;margin-bottom:16px;"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;">
+      <button class="btn btn-danger" style="font-size:0.75rem;padding:8px 14px;" onclick="deleteIncCategoryFromModal()">&#128465; Delete Category</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="closeIncomeRenameModal()">Cancel</button>
+        <button class="btn btn-primary" style="background:var(--sage);border-color:var(--sage);" onclick="applyIncomeRename()">&#10003; Apply to All Entries</button>
+      </div>
     </div>
   </div>
 </div>
@@ -4487,7 +4520,66 @@ function applyRename() {
 document.addEventListener('click', function(e) {
   var modal = document.getElementById('rename-modal');
   if (modal && modal.style.display === 'flex' && e.target === modal) closeRenameModal();
+  var incModal = document.getElementById('inc-rename-modal');
+  if (incModal && incModal.style.display === 'flex' && e.target === incModal) closeIncomeRenameModal();
 });
+
+// ── Income Rename Category ──
+function openIncomeRenameModal() {
+  var sel = document.getElementById('inc-rename-from');
+  sel.innerHTML = '';
+  getAllIncomeCats().forEach(function(c){
+    var opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt);
+  });
+  document.getElementById('inc-rename-to').value = '';
+  document.getElementById('inc-rename-preview').textContent = '';
+  document.getElementById('inc-rename-modal').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('inc-rename-to').focus(); }, 100);
+}
+function closeIncomeRenameModal() {
+  document.getElementById('inc-rename-modal').style.display = 'none';
+}
+function updateIncomeRenamePreview() {
+  var from = document.getElementById('inc-rename-from').value;
+  var to   = document.getElementById('inc-rename-to').value.trim();
+  var prev = document.getElementById('inc-rename-preview');
+  if (!from || !to) { prev.textContent = ''; return; }
+  var count = loadIncomeData().filter(function(i){ return i.category===from; }).length;
+  prev.textContent = count + ' entr' + (count===1?'y':'ies') + ' will be renamed from "' + from + '" to "' + to + '"';
+}
+function applyIncomeRename() {
+  var from = document.getElementById('inc-rename-from').value;
+  var to   = document.getElementById('inc-rename-to').value.trim();
+  if (!from || !to) { showToast('Please fill in both fields'); return; }
+  if (from === to)  { showToast('Names are identical'); return; }
+  var data = loadIncomeData();
+  var count = 0;
+  data.forEach(function(i){ if(i.category===from){ i.category=to; count++; } });
+  saveIncomeData(data);
+  saveIncomeCustomCat(to);
+  var customs = JSON.parse(localStorage.getItem(getIncCatsKey())||'[]');
+  var fi = customs.indexOf(from);
+  if (fi !== -1) customs.splice(fi, 1);
+  localStorage.setItem(getIncCatsKey(), JSON.stringify(customs));
+  closeIncomeRenameModal();
+  showToast(count + ' entries renamed: "' + from + '" → "' + to + '"');
+  renderIncomeLedger();
+}
+function deleteIncCategoryFromModal() {
+  var from = document.getElementById('inc-rename-from').value;
+  if (!from) { showToast('Select a category to delete'); return; }
+  var data = loadIncomeData();
+  var count = data.filter(function(i){ return i.category===from; }).length;
+  data.forEach(function(i){ if(i.category===from) i.category='Other'; });
+  saveIncomeData(data);
+  var customs = JSON.parse(localStorage.getItem(getIncCatsKey())||'[]');
+  var fi = customs.indexOf(from);
+  if (fi !== -1) { customs.splice(fi, 1); localStorage.setItem(getIncCatsKey(), JSON.stringify(customs)); }
+  closeIncomeRenameModal();
+  showToast(count > 0 ? count + ' entries moved to "Other" · "' + from + '" deleted' : '"' + from + '" deleted');
+  renderIncomeLedger();
+  incPopulateFilters();
+}
 
 // ════════════════════════════════
 //  LEDGER
@@ -6493,8 +6585,6 @@ function syncIncomeToFirebase() {
 
 function loadIncomeFromFirebase(cb) {
   if (!_db || !_userId) { if(cb) cb(); return; }
-  // Always clear local income first to prevent cross-user data leak
-  localStorage.removeItem(getIncKey());
   userCol('income_months').get().then(function(snapshot) {
     var allEntries = [];
     var fbMonths = [];
@@ -6505,9 +6595,22 @@ function loadIncomeFromFirebase(cb) {
     });
     allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
     window._knownIncomeMonths = fbMonths;
-    if (allEntries.length > 0) {
-      // Always load from Firebase on login - Firebase is source of truth
+    var local = loadIncomeData();
+    if (allEntries.length > 0 && local.length === 0) {
+      // Fresh login - load from Firebase
       localStorage.setItem(getIncKey(), JSON.stringify(allEntries));
+    } else if (local.length > 0 && allEntries.length === 0) {
+      // Local has data but Firebase empty - push local to Firebase
+      syncIncomeToFirebase();
+    } else if (allEntries.length > 0 && local.length > 0) {
+      // Both have data - Firebase wins (it's the shared source of truth)
+      // But only replace if Firebase has MORE or DIFFERENT data
+      if (allEntries.length >= local.length) {
+        localStorage.setItem(getIncKey(), JSON.stringify(allEntries));
+      } else {
+        // Local has more - push local to Firebase
+        syncIncomeToFirebase();
+      }
     }
     if (cb) cb();
   }).catch(function(){ if(cb) cb(); });
@@ -7176,14 +7279,20 @@ var incCatViewMode = 'pending';
 var incCatEditItems = [];
 
 function applyIncomeCatFilter() {
-  var val = document.getElementById('inc-cat-year-filter').value;
-  if (val === 'pending') {
+  var yearVal = document.getElementById('inc-cat-year-filter').value;
+  var monthSel = document.getElementById('inc-cat-month-filter');
+  var monthVal = monthSel ? monthSel.value : 'all';
+
+  if (yearVal === 'pending') {
     incCatViewMode = 'pending';
     incCatEditItems = incPendingItems;
+    if (monthSel) monthSel.style.display = 'none';
   } else {
-    var data = loadIncomeData().filter(function(i){ return i.date.substring(0,4)===val; });
+    if (monthSel) monthSel.style.display = 'inline-block';
+    var data = loadIncomeData().filter(function(i){ return i.date.substring(0,4)===yearVal; });
+    if (monthVal !== 'all') data = data.filter(function(i){ return i.date.substring(5,7)===monthVal; });
     incCatEditItems = data.map(function(i){ return Object.assign({},i); });
-    incCatViewMode = val;
+    incCatViewMode = yearVal + (monthVal !== 'all' ? '-' + monthVal : '');
     document.getElementById('inc-btn-save-pending').textContent = 'Update Categories';
   }
   renderIncomeCatTable();
@@ -7194,12 +7303,30 @@ function renderIncomeCatTable() {
   var years = []; data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }); years.sort().reverse();
   var ySel  = document.getElementById('inc-cat-year-filter');
   var curY  = ySel.value;
-  ySel.innerHTML = '<option value="pending">Pending</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  ySel.innerHTML = '<option value="pending">Pending (just parsed)</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+' (saved)</option>'; }).join('');
   if (curY && curY !== 'pending' && years.indexOf(curY)!==-1) ySel.value = curY;
+
+  // Populate month filter
+  var mSel = document.getElementById('inc-cat-month-filter');
+  if (mSel && (mSel.options.length < 2)) {
+    mSel.innerHTML = '<option value="all">All Months</option>' + MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
+  }
+
+  // Populate category filter
+  var catSel = document.getElementById('inc-cat-cat-filter');
+  if (catSel) {
+    var curCat = catSel.value;
+    catSel.innerHTML = '<option value="all">All Categories</option><option value="Other">Other only</option>';
+    getAllIncomeCats().forEach(function(c){ if(c!=='Other'){ var o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o); } });
+    catSel.value = curCat || 'all';
+  }
 
   populateIncCatBulkSel();
   var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
-  var filteredItems = _incCatDescFilter ? items.filter(function(i){ return i.desc.toLowerCase().indexOf(_incCatDescFilter)!==-1; }) : items;
+  var catFilterVal = document.getElementById('inc-cat-cat-filter') ? document.getElementById('inc-cat-cat-filter').value : 'all';
+  var filteredItems = items.slice();
+  if (catFilterVal !== 'all') filteredItems = filteredItems.filter(function(i){ return i.category === catFilterVal; });
+  if (_incCatDescFilter) filteredItems = filteredItems.filter(function(i){ return i.desc.toLowerCase().indexOf(_incCatDescFilter)!==-1; });
   var matchEl = document.getElementById('inc-cat-desc-match');
   if (matchEl) matchEl.textContent = _incCatDescFilter ? filteredItems.length+' match'+(filteredItems.length===1?'':'es') : '';
   document.getElementById('inc-cat-filter-count').textContent = items.length + ' items';
@@ -7354,6 +7481,45 @@ function renderIncomeMonthly() {
   }
   document.getElementById('inc-monthly-empty').style.display = 'none';
   container.innerHTML = '';
+
+  // Stats card
+  var statsDiv = document.getElementById('inc-monthly-stats');
+  if (statsDiv) {
+    statsDiv.style.display = 'block';
+    var positiveData = data.filter(function(i){ return i.amount > 0; });
+    if (positiveData.length) {
+      var byCur = {};
+      positiveData.forEach(function(i){ if(!byCur[i.currency]) byCur[i.currency]=[]; byCur[i.currency].push(i); });
+      var statParts = [];
+      Object.keys(byCur).sort().forEach(function(cur){
+        var citems = byCur[cur];
+        var amounts = citems.map(function(i){ return i.amount; });
+        var total = amounts.reduce(function(a,b){ return a+b; }, 0);
+        var avg = total / amounts.length;
+        var maxAmt = Math.max.apply(null, amounts);
+        var minAmt = Math.min.apply(null, amounts);
+        var maxItem = citems.filter(function(i){ return i.amount===maxAmt; })[0];
+        var minItem = citems.filter(function(i){ return i.amount===minAmt; })[0];
+        var descCount = {};
+        citems.forEach(function(i){ descCount[i.desc]=(descCount[i.desc]||0)+1; });
+        var mostCommon = Object.keys(descCount).sort(function(a,b){ return descCount[b]-descCount[a]; })[0];
+        var sym = SYMS[cur]||'';
+        statParts.push(
+          '<div class="dv-stat-group" style="border-left:3px solid var(--sage);">'+
+          '<div class="dv-stat-cur" style="color:var(--sage);">'+cur+'</div>'+
+          '<div class="dv-stat-row"><span class="dv-stat-label">Total</span><span class="dv-stat-val">'+sym+fmtNum(total)+'</span></div>'+
+          '<div class="dv-stat-row"><span class="dv-stat-label">Avg / entry</span><span class="dv-stat-val">'+sym+fmtNum(avg)+'</span></div>'+
+          '<div class="dv-stat-row"><span class="dv-stat-label">Highest</span><span class="dv-stat-val">'+sym+fmtNum(maxAmt)+' &mdash; <em>'+maxItem.desc+'</em></span></div>'+
+          '<div class="dv-stat-row"><span class="dv-stat-label">Lowest</span><span class="dv-stat-val">'+sym+fmtNum(minAmt)+' &mdash; <em>'+minItem.desc+'</em></span></div>'+
+          '<div class="dv-stat-row"><span class="dv-stat-label">Most frequent</span><span class="dv-stat-val"><em>'+mostCommon+'</em> &times;'+descCount[mostCommon]+'</span></div>'+
+          '</div>'
+        );
+      });
+      statsDiv.innerHTML = '<div class="dv-stats-bar">'+statParts.join('')+'</div>';
+    } else {
+      statsDiv.style.display = 'none';
+    }
+  }
 
   // Group by year → month
   var byYear = {};
