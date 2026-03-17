@@ -169,8 +169,7 @@ function syncInit() {
     _userName  = name;
     _userPhone = phone;
     updateUserDisplay();
-    // Apply mode immediately on page load (before Firebase loads)
-    setTimeout(function(){ applyMode(); }, 100);
+    setTimeout(function(){ applyMode(); adjustMainPadding(); }, 300);
     startSync();
   } else {
     var hasPhone = !!localStorage.getItem(PHONE_KEY);
@@ -1265,7 +1264,7 @@ nav.tabs.header-hidden button {
 
 <div id="sticky-topbar">
 <!-- Always-fixed top: user bar + nav tabs -->
-<div id="fixed-topbar" style="position:fixed;top:0;left:0;right:0;z-index:300;background:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,0.4);padding-top:env(safe-area-inset-top, 0px);">
+<div id="fixed-topbar" style="position:fixed;top:0;left:0;right:0;z-index:300;background:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,0.4);">
 <!-- Always-visible user bar — always shown -->
 <div id="hdr-user-bar" style="background:var(--ink);padding:6px 14px;border-bottom:1px solid #2e2620;display:flex;flex-direction:column;gap:4px;">
   <!-- Row 1: profile · initials · sync · hide -->
@@ -2144,7 +2143,7 @@ nav.tabs.header-hidden button {
   </div>
 </div>
 
-<div id="pin-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+<div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
   <div style="text-align:center;max-width:400px;width:100%;">
     <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My <span style="color:var(--gold);">Expense</span> Ledger</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;letter-spacing:2px;margin-bottom:28px;">PERSONAL FINANCE TRACKER</div>
@@ -6352,17 +6351,7 @@ function generateIncomePDFReport() {
   win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#1a4128;color:#8dd4a8;border:2px solid #4a7c59;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT</button>');
   win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#4a7c59;color:white;border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.85rem;font-weight:700;cursor:pointer;letter-spacing:1px;">&#128229; SAVE AS PDF</button>');
   win.document.write('</div>');
-  win.document.write('
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js')
-      .then(function(reg) { console.log('SW registered:', reg.scope); })
-      .catch(function(err) { console.log('SW error:', err); });
-  });
-}
-</script>
-</body></html>');
+  win.document.write('</body></html>');
   win.document.close();
 }
 function generatePDFReport() {
@@ -8621,25 +8610,21 @@ function adjustMainPadding() {
   var fixedBar  = document.getElementById('fixed-topbar');
   var bigHeader = document.getElementById('big-header-wrap');
   var main      = document.querySelector('main');
-  // Get actual height - force reflow first
-  var navH = fixedBar ? fixedBar.getBoundingClientRect().height : 82;
-  if (navH < 10) navH = fixedBar ? fixedBar.offsetHeight : 82;
-  if (navH < 10) navH = 82; // final fallback
+  var navH      = fixedBar ? fixedBar.offsetHeight : 82;
   // Position big header immediately below fixed nav bar
   if (bigHeader) bigHeader.style.top = navH + 'px';
   // Push main content below both fixed bars
   if (main) {
-    var bigH = (!_headerCollapsed && bigHeader) ? bigHeader.getBoundingClientRect().height : 0;
+    var bigH = (!_headerCollapsed && bigHeader) ? bigHeader.offsetHeight : 0;
     main.style.paddingTop = (navH + bigH + 16) + 'px';
   }
 }
 window.addEventListener('resize', adjustMainPadding);
 document.addEventListener('DOMContentLoaded', function(){
-  // Run multiple times to handle PWA/standalone mode render delays
   adjustMainPadding();
-  setTimeout(adjustMainPadding, 100);
-  setTimeout(adjustMainPadding, 400);
-  setTimeout(adjustMainPadding, 1000);
+  setTimeout(adjustMainPadding, 200);
+  setTimeout(adjustMainPadding, 600);
+  setTimeout(adjustMainPadding, 1200);
 });
 
 renderMonthPicker();
@@ -8647,6 +8632,13 @@ updateHeader();
 populateFilters();
 syncInit();
 
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function(e){ console.log('SW:', e); });
+  });
+}
 </script>
 </body>
 </html>
