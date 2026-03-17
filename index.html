@@ -6550,7 +6550,7 @@ function applyMode() {
     if (incNav)  incNav.style.display  = '';
     // Panels: show income, hide expense
     if (incMain) incMain.style.display = 'block';
-    document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = 'none'; });
+    document.querySelectorAll('main > .panel').forEach(function(p){ p.style.removeProperty('display'); });
     // Ensure the active income panel is visible
     var activeIncPanel = document.querySelector('#income-main .panel.active');
     if (!activeIncPanel) {
@@ -6575,7 +6575,7 @@ function applyMode() {
     if (incNav)  incNav.style.display  = 'none';
     // Panels: show expense, hide income
     if (incMain) incMain.style.display = 'none';
-    document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = ''; });
+    document.querySelectorAll('main > .panel').forEach(function(p){ p.style.removeProperty('display'); });
     // Mode label
     var ml2 = document.getElementById('hdr-mode-label');
     if (ml2) { ml2.innerHTML='&#128184; EXPENSES'; ml2.style.background='rgba(200,150,46,0.15)'; ml2.style.color='var(--gold2)'; }
