@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="My Finance Ledger">
+  <meta name="theme-color" content="#1a1410">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Expense Ledger</title>
@@ -6344,7 +6352,17 @@ function generateIncomePDFReport() {
   win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#1a4128;color:#8dd4a8;border:2px solid #4a7c59;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT</button>');
   win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#4a7c59;color:white;border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.85rem;font-weight:700;cursor:pointer;letter-spacing:1px;">&#128229; SAVE AS PDF</button>');
   win.document.write('</div>');
-  win.document.write('</body></html>');
+  win.document.write('
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js')
+      .then(function(reg) { console.log('SW registered:', reg.scope); })
+      .catch(function(err) { console.log('SW error:', err); });
+  });
+}
+</script>
+</body></html>');
   win.document.close();
 }
 function generatePDFReport() {
