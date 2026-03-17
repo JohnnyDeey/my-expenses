@@ -218,13 +218,10 @@ function loginWithBiometric() {
     var phone = localStorage.getItem(PHONE_KEY);
     if (uid && name && phone) {
       _userId = uid; _userName = name; _userPhone = phone;
+      updateUserDisplay();
+      hidePinScreen();
+      startSync();
       showToast('✓ Access granted — Welcome back, ' + name + '!');
-      // Small delay so toast is visible before overlay hides
-      setTimeout(function() {
-        updateUserDisplay();
-        hidePinScreen();
-        startSync();
-      }, 600);
     } else {
       showToast('Session expired. Please sign in with your code.');
     }
@@ -1868,7 +1865,18 @@ nav.tabs.header-hidden button {
     </div>
   </div>
 
-  <!-- ── 3a. CHANGE USERNAME ── -->
+  <!-- ── 3a. EDIT FULL NAME ── -->
+  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold);">
+    <label>&#9999; Your Full Name (used in PDF reports)</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">This name appears at the top of your printed reports. Enter your real full name here.</p>
+    <div id="current-fullname-display" style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--gold);margin-bottom:10px;padding:8px 12px;background:#fffbf0;border:1px solid var(--gold);border-radius:3px;"></div>
+    <div style="display:flex;gap:8px;">
+      <input id="change-fullname-input" type="text" placeholder="e.g. John David Adewumi..." autocomplete="name" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Sans',sans-serif;font-size:0.9rem;background:white;color:var(--ink);outline:none;">
+      <button class="btn btn-primary" style="padding:10px 18px;font-size:0.8rem;" onclick="saveFullName()">Save</button>
+    </div>
+  </div>
+
+  <!-- ── 3a2. CHANGE USERNAME ── -->
   <div class="card" style="margin-bottom:14px;">
     <label>&#128100; Change Username</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Change your username to a new one of your choice.</p>
@@ -2226,6 +2234,17 @@ nav.tabs.header-hidden button {
     <div id="inc-bio-status" style="font-family:'DM Mono',monospace;font-size:0.72rem;margin-bottom:12px;"></div>
     <button class="btn btn-success" style="width:100%;padding:12px;justify-content:center;" onclick="registerBiometric();renderIncomeBioStatus()">&#128273; Register Fingerprint / Face ID</button>
     <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;margin-top:8px;color:var(--rust);border-color:var(--rust);" onclick="localStorage.removeItem('finance_biometric_cred');showToast('Fingerprint removed');renderIncomeBioStatus();">&#10005; Remove Fingerprint</button>
+  </div>
+
+  <!-- ── EDIT FULL NAME ── -->
+  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--sage);">
+    <label>&#9999; Your Full Name (used in PDF reports)</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">This name appears at the top of your printed reports. Enter your real full name here.</p>
+    <div id="inc-current-fullname-display" style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--sage);margin-bottom:10px;padding:8px 12px;background:#f0fdf4;border:1px solid var(--sage);border-radius:3px;"></div>
+    <div style="display:flex;gap:8px;">
+      <input id="inc-change-fullname-input" type="text" placeholder="e.g. John David Adewumi..." autocomplete="name" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Sans',sans-serif;font-size:0.9rem;background:white;color:var(--ink);outline:none;">
+      <button class="btn btn-success" style="padding:10px 18px;font-size:0.8rem;" onclick="saveFullName()">Save</button>
+    </div>
   </div>
 
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
@@ -5210,6 +5229,7 @@ function renderManageUserBar() {
 function renderManagePanel(){
   var data = loadData();
   document.getElementById('manage-total').textContent = data.length;
+  setTimeout(updateFullNameDisplay, 50);
   renderTrashPanel();
   renderManageUserBar();
   updateBackupLastLabel();
@@ -6774,6 +6794,36 @@ function selectCustomUsername() {
 // ════════════════════════════════
 //  CHANGE USERNAME IN MANAGE
 // ════════════════════════════════
+function saveFullName() {
+  // Read from whichever input is visible
+  var inp = document.getElementById('change-fullname-input') ||
+            document.getElementById('inc-change-fullname-input');
+  // Try both
+  var expInp = document.getElementById('change-fullname-input');
+  var incInp = document.getElementById('inc-change-fullname-input');
+  var newName = (expInp && expInp.value.trim()) || (incInp && incInp.value.trim());
+  if (!newName) { showToast('Please enter your full name'); return; }
+  localStorage.setItem(FULL_NAME_KEY, newName);
+  // Also save to Firebase
+  if (_db && _userPhone) {
+    _db.collection('user_registry').doc(_userPhone).update({ full_name: newName })
+      .catch(function(){});
+  }
+  if (expInp) expInp.value = '';
+  if (incInp) incInp.value = '';
+  updateFullNameDisplay();
+  showToast('Full name saved: "' + newName + '" — will appear on reports');
+}
+
+function updateFullNameDisplay() {
+  var name = localStorage.getItem(FULL_NAME_KEY) || '';
+  var expEl = document.getElementById('current-fullname-display');
+  var incEl = document.getElementById('inc-current-fullname-display');
+  var display = name ? ('Current: ' + name) : 'Not set — enter your full name above';
+  if (expEl) expEl.textContent = display;
+  if (incEl) incEl.textContent = display;
+}
+
 function changeUsername() {
   var inp = document.getElementById('change-username-input');
   var newName = inp ? inp.value.trim() : '';
@@ -8494,6 +8544,7 @@ function clearIncomeLedgerFilters() {
 function renderIncomeManage() {
   var data = loadIncomeData();
   var totalEl = document.getElementById('inc-manage-total');
+  setTimeout(updateFullNameDisplay, 50);
   if (totalEl) totalEl.textContent = data.length;
 
   var listEl = document.getElementById('inc-manage-month-list');
