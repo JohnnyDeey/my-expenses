@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1265,7 +1265,7 @@ nav.tabs.header-hidden button {
 
 <div id="sticky-topbar">
 <!-- Always-fixed top: user bar + nav tabs -->
-<div id="fixed-topbar" style="position:fixed;top:0;left:0;right:0;z-index:300;background:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,0.4);">
+<div id="fixed-topbar" style="position:fixed;top:0;left:0;right:0;z-index:300;background:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,0.4);padding-top:env(safe-area-inset-top, 0px);">
 <!-- Always-visible user bar — always shown -->
 <div id="hdr-user-bar" style="background:var(--ink);padding:6px 14px;border-bottom:1px solid #2e2620;display:flex;flex-direction:column;gap:4px;">
   <!-- Row 1: profile · initials · sync · hide -->
@@ -8621,17 +8621,26 @@ function adjustMainPadding() {
   var fixedBar  = document.getElementById('fixed-topbar');
   var bigHeader = document.getElementById('big-header-wrap');
   var main      = document.querySelector('main');
-  var navH      = fixedBar ? fixedBar.offsetHeight : 82;
+  // Get actual height - force reflow first
+  var navH = fixedBar ? fixedBar.getBoundingClientRect().height : 82;
+  if (navH < 10) navH = fixedBar ? fixedBar.offsetHeight : 82;
+  if (navH < 10) navH = 82; // final fallback
   // Position big header immediately below fixed nav bar
   if (bigHeader) bigHeader.style.top = navH + 'px';
   // Push main content below both fixed bars
   if (main) {
-    var bigH = (!_headerCollapsed && bigHeader) ? bigHeader.offsetHeight : 0;
+    var bigH = (!_headerCollapsed && bigHeader) ? bigHeader.getBoundingClientRect().height : 0;
     main.style.paddingTop = (navH + bigH + 16) + 'px';
   }
 }
 window.addEventListener('resize', adjustMainPadding);
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(adjustMainPadding, 100); });
+document.addEventListener('DOMContentLoaded', function(){
+  // Run multiple times to handle PWA/standalone mode render delays
+  adjustMainPadding();
+  setTimeout(adjustMainPadding, 100);
+  setTimeout(adjustMainPadding, 400);
+  setTimeout(adjustMainPadding, 1000);
+});
 
 renderMonthPicker();
 updateHeader();
