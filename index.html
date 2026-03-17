@@ -230,15 +230,22 @@ function loginWithBiometric() {
     _userId = uid; _userName = name; _userPhone = phone;
 
     // Use normal login path but skip mode selection overlay
-    hidePinScreen(true);
+    _userId = uid; _userName = name; _userPhone = phone;
+    // Hide pin overlay
+    var pinO = document.getElementById('pin-overlay');
+    if (pinO) pinO.style.display = 'none';
+    // Restore last used mode
+    var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
+    _appMode = savedMode;
+    applyMode();
     updateUserDisplay();
-    fetchTrashFromFirebase();
-    // Do NOT call startSync() - it re-validates and calls showPinScreen() if slow
-    // Instead just connect DB and start listener directly
+    adjustMainPadding();
+    setTimeout(resetInactivityTimer, 1000);
+    setTimeout(checkBackupReminder, 3000);
+    loadIncomeFromFirebase(function(){});
     getDB(function() {
       syncSetStatus('live');
       syncStartListener();
-      renderSyncSetupUI();
     });
     showToast('✓ Welcome back, ' + name + '!');
 
