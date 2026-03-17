@@ -1926,6 +1926,9 @@ nav.tabs.header-hidden button {
     <span class="filter-label">Year:</span>
     <select id="inc-month-year" onchange="renderIncomeMonthly()"><option value="all">All Years</option></select>
     <select id="inc-month-month" onchange="renderIncomeMonthly()"><option value="all">All Months</option></select>
+    <button class="btn btn-primary" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:7px 14px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
+    <button class="btn btn-primary" style="font-family:'DM Mono',monospace;font-size:0.75rem;padding:7px 14px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
+    <button class="btn btn-primary" style="font-family:'DM Mono',monospace;font-size:0.75rem;padding:7px 14px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
     <button id="inc-sort-btn" onclick="toggleIncomeSort()" class="btn btn-ghost" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:0.72rem;padding:7px 14px;display:flex;align-items:center;gap:6px;">
       <span id="inc-sort-icon">&#8595;</span> <span id="inc-sort-label">Newest First</span>
     </button>
@@ -2043,6 +2046,9 @@ nav.tabs.header-hidden button {
         <div id="inc-manage-total" style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--sage);">0</div>
       </div>
       <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="exportIncomeCSV()">&#8595; Export Income CSV</button>
+      <button class="btn btn-primary" style="width:100%;padding:12px;justify-content:center;margin-top:8px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
+      <button class="btn btn-primary" style="width:100%;padding:12px;justify-content:center;margin-top:8px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
+      <button class="btn btn-primary" style="width:100%;padding:12px;justify-content:center;margin-top:8px;" onclick="generateIncomePDFReport()">&#128196; Generate PDF Report</button>
     </div>
     <div class="card">
       <label>Delete by Month</label>
@@ -4774,7 +4780,7 @@ function renderLedger(){
   var thead = document.createElement('thead');
   thead.innerHTML =
     '<tr style="background:var(--ink);color:var(--paper);">'+
-      '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;white-space:nowrap;">DATE</th>'+
+      '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;white-space:nowrap;width:82px;min-width:82px;">DATE</th>'+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DESCRIPTION</th>'+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;white-space:nowrap;">AMOUNT</th>'+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">CATEGORY</th>'+
@@ -4790,15 +4796,15 @@ function renderLedger(){
 
     // Date
     var dateTd = document.createElement('td');
-    dateTd.style.cssText = 'padding:4px 7px;font-family:DM Mono,monospace;font-size:0.7rem;color:#666;white-space:nowrap;border-right:1px solid #eee;';
+    dateTd.style.cssText = 'padding:4px 7px;font-family:DM Mono,monospace;font-size:0.7rem;color:#666;white-space:nowrap;width:82px;min-width:82px;border-right:1px solid #eee;';
     dateTd.textContent = item.date;
 
-    // Description — on mobile shows date underneath
+    // Description — autofit
     var descTd = document.createElement('td');
-    descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;max-width:160px;width:160px;';
-    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
+    descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;';
+    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
 
-    // Amount
+    // Amount — autofit
     var amtTd = document.createElement('td');
     amtTd.style.cssText = 'padding:4px 7px;font-family:DM Mono,monospace;font-size:0.78rem;font-weight:600;text-align:left;white-space:nowrap;border-right:1px solid #eee;color:'+(item.amount<0?'#4a7c59':'#1a1410')+';';
     amtTd.textContent = fmtAmt(item.amount, item.currency);
@@ -6246,6 +6252,101 @@ function setBudget(key, category, value) {
 // ════════════════════════════════════════════════════
 //  PDF MONTHLY REPORT
 // ════════════════════════════════════════════════════
+
+function generateIncomePDFReport() {
+  var data = loadIncomeData();
+  if (!data.length) { showToast('No income data to generate report'); return; }
+
+  // Filter by current monthly view if active
+  var year  = (_appMode === 'income' && document.getElementById('inc-month-year'))  ? document.getElementById('inc-month-year').value  : 'all';
+  var month = (_appMode === 'income' && document.getElementById('inc-month-month')) ? document.getElementById('inc-month-month').value : 'all';
+  var filtered = data.slice();
+  if (year  !== 'all') filtered = filtered.filter(function(i){ return i.date.indexOf(year)===0; });
+  if (month !== 'all') filtered = filtered.filter(function(i){ return i.date.substring(5,7)===month; });
+  if (!filtered.length) { showToast('No income data for selected period'); return; }
+
+  var periodLabel = (year === 'all') ? 'All Time'
+    : (month === 'all' ? year : MONTHS_FULL[parseInt(month)-1] + ' ' + year);
+
+  filtered.sort(function(a,b){ return a.date.localeCompare(b.date); });
+
+  // Totals by currency and category
+  var byCur = {};
+  var byCat = {};
+  filtered.forEach(function(i){
+    byCur[i.currency] = (byCur[i.currency]||0) + i.amount;
+    if (!byCat[i.category]) byCat[i.category] = {};
+    byCat[i.category][i.currency] = (byCat[i.category][i.currency]||0) + i.amount;
+  });
+  var currencies = Object.keys(byCur);
+  var catRows = Object.keys(byCat).sort(function(a,b){
+    var av = Object.values(byCat[a]).reduce(function(s,v){return s+v;},0);
+    var bv = Object.values(byCat[b]).reduce(function(s,v){return s+v;},0);
+    return bv - av;
+  });
+
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html><head><title>'+periodLabel+' — Income Report</title><meta charset="utf-8">');
+  win.document.write('<style>');
+  win.document.write('*{box-sizing:border-box;margin:0;padding:0;}');
+  win.document.write('body{font-family:Arial,sans-serif;font-size:10pt;color:#1a1410;background:white;padding:28px 32px;max-width:900px;margin:0 auto;}');
+  win.document.write('h1{font-size:18pt;font-weight:700;color:#1a4128;margin-bottom:4px;}');
+  win.document.write('h2{font-size:11pt;font-weight:700;color:#1a4128;margin:16px 0 8px;border-bottom:2px solid #4a7c59;padding-bottom:4px;}');
+  win.document.write('.subtitle{font-size:9pt;color:#888;margin-bottom:20px;}');
+  win.document.write('.summary{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;}');
+  win.document.write('.stat{background:#f0fdf4;border:1px solid #a9dfbf;border-radius:4px;padding:10px 14px;flex:1;min-width:100px;}');
+  win.document.write('.stat-label{font-size:7pt;text-transform:uppercase;letter-spacing:1px;color:#4a7c59;margin-bottom:3px;}');
+  win.document.write('.stat-value{font-size:14pt;font-weight:700;color:#1a4128;}');
+  win.document.write('table{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:16px;}');
+  win.document.write('thead tr{background:#1a4128;color:white;}');
+  win.document.write('th{padding:5px 8px;text-align:left;font-size:8pt;letter-spacing:0.5px;}');
+  win.document.write('td{padding:4px 8px;border-bottom:1px solid #e0edd5;}');
+  win.document.write('tr:nth-child(even){background:#f8fdf9;}');
+  win.document.write('.cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;}');
+  win.document.write('.footer{margin-top:24px;font-size:8pt;color:#aaa;text-align:center;border-top:1px solid #e0ddd5;padding-top:10px;}');
+  win.document.write('@media print{body{padding:0;} @page{size:A4;margin:18mm 15mm 18mm 15mm;}}');
+  win.document.write('</style></head><body>');
+
+  win.document.write('<h1>Income Report</h1>');
+  win.document.write('<div class="subtitle">'+periodLabel+' · Generated '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})+'</div>');
+
+  win.document.write('<div class="summary">');
+  win.document.write('<div class="stat"><div class="stat-label">Entries</div><div class="stat-value">'+filtered.length+'</div></div>');
+  currencies.forEach(function(cur){
+    win.document.write('<div class="stat"><div class="stat-label">'+cur+' Total</div><div class="stat-value">'+(SYMS[cur]||'')+fmtNum(byCur[cur])+'</div></div>');
+  });
+  win.document.write('</div>');
+
+  win.document.write('<h2>Income by Category</h2>');
+  win.document.write('<table><thead><tr><th>Category</th>');
+  currencies.forEach(function(c){ win.document.write('<th>'+c+'</th>'); });
+  win.document.write('</tr></thead><tbody>');
+  catRows.forEach(function(cat){
+    var color = getIncCatColor(cat);
+    win.document.write('<tr><td><span class="cat-dot" style="background:'+color+'"></span>'+cat+'</td>');
+    currencies.forEach(function(c){
+      var v = (byCat[cat]||{})[c]||0;
+      win.document.write('<td>'+(v>0?(SYMS[c]||'')+fmtNum(v):'—')+'</td>');
+    });
+    win.document.write('</tr>');
+  });
+  win.document.write('</tbody></table>');
+
+  win.document.write('<h2>All Transactions</h2>');
+  win.document.write('<table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th></tr></thead><tbody>');
+  filtered.forEach(function(item){
+    win.document.write('<tr><td>'+item.date+'</td><td>'+item.desc+'</td><td>'+item.category+'</td><td>'+(SYMS[item.currency]||'')+fmtNum(item.amount)+'</td></tr>');
+  });
+  win.document.write('</tbody></table>');
+
+  win.document.write('<div class="footer">My Expense Ledger · Income Report · Confidential</div>');
+  win.document.write('<div style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px;">');
+  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#1a4128;color:#8dd4a8;border:2px solid #4a7c59;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT</button>');
+  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#4a7c59;color:white;border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.85rem;font-weight:700;cursor:pointer;letter-spacing:1px;">&#128229; SAVE AS PDF</button>');
+  win.document.write('</div>');
+  win.document.write('</body></html>');
+  win.document.close();
+}
 function generatePDFReport() {
   var year     = document.getElementById('budget-year').value;
   var month    = document.getElementById('budget-month').value;
@@ -6291,7 +6392,7 @@ function generatePDFReport() {
   win.document.write('<meta charset="utf-8">');
   win.document.write('<style>');
   win.document.write('*{box-sizing:border-box;margin:0;padding:0;}');
-  win.document.write('body{font-family:Arial,sans-serif;font-size:10pt;color:#1a1410;background:white;padding:24px;}');
+  win.document.write('body{font-family:Arial,sans-serif;font-size:10pt;color:#1a1410;background:white;padding:28px 32px;max-width:900px;margin:0 auto;}');
   win.document.write('h1{font-size:18pt;font-weight:700;color:#1a1410;margin-bottom:4px;}');
   win.document.write('h2{font-size:11pt;font-weight:700;color:#1a1410;margin:16px 0 8px;border-bottom:2px solid #c8962e;padding-bottom:4px;}');
   win.document.write('.subtitle{font-size:9pt;color:#888;margin-bottom:20px;}');
@@ -6310,7 +6411,8 @@ function generatePDFReport() {
   win.document.write('.over{color:#b5451b;font-weight:700;}');
   win.document.write('.cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;}');
   win.document.write('.footer{margin-top:24px;font-size:8pt;color:#aaa;text-align:center;border-top:1px solid #e0ddd5;padding-top:10px;}');
-  win.document.write('@media print{body{padding:0;} @page{margin:15mm;}}');
+  win.document.write('@media print{body{padding:0;} @page{size:A4;margin:18mm 15mm 18mm 15mm;}}');
+  win.document.write('body{padding:24px 28px;}');
   win.document.write('</style></head><body>');
 
   // Header
@@ -8098,7 +8200,7 @@ function renderIncomeLedger() {
   var thead = document.createElement('thead');
   thead.innerHTML =
     '<tr style="background:var(--ink);color:var(--paper);">'+
-      '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;white-space:nowrap;">DATE</th>'+
+      '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;white-space:nowrap;width:82px;min-width:82px;">DATE</th>'+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DESCRIPTION</th>'+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;white-space:nowrap;">AMOUNT</th>'+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">CATEGORY</th>'+
@@ -8114,13 +8216,13 @@ function renderIncomeLedger() {
 
     // Date column
     var dateTd = document.createElement('td');
-    dateTd.style.cssText = 'padding:4px 7px;font-family:DM Mono,monospace;font-size:0.7rem;color:#666;white-space:nowrap;border-right:1px solid #eee;';
+    dateTd.style.cssText = 'padding:4px 7px;font-family:DM Mono,monospace;font-size:0.7rem;color:#666;white-space:nowrap;width:82px;min-width:82px;border-right:1px solid #eee;';
     dateTd.textContent = item.date;
 
-    // Description column
+    // Description column — autofit
     var descTd = document.createElement('td');
-    descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;max-width:160px;width:160px;';
-    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
+    descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;';
+    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
 
     // Amount column - LEFT aligned to match expenses
     var amtTd = document.createElement('td');
