@@ -306,21 +306,23 @@ function base64ToBuffer(base64) {
 function syncInit() {
   var phone = localStorage.getItem(PHONE_KEY);
 
-  // Check keep-logged-in: stored in sessionStorage so it dies when app/tab closes
-  var keepLogin  = sessionStorage.getItem('keep_login');      // '1' = checked
-  var loginTime  = parseInt(sessionStorage.getItem('login_time') || '0');
+  // sessionStorage.tab_open survives REFRESH but dies on tab close / app clear
+  // localStorage.last_active survives everything — used to check inactivity
+  var tabOpen    = sessionStorage.getItem('tab_open');
+  var keepLogin  = localStorage.getItem('keep_login_pref'); // '1' = 30min, '0' = 5min
+  var lastActive = parseInt(localStorage.getItem('last_active') || '0');
   var now        = Date.now();
-  var timeout    = keepLogin === '1' ? 30 * 60 * 1000 : 5 * 60 * 1000; // 30min or 5min
-  var sessionOk  = loginTime && (now - loginTime) < timeout;
+  var timeout    = keepLogin === '1' ? 30 * 60 * 1000 : 5 * 60 * 1000;
+  var withinTime = lastActive && (now - lastActive) < timeout;
 
-  if (sessionOk) {
-    // Valid session — restore and open app directly (handles refresh)
+  if (tabOpen && withinTime) {
+    // Refresh scenario: tab was open and still within inactivity window — resume
     var uid  = localStorage.getItem(UID_KEY);
     var name = localStorage.getItem(NAME_KEY);
     if (uid && name && phone) {
       _userId = uid; _userName = name; _userPhone = phone;
+      localStorage.setItem('last_active', String(Date.now())); // reset timer on resume
       updateUserDisplay();
-      // Restore last mode, no mode overlay on refresh
       var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
       _appMode = savedMode;
       applyMode();
@@ -331,7 +333,7 @@ function syncInit() {
     }
   }
 
-  // No valid session — require login
+  // Tab closed, app cleared, or time expired — require login
   showPinScreen();
   if (phone) {
     showLoginStep();
@@ -714,8 +716,9 @@ function confirmCode() {
   localStorage.removeItem('expense_ledger');
   localStorage.removeItem('custom_categories');
   localStorage.removeItem('custom_cat_rules');
-  sessionStorage.setItem('keep_login', '0');
-  sessionStorage.setItem('login_time', String(Date.now()));
+  sessionStorage.setItem('tab_open', '1');
+  localStorage.setItem('keep_login_pref', '0');
+  localStorage.setItem('last_active', String(Date.now()));
   hidePinScreen();
   updateUserDisplay();
   startSync();
@@ -759,10 +762,11 @@ function submitLogin() {
     // Load full name from registry if available
     if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
     if(errEl) errEl.textContent = '';
-    // Store session with timestamp — sessionStorage dies when app/tab closes
     var keepCb = document.getElementById('keep-logged-in');
-    sessionStorage.setItem('keep_login', (keepCb && keepCb.checked) ? '1' : '0');
-    sessionStorage.setItem('login_time', String(Date.now()));
+    var keepVal = (keepCb && keepCb.checked) ? '1' : '0';
+    sessionStorage.setItem('tab_open', '1');          // dies on close/clear
+    localStorage.setItem('keep_login_pref', keepVal); // survives refresh
+    localStorage.setItem('last_active', String(Date.now()));
     hidePinScreen();
     updateUserDisplay();
     fetchTrashFromFirebase();
@@ -869,8 +873,9 @@ function logOut() {
   if (moSel) moSel.innerHTML = '';
   _db = null; _userId = null;
   localStorage.removeItem(UID_KEY);
-  sessionStorage.removeItem('keep_login');
-  sessionStorage.removeItem('login_time');
+  sessionStorage.removeItem('tab_open');
+  localStorage.removeItem('last_active');
+  localStorage.removeItem('keep_login_pref');
   showPinScreen();
   showLoginStep();
   syncSetStatus('off');
@@ -5651,12 +5656,12 @@ function resetInactivityTimer() {
   clearTimeout(_inactivityTimer);
   clearInterval(_countdownTimer);
   hideInactivityWarning();
-  // Dynamic timeout: 30min if keep-logged-in checked, else 5min — silent logout
-  var keepLogin = sessionStorage.getItem('keep_login');
+  // Update last_active on every activity so refresh check stays fresh
+  localStorage.setItem('last_active', String(Date.now()));
+  var keepLogin = localStorage.getItem('keep_login_pref');
   var minutes   = keepLogin === '1' ? 30 : 5;
   _inactivityTimer = setTimeout(function() {
-    // Silent logout — no countdown, no warning
-    logOut();
+    logOut(); // silent logout — no countdown, no warning
   }, minutes * 60 * 1000);
 }
 
