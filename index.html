@@ -156,6 +156,102 @@ function userCol(name) {
 }
 
 // ── Init: restore session from localStorage ──
+
+// ── Biometric / Fingerprint Login ──
+var BIOMETRIC_KEY = 'finance_biometric_cred';
+
+function checkBiometricAvailable() {
+  if (!window.PublicKeyCredential) return;
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+    .then(function(available) {
+      var wrap = document.getElementById('biometric-btn-wrap');
+      // Only show if available AND user has saved biometric cred
+      var savedCred = localStorage.getItem(BIOMETRIC_KEY);
+      if (available && savedCred && wrap) {
+        wrap.style.display = 'block';
+      }
+    }).catch(function(){});
+}
+
+function loginWithBiometric() {
+  var savedCred = localStorage.getItem(BIOMETRIC_KEY);
+  if (!savedCred) { showToast('No fingerprint registered. Sign in with code first.'); return; }
+  var credData = JSON.parse(savedCred);
+  var challenge = new Uint8Array(32);
+  window.crypto.getRandomValues(challenge);
+  navigator.credentials.get({
+    publicKey: {
+      challenge: challenge,
+      allowCredentials: [{
+        id: base64ToBuffer(credData.id),
+        type: 'public-key',
+        transports: ['internal']
+      }],
+      userVerification: 'required',
+      timeout: 60000
+    }
+  }).then(function(assertion) {
+    // Biometric verified — restore session
+    var uid   = localStorage.getItem(UID_KEY);
+    var name  = localStorage.getItem(NAME_KEY);
+    var phone = localStorage.getItem(PHONE_KEY);
+    if (uid && name && phone) {
+      _userId = uid; _userName = name; _userPhone = phone;
+      updateUserDisplay();
+      hidePinScreen();
+      startSync();
+      showToast('Fingerprint verified ✓');
+    } else {
+      showToast('Session expired. Please sign in with your code.');
+    }
+  }).catch(function(e) {
+    if (e.name !== 'NotAllowedError') {
+      showToast('Biometric failed. Use your access code.');
+    }
+  });
+}
+
+function registerBiometric() {
+  if (!window.PublicKeyCredential) { showToast('Biometric not supported on this device'); return; }
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+    .then(function(available) {
+      if (!available) { showToast('No fingerprint/face sensor found'); return; }
+      var challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+      var userId = new TextEncoder().encode(_userId || 'user');
+      navigator.credentials.create({
+        publicKey: {
+          challenge: challenge,
+          rp: { name: 'My Finance Ledger', id: location.hostname },
+          user: { id: userId, name: _userName || 'user', displayName: _userName || 'User' },
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+          timeout: 60000
+        }
+      }).then(function(cred) {
+        localStorage.setItem(BIOMETRIC_KEY, JSON.stringify({
+          id: bufferToBase64(cred.rawId)
+        }));
+        showToast('Fingerprint registered! You can now use it to log in.');
+      }).catch(function(e) {
+        showToast('Could not register fingerprint: ' + e.message);
+      });
+    });
+}
+
+function bufferToBase64(buffer) {
+  var bytes = new Uint8Array(buffer);
+  var str = '';
+  bytes.forEach(function(b){ str += String.fromCharCode(b); });
+  return btoa(str);
+}
+function base64ToBuffer(base64) {
+  var str = atob(base64);
+  var buf = new Uint8Array(str.length);
+  for (var i = 0; i < str.length; i++) buf[i] = str.charCodeAt(i);
+  return buf.buffer;
+}
+
 function syncInit() {
   // Restore app mode immediately
   var savedMode = localStorage.getItem(APP_MODE_KEY);
@@ -510,10 +606,12 @@ function showLoginStep() {
   document.getElementById('pin-step-register').style.display = 'none';
   document.getElementById('pin-step-code').style.display    = 'none';
   document.getElementById('pin-step-login').style.display   = 'block';
-  // Clear fields on every show
+  // Always clear fields — never suggest saved credentials
   var ph = document.getElementById('login-phone'); if(ph) ph.value = '';
   var cd = document.getElementById('login-code');  if(cd) cd.value = '';
   var er = document.getElementById('login-error'); if(er) er.textContent = '';
+  // Check if fingerprint available for this device
+  setTimeout(checkBiometricAvailable, 200);
   setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
 }
 function showCodeStep() {
@@ -1750,6 +1848,14 @@ nav.tabs.header-hidden button {
     </div>
   </div>
 
+  <!-- ── 3a2. BIOMETRIC ── -->
+  <div class="card" style="margin-bottom:14px;">
+    <label>&#128273; Fingerprint / Face ID Login</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Register your fingerprint or face to skip typing your access code on this device.</p>
+    <button class="btn btn-success" style="width:100%;padding:12px;justify-content:center;" onclick="registerBiometric()">&#128273; Register Fingerprint / Face ID</button>
+    <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;margin-top:8px;color:var(--rust);border-color:var(--rust);" onclick="localStorage.removeItem('finance_biometric_cred');showToast('Fingerprint removed');">&#10005; Remove Fingerprint</button>
+  </div>
+
   <!-- ── 3b. CHANGE ACCESS CODE ── -->
   <div class="card" style="margin-bottom:14px;">
     <label>&#128274; Change Access Code</label>
@@ -2235,14 +2341,17 @@ nav.tabs.header-hidden button {
         <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Enter your phone number and access code.</div>
         <div style="margin-bottom:14px;">
           <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number or Username</label>
-          <input id="login-phone" type="text" placeholder="e.g. 07012345678 or jd0292" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('login-code').focus()">
+          <input id="login-phone" type="text" placeholder="e.g. 07012345678 or jd0292" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('login-code').focus()">
         </div>
         <div style="margin-bottom:20px;">
           <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Access code</label>
-          <input id="login-code" type="password" inputmode="numeric" maxlength="8" placeholder="••••••" style="width:100%;padding:14px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--paper);outline:none;letter-spacing:8px;text-align:center;" onkeydown="if(event.key==='Enter')submitLogin()">
+          <input id="login-code" type="password" inputmode="numeric" maxlength="8" placeholder="••••••" autocomplete="new-password" style="width:100%;padding:14px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--paper);outline:none;letter-spacing:8px;text-align:center;" onkeydown="if(event.key==='Enter')submitLogin()">
         </div>
         <div id="login-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
         <button onclick="submitLogin()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Sign In</button>
+        <div id="biometric-btn-wrap" style="display:none;margin-top:10px;">
+          <button onclick="loginWithBiometric()" style="width:100%;padding:14px;background:rgba(74,124,89,0.15);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:#8dd4a8;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">&#128273; Use Fingerprint / Face ID</button>
+        </div>
         <div style="text-align:center;margin-top:16px;">
           <button onclick="showRegisterStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;text-decoration:underline;">New user? Create account</button>
         </div>
@@ -5467,7 +5576,7 @@ function populateFilters(){
 var _inactivityTimer   = null;
 var _countdownTimer    = null;
 var _countdownSeconds  = 0;
-var INACTIVE_MINUTES   = 5;
+var INACTIVE_MINUTES   = 2;
 var COUNTDOWN_SECONDS  = 60;
 
 function resetInactivityTimer() {
