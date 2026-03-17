@@ -1138,7 +1138,7 @@ nav.tabs.header-hidden button {
 
 /* ── Ledger + Trash: compact horizontal scroll on mobile ── */
 @media (max-width: 600px) {
-  #ledger-accordion, #trash-content {
+  #ledger-accordion, #inc-ledger-accordion, #trash-content {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     display: block;
@@ -1147,6 +1147,8 @@ nav.tabs.header-hidden button {
   /* Compact row height */
   #ledger-accordion table tr td,
   #ledger-accordion table tr th,
+  #inc-ledger-accordion table tr td,
+  #inc-ledger-accordion table tr th,
   #trash-content table tr td,
   #trash-content table tr th {
     padding: 3px 5px !important;
@@ -3818,18 +3820,54 @@ function renderHeatmap(data, cur){
   var isMobile = window.innerWidth < 600;
 
   if (isMobile) {
-    // Mobile: vertical year cards with month bars
-    var mobileWrap = document.createElement('div');
-    years.forEach(function(y) {
+    // Mobile: one year at a time with prev/next navigation
+    if (typeof hContainer._expHeatmapYearIdx === 'undefined') {
+      hContainer._expHeatmapYearIdx = years.length - 1; // start at latest year
+    }
+    hContainer._expHeatmapYearIdx = Math.max(0, Math.min(years.length-1, hContainer._expHeatmapYearIdx));
+
+    function renderExpMobileYear(idx) {
+      hContainer._expHeatmapYearIdx = idx;
+      hContainer.innerHTML = '';
+      var y = years[idx];
+
+      // Navigation row
+      var nav = document.createElement('div');
+      nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;';
+      var prevBtn = document.createElement('button');
+      prevBtn.style.cssText = 'background:none;border:1px solid var(--border);border-radius:4px;padding:5px 12px;cursor:pointer;font-size:0.85rem;color:var(--gold);'+(idx===0?'opacity:0.3;cursor:default;':'');
+      prevBtn.textContent = '←';
+      prevBtn.disabled = idx === 0;
+      prevBtn.addEventListener('click', function(){ if(idx>0) renderExpMobileYear(idx-1); });
+
+      var yearLabel = document.createElement('span');
+      yearLabel.style.cssText = 'font-family:Playfair Display,serif;font-size:1.4rem;font-weight:900;color:var(--gold);';
+      yearLabel.textContent = y;
+
+      var nextBtn = document.createElement('button');
+      nextBtn.style.cssText = 'background:none;border:1px solid var(--border);border-radius:4px;padding:5px 12px;cursor:pointer;font-size:0.85rem;color:var(--gold);'+(idx===years.length-1?'opacity:0.3;cursor:default;':'');
+      nextBtn.textContent = '→';
+      nextBtn.disabled = idx === years.length - 1;
+      nextBtn.addEventListener('click', function(){ if(idx<years.length-1) renderExpMobileYear(idx+1); });
+
+      nav.appendChild(prevBtn);
+      nav.appendChild(yearLabel);
+      nav.appendChild(nextBtn);
+      hContainer.appendChild(nav);
+
       var card = document.createElement('div');
-      card.style.cssText = 'margin-bottom:14px;background:white;border:1px solid var(--border);border-radius:6px;padding:14px;box-shadow:2px 2px 0 var(--shadow);';
+      card.style.cssText = 'background:white;border:1px solid var(--border);border-radius:6px;padding:14px;box-shadow:2px 2px 0 var(--shadow);';
       var yearTotal = byYM[y].reduce(function(s,v){return s+v;},0);
-      card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">' +
-        '<span style="font-family:Playfair Display,serif;font-size:1.2rem;font-weight:900;color:var(--gold);">'+y+'</span>' +
-        '<span style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;">'+sym+fmtNum(yearTotal)+'</span>' +
-        '</div>';
       var maxM = Math.max.apply(null, byYM[y].filter(function(v){return v>0;}));
       if (!maxM) maxM = 1;
+
+      var cardHeader = document.createElement('div');
+      cardHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;';
+      cardHeader.innerHTML =
+        '<span style="font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);">'+(idx+1)+' of '+years.length+' years</span>'+
+        '<span style="font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;">'+sym+fmtNum(yearTotal)+'</span>';
+      card.appendChild(cardHeader);
+
       MONTHS.forEach(function(mName, mi) {
         var val = byYM[y][mi];
         var pct = val > 0 ? Math.max(8, val/maxM*100) : 0;
@@ -3838,15 +3876,13 @@ function renderHeatmap(data, cur){
         row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:5px;';
         row.innerHTML =
           '<span style="font-family:DM Mono,monospace;font-size:0.62rem;color:var(--muted);width:28px;flex-shrink:0;">'+mName.substring(0,3)+'</span>' +
-          '<div style="flex:1;height:14px;background:#f0ece4;border-radius:3px;overflow:hidden;" title="'+mName+' '+y+(val>0?': '+sym+fmtNum(val):': no data')+'">' +
-            (val>0 ? '<div style="width:'+pct.toFixed(1)+'%;height:100%;background:'+color+';border-radius:3px;"></div>' : '') +
-          '</div>' +
+          '<div style="flex:1;height:14px;background:#f0ece4;border-radius:3px;overflow:hidden;" title="'+mName+' '+y+(val>0?': '+sym+fmtNum(val):': no data')+'">'+(val>0?'<div style="width:'+pct.toFixed(1)+'%;height:100%;background:'+color+';border-radius:3px;"></div>':'')+'</div>'+
           '<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);min-width:60px;text-align:right;">'+(val>0?sym+fmtNum(val):'')+'</span>';
         card.appendChild(row);
       });
-      mobileWrap.appendChild(card);
-    });
-    hContainer.appendChild(mobileWrap);
+      hContainer.appendChild(card);
+    }
+    renderExpMobileYear(hContainer._expHeatmapYearIdx);
     return;
   }
 
