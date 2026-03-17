@@ -364,8 +364,8 @@ function syncStartListener() {
   if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
   if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
   _syncUnsubscribe = userCol('expense_months').onSnapshot(function(snapshot) {
-    // Block if we just deleted (to avoid our own push triggering a stale reload)
-    if (window._deletePending || window._isMerging) return;
+    // Block if we just wrote locally (avoids race condition restoring deleted data)
+    if (window._deletePending || window._isMerging || window._lastDeleteTime && (Date.now() - window._lastDeleteTime) < 8000) return;
     var allEntries = [];
     var fbMonths = [];
     snapshot.forEach(function(doc) {
@@ -403,7 +403,7 @@ function syncStartListener() {
   if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
   _incomeUnsubscribe = userCol('income_months').onSnapshot(function(snapshot) {
     // Block if we just pushed income data (avoids restoring our own deletions)
-    if (window._incDeletePending) return;
+    if (window._incDeletePending || (window._incLastDeleteTime && (Date.now() - window._incLastDeleteTime) < 8000)) return;
     var allEntries = [];
     snapshot.forEach(function(doc) {
       var d = doc.data();
@@ -1433,7 +1433,7 @@ nav.tabs.header-hidden button {
           </div>
           <div id="ps-ok-row" style="display:none;align-items:center;gap:10px;padding:4px 0;">
             <span style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--sage);">&#10003; All dates match the selected period</span>
-            <button class="btn btn-success" style="padding:7px 16px;" onclick="switchTab('categorize',null)">Go to Categorize &#8594;</button>
+            <button class="btn btn-success" style="padding:7px 16px;" onclick="expSendSkippedToTrashAndGo()">Go to Categorize &#8594;</button>
           </div>
         </div>
       </div>
@@ -1861,8 +1861,7 @@ nav.tabs.header-hidden button {
             </div>
             <div id="inc-ps-skipped-list" style="font-family:DM Mono,monospace;font-size:0.72rem;color:#7a1a00;display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;margin-bottom:10px;"></div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <span style="font-family:DM Mono,monospace;font-size:0.68rem;color:#a05000;line-height:1.6;flex:1;">Fix the lines above in the text area, then re-parse. Or dismiss and proceed with the valid entries.</span>
-              <button class="btn btn-ghost" style="font-size:0.72rem;padding:6px 12px;border-color:#b5451b;color:#7a1a00;" onclick="incDismissSkipped()">&#10005; Dismiss</button>
+              <span style="font-family:DM Mono,monospace;font-size:0.68rem;color:#a05000;line-height:1.6;flex:1;">Fix the lines above in the text area, then re-parse.</span>
             </div>
           </div>
 
@@ -2879,6 +2878,12 @@ function parseInput() {
       currentDate = (parts[0].length===4)
         ? parts[0]+'-'+pad(parseInt(parts[1]))+'-'+pad(parseInt(parts[2]))
         : parts[2]+'-'+pad(parseInt(parts[1]))+'-'+pad(parseInt(parts[0]));
+      // If date doesn't match selected year+month → show in red warning panel
+      var expectedKey = pickerYear + '-' + pad(pickerMonth);
+      if (currentDate.substring(0,7) !== expectedKey) {
+        skippedLines.push({ line: rawLine.trim(), reason: 'Date ' + currentDate + ' is outside the selected period ' + expectedKey });
+        currentDate = null; // block items under this date
+      }
       return;
     }
     if (!currentDate) return;
@@ -3001,14 +3006,7 @@ function parseInput() {
   catViewMode = 'pending';
 
   validateParsedDates();
-  // Send skipped lines to trash
-  if (skippedLines.length) {
-    var skippedItems = skippedLines.map(function(s){
-      return { _raw_line: s.line, _reason: s.reason, date: currentDate||'', desc: s.line, amount: null, currency: '', category: '' };
-    });
-    addToTrash(skippedItems, 'skipped');
-  }
-  showToast('Parsed ' + pendingItems.length + ' items' + (skippedLines.length ? ' · ' + skippedLines.length + ' skipped → recycle bin' : ''));
+  showToast('Parsed ' + pendingItems.length + ' items' + (skippedLines.length ? ' · ' + skippedLines.length + ' lines need attention' : ''));
 }
 
 
@@ -4126,6 +4124,27 @@ function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];
 // ════════════════════════════════
 //  PARSE DATE VALIDATION
 // ════════════════════════════════
+function expSendSkippedToTrashAndGo() {
+  // Send skipped lines to recycle bin NOW (user chose to proceed)
+  if (skippedLines && skippedLines.length) {
+    var lastDate = '';
+    // Try to extract a date from the skipped line reason
+    skippedLines.forEach(function(s) {
+      var m = s.reason && s.reason.match(/Date ([\d-]+)/);
+      var d = m ? m[1] : '';
+      lastDate = d || lastDate;
+    });
+    var skippedItems = skippedLines.map(function(s){
+      var m = s.reason && s.reason.match(/Date ([\d-]+)/);
+      var d = m ? m[1] : '';
+      return { _raw_line: s.line, _reason: s.reason, date: d, desc: s.line, amount: null, currency: '', category: '' };
+    });
+    addToTrash(skippedItems, 'skipped');
+    showToast(skippedLines.length + ' skipped lines moved to recycle bin');
+  }
+  switchTab('categorize', null);
+}
+
 function validateParsedDates() {
   var statsDiv = document.getElementById('parse-stats');
   statsDiv.style.display = 'block';
@@ -4153,43 +4172,12 @@ function validateParsedDates() {
     skippedDiv.style.display = 'none';
   }
 
-  // ── Date mismatch panel ──
-  var expectedYYYY = String(pickerYear);
-  var expectedMM   = pad(pickerMonth);
-  var expectedKey  = expectedYYYY + '-' + expectedMM;
-  var periodLabel  = MONTHS_FULL[pickerMonth-1] + ' ' + pickerYear;
-
-  document.getElementById('ps-expected-period').textContent = periodLabel;
-
-  var mismatched = pendingItems.filter(function(item) {
-    return item.date.substring(0,7) !== expectedKey;
-  });
-
-  var mismatchDiv  = document.getElementById('ps-mismatch');
-  var okRow        = document.getElementById('ps-ok-row');
-  var mismatchList = document.getElementById('ps-mismatch-list');
-  var mismatchCount= document.getElementById('ps-mismatch-count');
-
-  if (mismatched.length === 0) {
-    mismatchDiv.style.display = 'none';
-    okRow.style.display = 'flex';
-  } else {
-    okRow.style.display = 'none';
-    mismatchDiv.style.display = 'block';
-    mismatchCount.textContent = mismatched.length;
-    mismatchList.innerHTML = '';
-    mismatched.forEach(function(item) {
-      var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:baseline;gap:8px;padding:3px 0;border-bottom:1px solid rgba(232,160,32,0.2);';
-      row.innerHTML =
-        '<span style="color:#e8a020;font-size:0.85rem;">&#8594;</span>' +
-        '<span style="color:#c05000;font-weight:700;min-width:82px;">' + item.date + '</span>' +
-        '<span style="opacity:0.85;">' + item.desc + '</span>' +
-        '<span style="margin-left:auto;font-weight:600;">' + (SYMS[item.currency]||'') + fmtNum(item.amount) + '</span>';
-      mismatchList.appendChild(row);
-    });
-    highlightMismatchInTextarea(mismatched);
-  }
+  // ── No more yellow mismatch panel — wrong dates go to recycle bin at parse time ──
+  // Show ok-row always (skipped lines are warnings, not blockers)
+  var okRow = document.getElementById('ps-ok-row');
+  var mismatchDiv = document.getElementById('ps-mismatch');
+  if (mismatchDiv) mismatchDiv.style.display = 'none';
+  okRow.style.display = pendingItems.length ? 'flex' : 'none';
 }
 
 function highlightSkippedInTextarea(firstSkippedLine) {
@@ -6637,6 +6625,8 @@ function loadIncomeData() {
   try { return JSON.parse(localStorage.getItem(getIncKey()) || '[]'); } catch(e){ return []; }
 }
 function saveIncomeData(data) {
+  window._incLastDeleteTime = Date.now();
+  window._incDeletePending = true;
   localStorage.setItem(getIncKey(), JSON.stringify(data));
   syncIncomeToFirebase();
 }
@@ -7208,31 +7198,10 @@ function parseIncomeYear() {
   var months = Object.keys(byMonth);
   var totalItems = months.reduce(function(s,m){ return s+byMonth[m].length; }, 0);
 
-  // Show date errors if any — user must confirm or fix
-  if (dateErrors.length > 0) {
-    var errDiv = document.getElementById('inc-parse-stats');
-    errDiv.style.display = 'block';
-    var html = '<div style="background:#fff3cd;border:1.5px solid #e8a020;border-radius:4px;padding:12px 16px;margin-bottom:10px;">' +
-      '<div style="font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;color:#7a4800;margin-bottom:8px;">⚠ ' + dateErrors.length + ' dates are outside ' + incPickerYear + '</div>' +
-      '<div style="font-family:DM Mono,monospace;font-size:0.7rem;color:#7a4800;max-height:120px;overflow-y:auto;margin-bottom:10px;">';
-    dateErrors.slice(0,10).forEach(function(e){ html += '<div>→ '+e.date+' (year '+e.year+')</div>'; });
-    if (dateErrors.length > 10) html += '<div>...and '+(dateErrors.length-10)+' more</div>';
-    html += '</div>' +
-      '<div style="display:flex;gap:8px;">' +
-        '<button class="btn btn-ghost" style="font-size:0.72rem;padding:6px 12px;border-color:#e8a020;color:#7a4800;" onclick="incYearProceedWithSkip()">Skip wrong-year dates, parse rest</button>' +
-        '<button class="btn btn-success" style="font-size:0.72rem;padding:6px 12px;" onclick="incYearProceedAll()">Parse all anyway</button>' +
-      '</div>' +
-    '</div>';
-    html += '<div style="font-family:DM Mono,monospace;font-size:0.75rem;color:var(--muted);">Found <strong style="color:var(--gold);">'+totalItems+'</strong> items across '+months.length+' months</div>';
-    errDiv.innerHTML = html;
-    // Store parsed data temporarily
-    window._incYearParsed  = byMonth;
-    window._incYearSkipped = skipped;
-    return;
-  }
-
-  // No errors — proceed directly
+  // Wrong-year dates already sent to skipped[] silently — just proceed
   window._incYearParsed  = byMonth;
+  // Add dateErrors to skipped for display in the warning panel
+  dateErrors.forEach(function(e){ skipped.push(e.date + ' (year ' + e.year + ' outside ' + incPickerYear + ')'); });
   window._incYearSkipped = skipped;
   incYearProceedAll();
 }
@@ -7285,6 +7254,67 @@ function incYearSaveAll() {
   incValidateParseResults(skipped);
   showToast('Parsed ' + allNew.length + ' items across ' + months + ' months' + (skipped.length?' · '+skipped.length+' skipped':''));
   renderIncomeCatTable();
+}
+
+var incSkippedLines = [];
+
+function incValidateParseResults(skipped) {
+  incSkippedLines = skipped || [];
+  var skippedDiv   = document.getElementById('inc-ps-skipped');
+  var skippedList  = document.getElementById('inc-ps-skipped-list');
+  var skippedCount = document.getElementById('inc-ps-skipped-count');
+  var okRow        = document.getElementById('inc-ps-ok-row');
+
+  if (incSkippedLines.length > 0) {
+    skippedCount.textContent = incSkippedLines.length;
+    skippedList.innerHTML = '';
+    incSkippedLines.forEach(function(entry) {
+      // entry can be a plain string or {line, reason}
+      var lineText = typeof entry === 'string' ? entry : (entry.line || entry._raw_line || String(entry));
+      var rawText  = lineText.replace(/ \[.*?\]$/, ''); // strip appended notes
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid rgba(181,69,27,0.15);cursor:pointer;';
+      row.title = 'Click to jump to this line in the text area';
+      row.innerHTML =
+        '<span style="color:#b5451b;font-size:0.9rem;flex-shrink:0;">&#8594;</span>' +
+        '<span style="word-break:break-all;color:#7a1a00;">' + lineText + '</span>';
+      (function(raw, r) {
+        r.addEventListener('click', function() {
+          incHighlightSkippedInTextarea(raw);
+          skippedList.querySelectorAll('div').forEach(function(x){ x.style.background = ''; });
+          r.style.background = 'rgba(181,69,27,0.10)';
+        });
+      })(rawText, row);
+      skippedList.appendChild(row);
+    });
+    skippedDiv.style.display = 'block';
+    // Auto-jump to first skipped line
+    var firstText = typeof incSkippedLines[0] === 'string'
+      ? incSkippedLines[0].replace(/ \[.*?\]$/, '')
+      : (incSkippedLines[0].line || '');
+    incHighlightSkippedInTextarea(firstText);
+    if (skippedList.firstChild) skippedList.firstChild.style.background = 'rgba(181,69,27,0.10)';
+  } else {
+    skippedDiv.style.display = 'none';
+  }
+  // "Go to Categorize" shows regardless — skipped lines are warnings not blockers
+  okRow.style.display = incPendingItems.length ? 'flex' : 'none';
+}
+
+function incHighlightSkippedInTextarea(lineText) {
+  if (!lineText) return;
+  var ta = document.getElementById('inc-raw-input');
+  var pos = ta.value.indexOf(lineText);
+  if (pos === -1) return;
+  ta.focus();
+  ta.setSelectionRange(pos, pos + lineText.length);
+  var lines = ta.value.substring(0, pos).split('\n');
+  var lineH = ta.scrollHeight / (ta.value.split('\n').length || 1);
+  ta.scrollTop = Math.max(0, (lines.length - 3) * lineH);
+}
+
+function incDismissSkipped() {
+  document.getElementById('inc-ps-skipped').style.display = 'none';
 }
 
 function parseIncomeInput() {
@@ -7533,11 +7563,34 @@ function saveAllPendingIncome() {
   if (incCatViewMode === 'pending') {
     if (!incPendingItems.length) return;
     var existing = loadIncomeData();
-    var toAdd = incPendingItems.filter(function(i) {
-      return !existing.some(function(e){ return e.date===i.date && e.desc===i.desc && e.amount===i.amount; });
+
+    // Same deduplication logic as expenses:
+    // Count occurrences so same item can appear multiple times on same day (genuine duplicates)
+    function makeIncKey(i){ return i.date+'|'+i.desc+'|'+i.amount+'|'+i.currency; }
+    var existingCounts = {};
+    existing.forEach(function(i){
+      var k = makeIncKey(i);
+      existingCounts[k] = (existingCounts[k]||0) + 1;
     });
+    var pendingCounts = {};
+    var toAdd = incPendingItems.filter(function(i){
+      var k = makeIncKey(i);
+      pendingCounts[k] = (pendingCounts[k]||0) + 1;
+      // Only add if this occurrence number doesn't already exist
+      return pendingCounts[k] > (existingCounts[k]||0);
+    });
+    var dupes = incPendingItems.length - toAdd.length;
+
+    if (!toAdd.length) {
+      showToast('All items already exist — no duplicates saved');
+      incPendingItems = [];
+      renderIncomeCatTable();
+      renderIncomeMonthPicker();
+      incPopulateFilters();
+      return;
+    }
     saveIncomeData(existing.concat(toAdd));
-    showToast('Saved ' + toAdd.length + ' income entries');
+    showToast('Saved ' + toAdd.length + ' income entries' + (dupes > 0 ? ' (' + dupes + ' duplicates skipped)' : ''));
     incPendingItems = [];
   } else {
     var data = loadIncomeData();
