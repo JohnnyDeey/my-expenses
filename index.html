@@ -1849,6 +1849,22 @@ nav.tabs.header-hidden button {
           <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);padding:6px 0;">
             Parsed: <strong id="inc-ps-count" style="color:var(--gold);">0</strong> items
           </div>
+
+          <!-- Skipped lines warning -->
+          <div id="inc-ps-skipped" style="display:none;margin:10px 0 6px;background:#fdf0f8;border:1.5px solid #b5451b;border-radius:4px;padding:12px 16px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="font-size:1.1rem;">&#128683;</span>
+              <span style="font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;color:#7a1a00;">
+                <span id="inc-ps-skipped-count">0</span> lines had numbers but were skipped
+              </span>
+            </div>
+            <div id="inc-ps-skipped-list" style="font-family:DM Mono,monospace;font-size:0.72rem;color:#7a1a00;display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;margin-bottom:10px;"></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span style="font-family:DM Mono,monospace;font-size:0.68rem;color:#a05000;line-height:1.6;flex:1;">Fix the lines above in the text area, then re-parse.</span>
+              <button class="btn btn-ghost" style="font-size:0.72rem;padding:6px 12px;border-color:#b5451b;color:#7a1a00;" onclick="incDismissSkipped()">Dismiss &amp; Continue &#8594;</button>
+            </div>
+          </div>
+
           <div id="inc-ps-ok-row" style="display:none;align-items:center;gap:10px;padding:4px 0;">
             <span style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--sage);">&#10003; Ready to categorize</span>
             <button class="btn btn-success" style="padding:7px 16px;" onclick="switchIncomeTab('inc-categorize',null)">Go to Categorize &#8594;</button>
@@ -7251,7 +7267,7 @@ function incYearSaveAll() {
   var months = Object.keys(byMonth).length;
   document.getElementById('inc-ps-count').textContent = allNew.length;
   document.getElementById('inc-parse-stats').style.display = 'block';
-  document.getElementById('inc-ps-ok-row').style.display = 'flex';
+  incValidateParseResults(skipped);
   showToast('Parsed ' + allNew.length + ' items across ' + months + ' months' + (skipped.length?' · '+skipped.length+' skipped':''));
   renderIncomeCatTable();
 }
