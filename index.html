@@ -619,7 +619,7 @@ function showPinScreen() {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'flex';
 }
-function hidePinScreen(skipModeOverlay) {
+function hidePinScreen() {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'none';
   var loginStep = document.getElementById('pin-step-login');
@@ -628,24 +628,13 @@ function hidePinScreen(skipModeOverlay) {
   if (regStep)   regStep.style.display   = 'none';
   setTimeout(resetInactivityTimer, 1000);
   setTimeout(checkBackupReminder, 3000);
-  // Show mode selection ONLY if user has never chosen before (first ever login)
-  var savedMode = localStorage.getItem(APP_MODE_KEY);
-  if (!savedMode) {
-    // First time ever — ask once, then never again
-    _appMode = 'expenses';
-    applyMode();
-    adjustMainPadding();
-    updateUserDisplay();
-    loadIncomeFromFirebase(function(){});
-    setTimeout(showModeOverlay, 200);
-  } else {
-    // Returning user — go straight to last used mode
-    _appMode = savedMode;
-    applyMode();
-    adjustMainPadding();
-    updateUserDisplay();
-    loadIncomeFromFirebase(function(){});
-  }
+  // Always show mode selection after every login
+  _appMode = 'expenses';
+  applyMode();
+  adjustMainPadding();
+  updateUserDisplay();
+  loadIncomeFromFirebase(function(){});
+  setTimeout(showModeOverlay, 300);
 }
 function showRegisterStep() {
   document.getElementById('pin-step-register').style.display = 'block';
@@ -656,20 +645,10 @@ function showLoginStep() {
   document.getElementById('pin-step-register').style.display = 'none';
   document.getElementById('pin-step-code').style.display    = 'none';
   document.getElementById('pin-step-login').style.display   = 'block';
-  // Always clear fields — never suggest saved credentials
   var ph = document.getElementById('login-phone'); if(ph) ph.value = '';
   var cd = document.getElementById('login-code');  if(cd) cd.value = '';
   var er = document.getElementById('login-error'); if(er) er.textContent = '';
-  // Auto-trigger fingerprint immediately if registered on this device
-  var savedCred = localStorage.getItem(BIOMETRIC_KEY);
-  if (savedCred) {
-    var er2 = document.getElementById('login-error');
-    if (er2) er2.textContent = 'Touch fingerprint sensor to unlock...';
-    setTimeout(loginWithBiometric, 300); // small delay so UI is visible first
-  } else {
-    setTimeout(checkBiometricAvailable, 200);
-    setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
-  }
+  setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
 }
 function showCodeStep() {
   document.getElementById('pin-step-register').style.display = 'none';
@@ -1927,13 +1906,7 @@ nav.tabs.header-hidden button {
     </div>
   </div>
 
-  <!-- ── 3a2. BIOMETRIC ── -->
-  <div class="card" style="margin-bottom:14px;">
-    <label>&#128273; Fingerprint / Face ID Login</label>
-    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Register your fingerprint or face to skip typing your access code on this device.</p>
-    <button class="btn btn-success" style="width:100%;padding:12px;justify-content:center;" onclick="registerBiometric()">&#128273; Register Fingerprint / Face ID</button>
-    <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;margin-top:8px;color:var(--rust);border-color:var(--rust);" onclick="localStorage.removeItem('finance_biometric_cred');showToast('Fingerprint removed');">&#10005; Remove Fingerprint</button>
-  </div>
+
 
   <!-- ── 3b. CHANGE ACCESS CODE ── -->
   <div class="card" style="margin-bottom:14px;">
@@ -2268,14 +2241,7 @@ nav.tabs.header-hidden button {
       <div id="inc-manage-month-list"></div>
     </div>
   </div>
-  <!-- ── BIOMETRIC ── -->
-  <div class="card" style="margin-bottom:14px;">
-    <label>&#128273; Fingerprint / Face ID Login</label>
-    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Register your fingerprint or face to log in without typing your access code on this device.</p>
-    <div id="inc-bio-status" style="font-family:'DM Mono',monospace;font-size:0.72rem;margin-bottom:12px;"></div>
-    <button class="btn btn-success" style="width:100%;padding:12px;justify-content:center;" onclick="registerBiometric();renderIncomeBioStatus()">&#128273; Register Fingerprint / Face ID</button>
-    <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;margin-top:8px;color:var(--rust);border-color:var(--rust);" onclick="localStorage.removeItem('finance_biometric_cred');showToast('Fingerprint removed');renderIncomeBioStatus();">&#10005; Remove Fingerprint</button>
-  </div>
+
 
   <!-- ── EDIT FULL NAME ── -->
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--sage);">
@@ -2444,9 +2410,7 @@ nav.tabs.header-hidden button {
         </div>
         <div id="login-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
         <button onclick="submitLogin()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Sign In</button>
-        <div id="biometric-btn-wrap" style="display:none;margin-top:10px;">
-          <button onclick="loginWithBiometric()" style="width:100%;padding:14px;background:rgba(74,124,89,0.15);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:#8dd4a8;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">&#128273; Use Fingerprint / Face ID</button>
-        </div>
+
         <div style="text-align:center;margin-top:16px;">
           <button onclick="showRegisterStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;text-decoration:underline;">New user? Create account</button>
         </div>
