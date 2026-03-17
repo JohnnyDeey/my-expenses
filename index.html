@@ -1300,23 +1300,13 @@ nav.tabs.header-hidden button {
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-ghost" id="btn-clear-month" onclick="clearMonthData()" style="display:none;">Clear Month Data</button>
-          <button class="btn btn-ghost" onclick="toggleFnr()" title="Find &amp; Replace (Ctrl+H)" style="font-family:'DM Mono',monospace;letter-spacing:1px;">&#128269; F&amp;R</button>
+
           <button class="btn btn-ghost" onclick="loadSample()">Load Sample</button>
         </div>
       </div>
 
       <!-- Find & Replace toolbar -->
-      <div id="fnr-bar" style="display:none;background:var(--ink);border-radius:4px 4px 0 0;padding:10px 14px;display:none;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:2px solid var(--gold);">
-        <span style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Find &amp; Replace</span>
-        <input id="fnr-find" type="text" placeholder="Find..." style="font-family:'DM Sans',sans-serif;font-size:0.83rem;padding:6px 10px;border:1.5px solid #3a3020;border-radius:3px;background:#2a2018;color:var(--paper);outline:none;width:160px;">
-        <input id="fnr-replace" type="text" placeholder="Replace with..." style="font-family:'DM Sans',sans-serif;font-size:0.83rem;padding:6px 10px;border:1.5px solid #3a3020;border-radius:3px;background:#2a2018;color:var(--paper);outline:none;width:160px;">
-        <span id="fnr-count" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);min-width:60px;"></span>
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.72rem;color:var(--gold);border-color:#3a3020;" onclick="fnrReplaceCurrent()">Replace</button>
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.72rem;color:var(--gold2);border-color:#3a3020;" onclick="fnrReplaceAll()">Replace All</button>
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.72rem;border-color:#3a3020;" onclick="fnrPrev()">&#8593;</button>
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.72rem;border-color:#3a3020;" onclick="fnrNext()">&#8595;</button>
-        <button onclick="closeFnr()" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;margin-left:4px;padding:0 4px;">&#10005;</button>
-      </div>
+      <div 
 
       <textarea id="raw-input" rows="18" placeholder="Select a year and month on the left, then paste your Google Keep expense text here...&#10;&#10;Format example:&#10;01-02-2026&#10;&#9;Monthly rent&#9;&#8364;350.00&#10;&#9;Groceries&#9;&#8358;15,000.00" onkeydown="fnrKeyShortcut(event)"></textarea>
 
@@ -1342,7 +1332,7 @@ nav.tabs.header-hidden button {
             </div>
             <div id="ps-skipped-list" style="font-family:DM Mono,monospace;font-size:0.72rem;color:#7a1a00;display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;margin-bottom:10px;"></div>
             <div style="font-family:DM Mono,monospace;font-size:0.68rem;color:#a05000;line-height:1.6;">
-              Use Find &amp; Replace (F&amp;R button) to fix the format, then re-parse.
+              Fix the format in the text area above, then re-parse.
             </div>
           </div>
 
@@ -1766,20 +1756,11 @@ nav.tabs.header-hidden button {
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-ghost" id="inc-btn-clear-month" onclick="clearIncomeMonthData()" style="display:none;">Clear</button>
-          <button class="btn btn-ghost" onclick="toggleIncFnr()" style="font-family:'DM Mono',monospace;letter-spacing:1px;">&#128269; F&amp;R</button>
+
           <button class="btn btn-ghost" onclick="loadIncomeSample()">Sample</button>
         </div>
       </div>
-      <!-- Income Find & Replace bar -->
-      <div id="inc-fnr-bar" style="display:none;background:var(--ink);border-radius:4px 4px 0 0;padding:10px 14px;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:2px solid var(--gold);">
-        <span style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Find &amp; Replace</span>
-        <input id="inc-fnr-find" type="text" placeholder="Find..." style="font-family:'DM Sans',sans-serif;font-size:0.83rem;padding:6px 10px;border:1.5px solid #3a3020;border-radius:3px;background:#2a2018;color:var(--paper);outline:none;width:160px;">
-        <input id="inc-fnr-replace" type="text" placeholder="Replace with..." style="font-family:'DM Sans',sans-serif;font-size:0.83rem;padding:6px 10px;border:1.5px solid #3a3020;border-radius:3px;background:#2a2018;color:var(--paper);outline:none;width:160px;">
-        <span id="inc-fnr-count" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);min-width:60px;"></span>
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.72rem;color:var(--gold);border-color:#3a3020;" onclick="incFnrReplaceAll()">Replace All</button>
-        <button onclick="toggleIncFnr()" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;margin-left:4px;">&#10005;</button>
-      </div>
-      <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150"></textarea>
+            <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150"></textarea>
       <div class="import-tip">
         Supported: <strong>&#8358; / # Naira</strong> &nbsp;&bull;&nbsp; <strong>$ Dollar</strong> &nbsp;&bull;&nbsp; <strong>&#8364; Euro</strong> &nbsp;&bull;&nbsp; <strong>&#163; Pound</strong>
         &nbsp;&nbsp;|&nbsp;&nbsp; Colon or tab before amount &nbsp;&nbsp;|&nbsp;&nbsp; No currency symbol = skipped to recycle bin
@@ -7152,7 +7133,7 @@ function parseIncomeInput() {
 
   document.getElementById('inc-ps-count').textContent = incPendingItems.length;
   document.getElementById('inc-parse-stats').style.display = 'block';
-  document.getElementById('inc-ps-ok-row').style.display = incPendingItems.length ? 'flex' : 'none';
+  document.getElementById('inc-ps-ok-row').style.display = 'flex';
   renderIncomeCatTable();
 }
 
@@ -7316,8 +7297,13 @@ function incPopulateDailyFilters() {
   var latestKey = allMonthKeys[allMonthKeys.length-1] || '';
   var defYear  = latestKey ? latestKey.substring(0,4) : String(new Date().getFullYear());
   var defMonth = latestKey ? latestKey.substring(5,7) : pad(new Date().getMonth()+1);
-  ySel.innerHTML = '<option value="all">All Years</option>' + years.map(function(y){ return '<option value="'+y+'"'+(y===defYear?' selected':'')+'>'+y+'</option>'; }).join('');
-  mSel.innerHTML = '<option value="all">All Months</option>' + MONTHS.map(function(m,i){ var v=pad(i+1); return '<option value="'+v+'"'+(v===defMonth?' selected':'')+'>'+m+'</option>'; }).join('');
+  var savedYr = ySel.value;
+  var savedMo = mSel.value;
+  ySel.innerHTML = '<option value="all">All Years</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  mSel.innerHTML = '<option value="all">All Months</option>' + MONTHS.map(function(m,i){ var v=pad(i+1); return '<option value="'+v+'">'+m+'</option>'; }).join('');
+  // Default to All Years / All Months (no auto-selection)
+  ySel.value = savedYr || 'all';
+  mSel.value = savedMo || 'all';
 }
 
 function renderIncomeMonthly() {
@@ -7335,77 +7321,132 @@ function renderIncomeMonthly() {
     return;
   }
   document.getElementById('inc-monthly-empty').style.display = 'none';
+  container.innerHTML = '';
 
-  // Group by month
-  var byMonth = {};
+  // Group by year → month
+  var byYear = {};
   data.forEach(function(i) {
-    var k = i.date.substring(0,7);
-    if (!byMonth[k]) byMonth[k] = [];
-    byMonth[k].push(i);
+    var y = i.date.substring(0,4);
+    var m = i.date.substring(0,7);
+    if (!byYear[y]) byYear[y] = {};
+    if (!byYear[y][m]) byYear[y][m] = [];
+    byYear[y][m].push(i);
   });
 
-  container.innerHTML = '';
-  var monthKeys = Object.keys(byMonth).sort();
-  if (_incomeSortDesc) monthKeys.reverse();
-  monthKeys.forEach(function(ym) {
-    var items = byMonth[ym];
-    var p = ym.split('-');
-    var mLabel = MONTHS_FULL[parseInt(p[1])-1] + ' ' + p[0];
-    var totals = {};
-    items.forEach(function(i){ totals[i.currency]=(totals[i.currency]||0)+i.amount; });
-    var pillsHtml = Object.keys(totals).map(function(c){
-      return '<span class="day-total-pill '+c+'" style="background:rgba(74,124,89,0.15);color:var(--sage);">'+(SYMS[c]||'')+fmtNum(totals[c])+'</span>';
+  var yearKeys = Object.keys(byYear).sort();
+  if (_incomeSortDesc) yearKeys.reverse();
+  if (!window._incMonthOpenYears) window._incMonthOpenYears = {};
+
+  yearKeys.forEach(function(y) {
+    var monthKeys = Object.keys(byYear[y]).sort();
+    if (_incomeSortDesc) monthKeys.reverse();
+    var yearItems = [];
+    monthKeys.forEach(function(m){ yearItems = yearItems.concat(byYear[y][m]); });
+    var yTotals = {};
+    yearItems.forEach(function(i){ yTotals[i.currency]=(yTotals[i.currency]||0)+i.amount; });
+    var yPills = Object.keys(yTotals).map(function(c){
+      return '<span class="day-total-pill '+c+'" style="background:rgba(74,124,89,0.15);color:var(--sage);">'+(SYMS[c]||'')+fmtNum(yTotals[c])+'</span>';
     }).join('');
 
-    var block = document.createElement('div');
-    block.style.cssText = 'margin-bottom:10px;border-radius:5px;overflow:hidden;border:1px solid var(--border);box-shadow:2px 2px 0 var(--shadow);';
+    var isOpen = window._incMonthOpenYears[y] !== false; // default open
 
-    var hdr = document.createElement('div');
-    hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;user-select:none;background:white;';
-    hdr.innerHTML =
-      '<div style="display:flex;align-items:center;gap:10px;">'+
-        '<div style="font-family:DM Mono,monospace;font-size:0.82rem;font-weight:700;color:var(--sage);">'+mLabel+'</div>'+
-        '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);">'+items.length+' entries</div>'+
-        '<div style="display:flex;gap:4px;flex-wrap:wrap;">'+pillsHtml+'</div>'+
+    var yearBlock = document.createElement('div');
+    yearBlock.style.cssText = 'margin-bottom:12px;border-radius:6px;overflow:hidden;border:1px solid var(--border);box-shadow:2px 2px 0 var(--shadow);';
+
+    var yearHdr = document.createElement('div');
+    yearHdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;user-select:none;'+(isOpen?'background:var(--ink);color:var(--paper);':'background:white;');
+    yearHdr.innerHTML =
+      '<div style="display:flex;align-items:center;gap:14px;">'+
+        '<div style="font-family:Playfair Display,serif;font-size:1.6rem;font-weight:900;color:'+(isOpen?'var(--gold2)':'var(--gold)')+';">'+y+'</div>'+
+        '<div>'+
+          '<div style="font-family:DM Mono,monospace;font-size:0.7rem;color:'+(isOpen?'#9e8e7e':'var(--muted)')+';">'+yearItems.length+' entries · '+monthKeys.length+' months</div>'+
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">'+yPills+'</div>'+
+        '</div>'+
       '</div>'+
-      '<span style="font-size:0.72rem;color:var(--muted);">&#9660;</span>';
+      '<span class="yr-arrow" style="font-size:0.75rem;display:inline-block;color:'+(isOpen?'var(--gold2)':'var(--muted)')+';">&#9660;</span>';
 
-    var body = document.createElement('div');
-    body.style.display = 'none';
-    body.style.cssText += 'background:#fafaf7;border-top:1px solid var(--border);';
+    var yearBody = document.createElement('div');
+    yearBody.style.display = isOpen ? 'block' : 'none';
+    yearBody.style.cssText += 'background:#fafaf7;border-top:1px solid var(--border);padding:10px;';
 
-    // Items table
-    var tbl = document.createElement('table');
-    tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.8rem;';
-    items.forEach(function(item, ii) {
-      var color = getIncCatColor(item.category);
-      var tr = document.createElement('tr');
-      tr.style.cssText = 'border-bottom:1px solid #f0e8d8;'+(ii%2===0?'':'background:#fdf8f2;');
-      tr.innerHTML =
-        '<td style="padding:6px 10px;">' +
-          '<div style="font-size:0.78rem;font-weight:500;margin-bottom:2px;word-break:break-word;">'+item.desc+'</div>'+
-          '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">'+
-            '<div style="display:flex;align-items:center;gap:6px;">'+
-              '<span style="font-family:DM Mono,monospace;font-size:0.62rem;color:#999;">'+item.date.substring(5)+'</span>'+
-              '<span style="font-size:0.6rem;padding:1px 6px;border-radius:8px;background:'+color+'15;color:'+color+';border:1px solid '+color+'30;">'+item.category+'</span>'+
+    yearHdr.addEventListener('click', function(){
+      var open = yearBody.style.display !== 'none';
+      yearBody.style.display = open ? 'none' : 'block';
+      window._incMonthOpenYears[y] = !open;
+      yearHdr.style.background = open ? 'white' : 'var(--ink)';
+      yearHdr.style.color = open ? '' : 'var(--paper)';
+      var arrow = yearHdr.querySelector('.yr-arrow');
+      if (arrow){ arrow.style.transform = open ? '' : 'rotate(180deg)'; arrow.style.color = open ? 'var(--muted)' : 'var(--gold2)'; }
+    });
+
+    // Month blocks inside year
+    monthKeys.forEach(function(ym) {
+      var items = byYear[y][ym];
+      var p = ym.split('-');
+      var mLabel = MONTHS_FULL[parseInt(p[1])-1] + ' ' + p[0];
+      var mTotals = {};
+      items.forEach(function(i){ mTotals[i.currency]=(mTotals[i.currency]||0)+i.amount; });
+      var mPills = Object.keys(mTotals).map(function(c){
+        return '<span class="day-total-pill '+c+'" style="background:rgba(74,124,89,0.15);color:var(--sage);">'+(SYMS[c]||'')+fmtNum(mTotals[c])+'</span>';
+      }).join('');
+
+      var monthBlock = document.createElement('div');
+      monthBlock.style.cssText = 'margin-bottom:8px;border-radius:4px;overflow:hidden;border:1px solid var(--border);';
+
+      var mHdr = document.createElement('div');
+      mHdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none;background:white;';
+      mHdr.innerHTML =
+        '<div style="display:flex;align-items:center;gap:10px;">'+
+          '<div style="font-family:DM Mono,monospace;font-size:0.82rem;font-weight:700;color:var(--sage);">'+mLabel+'</div>'+
+          '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);">'+items.length+' entries</div>'+
+          '<div style="display:flex;gap:4px;flex-wrap:wrap;">'+mPills+'</div>'+
+        '</div>'+
+        '<span style="font-size:0.72rem;color:var(--muted);">&#9660;</span>';
+
+      var mBody = document.createElement('div');
+      mBody.style.display = 'none';
+      mBody.style.cssText += 'background:#fafaf7;border-top:1px solid var(--border);';
+
+      var tbl = document.createElement('table');
+      tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.8rem;';
+      items.forEach(function(item, ii) {
+        var color = getIncCatColor(item.category);
+        var tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom:1px solid #f0e8d8;'+(ii%2===0?'':'background:#fdf8f2;');
+        tr.innerHTML =
+          '<td style="padding:6px 10px;">'+
+            '<div style="font-size:0.78rem;font-weight:500;margin-bottom:2px;word-break:break-word;">'+item.desc+'</div>'+
+            '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">'+
+              '<div style="display:flex;align-items:center;gap:6px;">'+
+                '<span style="font-family:DM Mono,monospace;font-size:0.62rem;color:#999;">'+item.date+'</span>'+
+                '<span style="font-size:0.6rem;padding:1px 6px;border-radius:8px;background:'+color+'15;color:'+color+';border:1px solid '+color+'30;">'+item.category+'</span>'+
+              '</div>'+
+              '<span style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:var(--sage);white-space:nowrap;">'+(SYMS[item.currency]||'')+fmtNum(item.amount)+'</span>'+
             '</div>'+
-            '<span style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:var(--sage);white-space:nowrap;">'+(SYMS[item.currency]||'')+fmtNum(item.amount)+'</span>'+
-          '</div>'+
-        '</td>';
-      tbl.appendChild(tr);
-    });
-    body.appendChild(tbl);
+          '</td>';
+        tbl.appendChild(tr);
+      });
+      mBody.appendChild(tbl);
 
-    hdr.addEventListener('click', function(){
-      var open = body.style.display !== 'none';
-      body.style.display = open ? 'none' : 'block';
-      hdr.style.background = open ? 'white' : 'var(--ink)';
-      hdr.style.color = open ? '' : 'var(--paper)';
+      mHdr.addEventListener('click', function(){
+        var open = mBody.style.display !== 'none';
+        mBody.style.display = open ? 'none' : 'block';
+        mHdr.style.background = open ? 'white' : 'var(--paper2)';
+        var arrow = mHdr.querySelector('span:last-child');
+        if (arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
+      });
+
+      monthBlock.appendChild(mHdr);
+      monthBlock.appendChild(mBody);
+      yearBody.appendChild(monthBlock);
     });
-    block.appendChild(hdr); block.appendChild(body);
-    container.appendChild(block);
+
+    yearBlock.appendChild(yearHdr);
+    yearBlock.appendChild(yearBody);
+    container.appendChild(yearBlock);
   });
 }
+
 
 // ── Income Dashboard ──
 var incCharts = {};
