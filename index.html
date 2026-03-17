@@ -65,7 +65,8 @@ var _userName  = null;
 var _userPhone = null;
 
 var UID_KEY   = 'expense_user_uid';    // random UUID, not related to PIN
-var NAME_KEY  = 'expense_user_name';
+var NAME_KEY       = 'expense_user_name';
+var FULL_NAME_KEY  = 'expense_user_fullname'; // stores real full name
 var PHONE_KEY = 'expense_user_phone';  // hashed phone stored locally
 
 var FIREBASE_CONFIG = {
@@ -157,6 +158,11 @@ function userCol(name) {
 
 // ── Init: restore session from localStorage ──
 
+// ── Get full name for reports ──
+function getReportName() {
+  return localStorage.getItem(FULL_NAME_KEY) || _userName || 'Account Holder';
+}
+
 // ── Biometric / Fingerprint Login ──
 var BIOMETRIC_KEY = 'finance_biometric_cred';
 
@@ -205,21 +211,30 @@ function loginWithBiometric() {
     }
   }).then(function(assertion) {
     if (errEl) errEl.textContent = '';
+    // Vibrate to confirm success (Android)
+    if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
     var uid   = localStorage.getItem(UID_KEY);
     var name  = localStorage.getItem(NAME_KEY);
     var phone = localStorage.getItem(PHONE_KEY);
     if (uid && name && phone) {
       _userId = uid; _userName = name; _userPhone = phone;
-      updateUserDisplay();
-      hidePinScreen();
-      startSync();
-      showToast('Fingerprint verified ✓');
+      showToast('✓ Access granted — Welcome back, ' + name + '!');
+      // Small delay so toast is visible before overlay hides
+      setTimeout(function() {
+        updateUserDisplay();
+        hidePinScreen();
+        startSync();
+      }, 600);
     } else {
       showToast('Session expired. Please sign in with your code.');
     }
   }).catch(function(e) {
+    // Vibrate error pattern
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     if (errEl) errEl.textContent = '';
-    if (e.name !== 'NotAllowedError') {
+    if (e.name === 'NotAllowedError') {
+      showToast('Fingerprint not recognised — try again');
+    } else {
       showToast('Biometric failed. Use your access code.');
     }
   });
@@ -573,7 +588,8 @@ function syncStartListener() {
 }
 
 // ── Registration ──
-var _pendingName  = '';
+var _pendingName     = '';
+var _pendingFullName = '';
 var _pendingPhone = '';
 var _generatedCode = '';
 
@@ -634,6 +650,7 @@ function generateCode() {
   if (!_selectedUsername) { showToast('Please select a username first'); return; }
   if(errEl) errEl.textContent = 'Checking...';
   _pendingName  = _selectedUsername; // use chosen username as display name
+  _pendingFullName = name; // store real full name
   _pendingPhone = hashPhone(phone);
   _generatedCode = String(Math.floor(100000 + Math.random() * 900000));
 
@@ -669,9 +686,17 @@ function confirmCode() {
   _userId    = newUID;
   _userName  = _pendingName;
   _userPhone = _pendingPhone;
-  localStorage.setItem(UID_KEY,   _userId);
-  localStorage.setItem(NAME_KEY,  _userName);
-  localStorage.setItem(PHONE_KEY, _userPhone);
+  localStorage.setItem(UID_KEY,       _userId);
+  localStorage.setItem(NAME_KEY,      _userName);
+  localStorage.setItem(FULL_NAME_KEY, _pendingFullName || _pendingName);
+  localStorage.setItem(PHONE_KEY,     _userPhone);
+  // Also save full name to Firebase registry
+  if (_pendingFullName) {
+    try {
+      var db2 = _db;
+      if (db2) db2.collection('user_registry').doc(_pendingPhone).update({ full_name: _pendingFullName }).catch(function(){});
+    } catch(e){}
+  }
   localStorage.removeItem('_pending_uid');
   // Clear any previous user data from this device
   localStorage.removeItem('expense_ledger');
@@ -717,6 +742,8 @@ function submitLogin() {
     localStorage.setItem(UID_KEY,   _userId);
     localStorage.setItem(NAME_KEY,  _userName);
     localStorage.setItem(PHONE_KEY, _userPhone);
+    // Load full name from registry if available
+    if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
     if(errEl) errEl.textContent = '';
     hidePinScreen();
     updateUserDisplay();
@@ -6457,6 +6484,7 @@ function generateIncomePDFReport() {
   win.document.write('</style></head><body>');
 
   win.document.write('<h1>Income Report</h1>');
+  win.document.write('<div style="font-family:Arial,sans-serif;font-size:11pt;color:#1a4128;font-weight:600;margin-bottom:2px;">'+getReportName()+'</div>');
   win.document.write('<div class="subtitle">'+periodLabel+' · Generated '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})+'</div>');
 
   win.document.write('<div class="summary">');
@@ -6489,9 +6517,8 @@ function generateIncomePDFReport() {
   win.document.write('</tbody></table>');
 
   win.document.write('<div class="footer">My Expense Ledger · Income Report · Confidential</div>');
-  win.document.write('<div class="no-print" style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px;">');
-  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#1a4128;color:#8dd4a8;border:2px solid #4a7c59;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT / SAVE PDF</button>');
-  win.document.write('</div>');
+  win.document.write('<style>@media print { .no-print { display:none!important; } } .no-print{position:fixed;top:16px;right:16px;z-index:9999;}</style>');
+  win.document.write('<div class="no-print"><button onclick="window.print()" style="padding:10px 20px;background:#1a4128;color:#8dd4a8;border:2px solid #4a7c59;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT / SAVE PDF</button></div>');
   win.document.write('</body></html>');
   win.document.close();
 }
@@ -6565,6 +6592,7 @@ function generatePDFReport() {
 
   // Header
   win.document.write('<h1>Monthly Expense Report</h1>');
+  win.document.write('<div style="font-family:Arial,sans-serif;font-size:11pt;color:#1a1410;font-weight:600;margin-bottom:2px;">'+getReportName()+'</div>');
   win.document.write('<div class="subtitle">'+monthLabel+' · Generated '+new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})+'</div>');
 
   // Summary stats
@@ -6619,10 +6647,8 @@ function generatePDFReport() {
   win.document.write('<div class="footer">My Expense Ledger · Personal Finance Tracker · Confidential</div>');
   win.document.write('</body></html>');
   // Add save-as-PDF button instead of auto-printing
-  win.document.write('<div class="no-print" style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px;">');
-  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#1a1410;color:#e8b84b;border:2px solid #c8962e;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT / SAVE PDF</button>');
-  win.document.write('</div>');
-  win.document.write('<style>@media print { .no-print { display:none!important; } }</style>');
+  win.document.write('<style>@media print { .no-print { display:none!important; } } .no-print{position:fixed;top:16px;right:16px;z-index:9999;}</style>');
+  win.document.write('<div class="no-print"><button onclick="window.print()" style="padding:10px 20px;background:#1a1410;color:#e8b84b;border:2px solid #c8962e;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT / SAVE PDF</button></div>');
   win.document.close();
   // Do NOT auto-print — let user choose Save as PDF or Print
 }
