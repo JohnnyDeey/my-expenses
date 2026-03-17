@@ -304,32 +304,38 @@ function base64ToBuffer(base64) {
 }
 
 function syncInit() {
-  // Check if user actively logged in THIS session
-  // sessionStorage is wiped when app is closed/cleared - unlike localStorage
-  var sessionActive = sessionStorage.getItem('session_active');
-  
-  if (!sessionActive) {
-    // No active session — force login regardless of saved credentials
-    showPinScreen();
-    var phone = localStorage.getItem(PHONE_KEY);
-    if (phone) {
-      showLoginStep();
-    } else {
-      showRegisterStep();
+  var phone = localStorage.getItem(PHONE_KEY);
+
+  // Check keep-logged-in: stored in sessionStorage so it dies when app/tab closes
+  var keepLogin  = sessionStorage.getItem('keep_login');      // '1' = checked
+  var loginTime  = parseInt(sessionStorage.getItem('login_time') || '0');
+  var now        = Date.now();
+  var timeout    = keepLogin === '1' ? 30 * 60 * 1000 : 5 * 60 * 1000; // 30min or 5min
+  var sessionOk  = loginTime && (now - loginTime) < timeout;
+
+  if (sessionOk) {
+    // Valid session — restore and open app directly (handles refresh)
+    var uid  = localStorage.getItem(UID_KEY);
+    var name = localStorage.getItem(NAME_KEY);
+    if (uid && name && phone) {
+      _userId = uid; _userName = name; _userPhone = phone;
+      updateUserDisplay();
+      // Restore last mode, no mode overlay on refresh
+      var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
+      _appMode = savedMode;
+      applyMode();
+      adjustMainPadding();
+      loadIncomeFromFirebase(function(){});
+      startSync();
+      return;
     }
-    return;
   }
 
-  // Session is active (user logged in earlier this same session)
-  var uid   = localStorage.getItem(UID_KEY);
-  var name  = localStorage.getItem(NAME_KEY);
-  var phone2 = localStorage.getItem(PHONE_KEY);
-  if (uid && name && phone2) {
-    _userId = uid; _userName = name; _userPhone = phone2;
-    showPinScreen();
+  // No valid session — require login
+  showPinScreen();
+  if (phone) {
     showLoginStep();
   } else {
-    showPinScreen();
     showRegisterStep();
   }
 }
@@ -708,7 +714,8 @@ function confirmCode() {
   localStorage.removeItem('expense_ledger');
   localStorage.removeItem('custom_categories');
   localStorage.removeItem('custom_cat_rules');
-  sessionStorage.setItem('session_active', '1');
+  sessionStorage.setItem('keep_login', '0');
+  sessionStorage.setItem('login_time', String(Date.now()));
   hidePinScreen();
   updateUserDisplay();
   startSync();
@@ -752,7 +759,10 @@ function submitLogin() {
     // Load full name from registry if available
     if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
     if(errEl) errEl.textContent = '';
-    sessionStorage.setItem('session_active', '1'); // mark session as active
+    // Store session with timestamp — sessionStorage dies when app/tab closes
+    var keepCb = document.getElementById('keep-logged-in');
+    sessionStorage.setItem('keep_login', (keepCb && keepCb.checked) ? '1' : '0');
+    sessionStorage.setItem('login_time', String(Date.now()));
     hidePinScreen();
     updateUserDisplay();
     fetchTrashFromFirebase();
@@ -859,7 +869,8 @@ function logOut() {
   if (moSel) moSel.innerHTML = '';
   _db = null; _userId = null;
   localStorage.removeItem(UID_KEY);
-  sessionStorage.removeItem('session_active');
+  sessionStorage.removeItem('keep_login');
+  sessionStorage.removeItem('login_time');
   showPinScreen();
   showLoginStep();
   syncSetStatus('off');
@@ -2403,7 +2414,11 @@ nav.tabs.header-hidden button {
         <div id="login-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
         <button onclick="submitLogin()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Sign In</button>
 
-        <div style="text-align:center;margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;margin-bottom:4px;">
+          <input type="checkbox" id="keep-logged-in" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold);">
+          <label for="keep-logged-in" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;cursor:pointer;">Keep me logged in for 30 minutes</label>
+        </div>
+        <div style="text-align:center;margin-top:12px;">
           <button onclick="showRegisterStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;text-decoration:underline;">New user? Create account</button>
         </div>
       </div>
@@ -5628,17 +5643,21 @@ function populateFilters(){
 var _inactivityTimer   = null;
 var _countdownTimer    = null;
 var _countdownSeconds  = 0;
-var INACTIVE_MINUTES   = 2;
+var INACTIVE_MINUTES   = 2; // overridden at login based on checkbox
 var COUNTDOWN_SECONDS  = 60;
 
 function resetInactivityTimer() {
-  if (!_userId) return; // only track if logged in
+  if (!_userId) return;
   clearTimeout(_inactivityTimer);
   clearInterval(_countdownTimer);
   hideInactivityWarning();
+  // Dynamic timeout: 30min if keep-logged-in checked, else 5min — silent logout
+  var keepLogin = sessionStorage.getItem('keep_login');
+  var minutes   = keepLogin === '1' ? 30 : 5;
   _inactivityTimer = setTimeout(function() {
-    startInactivityCountdown();
-  }, (INACTIVE_MINUTES * 60 - COUNTDOWN_SECONDS) * 1000);
+    // Silent logout — no countdown, no warning
+    logOut();
+  }, minutes * 60 * 1000);
 }
 
 function startInactivityCountdown() {
