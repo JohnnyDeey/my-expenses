@@ -218,10 +218,24 @@ function loginWithBiometric() {
     var phone = localStorage.getItem(PHONE_KEY);
     if (uid && name && phone) {
       _userId = uid; _userName = name; _userPhone = phone;
+      // Hide pin overlay directly
+      var pinO = document.getElementById('pin-overlay');
+      if (pinO) pinO.style.display = 'none';
+      var loginStep = document.getElementById('pin-step-login');
+      var regStep   = document.getElementById('pin-step-register');
+      if (loginStep) loginStep.style.display = 'block';
+      if (regStep)   regStep.style.display   = 'none';
+      // Restore last used mode (skip mode selection for bio re-login)
+      var lastMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
+      _appMode = lastMode;
+      applyMode();
+      adjustMainPadding();
       updateUserDisplay();
-      hidePinScreen();
+      setTimeout(resetInactivityTimer, 1000);
+      setTimeout(checkBackupReminder, 3000);
+      loadIncomeFromFirebase(function(){});
       startSync();
-      showToast('✓ Access granted — Welcome back, ' + name + '!');
+      showToast('✓ Welcome back, ' + name + '!');
     } else {
       showToast('Session expired. Please sign in with your code.');
     }
