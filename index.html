@@ -160,6 +160,17 @@ function userCol(name) {
 // ── Biometric / Fingerprint Login ──
 var BIOMETRIC_KEY = 'finance_biometric_cred';
 
+function renderIncomeBioStatus() {
+  var el = document.getElementById('inc-bio-status');
+  if (!el) return;
+  var hasCred = !!localStorage.getItem(BIOMETRIC_KEY);
+  if (hasCred) {
+    el.innerHTML = '<span style="color:var(--sage);">&#10003; Fingerprint registered on this device</span>';
+  } else {
+    el.innerHTML = '<span style="color:var(--muted);">No fingerprint registered yet</span>';
+  }
+}
+
 function checkBiometricAvailable() {
   if (!window.PublicKeyCredential) return;
   PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
@@ -577,25 +588,14 @@ function hidePinScreen() {
   if (regStep)   regStep.style.display   = 'none';
   setTimeout(resetInactivityTimer, 1000);
   setTimeout(checkBackupReminder, 3000);
-  // Show mode selection overlay
-  setTimeout(function(){
-    var savedMode = localStorage.getItem(APP_MODE_KEY);
-    if (savedMode) {
-      _appMode = savedMode;
-      applyMode();
-    } else {
-      // Default to expenses, show overlay to let user choose
-      _appMode = 'expenses';
-      applyMode();
-      setTimeout(showModeOverlay, 800);
-    }
-    // Load income data from Firebase
-    loadIncomeFromFirebase(function(){
-      if (_appMode === 'income') {
-        renderIncomeMonthPicker(); incPopulateFilters(); renderIncomeLedger();
-      }
-    });
-  }, 500);
+  // ALWAYS show mode selection on every login — no exceptions
+  _appMode = 'expenses'; // reset so applyMode sets up expense UI first
+  applyMode();
+  adjustMainPadding();
+  updateUserDisplay();
+  setTimeout(showModeOverlay, 200);
+  // Load income data from Firebase in background
+  loadIncomeFromFirebase(function(){});
 }
 function showRegisterStep() {
   document.getElementById('pin-step-register').style.display = 'block';
@@ -2193,6 +2193,15 @@ nav.tabs.header-hidden button {
       <div id="inc-manage-month-list"></div>
     </div>
   </div>
+  <!-- ── BIOMETRIC ── -->
+  <div class="card" style="margin-bottom:14px;">
+    <label>&#128273; Fingerprint / Face ID Login</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Register your fingerprint or face to log in without typing your access code on this device.</p>
+    <div id="inc-bio-status" style="font-family:'DM Mono',monospace;font-size:0.72rem;margin-bottom:12px;"></div>
+    <button class="btn btn-success" style="width:100%;padding:12px;justify-content:center;" onclick="registerBiometric();renderIncomeBioStatus()">&#128273; Register Fingerprint / Face ID</button>
+    <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;margin-top:8px;color:var(--rust);border-color:var(--rust);" onclick="localStorage.removeItem('finance_biometric_cred');showToast('Fingerprint removed');renderIncomeBioStatus();">&#10005; Remove Fingerprint</button>
+  </div>
+
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
     <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="clearAllIncome()">&#128465; Delete ALL Income Data</button>
@@ -7142,7 +7151,7 @@ function switchIncomeTab(name, btn) {
   if (name === 'inc-monthly')     { incPopulateDailyFilters(); renderIncomeMonthly(); }
   if (name === 'inc-dashboard')   renderIncomeDashboard();
   if (name === 'inc-ledger')      { incPopulateFilters(); renderIncomeLedger(); }
-  if (name === 'inc-manage')      renderIncomeManage();
+  if (name === 'inc-manage')      { renderIncomeManage(); setTimeout(renderIncomeBioStatus, 100); }
 }
 
 // ── Income month picker ──
