@@ -660,9 +660,16 @@ function showLoginStep() {
   var ph = document.getElementById('login-phone'); if(ph) ph.value = '';
   var cd = document.getElementById('login-code');  if(cd) cd.value = '';
   var er = document.getElementById('login-error'); if(er) er.textContent = '';
-  // Check if fingerprint available for this device
-  setTimeout(checkBiometricAvailable, 200);
-  setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
+  // Auto-trigger fingerprint immediately if registered on this device
+  var savedCred = localStorage.getItem(BIOMETRIC_KEY);
+  if (savedCred) {
+    var er2 = document.getElementById('login-error');
+    if (er2) er2.textContent = 'Touch fingerprint sensor to unlock...';
+    setTimeout(loginWithBiometric, 300); // small delay so UI is visible first
+  } else {
+    setTimeout(checkBiometricAvailable, 200);
+    setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
+  }
 }
 function showCodeStep() {
   document.getElementById('pin-step-register').style.display = 'none';
