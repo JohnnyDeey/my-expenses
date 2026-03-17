@@ -278,7 +278,15 @@ function loginWithBiometric() {
     setTimeout(resetInactivityTimer, 500);
     setTimeout(checkBackupReminder, 3000);
     loadIncomeFromFirebase(function(){});
-    startSync();
+    // Skip re-validation — credentials already confirmed by biometric
+    // Just load data and start listener directly
+    syncSetStatus('connecting');
+    getDB(function() {
+      syncLoadFromFirebase(function() {
+        renderSyncSetupUI();
+        syncStartListener();
+      });
+    });
     showToast('✓ Welcome back, ' + name + '!');
 
   }).catch(function(e) {
