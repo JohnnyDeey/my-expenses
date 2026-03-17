@@ -187,6 +187,8 @@ function checkBiometricAvailable() {
 function loginWithBiometric() {
   var savedCred = localStorage.getItem(BIOMETRIC_KEY);
   if (!savedCred) { showToast('No fingerprint registered. Sign in with code first.'); return; }
+  var errEl = document.getElementById('login-error');
+  if (errEl) errEl.textContent = 'Waiting for fingerprint...';
   var credData = JSON.parse(savedCred);
   var challenge = new Uint8Array(32);
   window.crypto.getRandomValues(challenge);
@@ -196,13 +198,13 @@ function loginWithBiometric() {
       allowCredentials: [{
         id: base64ToBuffer(credData.id),
         type: 'public-key',
-        transports: ['internal']
+        transports: ['internal', 'hybrid', 'usb', 'ble', 'nfc']
       }],
-      userVerification: 'required',
-      timeout: 60000
+      userVerification: 'preferred',
+      timeout: 30000
     }
   }).then(function(assertion) {
-    // Biometric verified — restore session
+    if (errEl) errEl.textContent = '';
     var uid   = localStorage.getItem(UID_KEY);
     var name  = localStorage.getItem(NAME_KEY);
     var phone = localStorage.getItem(PHONE_KEY);
@@ -216,6 +218,7 @@ function loginWithBiometric() {
       showToast('Session expired. Please sign in with your code.');
     }
   }).catch(function(e) {
+    if (errEl) errEl.textContent = '';
     if (e.name !== 'NotAllowedError') {
       showToast('Biometric failed. Use your access code.');
     }
@@ -2065,8 +2068,6 @@ nav.tabs.header-hidden button {
     <select id="inc-month-year" onchange="renderIncomeMonthly()"><option value="all">All Years</option></select>
     <select id="inc-month-month" onchange="renderIncomeMonthly()"><option value="all">All Months</option></select>
     <button class="btn btn-primary" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:7px 14px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
-    <button class="btn btn-primary" style="font-family:'DM Mono',monospace;font-size:0.75rem;padding:7px 14px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
-    <button class="btn btn-primary" style="font-family:'DM Mono',monospace;font-size:0.75rem;padding:7px 14px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
     <button id="inc-sort-btn" onclick="toggleIncomeSort()" class="btn btn-ghost" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:0.72rem;padding:7px 14px;display:flex;align-items:center;gap:6px;">
       <span id="inc-sort-icon">&#8595;</span> <span id="inc-sort-label">Newest First</span>
     </button>
@@ -2185,8 +2186,6 @@ nav.tabs.header-hidden button {
       </div>
       <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="exportIncomeCSV()">&#8595; Export Income CSV</button>
       <button class="btn btn-primary" style="width:100%;padding:12px;justify-content:center;margin-top:8px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
-      <button class="btn btn-primary" style="width:100%;padding:12px;justify-content:center;margin-top:8px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
-      <button class="btn btn-primary" style="width:100%;padding:12px;justify-content:center;margin-top:8px;" onclick="generateIncomePDFReport()">&#128196; Generate PDF Report</button>
     </div>
     <div class="card">
       <label>Delete by Month</label>
@@ -6490,9 +6489,8 @@ function generateIncomePDFReport() {
   win.document.write('</tbody></table>');
 
   win.document.write('<div class="footer">My Expense Ledger · Income Report · Confidential</div>');
-  win.document.write('<div style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px;">');
-  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#1a4128;color:#8dd4a8;border:2px solid #4a7c59;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT</button>');
-  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#4a7c59;color:white;border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.85rem;font-weight:700;cursor:pointer;letter-spacing:1px;">&#128229; SAVE AS PDF</button>');
+  win.document.write('<div class="no-print" style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px;">');
+  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#1a4128;color:#8dd4a8;border:2px solid #4a7c59;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT / SAVE PDF</button>');
   win.document.write('</div>');
   win.document.write('</body></html>');
   win.document.close();
@@ -6621,9 +6619,8 @@ function generatePDFReport() {
   win.document.write('<div class="footer">My Expense Ledger · Personal Finance Tracker · Confidential</div>');
   win.document.write('</body></html>');
   // Add save-as-PDF button instead of auto-printing
-  win.document.write('<div style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px;">');
-  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#1a1410;color:#e8b84b;border:2px solid #c8962e;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT</button>');
-  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#c8962e;color:#1a1410;border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.85rem;font-weight:700;cursor:pointer;letter-spacing:1px;">&#128229; SAVE AS PDF</button>');
+  win.document.write('<div class="no-print" style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px;">');
+  win.document.write('<button onclick="window.print()" style="padding:10px 20px;background:#1a1410;color:#e8b84b;border:2px solid #c8962e;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT / SAVE PDF</button>');
   win.document.write('</div>');
   win.document.write('<style>@media print { .no-print { display:none!important; } }</style>');
   win.document.close();
