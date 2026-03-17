@@ -402,28 +402,29 @@ function syncStartListener() {
   // ── INCOME: real-time listener ──
   if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
   _incomeUnsubscribe = userCol('income_months').onSnapshot(function(snapshot) {
+    // Block if we just pushed income data (avoids restoring our own deletions)
+    if (window._incDeletePending) return;
     var allEntries = [];
     snapshot.forEach(function(doc) {
       var d = doc.data();
       if (d.entries) allEntries = allEntries.concat(d.entries);
     });
     allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
-    var local = loadIncomeData();
-    var remote = JSON.stringify(allEntries);
-    var localStr = JSON.stringify(local);
-    if (remote !== localStr && allEntries.length > 0) {
+    var localStr = JSON.stringify(loadIncomeData());
+    var remote   = JSON.stringify(allEntries);
+    // Only apply if data actually changed (allow empty — respects full deletions from other device)
+    if (remote !== localStr) {
       localStorage.setItem(getIncKey(), remote);
-      // Refresh income UI silently if in income mode
       if (_appMode === 'income') {
         updateIncomeHeaderContext();
         renderIncomeMonthPicker();
         var activeInc = document.querySelector('#income-main .panel.active');
         if (activeInc) {
           var incId = activeInc.id;
-          if (incId==='panel-inc-ledger')  renderIncomeLedger();
-          if (incId==='panel-inc-monthly') renderIncomeMonthly();
+          if (incId==='panel-inc-ledger')    renderIncomeLedger();
+          if (incId==='panel-inc-monthly')   renderIncomeMonthly();
           if (incId==='panel-inc-dashboard') renderIncomeDashboard();
-          if (incId==='panel-inc-manage')  renderIncomeManage();
+          if (incId==='panel-inc-manage')    renderIncomeManage();
         }
       }
     }
@@ -2379,8 +2380,12 @@ function learnKeywordsFromEntry(desc, cat) {
 function getCatColor(cat, idx) { return CAT_COLORS[cat] || CAT_COLORS_FB[idx % CAT_COLORS_FB.length]; }
 
 function saveData(data) {
+  window._deletePending = true; // block listener while we push
   localStorage.setItem('expense_ledger', JSON.stringify(data));
   syncPush();
+  // Clear after push delay
+  clearTimeout(window._deletePendingTimer);
+  window._deletePendingTimer = setTimeout(function(){ window._deletePending = false; }, 6000);
 }
 
 function loadData() {
@@ -6656,6 +6661,8 @@ function getIncCatColor(cat) {
 // ── Firebase sync for income ──
 function syncIncomeToFirebase() {
   if (!_db || !_userId) return;
+  // Set pending flag to block listener from restoring during our own push
+  window._incDeletePending = true;
   var data = loadIncomeData();
   var byMonth = {};
   data.forEach(function(e) {
@@ -6673,7 +6680,15 @@ function syncIncomeToFirebase() {
     if (localMonths.indexOf(ym) === -1) batch.delete(userCol('income_months').doc(ym));
   });
   window._knownIncomeMonths = localMonths;
-  batch.commit().catch(function(e){ console.error('Income sync error:', e); });
+  batch.commit()
+    .then(function(){
+      // Keep lock for 6 seconds after confirmed write
+      setTimeout(function(){ window._incDeletePending = false; }, 6000);
+    })
+    .catch(function(e){
+      console.error('Income sync error:', e);
+      window._incDeletePending = false;
+    });
 }
 
 function loadIncomeFromFirebase(cb) {
