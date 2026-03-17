@@ -304,24 +304,28 @@ function base64ToBuffer(base64) {
 }
 
 function syncInit() {
-  var phone = localStorage.getItem(PHONE_KEY);
-
-  // sessionStorage.tab_open survives REFRESH but dies on tab close / app clear
-  // localStorage.last_active survives everything — used to check inactivity
-  var tabOpen    = sessionStorage.getItem('tab_open');
-  var keepLogin  = localStorage.getItem('keep_login_pref'); // '1' = 30min, '0' = 5min
+  var phone      = localStorage.getItem(PHONE_KEY);
+  var keepLogin  = localStorage.getItem('keep_login_pref');
   var lastActive = parseInt(localStorage.getItem('last_active') || '0');
   var now        = Date.now();
   var timeout    = keepLogin === '1' ? 30 * 60 * 1000 : 5 * 60 * 1000;
-  var withinTime = lastActive && (now - lastActive) < timeout;
+  var sinceActive = now - lastActive;
 
-  if (tabOpen && withinTime) {
-    // Refresh scenario: tab was open and still within inactivity window — resume
+  // REFRESH DETECTION:
+  // A refresh happens within a few seconds of last_active being written
+  // App clear/close = much longer gap OR no last_active at all
+  // We treat anything within 30 seconds as a refresh — resume no matter what
+  var isRefresh = lastActive && sinceActive < 30000;
+
+  // RESUME if: it's a refresh, OR within the inactivity window
+  var shouldResume = isRefresh || (lastActive && sinceActive < timeout);
+
+  if (shouldResume) {
     var uid  = localStorage.getItem(UID_KEY);
     var name = localStorage.getItem(NAME_KEY);
     if (uid && name && phone) {
       _userId = uid; _userName = name; _userPhone = phone;
-      localStorage.setItem('last_active', String(Date.now())); // reset timer on resume
+      localStorage.setItem('last_active', String(Date.now()));
       updateUserDisplay();
       var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
       _appMode = savedMode;
@@ -333,13 +337,9 @@ function syncInit() {
     }
   }
 
-  // Tab closed, app cleared, or time expired — require login
+  // Require login
   showPinScreen();
-  if (phone) {
-    showLoginStep();
-  } else {
-    showRegisterStep();
-  }
+  if (phone) { showLoginStep(); } else { showRegisterStep(); }
 }
 
 function startSync() {
@@ -716,7 +716,6 @@ function confirmCode() {
   localStorage.removeItem('expense_ledger');
   localStorage.removeItem('custom_categories');
   localStorage.removeItem('custom_cat_rules');
-  sessionStorage.setItem('tab_open', '1');
   localStorage.setItem('keep_login_pref', '0');
   localStorage.setItem('last_active', String(Date.now()));
   hidePinScreen();
@@ -764,8 +763,7 @@ function submitLogin() {
     if(errEl) errEl.textContent = '';
     var keepCb = document.getElementById('keep-logged-in');
     var keepVal = (keepCb && keepCb.checked) ? '1' : '0';
-    sessionStorage.setItem('tab_open', '1');          // dies on close/clear
-    localStorage.setItem('keep_login_pref', keepVal); // survives refresh
+    localStorage.setItem('keep_login_pref', keepVal);
     localStorage.setItem('last_active', String(Date.now()));
     hidePinScreen();
     updateUserDisplay();
@@ -873,7 +871,6 @@ function logOut() {
   if (moSel) moSel.innerHTML = '';
   _db = null; _userId = null;
   localStorage.removeItem(UID_KEY);
-  sessionStorage.removeItem('tab_open');
   localStorage.removeItem('last_active');
   localStorage.removeItem('keep_login_pref');
   showPinScreen();
