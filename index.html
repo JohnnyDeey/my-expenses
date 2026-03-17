@@ -609,27 +609,28 @@ function showPinScreen() {
 function hidePinScreen(skipModeOverlay) {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'none';
-  // Restore login/register steps for next time
   var loginStep = document.getElementById('pin-step-login');
   var regStep   = document.getElementById('pin-step-register');
   if (loginStep) loginStep.style.display = 'block';
   if (regStep)   regStep.style.display   = 'none';
   setTimeout(resetInactivityTimer, 1000);
   setTimeout(checkBackupReminder, 3000);
-  if (skipModeOverlay) {
-    // Biometric login: restore last mode directly, no selection prompt
-    var lastMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
-    _appMode = lastMode;
-    applyMode();
-    adjustMainPadding();
-    loadIncomeFromFirebase(function(){});
-  } else {
-    // Normal login: always show mode selection
+  // Show mode selection ONLY if user has never chosen before (first ever login)
+  var savedMode = localStorage.getItem(APP_MODE_KEY);
+  if (!savedMode) {
+    // First time ever — ask once, then never again
     _appMode = 'expenses';
     applyMode();
     adjustMainPadding();
     updateUserDisplay();
+    loadIncomeFromFirebase(function(){});
     setTimeout(showModeOverlay, 200);
+  } else {
+    // Returning user — go straight to last used mode
+    _appMode = savedMode;
+    applyMode();
+    adjustMainPadding();
+    updateUserDisplay();
     loadIncomeFromFirebase(function(){});
   }
 }
