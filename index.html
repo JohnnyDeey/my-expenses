@@ -164,16 +164,36 @@ function syncInit() {
   var uid   = localStorage.getItem(UID_KEY);
   var name  = localStorage.getItem(NAME_KEY);
   var phone = localStorage.getItem(PHONE_KEY);
+
+  // ALWAYS show pin screen first — never flash the app behind login
+  showPinScreen();
+
   if (uid && name && phone) {
+    // Returning user: show login briefly then auto-proceed once Firebase confirms
     _userId    = uid;
     _userName  = name;
     _userPhone = phone;
     updateUserDisplay();
-    setTimeout(function(){ applyMode(); adjustMainPadding(); }, 300);
+    // Show a "loading / resuming session" state on the login screen
+    var loginStep = document.getElementById('pin-step-login');
+    var regStep   = document.getElementById('pin-step-register');
+    if (loginStep) loginStep.style.display = 'none';
+    if (regStep)   regStep.style.display   = 'none';
+    // Show a simple loading indicator in the pin overlay
+    var overlay = document.getElementById('pin-overlay');
+    var loadDiv = document.createElement('div');
+    loadDiv.id = 'pin-loading-msg';
+    loadDiv.style.cssText = 'text-align:center;';
+    loadDiv.innerHTML =
+      '<div style="font-family:Playfair Display,serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:8px;">My <span style="color:var(--gold);">Finance</span> Ledger</div>' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.72rem;color:#6b5e50;letter-spacing:2px;margin-bottom:28px;">PERSONAL FINANCE TRACKER</div>' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--gold);margin-bottom:6px;">Welcome back, ' + name + '</div>' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:#6b5e50;">Connecting...</div>';
+    if (overlay) overlay.querySelector('div').appendChild(loadDiv);
+    // Now start sync — hide pin screen once Firebase is ready
     startSync();
   } else {
     var hasPhone = !!localStorage.getItem(PHONE_KEY);
-    showPinScreen();
     if (hasPhone) { showLoginStep(); } else { showRegisterStep(); }
   }
 }
@@ -454,6 +474,14 @@ function showPinScreen() {
 function hidePinScreen() {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'none';
+  // Remove loading message if present
+  var ld = document.getElementById('pin-loading-msg');
+  if (ld && ld.parentNode) ld.parentNode.removeChild(ld);
+  // Restore login/register steps for next time
+  var loginStep = document.getElementById('pin-step-login');
+  var regStep   = document.getElementById('pin-step-register');
+  if (loginStep) loginStep.style.display = 'block';
+  if (regStep)   regStep.style.display   = 'none';
   setTimeout(resetInactivityTimer, 1000);
   setTimeout(checkBackupReminder, 3000);
   // Show mode selection overlay
@@ -2204,7 +2232,7 @@ nav.tabs.header-hidden button {
     </div>
 
     <!-- Step 3: Sign in with phone + code -->
-    <div id="pin-step-login" style="display:none;">
+    <div id="pin-step-login" style="display:block;">
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:left;">
         <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">Welcome back</div>
         <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Enter your phone number and access code.</div>
