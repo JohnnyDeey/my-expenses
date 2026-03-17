@@ -179,18 +179,18 @@ function syncInit() {
     var regStep   = document.getElementById('pin-step-register');
     if (loginStep) loginStep.style.display = 'none';
     if (regStep)   regStep.style.display   = 'none';
-    // Show a simple loading indicator in the pin overlay
-    var overlay = document.getElementById('pin-overlay');
-    var loadDiv = document.createElement('div');
-    loadDiv.id = 'pin-loading-msg';
-    loadDiv.style.cssText = 'text-align:center;';
-    loadDiv.innerHTML =
-      '<div style="font-family:Playfair Display,serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:8px;">My <span style="color:var(--gold);">Finance</span> Ledger</div>' +
-      '<div style="font-family:DM Mono,monospace;font-size:0.72rem;color:#6b5e50;letter-spacing:2px;margin-bottom:28px;">PERSONAL FINANCE TRACKER</div>' +
-      '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--gold);margin-bottom:6px;">Welcome back, ' + name + '</div>' +
-      '<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:#6b5e50;">Connecting...</div>';
-    if (overlay) overlay.querySelector('div').appendChild(loadDiv);
-    // Now start sync — hide pin screen once Firebase is ready
+    // Show login step with a "resuming" message, start sync
+    // Add timeout fallback — if Firebase takes >6s, open app anyway
+    showLoginStep();
+    var resumeMsg = document.getElementById('login-error');
+    if (resumeMsg) resumeMsg.textContent = 'Resuming your session...';
+    window._resumeTimeout = setTimeout(function() {
+      // Firebase too slow — open app with local data
+      hidePinScreen();
+      applyMode();
+      adjustMainPadding();
+      showToast('Opened with local data · syncing in background');
+    }, 6000);
     startSync();
   } else {
     var hasPhone = !!localStorage.getItem(PHONE_KEY);
@@ -474,9 +474,6 @@ function showPinScreen() {
 function hidePinScreen() {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'none';
-  // Remove loading message if present
-  var ld = document.getElementById('pin-loading-msg');
-  if (ld && ld.parentNode) ld.parentNode.removeChild(ld);
   // Restore login/register steps for next time
   var loginStep = document.getElementById('pin-step-login');
   var regStep   = document.getElementById('pin-step-register');
@@ -2171,7 +2168,7 @@ nav.tabs.header-hidden button {
   </div>
 </div>
 
-<div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+<div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
   <div style="text-align:center;max-width:400px;width:100%;">
     <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My <span style="color:var(--gold);">Expense</span> Ledger</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;letter-spacing:2px;margin-bottom:28px;">PERSONAL FINANCE TRACKER</div>
