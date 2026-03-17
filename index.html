@@ -304,44 +304,33 @@ function base64ToBuffer(base64) {
 }
 
 function syncInit() {
-  // Restore app mode immediately
-  var savedMode = localStorage.getItem(APP_MODE_KEY);
-  if (savedMode) { _appMode = savedMode; }
+  // Check if user actively logged in THIS session
+  // sessionStorage is wiped when app is closed/cleared - unlike localStorage
+  var sessionActive = sessionStorage.getItem('session_active');
+  
+  if (!sessionActive) {
+    // No active session — force login regardless of saved credentials
+    showPinScreen();
+    var phone = localStorage.getItem(PHONE_KEY);
+    if (phone) {
+      showLoginStep();
+    } else {
+      showRegisterStep();
+    }
+    return;
+  }
 
+  // Session is active (user logged in earlier this same session)
   var uid   = localStorage.getItem(UID_KEY);
   var name  = localStorage.getItem(NAME_KEY);
-  var phone = localStorage.getItem(PHONE_KEY);
-
-  // ALWAYS show pin screen first — never flash the app behind login
-  showPinScreen();
-
-  if (uid && name && phone) {
-    // Returning user: show login briefly then auto-proceed once Firebase confirms
-    _userId    = uid;
-    _userName  = name;
-    _userPhone = phone;
-    updateUserDisplay();
-    // Show a "loading / resuming session" state on the login screen
-    var loginStep = document.getElementById('pin-step-login');
-    var regStep   = document.getElementById('pin-step-register');
-    if (loginStep) loginStep.style.display = 'none';
-    if (regStep)   regStep.style.display   = 'none';
-    // Show login step with a "resuming" message, start sync
-    // Add timeout fallback — if Firebase takes >6s, open app anyway
+  var phone2 = localStorage.getItem(PHONE_KEY);
+  if (uid && name && phone2) {
+    _userId = uid; _userName = name; _userPhone = phone2;
+    showPinScreen();
     showLoginStep();
-    var resumeMsg = document.getElementById('login-error');
-    if (resumeMsg) resumeMsg.textContent = 'Resuming your session...';
-    window._resumeTimeout = setTimeout(function() {
-      // Firebase too slow — open app with local data
-      hidePinScreen();
-      applyMode();
-      adjustMainPadding();
-      showToast('Opened with local data · syncing in background');
-    }, 6000);
-    startSync();
   } else {
-    var hasPhone = !!localStorage.getItem(PHONE_KEY);
-    if (hasPhone) { showLoginStep(); } else { showRegisterStep(); }
+    showPinScreen();
+    showRegisterStep();
   }
 }
 
@@ -719,6 +708,7 @@ function confirmCode() {
   localStorage.removeItem('expense_ledger');
   localStorage.removeItem('custom_categories');
   localStorage.removeItem('custom_cat_rules');
+  sessionStorage.setItem('session_active', '1');
   hidePinScreen();
   updateUserDisplay();
   startSync();
@@ -762,6 +752,7 @@ function submitLogin() {
     // Load full name from registry if available
     if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
     if(errEl) errEl.textContent = '';
+    sessionStorage.setItem('session_active', '1'); // mark session as active
     hidePinScreen();
     updateUserDisplay();
     fetchTrashFromFirebase();
@@ -868,6 +859,7 @@ function logOut() {
   if (moSel) moSel.innerHTML = '';
   _db = null; _userId = null;
   localStorage.removeItem(UID_KEY);
+  sessionStorage.removeItem('session_active');
   showPinScreen();
   showLoginStep();
   syncSetStatus('off');
