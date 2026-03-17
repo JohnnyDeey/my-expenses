@@ -1860,8 +1860,8 @@ nav.tabs.header-hidden button {
             </div>
             <div id="inc-ps-skipped-list" style="font-family:DM Mono,monospace;font-size:0.72rem;color:#7a1a00;display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;margin-bottom:10px;"></div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <span style="font-family:DM Mono,monospace;font-size:0.68rem;color:#a05000;line-height:1.6;flex:1;">Fix the lines above in the text area, then re-parse.</span>
-              <button class="btn btn-ghost" style="font-size:0.72rem;padding:6px 12px;border-color:#b5451b;color:#7a1a00;" onclick="incDismissSkipped()">Dismiss &amp; Continue &#8594;</button>
+              <span style="font-family:DM Mono,monospace;font-size:0.68rem;color:#a05000;line-height:1.6;flex:1;">Fix the lines above in the text area, then re-parse. Or dismiss and proceed with the valid entries.</span>
+              <button class="btn btn-ghost" style="font-size:0.72rem;padding:6px 12px;border-color:#b5451b;color:#7a1a00;" onclick="incDismissSkipped()">&#10005; Dismiss</button>
             </div>
           </div>
 
@@ -7363,7 +7363,7 @@ function parseIncomeInput() {
 
   document.getElementById('inc-ps-count').textContent = incPendingItems.length;
   document.getElementById('inc-parse-stats').style.display = 'block';
-  document.getElementById('inc-ps-ok-row').style.display = incPendingItems.length ? 'flex' : 'none';
+  incValidateParseResults(skipped);
   renderIncomeCatTable();
 }
 
