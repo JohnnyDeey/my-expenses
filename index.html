@@ -194,59 +194,102 @@ function loginWithBiometric() {
   var savedCred = localStorage.getItem(BIOMETRIC_KEY);
   if (!savedCred) { showToast('No fingerprint registered. Sign in with code first.'); return; }
   var errEl = document.getElementById('login-error');
-  if (errEl) errEl.textContent = 'Waiting for fingerprint...';
+  if (errEl) errEl.textContent = 'Touch fingerprint sensor...';
+
   var credData = JSON.parse(savedCred);
-  var challenge = new Uint8Array(32);
+  var challenge = new Uint8Array(16); // smaller = faster
   window.crypto.getRandomValues(challenge);
+
+  // Minimal options = fastest response on Android
   navigator.credentials.get({
     publicKey: {
       challenge: challenge,
       allowCredentials: [{
         id: base64ToBuffer(credData.id),
         type: 'public-key',
-        transports: ['internal', 'hybrid', 'usb', 'ble', 'nfc']
+        transports: ['internal'] // only internal sensor, no scanning for external
       }],
-      userVerification: 'preferred',
-      timeout: 30000
+      userVerification: 'discouraged', // fastest — no PIN fallback prompt
+      timeout: 20000
     }
   }).then(function(assertion) {
+    if (!assertion) { showToast('Try again'); return; }
     if (errEl) errEl.textContent = '';
-    // Vibrate to confirm success (Android)
-    if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]); // quick double pulse
+
     var uid   = localStorage.getItem(UID_KEY);
     var name  = localStorage.getItem(NAME_KEY);
     var phone = localStorage.getItem(PHONE_KEY);
-    if (uid && name && phone) {
-      _userId = uid; _userName = name; _userPhone = phone;
-      // Hide pin overlay directly
-      var pinO = document.getElementById('pin-overlay');
-      if (pinO) pinO.style.display = 'none';
-      var loginStep = document.getElementById('pin-step-login');
-      var regStep   = document.getElementById('pin-step-register');
-      if (loginStep) loginStep.style.display = 'block';
-      if (regStep)   regStep.style.display   = 'none';
-      // Restore last used mode (skip mode selection for bio re-login)
-      var lastMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
-      _appMode = lastMode;
-      applyMode();
-      adjustMainPadding();
-      updateUserDisplay();
-      setTimeout(resetInactivityTimer, 1000);
-      setTimeout(checkBackupReminder, 3000);
-      loadIncomeFromFirebase(function(){});
-      startSync();
-      showToast('✓ Welcome back, ' + name + '!');
-    } else {
-      showToast('Session expired. Please sign in with your code.');
+
+    if (!uid || !name || !phone) {
+      showToast('Session expired — please sign in with your code');
+      return;
     }
+
+    _userId = uid; _userName = name; _userPhone = phone;
+
+    // 1. Hide pin overlay
+    var pinO = document.getElementById('pin-overlay');
+    if (pinO) pinO.style.display = 'none';
+
+    // 2. Reset login step for next time
+    var loginStep = document.getElementById('pin-step-login');
+    if (loginStep) loginStep.style.display = 'block';
+    var regStep = document.getElementById('pin-step-register');
+    if (regStep) regStep.style.display = 'none';
+
+    // 3. Restore last mode and activate first tab explicitly
+    var lastMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
+    _appMode = lastMode;
+
+    if (lastMode === 'income') {
+      // Show income UI
+      var incMain = document.getElementById('income-main');
+      if (incMain) incMain.style.display = 'block';
+      document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = 'none'; });
+      var mainNav = document.getElementById('main-nav');
+      if (mainNav) mainNav.style.display = 'none';
+      var incNav = document.getElementById('income-nav');
+      if (incNav) incNav.style.display = '';
+      // Make sure first income panel is active
+      var firstIncPanel = document.querySelector('#income-main .panel.active') ||
+                          document.querySelector('#income-main .panel');
+      if (firstIncPanel) { firstIncPanel.classList.add('active'); firstIncPanel.style.display = ''; }
+    } else {
+      // Show expenses UI
+      var incMain2 = document.getElementById('income-main');
+      if (incMain2) incMain2.style.display = 'none';
+      document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = ''; });
+      var mainNav2 = document.getElementById('main-nav');
+      if (mainNav2) mainNav2.style.display = '';
+      var incNav2 = document.getElementById('income-nav');
+      if (incNav2) incNav2.style.display = 'none';
+      // Make sure first expenses panel is active
+      var firstPanel = document.querySelector('main > .panel.active') ||
+                       document.getElementById('panel-import');
+      if (firstPanel) { firstPanel.classList.add('active'); }
+    }
+
+    updateUserDisplay();
+    adjustMainPadding();
+    updateHeaderContext();
+    renderMonthPicker();
+    populateFilters();
+    setTimeout(resetInactivityTimer, 500);
+    setTimeout(checkBackupReminder, 3000);
+    loadIncomeFromFirebase(function(){});
+    startSync();
+    showToast('✓ Welcome back, ' + name + '!');
+
   }).catch(function(e) {
-    // Vibrate error pattern
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
     if (errEl) errEl.textContent = '';
     if (e.name === 'NotAllowedError') {
       showToast('Fingerprint not recognised — try again');
+    } else if (e.name === 'InvalidStateError') {
+      showToast('Fingerprint key not found — re-register in Manage');
     } else {
-      showToast('Biometric failed. Use your access code.');
+      showToast('Biometric error: ' + (e.message || 'try your access code'));
     }
   });
 }
