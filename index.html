@@ -233,7 +233,13 @@ function loginWithBiometric() {
     hidePinScreen(true);
     updateUserDisplay();
     fetchTrashFromFirebase();
-    startSync();
+    // Do NOT call startSync() - it re-validates and calls showPinScreen() if slow
+    // Instead just connect DB and start listener directly
+    getDB(function() {
+      syncSetStatus('live');
+      syncStartListener();
+      renderSyncSetupUI();
+    });
     showToast('✓ Welcome back, ' + name + '!');
 
   }).catch(function(e) {
