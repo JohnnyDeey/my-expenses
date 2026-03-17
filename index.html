@@ -185,9 +185,10 @@ function startSync() {
           syncSetStatus('off');
           return;
         }
-        // ALWAYS load from Firebase first on login, THEN push
+        // ALWAYS load from Firebase first on login, THEN start real-time listeners
         syncLoadFromFirebase(function() {
           renderSyncSetupUI();
+          syncStartListener(); // start real-time listeners after initial load
         });
       }).catch(function() {
         // Network error — keep local, start listener
@@ -353,8 +354,84 @@ function syncPush() {
   }, 1500);
 }
 
+// ── Real-time listeners (onSnapshot) ──
+var _incomeUnsubscribe = null;
+
 function syncStartListener() {
-  // Handled by syncLoadFromFirebase in startSync
+  if (!_db || !_userId) return;
+
+  // ── EXPENSES: real-time listener ──
+  if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
+  if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
+  _syncUnsubscribe = userCol('expense_months').onSnapshot(function(snapshot) {
+    // Block if we just deleted (to avoid our own push triggering a stale reload)
+    if (window._deletePending || window._isMerging) return;
+    var allEntries = [];
+    var fbMonths = [];
+    snapshot.forEach(function(doc) {
+      fbMonths.push(doc.id);
+      var d = doc.data();
+      if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
+    });
+    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    window._knownFirebaseMonths = fbMonths;
+    var local = localStorage.getItem('expense_ledger') || '[]';
+    var remote = JSON.stringify(allEntries);
+    // Only update if data actually changed
+    if (remote !== local) {
+      localStorage.setItem('expense_ledger', remote);
+      syncSetStatus('live');
+      // Refresh UI silently
+      updateHeaderContext();
+      renderMonthPicker();
+      var active = document.querySelector('main > .panel.active');
+      if (active) {
+        var id = active.id;
+        if (id==='panel-ledger')    renderLedger();
+        if (id==='panel-daily')     renderDailyView();
+        if (id==='panel-dashboard') renderDashboard();
+        if (id==='panel-manage')    renderManagePanel();
+        if (id==='panel-import')    loadMonthIntoTextarea();
+      }
+    }
+  }, function(err) {
+    console.log('Expense listener error:', err);
+    syncSetStatus('error');
+  });
+
+  // ── INCOME: real-time listener ──
+  if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
+  _incomeUnsubscribe = userCol('income_months').onSnapshot(function(snapshot) {
+    var allEntries = [];
+    snapshot.forEach(function(doc) {
+      var d = doc.data();
+      if (d.entries) allEntries = allEntries.concat(d.entries);
+    });
+    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var local = loadIncomeData();
+    var remote = JSON.stringify(allEntries);
+    var localStr = JSON.stringify(local);
+    if (remote !== localStr && allEntries.length > 0) {
+      localStorage.setItem(getIncKey(), remote);
+      // Refresh income UI silently if in income mode
+      if (_appMode === 'income') {
+        updateIncomeHeaderContext();
+        renderIncomeMonthPicker();
+        var activeInc = document.querySelector('#income-main .panel.active');
+        if (activeInc) {
+          var incId = activeInc.id;
+          if (incId==='panel-inc-ledger')  renderIncomeLedger();
+          if (incId==='panel-inc-monthly') renderIncomeMonthly();
+          if (incId==='panel-inc-dashboard') renderIncomeDashboard();
+          if (incId==='panel-inc-manage')  renderIncomeManage();
+        }
+      }
+    }
+  }, function(err) {
+    console.log('Income listener error:', err);
+  });
+
+  syncSetStatus('live');
 }
 
 // ── Registration ──
@@ -8327,39 +8404,10 @@ function showUpdateBanner() {
 // Update check disabled
 
 // Re-sync when user returns to the app (tab focus, phone unlock)
+// onSnapshot handles live sync — just refresh trash on visibility change
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible' && _userId && _db) {
     if (!window._trashDeletePending) fetchTrashFromFirebase();
-    if (!window._deletePending && _appMode === 'expenses') { // only sync expenses in expenses mode
-      userCol('expense_months').get().then(function(snapshot) {
-        var allEntries = [];
-        var fbMonths = [];
-        snapshot.forEach(function(doc) {
-          fbMonths.push(doc.id);
-          var d = doc.data();
-          if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
-        });
-        allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
-        window._knownFirebaseMonths = fbMonths;
-        var local = localStorage.getItem('expense_ledger') || '[]';
-        var localArr = []; try { localArr = JSON.parse(local); } catch(e){}
-        // Only update if Firebase has different data
-        var remote = JSON.stringify(allEntries);
-        if (remote !== local && allEntries.length > 0) {
-          localStorage.setItem('expense_ledger', allEntries.length >= localArr.length ? remote : local);
-          updateHeaderContext();
-          renderMonthPicker();
-          var active = document.querySelector('.panel.active');
-          if (active) {
-            var id = active.id;
-            if (id==='panel-ledger')    renderLedger();
-            if (id==='panel-daily')     renderDailyView();
-            if (id==='panel-dashboard') renderDashboard();
-            if (id==='panel-manage')    renderManagePanel();
-          }
-        }
-      }).catch(function(){});
-    }
   }
 });
 
