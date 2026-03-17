@@ -226,67 +226,14 @@ function loginWithBiometric() {
       return;
     }
 
+    // Set credentials
     _userId = uid; _userName = name; _userPhone = phone;
 
-    // 1. Hide pin overlay
-    var pinO = document.getElementById('pin-overlay');
-    if (pinO) pinO.style.display = 'none';
-
-    // 2. Reset login step for next time
-    var loginStep = document.getElementById('pin-step-login');
-    if (loginStep) loginStep.style.display = 'block';
-    var regStep = document.getElementById('pin-step-register');
-    if (regStep) regStep.style.display = 'none';
-
-    // 3. Restore last mode and activate first tab explicitly
-    var lastMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
-    _appMode = lastMode;
-
-    if (lastMode === 'income') {
-      // Show income UI
-      var incMain = document.getElementById('income-main');
-      if (incMain) incMain.style.display = 'block';
-      document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = 'none'; });
-      var mainNav = document.getElementById('main-nav');
-      if (mainNav) mainNav.style.display = 'none';
-      var incNav = document.getElementById('income-nav');
-      if (incNav) incNav.style.display = '';
-      // Make sure first income panel is active
-      var firstIncPanel = document.querySelector('#income-main .panel.active') ||
-                          document.querySelector('#income-main .panel');
-      if (firstIncPanel) { firstIncPanel.classList.add('active'); firstIncPanel.style.display = ''; }
-    } else {
-      // Show expenses UI
-      var incMain2 = document.getElementById('income-main');
-      if (incMain2) incMain2.style.display = 'none';
-      document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = ''; });
-      var mainNav2 = document.getElementById('main-nav');
-      if (mainNav2) mainNav2.style.display = '';
-      var incNav2 = document.getElementById('income-nav');
-      if (incNav2) incNav2.style.display = 'none';
-      // Make sure first expenses panel is active
-      var firstPanel = document.querySelector('main > .panel.active') ||
-                       document.getElementById('panel-import');
-      if (firstPanel) { firstPanel.classList.add('active'); }
-    }
-
+    // Use normal login path but skip mode selection overlay
+    hidePinScreen(true);
     updateUserDisplay();
-    adjustMainPadding();
-    updateHeaderContext();
-    renderMonthPicker();
-    populateFilters();
-    setTimeout(resetInactivityTimer, 500);
-    setTimeout(checkBackupReminder, 3000);
-    loadIncomeFromFirebase(function(){});
-    // Skip re-validation — credentials already confirmed by biometric
-    // Just load data and start listener directly
-    syncSetStatus('connecting');
-    getDB(function() {
-      syncLoadFromFirebase(function() {
-        renderSyncSetupUI();
-        syncStartListener();
-      });
-    });
+    fetchTrashFromFirebase();
+    startSync();
     showToast('✓ Welcome back, ' + name + '!');
 
   }).catch(function(e) {
@@ -659,7 +606,7 @@ function showPinScreen() {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'flex';
 }
-function hidePinScreen() {
+function hidePinScreen(skipModeOverlay) {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'none';
   // Restore login/register steps for next time
@@ -669,14 +616,22 @@ function hidePinScreen() {
   if (regStep)   regStep.style.display   = 'none';
   setTimeout(resetInactivityTimer, 1000);
   setTimeout(checkBackupReminder, 3000);
-  // ALWAYS show mode selection on every login — no exceptions
-  _appMode = 'expenses'; // reset so applyMode sets up expense UI first
-  applyMode();
-  adjustMainPadding();
-  updateUserDisplay();
-  setTimeout(showModeOverlay, 200);
-  // Load income data from Firebase in background
-  loadIncomeFromFirebase(function(){});
+  if (skipModeOverlay) {
+    // Biometric login: restore last mode directly, no selection prompt
+    var lastMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
+    _appMode = lastMode;
+    applyMode();
+    adjustMainPadding();
+    loadIncomeFromFirebase(function(){});
+  } else {
+    // Normal login: always show mode selection
+    _appMode = 'expenses';
+    applyMode();
+    adjustMainPadding();
+    updateUserDisplay();
+    setTimeout(showModeOverlay, 200);
+    loadIncomeFromFirebase(function(){});
+  }
 }
 function showRegisterStep() {
   document.getElementById('pin-step-register').style.display = 'block';
