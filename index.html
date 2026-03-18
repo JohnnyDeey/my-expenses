@@ -1884,10 +1884,10 @@ nav.tabs.header-hidden button {
     <div id="pin-step-full-verify" style="display:none;">
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.35);border-radius:8px;padding:28px;text-align:left;">
         <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:4px;">Security Check</div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;line-height:1.7;">Just making sure it's still you — enter your username and PIN.</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;line-height:1.7;">Just making sure it's still you — enter your username or phone number, and your PIN.</div>
         <div style="margin-bottom:14px;">
-          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Username</label>
-          <input id="fv-username" type="text" placeholder="Your username e.g. jd0292" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('fv-pin').focus()">
+          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Username or Phone number</label>
+          <input id="fv-username" type="text" placeholder="Username (e.g. jd0292) or phone" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('fv-pin').focus()">
         </div>
         <div style="margin-bottom:16px;">
           <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">PIN</label>
@@ -8706,49 +8706,78 @@ function submitPinLogin() {
   showToast('Welcome back, ' + name + '!');
 }
 
-// ── Full verify (username + PIN, against Firebase) ──
+// ── Full verify (username OR phone + PIN, against Firebase) ──
 function submitFullVerify() {
   var usernameEl = document.getElementById('fv-username');
   var pinEl      = document.getElementById('fv-pin');
   var errEl      = document.getElementById('fv-error');
-  var username   = usernameEl ? usernameEl.value.trim() : '';
+  var identifier = usernameEl ? usernameEl.value.trim() : '';
   var pin        = pinEl      ? pinEl.value.trim()      : '';
-  if (!username) { if(errEl) errEl.textContent = 'Please enter your username'; return; }
+  if (!identifier) { if(errEl) errEl.textContent = 'Please enter your username or phone number'; return; }
   if (pin.length < 4) { if(errEl) errEl.textContent = 'Please enter your PIN'; return; }
   if(errEl) errEl.textContent = 'Verifying...';
   var pinHash = hashPin(pin);
-  getDB(function(db) {
-    db.collection('user_registry').where('name', '==', username).get().then(function(snap) {
-      if (snap.empty) { if(errEl) errEl.textContent = 'Username not found'; return; }
-      var doc  = snap.docs[0];
-      var data = doc.data();
-      if (data.pin_hash !== pinHash) {
-        _loginAttempts++;
-        var left = Math.max(0, 3 - _loginAttempts);
-        if(errEl) errEl.textContent = _loginAttempts >= 3
-          ? 'Incorrect PIN.' : 'Incorrect PIN. ' + left + ' attempt' + (left===1?'':'s') + ' left.';
-        if (_loginAttempts >= 3) {
-          var hint = document.getElementById('reset-attempt-hint');
-          if (hint) hint.style.display = 'block';
-        }
-        return;
+
+  function doVerify(doc) {
+    if (!doc.exists) return false;
+    var data = doc.data();
+    if (data.pin_hash !== pinHash) {
+      _loginAttempts++;
+      var left = Math.max(0, 3 - _loginAttempts);
+      if(errEl) errEl.textContent = _loginAttempts >= 3
+        ? 'Incorrect PIN.' : 'Incorrect PIN. ' + left + ' attempt' + (left===1?'':'s') + ' left.';
+      if (_loginAttempts >= 3) {
+        var hint = document.getElementById('reset-attempt-hint');
+        if (hint) hint.style.display = 'block';
       }
-      // Success — save local hash for future PIN-only logins
-      _loginAttempts = 0;
-      var uid = data.user_id;
-      var name = data.name;
-      var phone = doc.id;
-      localStorage.setItem(UID_KEY,   uid);
-      localStorage.setItem(NAME_KEY,  name);
-      localStorage.setItem(PHONE_KEY, phone);
-      localStorage.setItem('expense_pin_hash_local', pinHash);
-      if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
-      recordFullVerify();
-      _resumeSession(uid, name, phone);
-      showToast('Identity confirmed. Welcome back, ' + name + '!');
-    }).catch(function() {
-      if(errEl) errEl.textContent = 'Connection error. Check your internet.';
-    });
+      return true; // found user, wrong PIN
+    }
+    // Success
+    _loginAttempts = 0;
+    var uid = data.user_id;
+    var name = data.name;
+    var phone = doc.id;
+    localStorage.setItem(UID_KEY,   uid);
+    localStorage.setItem(NAME_KEY,  name);
+    localStorage.setItem(PHONE_KEY, phone);
+    localStorage.setItem('expense_pin_hash_local', pinHash);
+    if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
+    recordFullVerify();
+    _resumeSession(uid, name, phone);
+    showToast('Identity confirmed. Welcome back, ' + name + '!');
+    return true;
+  }
+
+  getDB(function(db) {
+    var looksLikePhone = /^[+0-9\-\s()]+$/.test(identifier) && identifier.replace(/[^0-9]/g,'').length >= 7;
+    if (looksLikePhone) {
+      // Try phone hash first
+      var phoneHash = hashPhone(identifier);
+      db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
+        if (!doVerify(doc)) {
+          // Not found by phone — try as username
+          db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
+            if (snap.empty) { if(errEl) errEl.textContent = 'Account not found. Check your username or phone.'; }
+            else doVerify(snap.docs[0]);
+          });
+        }
+      }).catch(function() { if(errEl) errEl.textContent = 'Connection error. Check your internet.'; });
+    } else {
+      // Try username
+      db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
+        if (!snap.empty) {
+          doVerify(snap.docs[0]);
+        } else {
+          // Not found by username — try as phone just in case
+          var phoneHash = hashPhone(identifier);
+          db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
+            if (!doVerify(doc)) {
+              if(errEl) errEl.textContent = 'Account not found. Check your username or phone.';
+            }
+          });
+        }
+      }).catch(function() { if(errEl) errEl.textContent = 'Connection error. Check your internet.'; });
+    }
   });
 }
 
@@ -8804,7 +8833,7 @@ function _resumeSession(uid, name, phone) {
   adjustMainPadding();
   setTimeout(resetInactivityTimer, 500);
   setTimeout(checkBackupReminder, 3000);
-  setTimeout(showModeOverlay, 200);
+  // Do NOT call showModeOverlay here — keep the user on whatever tab they were on
   // Fire sync in background — app is already usable
   loadIncomeFromFirebase(function(){});
   getDB(function() {
