@@ -8615,28 +8615,8 @@ function loginWithBiometric() {
       return;
     }
 
-    _userId = uid; _userName = name; _userPhone = phone;
     sessionStorage.setItem('app_session', '1');
-    localStorage.setItem('last_active', String(Date.now()));
-
-    var pinO = document.getElementById('pin-overlay');
-    if (pinO) pinO.style.display = 'none';
-    var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
-    _appMode = savedMode;
-    applyMode();
-    updateUserDisplay();
-    adjustMainPadding();
-    setTimeout(resetInactivityTimer, 1000);
-    loadIncomeFromFirebase(function(){});
-    getDB(function() {
-      syncSetStatus('live');
-      syncStartListener();
-      renderSyncSetupUI();
-      updateHeaderContext();
-      renderMonthPicker();
-      populateFilters();
-      setTimeout(checkPrivacy, 600);
-    });
+    _resumeSession(uid, name, phone);
     showToast('✓ Welcome back, ' + name + '!');
 
   }).catch(function(e) {
@@ -8701,38 +8681,102 @@ function syncInit() {
   var name  = localStorage.getItem(NAME_KEY);
   var phone = localStorage.getItem(PHONE_KEY);
 
-  // sessionStorage survives F5 refresh but is wiped when the tab is closed or
-  // the app is opened fresh. This is the ONLY gate we need:
-  // — Refresh within same session → sessionStorage has 'app_session' → resume
-  // — Fresh open / new tab        → sessionStorage is empty          → show login
+  // ── CASE 1: Active session (refresh / tab still alive) ──
+  // sessionStorage survives F5 but is wiped on fresh open
   var isActiveSession = sessionStorage.getItem('app_session') === '1';
-
   if (isActiveSession && uid && name && phone) {
-    _userId = uid; _userName = name; _userPhone = phone;
-    localStorage.setItem('last_active', String(Date.now()));
-    var pinO = document.getElementById('pin-overlay');
-    if (pinO) pinO.style.display = 'none';
-    updateUserDisplay();
-    var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
-    _appMode = savedMode;
-    applyMode();
-    adjustMainPadding();
-    loadIncomeFromFirebase(function(){});
-    getDB(function() {
-      syncSetStatus('live');
-      syncStartListener();
-      renderSyncSetupUI();
-      updateHeaderContext();
-      renderMonthPicker();
-      populateFilters();
-    });
-    setTimeout(resetInactivityTimer, 1000);
+    _resumeSession(uid, name, phone);
     return;
   }
 
-  // No active session — require login
+  // ── CASE 2: Fingerprint enabled — trigger silently, show NO login screen ──
+  var hasCred   = !!localStorage.getItem(BIOMETRIC_KEY);
+  var isEnabled = localStorage.getItem(BIOMETRIC_ENABLED) === '1';
+  if (hasCred && isEnabled && uid && name && phone && window.PublicKeyCredential) {
+    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+      .then(function(available) {
+        if (available) {
+          // Trigger fingerprint with overlay still HIDDEN — user sees no login screen
+          _silentBiometricLogin(uid, name, phone);
+        } else {
+          // Sensor unavailable — fall through to login
+          showPinScreen();
+          showLoginStep();
+        }
+      }).catch(function() {
+        showPinScreen();
+        showLoginStep();
+      });
+    return; // don't show anything yet
+  }
+
+  // ── CASE 3: No session, no fingerprint — show login ──
   showPinScreen();
   if (phone) { showLoginStep(); } else { showRegisterStep(); }
+}
+
+// Resume session without any login UI (refresh / active session)
+function _resumeSession(uid, name, phone) {
+  _userId = uid; _userName = name; _userPhone = phone;
+  localStorage.setItem('last_active', String(Date.now()));
+  var pinO = document.getElementById('pin-overlay');
+  if (pinO) pinO.style.display = 'none';
+  updateUserDisplay();
+  var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
+  _appMode = savedMode;
+  applyMode();
+  adjustMainPadding();
+  loadIncomeFromFirebase(function(){});
+  getDB(function() {
+    syncSetStatus('live');
+    syncStartListener();
+    renderSyncSetupUI();
+    updateHeaderContext();
+    renderMonthPicker();
+    populateFilters();
+    setTimeout(checkPrivacy, 600);
+  });
+  setTimeout(resetInactivityTimer, 1000);
+}
+
+// Trigger fingerprint silently — login overlay stays hidden until needed
+function _silentBiometricLogin(uid, name, phone) {
+  var savedCred = localStorage.getItem(BIOMETRIC_KEY);
+  if (!savedCred) { showPinScreen(); showLoginStep(); return; }
+
+  var credData  = JSON.parse(savedCred);
+  var challenge = new Uint8Array(16);
+  window.crypto.getRandomValues(challenge);
+
+  navigator.credentials.get({
+    publicKey: {
+      challenge:         challenge,
+      allowCredentials: [{ id: base64ToBuffer(credData.id), type: 'public-key', transports: ['internal'] }],
+      userVerification: 'discouraged',
+      timeout:           20000
+    }
+  }).then(function(assertion) {
+    if (!assertion) { showPinScreen(); showLoginStep(); return; }
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+    // Success — resume exactly like a session restore, no login screen ever shown
+    sessionStorage.setItem('app_session', '1');
+    _resumeSession(uid, name, phone);
+    showToast('✓ Welcome back, ' + name + '!');
+
+  }).catch(function(e) {
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    // Any failure or cancel — now show the login screen
+    showPinScreen();
+    if (e.name === 'NotAllowedError') {
+      // User cancelled fingerprint — show normal login
+      showLoginStep();
+    } else {
+      // Sensor error — show login with message
+      showLoginStep();
+      var errEl = document.getElementById('login-error');
+      if (errEl) errEl.textContent = 'Fingerprint failed — enter your access code';
+    }
+  });
 }
 
 function startSync() {
