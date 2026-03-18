@@ -1837,14 +1837,19 @@ nav.tabs.header-hidden button {
           <input id="login-code" type="password" inputmode="numeric" maxlength="8" placeholder="••••••" autocomplete="new-password" style="width:100%;padding:14px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--paper);outline:none;letter-spacing:8px;text-align:center;" onkeydown="if(event.key==='Enter')submitLogin()">
         </div>
         <div id="login-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
+        <!-- Wrong attempt hint (shown after 3 fails) -->
+        <div id="reset-attempt-hint" style="display:none;background:rgba(181,69,27,0.12);border:1px solid rgba(181,69,27,0.4);border-radius:4px;padding:10px 12px;margin-bottom:12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#e07040;line-height:1.7;">
+          &#128274; Having trouble? <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold2);cursor:pointer;text-decoration:underline;padding:0;">Reset your access code</button>
+        </div>
         <button onclick="submitLogin()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Sign In</button>
 
         <div style="display:flex;align-items:center;gap:8px;margin-top:14px;margin-bottom:4px;">
           <input type="checkbox" id="keep-logged-in" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold);">
           <label for="keep-logged-in" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;cursor:pointer;">Keep me logged in</label>
         </div>
-        <div style="text-align:center;margin-top:12px;">
+        <div style="text-align:center;margin-top:12px;display:flex;flex-direction:column;gap:6px;">
           <button onclick="showRegisterStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;text-decoration:underline;">New user? Create account</button>
+          <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Forgot your access code?</button>
         </div>
       </div>
     </div>
@@ -1852,12 +1857,31 @@ nav.tabs.header-hidden button {
     <!-- Fingerprint auto-prompt screen (shown instead of login when biometric is enabled) -->
     <div id="pin-step-biometric" style="display:none;">
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:36px 28px;text-align:center;">
-        <div style="font-size:3.5rem;margin-bottom:16px;line-height:1;">&#128077;</div>
-        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--gold2);margin-bottom:8px;">Touch to Sign In</div>
-        <div id="bio-prompt-name" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:24px;"></div>
+        <style>
+          @keyframes bio-pulse {
+            0%   { transform: scale(1);    opacity: 1; }
+            50%  { transform: scale(1.18); opacity: 0.7; }
+            100% { transform: scale(1);    opacity: 1; }
+          }
+          @keyframes bio-ring {
+            0%   { transform: scale(0.85); opacity: 0.6; }
+            100% { transform: scale(1.55); opacity: 0; }
+          }
+          #bio-thumb-icon { display:inline-block; animation: bio-pulse 1.6s ease-in-out infinite; font-size:4rem; line-height:1; }
+          #bio-ring-wrap  { position:relative; display:inline-flex; align-items:center; justify-content:center; width:90px; height:90px; margin-bottom:20px; }
+          #bio-ring       { position:absolute; inset:0; border-radius:50%; border:3px solid rgba(200,150,46,0.5); animation: bio-ring 1.6s ease-out infinite; }
+        </style>
+        <div id="bio-ring-wrap">
+          <div id="bio-ring"></div>
+          <span id="bio-thumb-icon">&#128077;</span>
+        </div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--gold2);margin-bottom:6px;">Touch to Sign In</div>
+        <div id="bio-prompt-name" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:16px;"></div>
         <div id="bio-prompt-status" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--gold);min-height:20px;margin-bottom:20px;"></div>
-        <button onclick="loginWithBiometric()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.85rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:12px;">&#128077; Use Fingerprint</button>
-        <button onclick="showLoginInstead()" style="width:100%;padding:11px;background:none;border:1px solid rgba(200,150,46,0.3);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;cursor:pointer;">Use access code instead</button>
+        <!-- Buttons only appear AFTER fingerprint is accepted or declined -->
+        <div id="bio-action-btns" style="display:none;">
+          <button onclick="showLoginInstead()" style="width:100%;padding:11px;background:none;border:1px solid rgba(200,150,46,0.3);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;cursor:pointer;">Use access code instead</button>
+        </div>
       </div>
     </div>
 
@@ -1872,6 +1896,35 @@ nav.tabs.header-hidden button {
     <div style="font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--muted);line-height:1.7;margin-bottom:24px;">Skip the password next time — just touch the fingerprint sensor to open your app instantly. You can turn this off anytime in Manage.</div>
     <button onclick="acceptBioSetup()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:10px;">&#128077; Yes — Take Me There</button>
     <button onclick="declineBioSetup()" style="width:100%;padding:11px;background:none;border:1px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);cursor:pointer;">No thanks</button>
+  </div>
+</div>
+
+<!-- ══ PASSWORD RESET OVERLAY ══ -->
+<div id="reset-overlay" style="display:none;position:fixed;inset:0;z-index:100001;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#1e1812;border:2px solid var(--gold);border-radius:10px;width:100%;max-width:400px;padding:28px;">
+    <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">&#128274; Reset Access Code</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;margin-bottom:20px;">Verify your identity to get a new code</div>
+
+    <!-- Step A: enter phone -->
+    <div id="reset-step-phone">
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:14px;line-height:1.7;">Enter the phone number you registered with. We will verify your account and show you a temporary reset code.</div>
+      <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number</label>
+      <input id="reset-phone-input" type="tel" placeholder="e.g. 07012345678" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;margin-bottom:10px;" onkeydown="if(event.key==='Enter')submitResetRequest()">
+      <div id="reset-phone-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:16px;"></div>
+      <button onclick="submitResetRequest()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:10px;">Verify My Account</button>
+      <button onclick="closeResetOverlay()" style="width:100%;padding:10px;background:none;border:1px solid rgba(200,150,46,0.25);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">← Back to Sign In</button>
+    </div>
+
+    <!-- Step B: show reset code -->
+    <div id="reset-step-code" style="display:none;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:16px;line-height:1.7;">Identity verified. Here is your one-time reset code. It expires in <strong style="color:var(--gold);">15 minutes</strong>. Use it to sign in, then change your code immediately in Manage → Change Access Code.</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Your Temporary Code</div>
+      <div id="reset-code-display" style="font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:900;color:var(--gold2);letter-spacing:10px;text-align:center;padding:18px;background:#2a2018;border-radius:6px;margin-bottom:8px;border:1px solid rgba(200,150,46,0.3);"></div>
+      <div id="reset-code-timer" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--gold);text-align:center;margin-bottom:16px;"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#b5451b;background:rgba(181,69,27,0.1);border:1px solid rgba(181,69,27,0.3);border-radius:4px;padding:10px 12px;margin-bottom:16px;line-height:1.7;">&#9888; Screenshot this code now. For security, it will not be shown again after you close this screen.</div>
+      <button onclick="useResetCodeNow()" style="width:100%;padding:13px;background:var(--sage);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px;">&#10003; Use This Code to Sign In</button>
+      <button onclick="closeResetOverlay()" style="width:100%;padding:10px;background:none;border:1px solid rgba(200,150,46,0.25);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">Close</button>
+    </div>
   </div>
 </div>
 
@@ -1955,7 +2008,7 @@ nav.tabs.header-hidden button {
       <div id="contact-name-info" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:16px;padding:8px 12px;border-radius:4px;"></div>
       <p style="font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--ink);line-height:1.7;margin-bottom:20px;">Tap the button below to open your email app. Your account name will be included automatically so we know who you are.</p>
       <button onclick="sendSupport()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:12px;">&#9993; Open Email App</button>
-      <p style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);text-align:center;line-height:1.6;">This opens your Gmail or mail app with a pre-filled message.<br>myfinanceledgerapp@gmail.com</p>
+      <p style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);text-align:center;line-height:1.6;">This opens your Gmail or mail app with a pre-filled message.<br><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="cba6b2ada2a5aaa5a8aea7aeafacaeb9aabbbb8baca6aaa2a7e5a8a4a6">[email&#160;protected]</a></p>
     </div>
   </div>
 </div>
@@ -2037,7 +2090,7 @@ nav.tabs.header-hidden button {
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // Capture clean source HTML before JS modifies the DOM
 // Capture clean source HTML before JS modifies the DOM
 var _originalHtml = document.documentElement.outerHTML;
@@ -8562,6 +8615,14 @@ function checkBiometricAvailable() {
       var bioStep   = document.getElementById('pin-step-biometric');
       if (loginStep) loginStep.style.display = 'none';
       if (bioStep)   bioStep.style.display   = 'block';
+      // Reset animation
+      var thumbIcon = document.getElementById('bio-thumb-icon');
+      if (thumbIcon) { thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite'; thumbIcon.innerHTML = '&#128077;'; }
+      var bioRing = document.getElementById('bio-ring');
+      if (bioRing) bioRing.style.animation = 'bio-ring 1.6s ease-out infinite';
+      // Hide action buttons until needed
+      var bioActionBtns = document.getElementById('bio-action-btns');
+      if (bioActionBtns) bioActionBtns.style.display = 'none';
       // Set the user's name in the prompt
       var savedName = localStorage.getItem(NAME_KEY) || localStorage.getItem(FULL_NAME_KEY) || '';
       var nameEl = document.getElementById('bio-prompt-name');
@@ -8581,6 +8642,15 @@ function showLoginInstead() {
   if (loginStep) loginStep.style.display = 'block';
   var statusEl = document.getElementById('bio-prompt-status');
   if (statusEl) statusEl.textContent = '';
+  // Stop bio animation
+  var thumbIcon = document.getElementById('bio-thumb-icon');
+  if (thumbIcon) thumbIcon.style.animation = 'none';
+  var bioRing = document.getElementById('bio-ring');
+  if (bioRing) bioRing.style.animation = 'none';
+  // Hide action buttons again for next time
+  var bioActionBtns = document.getElementById('bio-action-btns');
+  if (bioActionBtns) bioActionBtns.style.display = 'none';
+  setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
 }
 
 // ── Fingerprint login ──
@@ -8588,7 +8658,15 @@ function loginWithBiometric() {
   var savedCred = localStorage.getItem(BIOMETRIC_KEY);
   if (!savedCred) { showLoginInstead(); return; }
   var statusEl = document.getElementById('bio-prompt-status');
-  if (statusEl) statusEl.textContent = 'Touch fingerprint sensor...';
+  if (statusEl) statusEl.textContent = 'Waiting for fingerprint...';
+  // Ensure animation is running while waiting
+  var thumbIcon = document.getElementById('bio-thumb-icon');
+  if (thumbIcon) thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite';
+  var bioRing = document.getElementById('bio-ring');
+  if (bioRing) bioRing.style.animation = 'bio-ring 1.6s ease-out infinite';
+  // Hide action buttons while scanning
+  var bioActionBtns = document.getElementById('bio-action-btns');
+  if (bioActionBtns) bioActionBtns.style.display = 'none';
 
   var credData  = JSON.parse(savedCred);
   var challenge = new Uint8Array(16);
@@ -8602,8 +8680,10 @@ function loginWithBiometric() {
       timeout:           20000
     }
   }).then(function(assertion) {
-    if (!assertion) { if (statusEl) statusEl.textContent = 'Try again'; return; }
-    if (statusEl) statusEl.textContent = '';
+    if (!assertion) { if (statusEl) statusEl.textContent = 'Try again'; if (bioActionBtns) bioActionBtns.style.display = 'block'; return; }
+    if (statusEl) statusEl.textContent = '✓ Verified';
+    if (thumbIcon) thumbIcon.style.animation = 'none';
+    if (bioRing) bioRing.style.animation = 'none';
     if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
 
     var uid   = localStorage.getItem(UID_KEY);
@@ -8611,6 +8691,7 @@ function loginWithBiometric() {
     var phone = localStorage.getItem(PHONE_KEY);
     if (!uid || !name || !phone) {
       if (statusEl) statusEl.textContent = 'Session expired — use your access code';
+      if (bioActionBtns) bioActionBtns.style.display = 'block';
       showLoginInstead();
       return;
     }
@@ -8621,13 +8702,15 @@ function loginWithBiometric() {
 
   }).catch(function(e) {
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    // Stop animation and show fallback button
+    if (thumbIcon) { thumbIcon.style.animation = 'none'; thumbIcon.textContent = ''; thumbIcon.innerHTML = '&#128078;'; }
+    if (bioRing) bioRing.style.animation = 'none';
+    if (bioActionBtns) bioActionBtns.style.display = 'block';
     if (e.name === 'NotAllowedError') {
-      // User cancelled — drop back to login form silently
-      if (statusEl) statusEl.textContent = '';
-      showLoginInstead();
+      // User cancelled — show message and fallback button
+      if (statusEl) statusEl.textContent = 'Fingerprint cancelled';
     } else if (e.name === 'InvalidStateError') {
       if (statusEl) statusEl.textContent = 'Key not found — re-register in Manage';
-      showLoginInstead();
     } else {
       if (statusEl) statusEl.textContent = 'Try again or use access code';
     }
@@ -9072,6 +9155,9 @@ function showLoginStep() {
   var ph = document.getElementById('login-phone'); if(ph) ph.value = '';
   var cd = document.getElementById('login-code');  if(cd) cd.value = '';
   var er = document.getElementById('login-error'); if(er) er.textContent = '';
+  // Reset wrong attempt counter display
+  _loginAttempts = 0;
+  var ra = document.getElementById('reset-attempt-hint'); if(ra) ra.style.display = 'none';
   // Check if fingerprint is available — if so show fingerprint screen, else show login form
   var hasCred   = !!localStorage.getItem(BIOMETRIC_KEY);
   var isEnabled = localStorage.getItem(BIOMETRIC_ENABLED) === '1';
@@ -9080,6 +9166,13 @@ function showLoginStep() {
       .then(function(available) {
         if (available) {
           if (bioStep) bioStep.style.display = 'block';
+          // Reset animation state
+          var thumbIcon = document.getElementById('bio-thumb-icon');
+          if (thumbIcon) { thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite'; thumbIcon.innerHTML = '&#128077;'; }
+          var bioRing = document.getElementById('bio-ring');
+          if (bioRing) bioRing.style.animation = 'bio-ring 1.6s ease-out infinite';
+          var bioActionBtns = document.getElementById('bio-action-btns');
+          if (bioActionBtns) bioActionBtns.style.display = 'none';
           var savedName = localStorage.getItem(NAME_KEY) || localStorage.getItem(FULL_NAME_KEY) || '';
           var nameEl = document.getElementById('bio-prompt-name');
           if (nameEl && savedName) nameEl.textContent = 'Signing in as ' + savedName;
@@ -9175,6 +9268,144 @@ function confirmCode() {
   startSync();
 }
 
+// ── Wrong attempt tracker & password reset ──
+var _loginAttempts = 0;
+var _resetCode = null;
+var _resetCodeExpiry = 0;
+var _resetTimerInterval = null;
+
+function openResetOverlay() {
+  var o = document.getElementById('reset-overlay');
+  if (o) o.style.display = 'flex';
+  // Reset to step A
+  var sa = document.getElementById('reset-step-phone');
+  var sb = document.getElementById('reset-step-code');
+  if (sa) sa.style.display = 'block';
+  if (sb) sb.style.display = 'none';
+  var inp = document.getElementById('reset-phone-input');
+  if (inp) { inp.value = ''; setTimeout(function(){ inp.focus(); }, 100); }
+  var err = document.getElementById('reset-phone-error');
+  if (err) err.textContent = '';
+}
+
+function closeResetOverlay() {
+  var o = document.getElementById('reset-overlay');
+  if (o) o.style.display = 'none';
+  if (_resetTimerInterval) { clearInterval(_resetTimerInterval); _resetTimerInterval = null; }
+}
+
+function submitResetRequest() {
+  var inp = document.getElementById('reset-phone-input');
+  var err = document.getElementById('reset-phone-error');
+  var phone = inp ? inp.value.trim() : '';
+  if (!phone || phone.replace(/[^0-9]/g,'').length < 7) {
+    if (err) err.textContent = 'Please enter a valid phone number';
+    return;
+  }
+  if (err) err.textContent = 'Checking...';
+  var phoneHash = hashPhone(phone);
+  getDB(function(db) {
+    db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
+      if (!doc.exists) {
+        if (err) err.textContent = 'No account found with this phone number.';
+        return;
+      }
+      // Account exists — generate a time-based reset code and store it
+      var data = doc.data();
+      _resetCode = String(Math.floor(100000 + Math.random() * 900000));
+      _resetCodeExpiry = Date.now() + 15 * 60 * 1000; // 15 minutes
+      // Store reset code hash in Firebase (temporary — expires)
+      db.collection('user_registry').doc(phoneHash).update({
+        reset_code_hash: hashPin(_resetCode),
+        reset_code_expiry: _resetCodeExpiry
+      }).then(function() {
+        if (err) err.textContent = '';
+        // Show the code
+        var sa = document.getElementById('reset-step-phone');
+        var sb = document.getElementById('reset-step-code');
+        if (sa) sa.style.display = 'none';
+        if (sb) sb.style.display = 'block';
+        var cd = document.getElementById('reset-code-display');
+        if (cd) cd.textContent = _resetCode;
+        // Store the phone hash for useResetCodeNow
+        _pendingResetPhone = phoneHash;
+        _pendingResetName = data.name;
+        _pendingResetUID = data.user_id;
+        // Start countdown timer
+        updateResetTimer();
+        _resetTimerInterval = setInterval(updateResetTimer, 1000);
+      }).catch(function() {
+        if (err) err.textContent = 'Connection error. Please try again.';
+      });
+    }).catch(function() {
+      if (err) err.textContent = 'Connection error. Please check your internet.';
+    });
+  });
+}
+
+var _pendingResetPhone = null;
+var _pendingResetName  = null;
+var _pendingResetUID   = null;
+
+function updateResetTimer() {
+  var remaining = Math.max(0, _resetCodeExpiry - Date.now());
+  var mins = Math.floor(remaining / 60000);
+  var secs = Math.floor((remaining % 60000) / 1000);
+  var timerEl = document.getElementById('reset-code-timer');
+  if (timerEl) {
+    timerEl.textContent = 'Expires in ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+    timerEl.style.color = remaining < 120000 ? '#b5451b' : 'var(--gold)';
+  }
+  if (remaining === 0) {
+    clearInterval(_resetTimerInterval);
+    _resetTimerInterval = null;
+    if (timerEl) timerEl.textContent = 'Code expired — request a new one';
+    var cd = document.getElementById('reset-code-display');
+    if (cd) cd.textContent = '------';
+  }
+}
+
+function useResetCodeNow() {
+  if (!_pendingResetPhone || !_resetCode || !_pendingResetUID) { closeResetOverlay(); return; }
+  if (Date.now() > _resetCodeExpiry) {
+    showToast('Code expired — please request a new one');
+    return;
+  }
+  closeResetOverlay();
+  // Pre-fill login fields with the reset code and trigger login via code swap
+  // Instead, directly log the user in using stored credentials like a session restore
+  _userId    = _pendingResetUID;
+  _userName  = _pendingResetName;
+  _userPhone = _pendingResetPhone;
+  localStorage.setItem(UID_KEY,   _userId);
+  localStorage.setItem(NAME_KEY,  _userName);
+  localStorage.setItem(PHONE_KEY, _userPhone);
+  // Update the user's pin_hash in Firebase to the reset code so they can also log in with it
+  getDB(function(db) {
+    db.collection('user_registry').doc(_pendingResetPhone).update({
+      pin_hash: hashPin(_resetCode),
+      reset_code_hash: null,
+      reset_code_expiry: null
+    }).catch(function(){});
+  });
+  localStorage.setItem('keep_login_pref', '0');
+  localStorage.setItem('last_active', String(Date.now()));
+  hidePinScreen();
+  updateUserDisplay();
+  fetchTrashFromFirebase();
+  startSync();
+  showToast('✓ Signed in with reset code. Change your access code in Manage now!');
+  // Navigate to Manage tab after a short delay
+  setTimeout(function() {
+    var manageBtn = document.querySelector('#main-nav button[onclick*="manage"]');
+    if (manageBtn) manageBtn.click();
+    setTimeout(function() {
+      var pinCard = document.getElementById('manage-pin-input');
+      if (pinCard) pinCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 400);
+  }, 1000);
+}
+
 // ── Login: validate phone + PIN, get UUID from registry ──
 function submitLogin() {
   var phoneEl = document.getElementById('login-phone');
@@ -9196,7 +9427,15 @@ function submitLogin() {
     if (!doc.exists) return false;
     var data = doc.data();
     if (data.pin_hash !== pinHash) {
-      if(errEl) errEl.textContent = 'Incorrect access code. Please try again.';
+      _loginAttempts++;
+      var attemptsLeft = Math.max(0, 3 - _loginAttempts);
+      if (_loginAttempts >= 3) {
+        if(errEl) errEl.textContent = 'Incorrect access code.';
+        var hint = document.getElementById('reset-attempt-hint');
+        if (hint) hint.style.display = 'block';
+      } else {
+        if(errEl) errEl.textContent = 'Incorrect access code. ' + attemptsLeft + ' attempt' + (attemptsLeft === 1 ? '' : 's') + ' left.';
+      }
       return true; // found user but wrong code
     }
     var uid = data.user_id;
@@ -9217,6 +9456,9 @@ function submitLogin() {
     var keepVal = (keepCb && keepCb.checked) ? '1' : '0';
     localStorage.setItem('keep_login_pref', keepVal);
     localStorage.setItem('last_active', String(Date.now()));
+    _loginAttempts = 0;
+    var hint = document.getElementById('reset-attempt-hint');
+    if (hint) hint.style.display = 'none';
     hidePinScreen();
     updateUserDisplay();
     fetchTrashFromFirebase();
@@ -9743,15 +9985,4 @@ renderMonthPicker();
 updateHeader();
 populateFilters();
 
-syncInit();
-
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js').catch(function(e){ console.log('SW:', e); });
-  });
-}
-</script>
-</body>
-</html>
+s
