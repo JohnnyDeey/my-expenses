@@ -12,6 +12,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Expense Ledger</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
@@ -326,784 +327,6 @@ document.addEventListener('click', function(e) {
     editDateLookupCat(e.target, e.target.getAttribute('data-id'), e.target.getAttribute('data-type'));
   }
 });
-
-// ── Get full name for reports ──
-function getReportName() {
-  return localStorage.getItem(FULL_NAME_KEY) || _userName || 'Account Holder';
-}
-
-// ── Biometric / Fingerprint Login ──
-var BIOMETRIC_KEY = 'finance_biometric_cred';
-
-function renderIncomeBioStatus() {
-  var el = document.getElementById('inc-bio-status');
-  if (!el) return;
-  var hasCred = !!localStorage.getItem(BIOMETRIC_KEY);
-  if (hasCred) {
-    el.innerHTML = '<span style="color:var(--sage);">&#10003; Fingerprint registered on this device</span>';
-  } else {
-    el.innerHTML = '<span style="color:var(--muted);">No fingerprint registered yet</span>';
-  }
-}
-
-function checkBiometricAvailable() {
-  if (!window.PublicKeyCredential) return;
-  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-    .then(function(available) {
-      var wrap = document.getElementById('biometric-btn-wrap');
-      // Only show if available AND user has saved biometric cred
-      var savedCred = localStorage.getItem(BIOMETRIC_KEY);
-      if (available && savedCred && wrap) {
-        wrap.style.display = 'block';
-      }
-    }).catch(function(){});
-}
-
-function loginWithBiometric() {
-  var savedCred = localStorage.getItem(BIOMETRIC_KEY);
-  if (!savedCred) { showToast('No fingerprint registered. Sign in with code first.'); return; }
-  var errEl = document.getElementById('login-error');
-  if (errEl) errEl.textContent = 'Touch fingerprint sensor...';
-
-  var credData = JSON.parse(savedCred);
-  var challenge = new Uint8Array(16); // smaller = faster
-  window.crypto.getRandomValues(challenge);
-
-  // Minimal options = fastest response on Android
-  navigator.credentials.get({
-    publicKey: {
-      challenge: challenge,
-      allowCredentials: [{
-        id: base64ToBuffer(credData.id),
-        type: 'public-key',
-        transports: ['internal'] // only internal sensor, no scanning for external
-      }],
-      userVerification: 'discouraged', // fastest — no PIN fallback prompt
-      timeout: 20000
-    }
-  }).then(function(assertion) {
-    if (!assertion) { showToast('Try again'); return; }
-    if (errEl) errEl.textContent = '';
-    if (navigator.vibrate) navigator.vibrate([60, 40, 60]); // quick double pulse
-
-    var uid   = localStorage.getItem(UID_KEY);
-    var name  = localStorage.getItem(NAME_KEY);
-    var phone = localStorage.getItem(PHONE_KEY);
-
-    if (!uid || !name || !phone) {
-      showToast('Session expired — please sign in with your code');
-      return;
-    }
-
-    // Set credentials
-    _userId = uid; _userName = name; _userPhone = phone;
-
-    // Use normal login path but skip mode selection overlay
-    _userId = uid; _userName = name; _userPhone = phone;
-    // Hide pin overlay
-    var pinO = document.getElementById('pin-overlay');
-    if (pinO) pinO.style.display = 'none';
-    // Restore last used mode
-    var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
-    _appMode = savedMode;
-    applyMode();
-    updateUserDisplay();
-    adjustMainPadding();
-    setTimeout(resetInactivityTimer, 1000);
-    setTimeout(checkBackupReminder, 3000);
-    loadIncomeFromFirebase(function(){});
-    getDB(function() {
-      syncSetStatus('live');
-      syncStartListener();
-    });
-    showToast('✓ Welcome back, ' + name + '!');
-
-  }).catch(function(e) {
-    if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
-    if (errEl) errEl.textContent = '';
-    if (e.name === 'NotAllowedError') {
-      showToast('Fingerprint not recognised — try again');
-    } else if (e.name === 'InvalidStateError') {
-      showToast('Fingerprint key not found — re-register in Manage');
-    } else {
-      showToast('Biometric error: ' + (e.message || 'try your access code'));
-    }
-  });
-}
-
-function registerBiometric() {
-  if (!window.PublicKeyCredential) { showToast('Biometric not supported on this device'); return; }
-  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-    .then(function(available) {
-      if (!available) { showToast('No fingerprint/face sensor found'); return; }
-      var challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
-      var userId = new TextEncoder().encode(_userId || 'user');
-      navigator.credentials.create({
-        publicKey: {
-          challenge: challenge,
-          rp: { name: 'My Finance Ledger', id: location.hostname },
-          user: { id: userId, name: _userName || 'user', displayName: _userName || 'User' },
-          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
-          timeout: 60000
-        }
-      }).then(function(cred) {
-        localStorage.setItem(BIOMETRIC_KEY, JSON.stringify({
-          id: bufferToBase64(cred.rawId)
-        }));
-        showToast('Fingerprint registered! You can now use it to log in.');
-      }).catch(function(e) {
-        showToast('Could not register fingerprint: ' + e.message);
-      });
-    });
-}
-
-function bufferToBase64(buffer) {
-  var bytes = new Uint8Array(buffer);
-  var str = '';
-  bytes.forEach(function(b){ str += String.fromCharCode(b); });
-  return btoa(str);
-}
-function base64ToBuffer(base64) {
-  var str = atob(base64);
-  var buf = new Uint8Array(str.length);
-  for (var i = 0; i < str.length; i++) buf[i] = str.charCodeAt(i);
-  return buf.buffer;
-}
-
-function syncInit() {
-  var phone      = localStorage.getItem(PHONE_KEY);
-  var keepLogin  = localStorage.getItem('keep_login_pref');
-  var lastActive = parseInt(localStorage.getItem('last_active') || '0');
-  var now        = Date.now();
-  var timeout    = keepLogin === '1' ? 30 * 60 * 1000 : 5 * 60 * 1000;
-  var sinceActive = now - lastActive;
-
-  // REFRESH DETECTION:
-  // A refresh happens within a few seconds of last_active being written
-  // App clear/close = much longer gap OR no last_active at all
-  // We treat anything within 30 seconds as a refresh — resume no matter what
-  var isRefresh = lastActive && sinceActive < 30000;
-
-  // RESUME if: it's a refresh, OR within the inactivity window
-  var shouldResume = isRefresh || (lastActive && sinceActive < timeout);
-
-  if (shouldResume) {
-    var uid  = localStorage.getItem(UID_KEY);
-    var name = localStorage.getItem(NAME_KEY);
-    if (uid && name && phone) {
-      _userId = uid; _userName = name; _userPhone = phone;
-      localStorage.setItem('last_active', String(Date.now()));
-      updateUserDisplay();
-      var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
-      _appMode = savedMode;
-      applyMode();
-      adjustMainPadding();
-      loadIncomeFromFirebase(function(){});
-      startSync();
-      return;
-    }
-  }
-
-  // Require login
-  showPinScreen();
-  if (phone) { showLoginStep(); } else { showRegisterStep(); }
-}
-
-function startSync() {
-  syncSetStatus('connecting');
-  getDB(function() {
-    if (_userPhone && _userId) {
-      _db.collection('user_registry').doc(_userPhone).get().then(function(doc) {
-        if (!doc.exists || doc.data().user_id !== _userId) {
-          localStorage.removeItem(UID_KEY);
-          localStorage.removeItem(NAME_KEY);
-          localStorage.removeItem(PHONE_KEY);
-          _userId = null; _userName = null; _userPhone = null;
-          showPinScreen(); showLoginStep();
-          syncSetStatus('off');
-          return;
-        }
-        // ALWAYS load from Firebase first on login, THEN start real-time listeners
-        syncLoadFromFirebase(function() {
-          renderSyncSetupUI();
-          syncStartListener(); // start real-time listeners after initial load
-        });
-      }).catch(function() {
-        // Network error — keep local, start listener
-        syncSetStatus('live');
-        syncPush();
-        renderSyncSetupUI();
-      });
-    } else {
-      syncLoadFromFirebase(function() {
-        renderSyncSetupUI();
-      });
-    }
-  });
-}
-
-function syncLoadFromFirebase(callback) {
-  // Step 1: Load data from Firebase
-  syncSetStatus('syncing');
-  userCol('expense_months').get().then(function(snapshot) {
-    var allEntries = [];
-    var fbMonths = [];
-    snapshot.forEach(function(doc) {
-      fbMonths.push(doc.id);
-      var d = doc.data();
-      if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
-    });
-    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
-    window._knownFirebaseMonths = fbMonths;
-
-    var local      = localStorage.getItem('expense_ledger') || '[]';
-    var localArr   = []; try { localArr = JSON.parse(local); } catch(e){}
-    var localCount = localArr.length;
-    var remoteCount = allEntries.length;
-
-    if (remoteCount > 0 && localCount === 0) {
-      // Fresh login — load from Firebase
-      localStorage.setItem('expense_ledger', JSON.stringify(allEntries));
-      populateFilters();
-      updateHeaderContext();
-      renderMonthPicker();
-      showToast('Data loaded · ' + allEntries.length + ' entries');
-    } else if (localCount > 0) {
-      // Has local data — push it to Firebase (local is source of truth)
-      syncPushNow();
-    }
-    // Load settings (categories)
-    userCol('settings').doc('default').get().then(function(doc) {
-      if (doc.exists) {
-        var d = doc.data();
-        if (d.custom_categories) localStorage.setItem('custom_categories', d.custom_categories);
-        if (d.custom_cat_rules)  localStorage.setItem('custom_cat_rules',  d.custom_cat_rules);
-      }
-    });
-    syncSetStatus('live');
-    if (callback) callback();
-  }).catch(function(err) {
-    console.error('Load error:', err);
-    syncSetStatus('error');
-    if (callback) callback();
-  });
-}
-
-function syncPushNow() {
-  // Immediate push — also deletes removed month documents from Firebase
-  clearTimeout(_syncPushTimer);
-  if (!_db || !_userId) return;
-  window._deletePending = true;
-  _isMerging = true;
-  syncSetStatus('syncing');
-  var data  = localStorage.getItem('expense_ledger')    || '[]';
-  var cats  = localStorage.getItem('custom_categories') || '[]';
-  var rules = localStorage.getItem('custom_cat_rules')  || '[]';
-  var entries = []; try { entries = JSON.parse(data); } catch(e){}
-  var byMonth = {};
-  entries.forEach(function(e) {
-    var k = e.date ? e.date.substring(0,7) : 'unknown';
-    if (!byMonth[k]) byMonth[k] = [];
-    byMonth[k].push(e);
-  });
-  var localMonths = Object.keys(byMonth);
-  var batch = _db.batch();
-  // Set all existing months
-  localMonths.forEach(function(ym) {
-    batch.set(userCol('expense_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
-  });
-  // DELETE Firebase docs for months no longer in local data
-  // We track which months were previously in Firebase via _knownFirebaseMonths
-  var knownMonths = window._knownFirebaseMonths || [];
-  knownMonths.forEach(function(ym) {
-    if (localMonths.indexOf(ym) === -1) {
-      batch.delete(userCol('expense_months').doc(ym));
-    }
-  });
-  // Update known months to current local months
-  window._knownFirebaseMonths = localMonths;
-  batch.set(userCol('settings').doc('default'), {
-    custom_categories: cats, custom_cat_rules: rules,
-    display_name: _userName, updated: Date.now()
-  });
-  var trashData = localStorage.getItem(getTrashKey()) || '[]';
-  var trashArr = []; try { trashArr = JSON.parse(trashData); } catch(e){}
-  if (trashArr.length > 0 || window._trashFetched) {
-    batch.set(userCol('settings').doc('trash'), { items: trashData, updated: Date.now() });
-  }
-  batch.commit()
-    .then(function(){
-      syncSetStatus('live');
-      _isMerging = false;
-      // Keep delete lock for 5 more seconds after confirmed write
-      setTimeout(function(){ window._deletePending = false; }, 5000);
-    })
-    .catch(function(e){
-      console.error('Push error:', e);
-      syncSetStatus('error');
-      _isMerging = false;
-      window._deletePending = false;
-    });
-}
-
-function syncPush() {
-  if (!_db || !_userId || _isMerging) return;
-  clearTimeout(_syncPushTimer);
-  _syncPushTimer = setTimeout(function() {
-    syncSetStatus('syncing');
-    var data  = localStorage.getItem('expense_ledger')    || '[]';
-    var cats  = localStorage.getItem('custom_categories') || '[]';
-    var rules = localStorage.getItem('custom_cat_rules')  || '[]';
-    var entries = []; try { entries = JSON.parse(data); } catch(e){}
-    var byMonth = {};
-    entries.forEach(function(e) {
-      var k = e.date ? e.date.substring(0,7) : 'unknown';
-      if (!byMonth[k]) byMonth[k] = [];
-      byMonth[k].push(e);
-    });
-    var localMonths2 = Object.keys(byMonth);
-    var batch = _db.batch();
-    localMonths2.forEach(function(ym) {
-      batch.set(userCol('expense_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
-    });
-    // Delete Firebase docs for months removed from local
-    var knownM = window._knownFirebaseMonths || [];
-    knownM.forEach(function(ym) {
-      if (localMonths2.indexOf(ym) === -1) {
-        batch.delete(userCol('expense_months').doc(ym));
-      }
-    });
-    window._knownFirebaseMonths = localMonths2;
-    batch.set(userCol('settings').doc('default'), {
-      custom_categories: cats, custom_cat_rules: rules,
-      display_name: _userName, updated: Date.now()
-    });
-    // Push trash — only push if non-empty OR if we've already fetched from Firebase
-    var trashData = localStorage.getItem(getTrashKey()) || '[]';
-    var trashArr = []; try { trashArr = JSON.parse(trashData); } catch(e){}
-    if (trashArr.length > 0 || window._trashFetched) {
-      batch.set(userCol('settings').doc('trash'), {
-        items: trashData, updated: Date.now()
-      });
-    }
-    batch.commit()
-      .then(function(){ syncSetStatus('live'); })
-      .catch(function(e){ console.error('Push error:', e); syncSetStatus('error'); });
-  }, 1500);
-}
-
-// ── Real-time listeners (onSnapshot) ──
-var _incomeUnsubscribe = null;
-
-function syncStartListener() {
-  if (!_db || !_userId) return;
-
-  // ── EXPENSES: real-time listener ──
-  if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
-  if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
-  _syncUnsubscribe = userCol('expense_months').onSnapshot(function(snapshot) {
-    // Block if we just wrote locally (avoids race condition restoring deleted data)
-    if (window._deletePending || window._isMerging || window._lastDeleteTime && (Date.now() - window._lastDeleteTime) < 8000) return;
-    var allEntries = [];
-    var fbMonths = [];
-    snapshot.forEach(function(doc) {
-      fbMonths.push(doc.id);
-      var d = doc.data();
-      if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
-    });
-    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
-    window._knownFirebaseMonths = fbMonths;
-    var local = localStorage.getItem('expense_ledger') || '[]';
-    var remote = JSON.stringify(allEntries);
-    // Only update if data actually changed
-    if (remote !== local) {
-      localStorage.setItem('expense_ledger', remote);
-      syncSetStatus('live');
-      // Refresh UI silently
-      updateHeaderContext();
-      renderMonthPicker();
-      var active = document.querySelector('main > .panel.active');
-      if (active) {
-        var id = active.id;
-        if (id==='panel-ledger')    renderLedger();
-        if (id==='panel-daily')     renderDailyView();
-        if (id==='panel-dashboard') renderDashboard();
-        if (id==='panel-manage')    renderManagePanel();
-        if (id==='panel-import')    loadMonthIntoTextarea();
-      }
-    }
-  }, function(err) {
-    console.log('Expense listener error:', err);
-    syncSetStatus('error');
-  });
-
-  // ── INCOME: real-time listener ──
-  if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
-  _incomeUnsubscribe = userCol('income_months').onSnapshot(function(snapshot) {
-    // Block if we just pushed income data (avoids restoring our own deletions)
-    if (window._incDeletePending || (window._incLastDeleteTime && (Date.now() - window._incLastDeleteTime) < 8000)) return;
-    var allEntries = [];
-    snapshot.forEach(function(doc) {
-      var d = doc.data();
-      if (d.entries) allEntries = allEntries.concat(d.entries);
-    });
-    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
-    var localStr = JSON.stringify(loadIncomeData());
-    var remote   = JSON.stringify(allEntries);
-    // Only apply if data actually changed (allow empty — respects full deletions from other device)
-    if (remote !== localStr) {
-      localStorage.setItem(getIncKey(), remote);
-      if (_appMode === 'income') {
-        updateIncomeHeaderContext();
-        renderIncomeMonthPicker();
-        var activeInc = document.querySelector('#income-main .panel.active');
-        if (activeInc) {
-          var incId = activeInc.id;
-          if (incId==='panel-inc-ledger')    renderIncomeLedger();
-          if (incId==='panel-inc-monthly')   renderIncomeMonthly();
-          if (incId==='panel-inc-dashboard') renderIncomeDashboard();
-          if (incId==='panel-inc-manage')    renderIncomeManage();
-        }
-      }
-    }
-  }, function(err) {
-    console.log('Income listener error:', err);
-  });
-
-  syncSetStatus('live');
-}
-
-// ── Registration ──
-var _pendingName     = '';
-var _pendingFullName = '';
-var _pendingPhone = '';
-var _generatedCode = '';
-
-function showPinScreen() {
-  var o = document.getElementById('pin-overlay');
-  if (o) o.style.display = 'flex';
-}
-function hidePinScreen() {
-  var o = document.getElementById('pin-overlay');
-  if (o) o.style.display = 'none';
-  var loginStep = document.getElementById('pin-step-login');
-  var regStep   = document.getElementById('pin-step-register');
-  if (loginStep) loginStep.style.display = 'block';
-  if (regStep)   regStep.style.display   = 'none';
-  setTimeout(resetInactivityTimer, 1000);
-  setTimeout(checkBackupReminder, 3000);
-  // Always show mode selection after every login
-  _appMode = 'expenses';
-  applyMode();
-  adjustMainPadding();
-  updateUserDisplay();
-  loadIncomeFromFirebase(function(){});
-  setTimeout(showModeOverlay, 300);
-}
-function showRegisterStep() {
-  document.getElementById('pin-step-register').style.display = 'block';
-  document.getElementById('pin-step-code').style.display    = 'none';
-  document.getElementById('pin-step-login').style.display   = 'none';
-}
-function showLoginStep() {
-  document.getElementById('pin-step-register').style.display = 'none';
-  document.getElementById('pin-step-code').style.display    = 'none';
-  document.getElementById('pin-step-login').style.display   = 'block';
-  var ph = document.getElementById('login-phone'); if(ph) ph.value = '';
-  var cd = document.getElementById('login-code');  if(cd) cd.value = '';
-  var er = document.getElementById('login-error'); if(er) er.textContent = '';
-  setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
-}
-function showCodeStep() {
-  document.getElementById('pin-step-register').style.display = 'none';
-  document.getElementById('pin-step-code').style.display    = 'block';
-  document.getElementById('pin-step-login').style.display   = 'none';
-}
-
-function generateCode() {
-  var name  = (document.getElementById('reg-name')  ||{}).value.trim();
-  var phone = (document.getElementById('reg-phone') ||{}).value.trim();
-  var errEl = document.getElementById('reg-error');
-  if (!name)  { if(errEl) errEl.textContent='Please enter your name'; return; }
-  if (!phone || phone.replace(/[^0-9]/g,'').length < 7) {
-    if(errEl) errEl.textContent='Please enter a valid phone number'; return;
-  }
-  if (!_selectedUsername) { showToast('Please select a username first'); return; }
-  if(errEl) errEl.textContent = 'Checking...';
-  _pendingName  = _selectedUsername; // use chosen username as display name
-  _pendingFullName = name; // store real full name
-  _pendingPhone = hashPhone(phone);
-  _generatedCode = String(Math.floor(100000 + Math.random() * 900000));
-
-  getDB(function(db) {
-    db.collection('user_registry').doc(_pendingPhone).get().then(function(doc) {
-      if (doc.exists) {
-        if(errEl) errEl.textContent = 'Phone already registered. Please sign in instead.';
-        return;
-      }
-      // Create registry entry with a NEW random UUID — not derived from PIN
-      var newUID = generateUUID();
-      db.collection('user_registry').doc(_pendingPhone).set({
-        name:      _pendingName,
-        pin_hash:  hashPin(_generatedCode),
-        user_id:   newUID,          // <-- random UUID, data stored here
-        created:   Date.now()
-      }).then(function() {
-        if(errEl) errEl.textContent = '';
-        document.getElementById('generated-code-display').textContent = _generatedCode;
-        // Store UUID locally now so confirmCode can use it
-        localStorage.setItem('_pending_uid', newUID);
-        showCodeStep();
-      });
-    }).catch(function(e) {
-      if(errEl) errEl.textContent = 'Connection error. Check your internet and try again.';
-    });
-  });
-}
-
-function confirmCode() {
-  var newUID = localStorage.getItem('_pending_uid');
-  if (!newUID) { showToast('Something went wrong. Please try again.'); showRegisterStep(); return; }
-  _userId    = newUID;
-  _userName  = _pendingName;
-  _userPhone = _pendingPhone;
-  localStorage.setItem(UID_KEY,       _userId);
-  localStorage.setItem(NAME_KEY,      _userName);
-  localStorage.setItem(FULL_NAME_KEY, _pendingFullName || _pendingName);
-  localStorage.setItem(PHONE_KEY,     _userPhone);
-  // Also save full name to Firebase registry
-  if (_pendingFullName) {
-    try {
-      var db2 = _db;
-      if (db2) db2.collection('user_registry').doc(_pendingPhone).update({ full_name: _pendingFullName }).catch(function(){});
-    } catch(e){}
-  }
-  localStorage.removeItem('_pending_uid');
-  // Clear any previous user data from this device
-  localStorage.removeItem('expense_ledger');
-  localStorage.removeItem('custom_categories');
-  localStorage.removeItem('custom_cat_rules');
-  localStorage.setItem('keep_login_pref', '0');
-  localStorage.setItem('last_active', String(Date.now()));
-  hidePinScreen();
-  updateUserDisplay();
-  startSync();
-}
-
-// ── Login: validate phone + PIN, get UUID from registry ──
-function submitLogin() {
-  var phoneEl = document.getElementById('login-phone');
-  var codeEl  = document.getElementById('login-code');
-  var errEl   = document.getElementById('login-error');
-  var identifier = phoneEl ? phoneEl.value.trim() : '';
-  var code       = codeEl  ? codeEl.value.trim()  : '';
-  if (!identifier) {
-    if(errEl) errEl.textContent = 'Please enter your phone number or username'; return;
-  }
-  if (code.length < 4) {
-    if(errEl) errEl.textContent = 'Please enter your access code'; return;
-  }
-  if(errEl) errEl.textContent = 'Verifying...';
-
-  var pinHash = hashPin(code);
-
-  function doLogin(doc, errEl) {
-    if (!doc.exists) return false;
-    var data = doc.data();
-    if (data.pin_hash !== pinHash) {
-      if(errEl) errEl.textContent = 'Incorrect access code. Please try again.';
-      return true; // found user but wrong code
-    }
-    var uid = data.user_id;
-    if (!uid) { if(errEl) errEl.textContent = 'Account error. Please contact admin.'; return true; }
-    _userId    = uid;
-    _userName  = data.name;
-    _userPhone = data._phone_key || doc.id;
-    localStorage.removeItem('expense_ledger');
-    localStorage.removeItem('custom_categories');
-    localStorage.removeItem('custom_cat_rules');
-    localStorage.setItem(UID_KEY,   _userId);
-    localStorage.setItem(NAME_KEY,  _userName);
-    localStorage.setItem(PHONE_KEY, _userPhone);
-    // Load full name from registry if available
-    if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
-    if(errEl) errEl.textContent = '';
-    var keepCb = document.getElementById('keep-logged-in');
-    var keepVal = (keepCb && keepCb.checked) ? '1' : '0';
-    localStorage.setItem('keep_login_pref', keepVal);
-    localStorage.setItem('last_active', String(Date.now()));
-    hidePinScreen();
-    updateUserDisplay();
-    fetchTrashFromFirebase();
-    startSync();
-    return true;
-  }
-
-  getDB(function(db) {
-    // Phone = only digits, +, spaces, dashes, brackets
-    // Username = contains letters (mix of text and numbers)
-    var looksLikePhone = /^[+0-9\-\s()]+$/.test(identifier) && identifier.replace(/[^0-9]/g,'').length >= 7;
-
-    if (looksLikePhone) {
-      // Try phone hash first
-      var phoneHash = hashPhone(identifier);
-      db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
-        if (!doLogin(doc, errEl)) {
-          // Not found by phone — try as username
-          db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
-            if (snap.empty) {
-              if(errEl) errEl.textContent = 'Account not found. Please register first.';
-            } else {
-              doLogin(snap.docs[0], errEl);
-            }
-          });
-        }
-      }).catch(function(e) {
-        if(errEl) errEl.textContent = 'Connection error. Please check your internet.';
-      });
-    } else {
-      // Try as username directly
-      db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
-        if (!snap.empty) {
-          doLogin(snap.docs[0], errEl);
-        } else {
-          // Not found by username — try as phone just in case
-          var phoneHash = hashPhone(identifier);
-          db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
-            if (!doLogin(doc, errEl)) {
-              if(errEl) errEl.textContent = 'Account not found. Please register first.';
-            }
-          });
-        }
-      }).catch(function(e) {
-        if(errEl) errEl.textContent = 'Connection error. Please check your internet.';
-      });
-    }
-  });
-}
-
-function getInitials(name) {
-  if (!name) return '??';
-  var parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.substring(0,2).toUpperCase();
-}
-
-function updateUserDisplay() {
-  var el = document.getElementById('sync-user-display');
-  if (el && _userName) { el.textContent = getInitials(_userName); el.style.display = 'inline'; }
-  // Update name in user bar — show initials only
-  var nameEl = document.getElementById('hdr-user-bar-name');
-  if (nameEl) nameEl.textContent = _userName ? getInitials(_userName) : '??';
-  // Update dot + status
-  var dot = document.getElementById('hdr-user-bar-dot');
-  var status = document.getElementById('hdr-user-bar-status');
-  if (dot) dot.style.background = _userId ? '#4a7c59' : '#555';
-  if (status) { status.textContent = _userId ? 'Live sync active' : 'Sign in to sync'; status.style.color = _userId ? '#4a7c59' : '#555'; }
-  // Update auth buttons
-  var btns = document.getElementById('hdr-user-bar-btns');
-  if (btns) {
-    if (_userId) {
-      var isInc = _appMode === 'income';
-      var mlBg  = isInc ? 'rgba(74,124,89,0.25)' : 'rgba(200,150,46,0.15)';
-      var mlClr = isInc ? '#8dd4a8' : 'var(--gold2)';
-      var mlTxt = isInc ? '&#128176;' : '&#128184;';
-      btns.innerHTML =
-        '<button id="mode-switch-btn" onclick="showModeSwitchPrompt()" title="Switch module" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.6);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128260;</button>' +
-        '<span id="hdr-mode-label" style="font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;padding:5px 12px;border-radius:4px;background:'+mlBg+';color:'+mlClr+';white-space:nowrap;flex:1;text-align:center;">'+mlTxt+'</span>' +
-        '<button onclick="logOut()" title="Log out" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128275;</button>';
-    } else {
-      btns.innerHTML =
-        '<button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;" title="Sign in">&#128275;</button>';
-    }
-  }
-  // User bar always flex
-  var userBar = document.getElementById('hdr-user-bar');
-  if (userBar) userBar.style.display = 'flex';
-}
-
-function logOut() {
-  if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
-  // Clear local data for security before clearing userId
-  localStorage.removeItem('expense_ledger');
-  localStorage.removeItem('custom_categories');
-  localStorage.removeItem('custom_cat_rules');
-  localStorage.removeItem(TRASH_KEY + '_' + _userId);
-  localStorage.removeItem(getIncKey());
-  localStorage.removeItem(getIncTrashKey());
-  // Reset pill 2 dropdowns so they re-init on next login
-  var yrSel = document.getElementById('hdr-filter-year');
-  var moSel = document.getElementById('hdr-filter-month');
-  if (yrSel) yrSel.innerHTML = '';
-  if (moSel) moSel.innerHTML = '';
-  _db = null; _userId = null;
-  localStorage.removeItem(UID_KEY);
-  localStorage.removeItem('last_active');
-  localStorage.removeItem('keep_login_pref');
-  showPinScreen();
-  showLoginStep();
-  syncSetStatus('off');
-  updateHeaderContext();
-  updateUserDisplay();
-  showToast('Logged out');
-}
-
-function switchUser() {
-  if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
-  // Clear this user's local data before switching
-  localStorage.removeItem('expense_ledger');
-  localStorage.removeItem('custom_categories');
-  localStorage.removeItem('custom_cat_rules');
-  if (_userId) localStorage.removeItem(TRASH_KEY + '_' + _userId);
-  _db = null; _userId = null; _userName = null; _userPhone = null;
-  localStorage.removeItem(UID_KEY);
-  localStorage.removeItem(NAME_KEY);
-  localStorage.removeItem(PHONE_KEY);
-  showPinScreen();
-  showRegisterStep();
-  syncSetStatus('off');
-  updateHeaderContext();
-}
-
-function renderSyncSetupUI() {
-  var el = document.getElementById('sync-setup-content');
-  if (!el) return;
-  el.innerHTML =
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #4a7c59;border-radius:4px;">' +
-      '<span style="font-size:1.1rem;">&#9989;</span>' +
-      '<div><div style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:#166534;">Signed in as ' + (_userName||'') + '</div>' +
-      '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:#4a7c59;margin-top:2px;">Live sync active · data is private</div></div>' +
-    '</div>' +
-    '<div style="font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);line-height:1.7;margin-bottom:14px;">Phone number and access code required. Each person data is completely private.</div>' +
-    '<div style="background:#fff8e6;border:1px solid var(--gold);border-radius:4px;padding:12px 14px;margin-bottom:12px;">' +
-      '<div style="font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Fix wrong auto-categories</div>' +
-      '<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);margin-bottom:10px;">If categories keep reverting, click to clean up learned rules.</div>' +
-      '<button class="btn btn-ghost" style="font-size:0.72rem;padding:8px 14px;" onclick="cleanupCustomRules()">&#9881; Clean up rules</button>' +
-    '</div>' +
-    '<div style="background:var(--paper2);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:12px;">' +
-      '<div style="font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Change access code</div>' +
-      '<div style="display:flex;gap:8px;">' +
-        '<input id="change-pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="New code (4+ digits)" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:0.85rem;background:white;color:var(--ink);outline:none;">' +
-        '<button class="btn btn-ghost" style="padding:8px 14px;font-size:0.72rem;" onclick="changePin()">Save</button>' +
-      '</div>' +
-    '</div>' +
-    '';
-}
-
-function changePin() {
-  // Try manage card input first, fall back to sync setup input
-  var inp = document.getElementById('manage-pin-input') || document.getElementById('change-pin-input');
-  var newCode = inp ? inp.value.trim() : '';
-  if (newCode.length < 4) { showToast('Code must be at least 4 digits'); return; }
-  if (!/^[0-9]+$/.test(newCode)) { showToast('Code must be numbers only'); return; }
-  if (!_db || !_userPhone) { showToast('Not connected'); return; }
-  _db.collection('user_registry').doc(_userPhone).update({ pin_hash: hashPin(newCode) })
-    .then(function() { showToast('Access code changed!'); if(inp) inp.value=''; })
-    .catch(function(e) { showToast('Error: ' + e.message); });
-}
-
 
 </script>
 <style>
@@ -1623,11 +846,10 @@ nav.tabs.header-hidden button {
         </div>
       </div>
     </div>
-    <!-- Centered date lookup icon — 🔍📆 use magnifying glass with calendar -->
-    <div style="flex:1;display:flex;justify-content:center;">
-      <button onclick="openDateLookup()" title="Date lookup" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;display:flex;align-items:center;gap:4px;">
-        <span>&#128467;</span>
-      </button>
+    <!-- Centered: date lookup + help -->
+    <div style="flex:1;display:flex;justify-content:center;gap:6px;">
+      <button onclick="openDateLookup()" title="Date lookup" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#128467;</button>
+      <button onclick="openHelp()" title="Help &amp; Support" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#10067;</button>
     </div>
     <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" title="Show/Hide header" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128065;</button>
   </div>
@@ -2617,6 +1839,86 @@ nav.tabs.header-hidden button {
   <div style="display:flex;gap:10px;width:100%;">
     <button onclick="stayLoggedIn()" style="flex:1;padding:10px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;font-weight:700;color:var(--ink);cursor:pointer;">&#10003; Stay logged in</button>
     <button onclick="logOut()" style="padding:10px 14px;background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:rgba(255,255,255,0.5);cursor:pointer;">Log out</button>
+  </div>
+</div>
+
+
+<!-- PRIVACY POLICY OVERLAY -->
+<div id="privacy-overlay" style="display:none;position:fixed;inset:0;z-index:99997;background:#1a1410;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
+  <div style="max-width:500px;width:100%;background:var(--paper);border:2px solid var(--gold);border-radius:8px;padding:28px;">
+    <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--ink);margin-bottom:4px;">Privacy Policy &amp; Terms</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:16px;">MY EXPENSE LEDGER &middot; MARCH 2026</div>
+    <div style="max-height:300px;overflow-y:auto;font-family:'DM Sans',sans-serif;font-size:0.82rem;color:var(--ink);line-height:1.8;margin-bottom:16px;padding:14px;border:1px solid var(--border);border-radius:4px;">
+      <p style="font-weight:700;margin-bottom:6px;">1. Your Data &amp; Privacy</p>
+      <p style="margin-bottom:12px;">All financial data you enter is stored in your personal Firebase account. It is completely private. No other user can access your data. Your phone number is stored as a one-way hash that cannot be reversed.</p>
+      <p style="font-weight:700;margin-bottom:6px;">2. Data Storage</p>
+      <p style="margin-bottom:12px;">Your data is stored in Google Firebase Firestore, protected by security rules ensuring only you can read or write your data. We do not sell, share, or transfer your data to any third party.</p>
+      <p style="font-weight:700;margin-bottom:6px;">3. Authentication</p>
+      <p style="margin-bottom:12px;">You are identified by your phone number hash and access code. Your access code is hashed before storage and is never stored in plain text. We cannot recover your access code if lost.</p>
+      <p style="font-weight:700;margin-bottom:6px;">4. Session Security</p>
+      <p style="margin-bottom:12px;">The app automatically logs you out after a period of inactivity. Closing the app or browser tab ends your session.</p>
+      <p style="font-weight:700;margin-bottom:6px;">5. No Advertising</p>
+      <p style="margin-bottom:12px;">This app contains no advertisements. We do not use your data for advertising or marketing purposes.</p>
+      <p style="font-weight:700;margin-bottom:6px;">6. Contact</p>
+      <p>If you have concerns about your data, use the Help button inside the app to contact support.</p>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;padding:12px;background:#fffbf0;border:1px solid var(--gold);border-radius:4px;">
+      <input type="checkbox" id="privacy-cb" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;accent-color:var(--gold);cursor:pointer;">
+      <label for="privacy-cb" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);cursor:pointer;line-height:1.6;">I have read and agree to the Privacy Policy and Terms of Use for My Expense Ledger.</label>
+    </div>
+    <button onclick="acceptPrivacy()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;">&#10003; I Agree &mdash; Continue</button>
+  </div>
+</div>
+
+<!-- HELP OVERLAY -->
+<div id="help-overlay" style="display:none;position:fixed;inset:0;z-index:99991;background:rgba(26,20,16,0.85);align-items:flex-start;justify-content:center;padding:16px;padding-top:70px;overflow-y:auto;">
+  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:600px;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--ink);border-radius:6px 6px 0 0;">
+      <span style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--gold2);">&#10067; Help &amp; Support</span>
+      <button onclick="closeHelp()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;padding:0 4px;">&#10005;</button>
+    </div>
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);">
+      <input type="text" id="help-search" placeholder="Search help... e.g. total expenses January" oninput="runHelpSearch(this.value)" autocomplete="off"
+        style="width:100%;padding:10px 14px;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.88rem;background:white;color:var(--ink);outline:none;box-sizing:border-box;">
+    </div>
+    <div id="help-icons" style="padding:14px 20px;border-bottom:1px solid var(--border);">
+      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;">Tap an icon to learn what it does</div>
+      <div id="help-icon-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+    <div id="help-body" style="padding:16px 20px;min-height:80px;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Select an icon above or type to search</div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid var(--border);background:#fffbf0;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:8px;">Still need help? Send us a message.</div>
+      <button onclick="openContact()" style="width:100%;padding:11px;background:var(--ink);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;">&#9993; Contact Support</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT OVERLAY -->
+<div id="contact-overlay" style="display:none;position:fixed;inset:0;z-index:99992;background:rgba(26,20,16,0.9);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--ink);border-radius:6px 6px 0 0;">
+      <span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);">&#9993; Contact Support</span>
+      <button onclick="closeContact()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;padding:0 4px;">&#10005;</button>
+    </div>
+    <div style="padding:20px;">
+      <div id="contact-name-info" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:14px;padding:8px 12px;border-radius:4px;"></div>
+      <div style="margin-bottom:12px;">
+        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Your Email *</label>
+        <input type="email" id="contact-email" placeholder="your@email.com" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.88rem;background:white;outline:none;box-sizing:border-box;">
+        <div id="contact-email-err" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--rust);margin-top:4px;min-height:14px;"></div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Subject *</label>
+        <input type="text" id="contact-subject" placeholder="Brief description of your issue" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.88rem;background:white;outline:none;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Message *</label>
+        <textarea id="contact-msg" rows="5" placeholder="Describe your issue..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.88rem;background:white;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+      <button id="contact-send-btn" onclick="sendSupport()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;">&#9993; Send Message</button>
+    </div>
   </div>
 </div>
 
@@ -5857,7 +5159,6 @@ function resetInactivityTimer() {
   clearTimeout(_inactivityTimer);
   clearInterval(_countdownTimer);
   hideInactivityWarning();
-  // Update last_active on every activity so refresh check stays fresh
   localStorage.setItem('last_active', String(Date.now()));
   var keepLogin = localStorage.getItem('keep_login_pref');
   var minutes   = keepLogin === '1' ? 30 : 5;
@@ -5907,9 +5208,17 @@ function hideInactivityWarning() {
 // Track user activity
 ['click','keydown','touchstart','scroll','mousemove'].forEach(function(evt) {
   document.addEventListener(evt, function() {
-    if (_userId) resetInactivityTimer();
+    if (_userId) {
+      localStorage.setItem('last_active', String(Date.now()));
+      resetInactivityTimer();
+    }
   }, { passive: true });
 });
+
+// Keep last_active fresh every 15s so refresh always works
+setInterval(function() {
+  if (_userId) localStorage.setItem('last_active', String(Date.now()));
+}, 15000);
 
 
 // ════════════════════════════════
@@ -9066,6 +8375,1051 @@ document.addEventListener('DOMContentLoaded', function(){
   setTimeout(adjustMainPadding, 1200);
 });
 
+
+// ── Get full name for reports ──
+function getReportName() {
+  return localStorage.getItem(FULL_NAME_KEY) || _userName || 'Account Holder';
+}
+
+// ── Biometric / Fingerprint Login ──
+var BIOMETRIC_KEY = 'finance_biometric_cred';
+
+function renderIncomeBioStatus() {
+  var el = document.getElementById('inc-bio-status');
+  if (!el) return;
+  var hasCred = !!localStorage.getItem(BIOMETRIC_KEY);
+  if (hasCred) {
+    el.innerHTML = '<span style="color:var(--sage);">&#10003; Fingerprint registered on this device</span>';
+  } else {
+    el.innerHTML = '<span style="color:var(--muted);">No fingerprint registered yet</span>';
+  }
+}
+
+function checkBiometricAvailable() {
+  if (!window.PublicKeyCredential) return;
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+    .then(function(available) {
+      var wrap = document.getElementById('biometric-btn-wrap');
+      // Only show if available AND user has saved biometric cred
+      var savedCred = localStorage.getItem(BIOMETRIC_KEY);
+      if (available && savedCred && wrap) {
+        wrap.style.display = 'block';
+      }
+    }).catch(function(){});
+}
+
+function loginWithBiometric() {
+  var savedCred = localStorage.getItem(BIOMETRIC_KEY);
+  if (!savedCred) { showToast('No fingerprint registered. Sign in with code first.'); return; }
+  var errEl = document.getElementById('login-error');
+  if (errEl) errEl.textContent = 'Touch fingerprint sensor...';
+
+  var credData = JSON.parse(savedCred);
+  var challenge = new Uint8Array(16); // smaller = faster
+  window.crypto.getRandomValues(challenge);
+
+  // Minimal options = fastest response on Android
+  navigator.credentials.get({
+    publicKey: {
+      challenge: challenge,
+      allowCredentials: [{
+        id: base64ToBuffer(credData.id),
+        type: 'public-key',
+        transports: ['internal'] // only internal sensor, no scanning for external
+      }],
+      userVerification: 'discouraged', // fastest — no PIN fallback prompt
+      timeout: 20000
+    }
+  }).then(function(assertion) {
+    if (!assertion) { showToast('Try again'); return; }
+    if (errEl) errEl.textContent = '';
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]); // quick double pulse
+
+    var uid   = localStorage.getItem(UID_KEY);
+    var name  = localStorage.getItem(NAME_KEY);
+    var phone = localStorage.getItem(PHONE_KEY);
+
+    if (!uid || !name || !phone) {
+      showToast('Session expired — please sign in with your code');
+      return;
+    }
+
+    // Set credentials
+    _userId = uid; _userName = name; _userPhone = phone;
+
+    // Use normal login path but skip mode selection overlay
+    _userId = uid; _userName = name; _userPhone = phone;
+    // Hide pin overlay
+    var pinO = document.getElementById('pin-overlay');
+    if (pinO) pinO.style.display = 'none';
+    // Restore last used mode
+    var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
+    _appMode = savedMode;
+    applyMode();
+    updateUserDisplay();
+    adjustMainPadding();
+    setTimeout(resetInactivityTimer, 1000);
+    setTimeout(checkBackupReminder, 3000);
+    loadIncomeFromFirebase(function(){});
+    getDB(function() {
+      syncSetStatus('live');
+      syncStartListener();
+    });
+    showToast('✓ Welcome back, ' + name + '!');
+
+  }).catch(function(e) {
+    if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+    if (errEl) errEl.textContent = '';
+    if (e.name === 'NotAllowedError') {
+      showToast('Fingerprint not recognised — try again');
+    } else if (e.name === 'InvalidStateError') {
+      showToast('Fingerprint key not found — re-register in Manage');
+    } else {
+      showToast('Biometric error: ' + (e.message || 'try your access code'));
+    }
+  });
+}
+
+function registerBiometric() {
+  if (!window.PublicKeyCredential) { showToast('Biometric not supported on this device'); return; }
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+    .then(function(available) {
+      if (!available) { showToast('No fingerprint/face sensor found'); return; }
+      var challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+      var userId = new TextEncoder().encode(_userId || 'user');
+      navigator.credentials.create({
+        publicKey: {
+          challenge: challenge,
+          rp: { name: 'My Finance Ledger', id: location.hostname },
+          user: { id: userId, name: _userName || 'user', displayName: _userName || 'User' },
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+          timeout: 60000
+        }
+      }).then(function(cred) {
+        localStorage.setItem(BIOMETRIC_KEY, JSON.stringify({
+          id: bufferToBase64(cred.rawId)
+        }));
+        showToast('Fingerprint registered! You can now use it to log in.');
+      }).catch(function(e) {
+        showToast('Could not register fingerprint: ' + e.message);
+      });
+    });
+}
+
+function bufferToBase64(buffer) {
+  var bytes = new Uint8Array(buffer);
+  var str = '';
+  bytes.forEach(function(b){ str += String.fromCharCode(b); });
+  return btoa(str);
+}
+function base64ToBuffer(base64) {
+  var str = atob(base64);
+  var buf = new Uint8Array(str.length);
+  for (var i = 0; i < str.length; i++) buf[i] = str.charCodeAt(i);
+  return buf.buffer;
+}
+
+function syncInit() {
+  var phone      = localStorage.getItem(PHONE_KEY);
+  var keepLogin  = localStorage.getItem('keep_login_pref');
+  var lastActive = parseInt(localStorage.getItem('last_active') || '0');
+  var now        = Date.now();
+  var timeout    = keepLogin === '1' ? 30 * 60 * 1000 : 5 * 60 * 1000;
+  var sinceActive = now - lastActive;
+
+  // REFRESH DETECTION:
+  // Pull-to-refresh on mobile can take 3-10 seconds
+  // We treat anything within 60 seconds as a refresh — resume no matter what
+  var isRefresh = lastActive && sinceActive < 180000; // 3 min window covers slow mobile restores
+
+  // RESUME if: it's a refresh, OR within the inactivity window
+  var shouldResume = isRefresh || (lastActive && sinceActive < timeout);
+
+  if (shouldResume) {
+    var uid  = localStorage.getItem(UID_KEY);
+    var name = localStorage.getItem(NAME_KEY);
+    if (uid && name && phone) {
+      _userId = uid; _userName = name; _userPhone = phone;
+      localStorage.setItem('last_active', String(Date.now()));
+      updateUserDisplay();
+      var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
+      _appMode = savedMode;
+      applyMode();
+      adjustMainPadding();
+      loadIncomeFromFirebase(function(){});
+      // Skip startSync() on refresh — it re-validates Firebase and can call showPinScreen()
+      // Instead go straight to data + listener
+      getDB(function() {
+        syncSetStatus('live');
+        syncStartListener();
+        renderSyncSetupUI();
+        updateHeaderContext();
+        renderMonthPicker();
+        populateFilters();
+      });
+      setTimeout(resetInactivityTimer, 1000);
+      return;
+    }
+  }
+
+  // Require login
+  showPinScreen();
+  if (phone) { showLoginStep(); } else { showRegisterStep(); }
+}
+
+function startSync() {
+  syncSetStatus('connecting');
+  getDB(function() {
+    if (_userPhone && _userId) {
+      // Load data and start listeners — skip re-validation to prevent showPinScreen() race
+      syncLoadFromFirebase(function() {
+        renderSyncSetupUI();
+        syncStartListener();
+      });
+    } else {
+      syncLoadFromFirebase(function() {
+        renderSyncSetupUI();
+      });
+    }
+  });
+}
+
+function syncLoadFromFirebase(callback) {
+  // Step 1: Load data from Firebase
+  syncSetStatus('syncing');
+  userCol('expense_months').get().then(function(snapshot) {
+    var allEntries = [];
+    var fbMonths = [];
+    snapshot.forEach(function(doc) {
+      fbMonths.push(doc.id);
+      var d = doc.data();
+      if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
+    });
+    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    window._knownFirebaseMonths = fbMonths;
+
+    var local      = localStorage.getItem('expense_ledger') || '[]';
+    var localArr   = []; try { localArr = JSON.parse(local); } catch(e){}
+    var localCount = localArr.length;
+    var remoteCount = allEntries.length;
+
+    if (remoteCount > 0 && localCount === 0) {
+      // Fresh login — load from Firebase
+      localStorage.setItem('expense_ledger', JSON.stringify(allEntries));
+      populateFilters();
+      updateHeaderContext();
+      renderMonthPicker();
+      showToast('Data loaded · ' + allEntries.length + ' entries');
+    } else if (localCount > 0) {
+      // Has local data — push it to Firebase (local is source of truth)
+      syncPushNow();
+    }
+    // Load settings (categories)
+    userCol('settings').doc('default').get().then(function(doc) {
+      if (doc.exists) {
+        var d = doc.data();
+        if (d.custom_categories) localStorage.setItem('custom_categories', d.custom_categories);
+        if (d.custom_cat_rules)  localStorage.setItem('custom_cat_rules',  d.custom_cat_rules);
+      }
+    });
+    syncSetStatus('live');
+    if (callback) callback();
+  }).catch(function(err) {
+    console.error('Load error:', err);
+    syncSetStatus('error');
+    if (callback) callback();
+  });
+}
+
+function syncPushNow() {
+  // Immediate push — also deletes removed month documents from Firebase
+  clearTimeout(_syncPushTimer);
+  if (!_db || !_userId) return;
+  window._deletePending = true;
+  _isMerging = true;
+  syncSetStatus('syncing');
+  var data  = localStorage.getItem('expense_ledger')    || '[]';
+  var cats  = localStorage.getItem('custom_categories') || '[]';
+  var rules = localStorage.getItem('custom_cat_rules')  || '[]';
+  var entries = []; try { entries = JSON.parse(data); } catch(e){}
+  var byMonth = {};
+  entries.forEach(function(e) {
+    var k = e.date ? e.date.substring(0,7) : 'unknown';
+    if (!byMonth[k]) byMonth[k] = [];
+    byMonth[k].push(e);
+  });
+  var localMonths = Object.keys(byMonth);
+  var batch = _db.batch();
+  // Set all existing months
+  localMonths.forEach(function(ym) {
+    batch.set(userCol('expense_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
+  });
+  // DELETE Firebase docs for months no longer in local data
+  // We track which months were previously in Firebase via _knownFirebaseMonths
+  var knownMonths = window._knownFirebaseMonths || [];
+  knownMonths.forEach(function(ym) {
+    if (localMonths.indexOf(ym) === -1) {
+      batch.delete(userCol('expense_months').doc(ym));
+    }
+  });
+  // Update known months to current local months
+  window._knownFirebaseMonths = localMonths;
+  batch.set(userCol('settings').doc('default'), {
+    custom_categories: cats, custom_cat_rules: rules,
+    display_name: _userName, updated: Date.now()
+  });
+  var trashData = localStorage.getItem(getTrashKey()) || '[]';
+  var trashArr = []; try { trashArr = JSON.parse(trashData); } catch(e){}
+  if (trashArr.length > 0 || window._trashFetched) {
+    batch.set(userCol('settings').doc('trash'), { items: trashData, updated: Date.now() });
+  }
+  batch.commit()
+    .then(function(){
+      syncSetStatus('live');
+      _isMerging = false;
+      // Keep delete lock for 5 more seconds after confirmed write
+      setTimeout(function(){ window._deletePending = false; }, 5000);
+    })
+    .catch(function(e){
+      console.error('Push error:', e);
+      syncSetStatus('error');
+      _isMerging = false;
+      window._deletePending = false;
+    });
+}
+
+function syncPush() {
+  if (!_db || !_userId || _isMerging) return;
+  clearTimeout(_syncPushTimer);
+  _syncPushTimer = setTimeout(function() {
+    syncSetStatus('syncing');
+    var data  = localStorage.getItem('expense_ledger')    || '[]';
+    var cats  = localStorage.getItem('custom_categories') || '[]';
+    var rules = localStorage.getItem('custom_cat_rules')  || '[]';
+    var entries = []; try { entries = JSON.parse(data); } catch(e){}
+    var byMonth = {};
+    entries.forEach(function(e) {
+      var k = e.date ? e.date.substring(0,7) : 'unknown';
+      if (!byMonth[k]) byMonth[k] = [];
+      byMonth[k].push(e);
+    });
+    var localMonths2 = Object.keys(byMonth);
+    var batch = _db.batch();
+    localMonths2.forEach(function(ym) {
+      batch.set(userCol('expense_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
+    });
+    // Delete Firebase docs for months removed from local
+    var knownM = window._knownFirebaseMonths || [];
+    knownM.forEach(function(ym) {
+      if (localMonths2.indexOf(ym) === -1) {
+        batch.delete(userCol('expense_months').doc(ym));
+      }
+    });
+    window._knownFirebaseMonths = localMonths2;
+    batch.set(userCol('settings').doc('default'), {
+      custom_categories: cats, custom_cat_rules: rules,
+      display_name: _userName, updated: Date.now()
+    });
+    // Push trash — only push if non-empty OR if we've already fetched from Firebase
+    var trashData = localStorage.getItem(getTrashKey()) || '[]';
+    var trashArr = []; try { trashArr = JSON.parse(trashData); } catch(e){}
+    if (trashArr.length > 0 || window._trashFetched) {
+      batch.set(userCol('settings').doc('trash'), {
+        items: trashData, updated: Date.now()
+      });
+    }
+    batch.commit()
+      .then(function(){ syncSetStatus('live'); })
+      .catch(function(e){ console.error('Push error:', e); syncSetStatus('error'); });
+  }, 1500);
+}
+
+// ── Real-time listeners (onSnapshot) ──
+var _incomeUnsubscribe = null;
+
+function syncStartListener() {
+  if (!_db || !_userId) return;
+
+  // ── EXPENSES: real-time listener ──
+  if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
+  if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
+  _syncUnsubscribe = userCol('expense_months').onSnapshot(function(snapshot) {
+    // Block if we just wrote locally (avoids race condition restoring deleted data)
+    if (window._deletePending || window._isMerging || window._lastDeleteTime && (Date.now() - window._lastDeleteTime) < 8000) return;
+    var allEntries = [];
+    var fbMonths = [];
+    snapshot.forEach(function(doc) {
+      fbMonths.push(doc.id);
+      var d = doc.data();
+      if (d.entries && Array.isArray(d.entries)) allEntries = allEntries.concat(d.entries);
+    });
+    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    window._knownFirebaseMonths = fbMonths;
+    var local = localStorage.getItem('expense_ledger') || '[]';
+    var remote = JSON.stringify(allEntries);
+    // Only update if data actually changed
+    if (remote !== local) {
+      localStorage.setItem('expense_ledger', remote);
+      syncSetStatus('live');
+      // Refresh UI silently
+      updateHeaderContext();
+      renderMonthPicker();
+      var active = document.querySelector('main > .panel.active');
+      if (active) {
+        var id = active.id;
+        if (id==='panel-ledger')    renderLedger();
+        if (id==='panel-daily')     renderDailyView();
+        if (id==='panel-dashboard') renderDashboard();
+        if (id==='panel-manage')    renderManagePanel();
+        if (id==='panel-import')    loadMonthIntoTextarea();
+      }
+    }
+  }, function(err) {
+    console.log('Expense listener error:', err);
+    syncSetStatus('error');
+  });
+
+  // ── INCOME: real-time listener ──
+  if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
+  _incomeUnsubscribe = userCol('income_months').onSnapshot(function(snapshot) {
+    // Block if we just pushed income data (avoids restoring our own deletions)
+    if (window._incDeletePending || (window._incLastDeleteTime && (Date.now() - window._incLastDeleteTime) < 8000)) return;
+    var allEntries = [];
+    snapshot.forEach(function(doc) {
+      var d = doc.data();
+      if (d.entries) allEntries = allEntries.concat(d.entries);
+    });
+    allEntries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var localStr = JSON.stringify(loadIncomeData());
+    var remote   = JSON.stringify(allEntries);
+    // Only apply if data actually changed (allow empty — respects full deletions from other device)
+    if (remote !== localStr) {
+      localStorage.setItem(getIncKey(), remote);
+      if (_appMode === 'income') {
+        updateIncomeHeaderContext();
+        renderIncomeMonthPicker();
+        var activeInc = document.querySelector('#income-main .panel.active');
+        if (activeInc) {
+          var incId = activeInc.id;
+          if (incId==='panel-inc-ledger')    renderIncomeLedger();
+          if (incId==='panel-inc-monthly')   renderIncomeMonthly();
+          if (incId==='panel-inc-dashboard') renderIncomeDashboard();
+          if (incId==='panel-inc-manage')    renderIncomeManage();
+        }
+      }
+    }
+  }, function(err) {
+    console.log('Income listener error:', err);
+  });
+
+  syncSetStatus('live');
+}
+
+// ── Registration ──
+var _pendingName     = '';
+var _pendingFullName = '';
+var _pendingPhone = '';
+var _generatedCode = '';
+
+function showPinScreen() {
+  var o = document.getElementById('pin-overlay');
+  if (o) o.style.display = 'flex';
+}
+function hidePinScreen() {
+  var o = document.getElementById('pin-overlay');
+  if (o) o.style.display = 'none';
+  var loginStep = document.getElementById('pin-step-login');
+  var regStep   = document.getElementById('pin-step-register');
+  if (loginStep) loginStep.style.display = 'block';
+  if (regStep)   regStep.style.display   = 'none';
+  setTimeout(resetInactivityTimer, 1000);
+  setTimeout(checkBackupReminder, 3000);
+  setTimeout(checkPrivacy, 800);
+  // Always show mode selection after every login
+  _appMode = 'expenses';
+  applyMode();
+  adjustMainPadding();
+  updateUserDisplay();
+  loadIncomeFromFirebase(function(){});
+  setTimeout(showModeOverlay, 300);
+}
+function showRegisterStep() {
+  document.getElementById('pin-step-register').style.display = 'block';
+  document.getElementById('pin-step-code').style.display    = 'none';
+  document.getElementById('pin-step-login').style.display   = 'none';
+}
+function showLoginStep() {
+  document.getElementById('pin-step-register').style.display = 'none';
+  document.getElementById('pin-step-code').style.display    = 'none';
+  document.getElementById('pin-step-login').style.display   = 'block';
+  var ph = document.getElementById('login-phone'); if(ph) ph.value = '';
+  var cd = document.getElementById('login-code');  if(cd) cd.value = '';
+  var er = document.getElementById('login-error'); if(er) er.textContent = '';
+  setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
+}
+function showCodeStep() {
+  document.getElementById('pin-step-register').style.display = 'none';
+  document.getElementById('pin-step-code').style.display    = 'block';
+  document.getElementById('pin-step-login').style.display   = 'none';
+}
+
+function generateCode() {
+  var name  = (document.getElementById('reg-name')  ||{}).value.trim();
+  var phone = (document.getElementById('reg-phone') ||{}).value.trim();
+  var errEl = document.getElementById('reg-error');
+  if (!name)  { if(errEl) errEl.textContent='Please enter your name'; return; }
+  if (!phone || phone.replace(/[^0-9]/g,'').length < 7) {
+    if(errEl) errEl.textContent='Please enter a valid phone number'; return;
+  }
+  if (!_selectedUsername) { showToast('Please select a username first'); return; }
+  if(errEl) errEl.textContent = 'Checking...';
+  _pendingName  = _selectedUsername; // use chosen username as display name
+  _pendingFullName = name; // store real full name
+  _pendingPhone = hashPhone(phone);
+  _generatedCode = String(Math.floor(100000 + Math.random() * 900000));
+
+  getDB(function(db) {
+    db.collection('user_registry').doc(_pendingPhone).get().then(function(doc) {
+      if (doc.exists) {
+        if(errEl) errEl.textContent = 'Phone already registered. Please sign in instead.';
+        return;
+      }
+      // Create registry entry with a NEW random UUID — not derived from PIN
+      var newUID = generateUUID();
+      db.collection('user_registry').doc(_pendingPhone).set({
+        name:      _pendingName,
+        pin_hash:  hashPin(_generatedCode),
+        user_id:   newUID,          // <-- random UUID, data stored here
+        created:   Date.now()
+      }).then(function() {
+        if(errEl) errEl.textContent = '';
+        document.getElementById('generated-code-display').textContent = _generatedCode;
+        // Store UUID locally now so confirmCode can use it
+        localStorage.setItem('_pending_uid', newUID);
+        showCodeStep();
+      });
+    }).catch(function(e) {
+      if(errEl) errEl.textContent = 'Connection error. Check your internet and try again.';
+    });
+  });
+}
+
+function confirmCode() {
+  var newUID = localStorage.getItem('_pending_uid');
+  if (!newUID) { showToast('Something went wrong. Please try again.'); showRegisterStep(); return; }
+  _userId    = newUID;
+  _userName  = _pendingName;
+  _userPhone = _pendingPhone;
+  localStorage.setItem(UID_KEY,       _userId);
+  localStorage.setItem(NAME_KEY,      _userName);
+  localStorage.setItem(FULL_NAME_KEY, _pendingFullName || _pendingName);
+  localStorage.setItem(PHONE_KEY,     _userPhone);
+  // Also save full name to Firebase registry
+  if (_pendingFullName) {
+    try {
+      var db2 = _db;
+      if (db2) db2.collection('user_registry').doc(_pendingPhone).update({ full_name: _pendingFullName }).catch(function(){});
+    } catch(e){}
+  }
+  localStorage.removeItem('_pending_uid');
+  // Clear any previous user data from this device
+  localStorage.removeItem('expense_ledger');
+  localStorage.removeItem('custom_categories');
+  localStorage.removeItem('custom_cat_rules');
+  localStorage.setItem('keep_login_pref', '0');
+  localStorage.setItem('last_active', String(Date.now()));
+  hidePinScreen();
+  updateUserDisplay();
+  startSync();
+}
+
+// ── Login: validate phone + PIN, get UUID from registry ──
+function submitLogin() {
+  var phoneEl = document.getElementById('login-phone');
+  var codeEl  = document.getElementById('login-code');
+  var errEl   = document.getElementById('login-error');
+  var identifier = phoneEl ? phoneEl.value.trim() : '';
+  var code       = codeEl  ? codeEl.value.trim()  : '';
+  if (!identifier) {
+    if(errEl) errEl.textContent = 'Please enter your phone number or username'; return;
+  }
+  if (code.length < 4) {
+    if(errEl) errEl.textContent = 'Please enter your access code'; return;
+  }
+  if(errEl) errEl.textContent = 'Verifying...';
+
+  var pinHash = hashPin(code);
+
+  function doLogin(doc, errEl) {
+    if (!doc.exists) return false;
+    var data = doc.data();
+    if (data.pin_hash !== pinHash) {
+      if(errEl) errEl.textContent = 'Incorrect access code. Please try again.';
+      return true; // found user but wrong code
+    }
+    var uid = data.user_id;
+    if (!uid) { if(errEl) errEl.textContent = 'Account error. Please contact admin.'; return true; }
+    _userId    = uid;
+    _userName  = data.name;
+    _userPhone = data._phone_key || doc.id;
+    localStorage.removeItem('expense_ledger');
+    localStorage.removeItem('custom_categories');
+    localStorage.removeItem('custom_cat_rules');
+    localStorage.setItem(UID_KEY,   _userId);
+    localStorage.setItem(NAME_KEY,  _userName);
+    localStorage.setItem(PHONE_KEY, _userPhone);
+    // Load full name from registry if available
+    if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
+    if(errEl) errEl.textContent = '';
+    var keepCb = document.getElementById('keep-logged-in');
+    var keepVal = (keepCb && keepCb.checked) ? '1' : '0';
+    localStorage.setItem('keep_login_pref', keepVal);
+    localStorage.setItem('last_active', String(Date.now()));
+    hidePinScreen();
+    updateUserDisplay();
+    fetchTrashFromFirebase();
+    startSync();
+    return true;
+  }
+
+  getDB(function(db) {
+    // Phone = only digits, +, spaces, dashes, brackets
+    // Username = contains letters (mix of text and numbers)
+    var looksLikePhone = /^[+0-9\-\s()]+$/.test(identifier) && identifier.replace(/[^0-9]/g,'').length >= 7;
+
+    if (looksLikePhone) {
+      // Try phone hash first
+      var phoneHash = hashPhone(identifier);
+      db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
+        if (!doLogin(doc, errEl)) {
+          // Not found by phone — try as username
+          db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
+            if (snap.empty) {
+              if(errEl) errEl.textContent = 'Account not found. Please register first.';
+            } else {
+              doLogin(snap.docs[0], errEl);
+            }
+          });
+        }
+      }).catch(function(e) {
+        if(errEl) errEl.textContent = 'Connection error. Please check your internet.';
+      });
+    } else {
+      // Try as username directly
+      db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
+        if (!snap.empty) {
+          doLogin(snap.docs[0], errEl);
+        } else {
+          // Not found by username — try as phone just in case
+          var phoneHash = hashPhone(identifier);
+          db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
+            if (!doLogin(doc, errEl)) {
+              if(errEl) errEl.textContent = 'Account not found. Please register first.';
+            }
+          });
+        }
+      }).catch(function(e) {
+        if(errEl) errEl.textContent = 'Connection error. Please check your internet.';
+      });
+    }
+  });
+}
+
+function getInitials(name) {
+  if (!name) return '??';
+  var parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.substring(0,2).toUpperCase();
+}
+
+function updateUserDisplay() {
+  var el = document.getElementById('sync-user-display');
+  if (el && _userName) { el.textContent = getInitials(_userName); el.style.display = 'inline'; }
+  // Update name in user bar — show initials only
+  var nameEl = document.getElementById('hdr-user-bar-name');
+  if (nameEl) nameEl.textContent = _userName ? getInitials(_userName) : '??';
+  // Update dot + status
+  var dot = document.getElementById('hdr-user-bar-dot');
+  var status = document.getElementById('hdr-user-bar-status');
+  if (dot) dot.style.background = _userId ? '#4a7c59' : '#555';
+  if (status) { status.textContent = _userId ? 'Live sync active' : 'Sign in to sync'; status.style.color = _userId ? '#4a7c59' : '#555'; }
+  // Update auth buttons
+  var btns = document.getElementById('hdr-user-bar-btns');
+  if (btns) {
+    if (_userId) {
+      var isInc = _appMode === 'income';
+      var mlBg  = isInc ? 'rgba(74,124,89,0.25)' : 'rgba(200,150,46,0.15)';
+      var mlClr = isInc ? '#8dd4a8' : 'var(--gold2)';
+      var mlTxt = isInc ? '&#128176;' : '&#128184;';
+      btns.innerHTML =
+        '<button id="mode-switch-btn" onclick="showModeSwitchPrompt()" title="Switch module" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.6);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128260;</button>' +
+        '<span id="hdr-mode-label" style="font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;padding:5px 12px;border-radius:4px;background:'+mlBg+';color:'+mlClr+';white-space:nowrap;flex:1;text-align:center;">'+mlTxt+'</span>' +
+        '<button onclick="logOut()" title="Log out" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128275;</button>';
+    } else {
+      btns.innerHTML =
+        '<button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;" title="Sign in">&#128275;</button>';
+    }
+  }
+  // User bar always flex
+  var userBar = document.getElementById('hdr-user-bar');
+  if (userBar) userBar.style.display = 'flex';
+}
+
+function logOut() {
+  if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
+  // Clear local data for security before clearing userId
+  localStorage.removeItem('expense_ledger');
+  localStorage.removeItem('custom_categories');
+  localStorage.removeItem('custom_cat_rules');
+  localStorage.removeItem(TRASH_KEY + '_' + _userId);
+  localStorage.removeItem(getIncKey());
+  localStorage.removeItem(getIncTrashKey());
+  // Reset pill 2 dropdowns so they re-init on next login
+  var yrSel = document.getElementById('hdr-filter-year');
+  var moSel = document.getElementById('hdr-filter-month');
+  if (yrSel) yrSel.innerHTML = '';
+  if (moSel) moSel.innerHTML = '';
+  _db = null; _userId = null;
+  localStorage.removeItem(UID_KEY);
+  localStorage.removeItem('last_active');
+  localStorage.removeItem('keep_login_pref');
+  showPinScreen();
+  showLoginStep();
+  syncSetStatus('off');
+  updateHeaderContext();
+  updateUserDisplay();
+  showToast('Logged out');
+}
+
+function switchUser() {
+  if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
+  // Clear this user's local data before switching
+  localStorage.removeItem('expense_ledger');
+  localStorage.removeItem('custom_categories');
+  localStorage.removeItem('custom_cat_rules');
+  if (_userId) localStorage.removeItem(TRASH_KEY + '_' + _userId);
+  _db = null; _userId = null; _userName = null; _userPhone = null;
+  localStorage.removeItem(UID_KEY);
+  localStorage.removeItem(NAME_KEY);
+  localStorage.removeItem(PHONE_KEY);
+  showPinScreen();
+  showRegisterStep();
+  syncSetStatus('off');
+  updateHeaderContext();
+}
+
+function renderSyncSetupUI() {
+  var el = document.getElementById('sync-setup-content');
+  if (!el) return;
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #4a7c59;border-radius:4px;">' +
+      '<span style="font-size:1.1rem;">&#9989;</span>' +
+      '<div><div style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:#166534;">Signed in as ' + (_userName||'') + '</div>' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:#4a7c59;margin-top:2px;">Live sync active · data is private</div></div>' +
+    '</div>' +
+    '<div style="font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);line-height:1.7;margin-bottom:14px;">Phone number and access code required. Each person data is completely private.</div>' +
+    '<div style="background:#fff8e6;border:1px solid var(--gold);border-radius:4px;padding:12px 14px;margin-bottom:12px;">' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Fix wrong auto-categories</div>' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);margin-bottom:10px;">If categories keep reverting, click to clean up learned rules.</div>' +
+      '<button class="btn btn-ghost" style="font-size:0.72rem;padding:8px 14px;" onclick="cleanupCustomRules()">&#9881; Clean up rules</button>' +
+    '</div>' +
+    '<div style="background:var(--paper2);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:12px;">' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Change access code</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<input id="change-pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="New code (4+ digits)" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:0.85rem;background:white;color:var(--ink);outline:none;">' +
+        '<button class="btn btn-ghost" style="padding:8px 14px;font-size:0.72rem;" onclick="changePin()">Save</button>' +
+      '</div>' +
+    '</div>' +
+    '';
+}
+
+function changePin() {
+  // Try manage card input first, fall back to sync setup input
+  var inp = document.getElementById('manage-pin-input') || document.getElementById('change-pin-input');
+  var newCode = inp ? inp.value.trim() : '';
+  if (newCode.length < 4) { showToast('Code must be at least 4 digits'); return; }
+  if (!/^[0-9]+$/.test(newCode)) { showToast('Code must be numbers only'); return; }
+  if (!_db || !_userPhone) { showToast('Not connected'); return; }
+  _db.collection('user_registry').doc(_userPhone).update({ pin_hash: hashPin(newCode) })
+    .then(function() { showToast('Access code changed!'); if(inp) inp.value=''; })
+    .catch(function(e) { showToast('Error: ' + e.message); });
+}
+
+// ════════════════════════
+//  KEEP-ALIVE (refresh fix)
+// ════════════════════════
+setInterval(function() {
+  if (_userId) localStorage.setItem('last_active', String(Date.now()));
+}, 15000);
+
+// ════════════════════════
+//  PRIVACY POLICY
+// ════════════════════════
+var PRIVACY_VER = '2026-03';
+
+function checkPrivacy() {
+  if (localStorage.getItem('privacy_ok') === PRIVACY_VER) return;
+  var o = document.getElementById('privacy-overlay');
+  if (o) o.style.display = 'flex';
+}
+
+function acceptPrivacy() {
+  var cb = document.getElementById('privacy-cb');
+  if (!cb || !cb.checked) { showToast('Please tick the checkbox to agree'); return; }
+  localStorage.setItem('privacy_ok', PRIVACY_VER);
+  var o = document.getElementById('privacy-overlay');
+  if (o) o.style.display = 'none';
+}
+
+// ════════════════════════
+//  HELP SYSTEM
+// ════════════════════════
+var HELP_ITEMS = [
+  {icon:'&#128221;', label:'Import',     tag:'import'},
+  {icon:'&#128278;', label:'Categorize', tag:'categorize'},
+  {icon:'&#128197;', label:'Daily',      tag:'daily'},
+  {icon:'&#128200;', label:'Dashboard',  tag:'dashboard'},
+  {icon:'&#128220;', label:'Ledger',     tag:'ledger'},
+  {icon:'&#127919;', label:'Budget',     tag:'budget'},
+  {icon:'&#9881;',   label:'Manage',     tag:'manage'},
+  {icon:'&#128176;', label:'Income',     tag:'income'},
+  {icon:'&#128467;', label:'Date',       tag:'date'},
+  {icon:'&#128275;', label:'Login',      tag:'login'},
+  {icon:'&#128196;', label:'PDF',        tag:'pdf'},
+  {icon:'&#10067;',  label:'Help',       tag:'help'}
+];
+
+var HELP_DATA = {
+  'import': {
+    title: '📝 Import — Adding Expenses',
+    steps: ['Select a year and month from the left panel.','Paste your expense text into the large text area.','Each day starts with the date e.g. 01-01-2024.','Each item: tab + description + tab + amount with currency symbol e.g. ₦2,500 or €15.00.','Click Parse Expenses to extract items.','Review any skipped lines shown in red.','Click Go to Categorize when ready.'],
+    example: 'User jd0292 — January 2024:\n01-01-2024\n\tBread\t₦500\n\tTransport\t₦200\n\n02-01-2024\n\tLunch\t₦1,200',
+    tip: 'Use Find & Replace (Ctrl+H) to fix formatting issues before parsing.'
+  },
+  'categorize': {
+    title: '🏷️ Categorize — Assigning Categories',
+    steps: ['After parsing click Go to Categorize.','Each item shows description, date, amount and suggested category.','Tap any category dropdown to change it.','Use Search to filter items by keyword.','Use Assign All to bulk-assign a category to all matching items.','Click Auto-Assign All for smart suggestions based on your history.','Click Save to Ledger when done.'],
+    example: 'User sa0819 had 45 items parsed. She searched bread and assigned all 12 matches to Food & Groceries in one click.',
+    tip: 'The app learns from your choices. The more you use it the smarter auto-assign becomes.'
+  },
+  'daily': {
+    title: '📅 Daily — Day by Day Breakdown',
+    steps: ['Use Year and Month dropdowns to filter.','Click a year to expand and see months.','Click a month to see individual days.','Each day shows totals per currency.','Click a day to see all individual items.'],
+    example: 'User mk0374 — March 15, 2024:\n₦4,500 and €12.50 spent across 5 items.\nTransport ₦1,500, Lunch ₦2,000, Coffee €3.50.',
+    tip: 'Use the Oldest First / Newest First button to change sort order.'
+  },
+  'dashboard': {
+    title: '📈 Dashboard — Charts & Analytics',
+    steps: ['Use Year and Currency filters at the top.','Monthly Trend shows spending per month as a line chart.','Category Breakdown shows spending by category.','Yearly Total compares annual spending.','Heatmap shows high and low spend months.','Year-over-Year shows % change between years.'],
+    example: 'User jd0292 dashboard:\nDec 2023: ₦47,500 (highest).\nJan 2023: ₦18,200 (lowest).\nYear-on-year 2022 to 2023: +38%.',
+    tip: 'On mobile the heatmap shows one year at a time. Use arrows to navigate years.'
+  },
+  'ledger': {
+    title: '📜 Ledger — Full Transaction List',
+    steps: ['Use filters (Year, Month, Currency, Category) to narrow results.','Use Search to find entries by keyword.','Use Search Desc + Assign to bulk-change categories.','Tap a category pill on any row to change it.','Tap × to delete — goes to Recycle Bin.','Tap − to temporarily hide from current view.'],
+    example: 'User sa0819 searched water and found 23 entries across 8 months. She bulk-assigned all to Utilities in one click.',
+    tip: 'The ledger shows 200 entries per page. Use Next and Prev to navigate.'
+  },
+  'budget': {
+    title: '🎯 Budget — Monthly Spending Targets',
+    steps: ['Select month, year and currency.','Use Add Category dropdown to add a category.','Type a limit amount in the box next to the category.','Progress bars show how much of your budget you have used.','Bars turn amber at 70% and red at 90%.','Click PDF Report to print a budget summary.'],
+    example: 'User mk0374 — March 2024:\nFood budget: ₦30,000.\nMid-month spent: ₦22,400 (74%) shown in amber.\nFinal: ₦31,200 — ₦1,200 over budget shown in red.',
+    tip: 'Budgets are stored per month. Set them at the start of each month.'
+  },
+  'manage': {
+    title: '⚙️ Manage — Data Settings & Control',
+    steps: ['Edit Full Name — sets your name for PDF reports.','Change Username — updates your login username.','Change Access Code — updates your PIN.','Export CSV — downloads your data as a spreadsheet.','Import from CSV — restores data from a backup.','Delete by Month — removes a month (goes to Recycle Bin).','Recycle Bin — restore or permanently delete removed entries.'],
+    example: 'User jd0292 went to Manage, expanded 2024, clicked Delete on February 2024. The 34 entries moved to Recycle Bin. He later restored 30 of them.',
+    tip: 'Export a CSV backup at least once a month to keep your data safe.'
+  },
+  'income': {
+    title: '💰 Income — Tracking Earnings',
+    steps: ['Tap the switch button in the header and select Income.','Use Income Import to paste your income records.','Format: date on one line, then items as Description: ₦amount.','Switch between Month mode or Year mode (full year at once).','Categorize income as Salary, Commission, Tips etc.','View Monthly breakdown, Dashboard charts and Full Ledger.'],
+    example: 'User sa0819 — March 2024:\n01-03-2024\nMonthly salary: ₦70,000\nFreelance website: $150\nCommission: ₦8,500\nTotal: ₦78,500 + $150',
+    tip: 'Income and Expenses are separate. Switch between them using the button in the top header.'
+  },
+  'date': {
+    title: '🗓️ Date Lookup — Find Transactions by Date',
+    steps: ['Tap the 🗓️ icon in the top header bar.','Select a date using the date picker.','Choose Expenses, Income or Both.','All transactions appear in a scrollable table.','Use the left arrow to go to the previous day.','Use the right arrow to go to the next day.','Tap any category to change it — saves automatically.'],
+    example: 'User jd0292 checked 14 Feb 2024:\nDinner €45.00 (Food)\nFlowers ₦8,000 (Personal Care)\nCinema €12.00 (Entertainment)\nTotal: ₦8,000 + €57.00',
+    tip: 'Use the arrows to browse day by day through an entire month without reopening the picker.'
+  },
+  'login': {
+    title: '🔓 Login & Registration',
+    steps: ['First time: enter your full name and phone number.','Choose or create a username (4-10 characters).','Your access code is generated — screenshot it or write it down!','Returning user: enter phone or username and access code.','Tick Keep me logged in to stay logged in for 30 minutes of inactivity.','Change your access code anytime in the Manage tab.'],
+    example: 'New user mk0374 registered with phone 08012345678.\nUsername suggestions: mk0374, mi0392, mk9283.\nShe chose mk0374. Access code: 847291 — she screenshotted it.',
+    tip: 'Your phone number is scrambled before storage. Nobody can read it. If you forget your code contact support.'
+  },
+  'pdf': {
+    title: '📄 PDF Reports — Print & Save',
+    steps: ['Expense Report: Budget tab, select month and currency, click PDF Report.','Income Report: Income then Monthly tab, filter by period, click PDF Report.','A new window opens with the formatted report.','Click Print / Save PDF.','In the print dialog choose Save as PDF.','Your full name appears at the top — set it in Manage first.'],
+    example: 'User jd0292 generated March 2024 expense report:\nName: John David at the top.\n67 transactions, total ₦124,500 + €89.00.\nCategory breakdown and budget progress bars included.',
+    tip: 'Set your full name in Manage before generating reports so your name appears correctly.'
+  },
+  'help': {
+    title: '❓ Help & Support',
+    steps: ['Tap any icon in the grid to read a guide for that feature.','Type a question in plain language in the search box.','Tap a suggested topic to read the full guide.','If you still need help tap Contact Support at the bottom.','Enter your email, subject and message then tap Send.','Your name is pulled from your account automatically.'],
+    example: 'User sa0819 typed total expenses January 2024.\nThe search suggested Dashboard and Ledger.\nShe clicked Dashboard and found the filter instructions she needed.',
+    tip: 'Make sure your full name is saved in Manage before contacting support so we know who you are.'
+  }
+};
+
+function openHelp() {
+  var o = document.getElementById('help-overlay');
+  if (o) o.style.display = 'flex';
+  var hs = document.getElementById('help-search');
+  if (hs) hs.value = '';
+  buildHelpIcons();
+  var hb = document.getElementById('help-body');
+  if (hb) hb.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Tap an icon above or type to search</div>';
+}
+
+function closeHelp() {
+  var o = document.getElementById('help-overlay');
+  if (o) o.style.display = 'none';
+}
+
+function buildHelpIcons() {
+  var c = document.getElementById('help-icon-list');
+  if (!c || c.children.length > 0) return;
+  HELP_ITEMS.forEach(function(item) {
+    var btn = document.createElement('button');
+    btn.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 10px;background:white;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;min-width:54px;transition:border-color 0.15s;';
+    btn.innerHTML = '<span style="font-size:1.3rem;line-height:1;">' + item.icon + '</span><span style="font-family:DM Mono,monospace;font-size:0.55rem;color:var(--muted);">' + item.label + '</span>';
+    btn.addEventListener('click', function() { showHelpArticle(item.tag); });
+    btn.addEventListener('mouseover', function() { btn.style.borderColor = 'var(--gold)'; });
+    btn.addEventListener('mouseout',  function() { btn.style.borderColor = 'var(--border)'; });
+    c.appendChild(btn);
+  });
+}
+
+function showHelpArticle(tag) {
+  var art = HELP_DATA[tag];
+  if (!art) return;
+  var stepsHtml = art.steps.map(function(s, i) {
+    return '<div style="display:flex;gap:10px;margin-bottom:8px;"><span style="font-family:DM Mono,monospace;font-size:0.72rem;color:var(--gold);font-weight:700;min-width:18px;">' + (i+1) + '.</span><span style="font-size:0.82rem;line-height:1.7;">' + s + '</span></div>';
+  }).join('');
+  var exHtml = art.example ? '<div style="margin-top:12px;padding:12px;background:var(--paper2);border-left:3px solid var(--sage);border-radius:3px;font-family:DM Mono,monospace;font-size:0.72rem;white-space:pre-wrap;line-height:1.7;">' + art.example + '</div>' : '';
+  var tipHtml = art.tip ? '<div style="margin-top:10px;padding:10px 12px;background:#fffbf0;border-left:3px solid var(--gold);border-radius:3px;font-family:DM Mono,monospace;font-size:0.72rem;line-height:1.7;"><strong>Tip:</strong> ' + art.tip + '</div>' : '';
+  var hb = document.getElementById('help-body');
+  if (hb) hb.innerHTML = '<div style="background:white;border:1px solid var(--border);border-radius:6px;padding:16px;">' + '<div style="font-family:Playfair Display,serif;font-size:1rem;font-weight:700;margin-bottom:14px;">' + art.title + '</div>' + stepsHtml + exHtml + tipHtml + '</div>';
+}
+
+function runHelpSearch(q) {
+  q = (q || '').toLowerCase().trim();
+  var hb = document.getElementById('help-body');
+  if (!hb) return;
+  if (!q) { hb.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Tap an icon above or type to search</div>'; return; }
+  var kw = {
+    import:['import','paste','add','enter','month','period'],
+    categorize:['categor','assign','label','group','sort'],
+    daily:['daily','day','breakdown','per day'],
+    dashboard:['dashboard','chart','graph','stat','analytic','trend','heatmap','visual'],
+    ledger:['ledger','list','all entries','search','find','record'],
+    budget:['budget','target','limit','goal','plan','overspend'],
+    manage:['manage','delete','export','csv','backup','setting','account'],
+    income:['income','salary','earn','receive','payment'],
+    date:['date','lookup','january','february','march','april','may','june','july','august','september','october','november','december','what did','what spend','check'],
+    login:['login','sign in','password','access code','register','forgot'],
+    pdf:['pdf','report','print','download','save report'],
+    help:['help','support','contact','question','how to','guide']
+  };
+  var matches = Object.keys(kw).filter(function(tag) {
+    return kw[tag].some(function(k) { return q.indexOf(k) !== -1 || k.indexOf(q) !== -1; });
+  });
+  if (!matches.length) {
+    hb.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:16px;">No results for &quot;' + q + '&quot;<br><br><span style="font-size:0.72rem;">Try different keywords or contact support below.</span></div>';
+    return;
+  }
+  hb.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Suggested topics:</div>';
+  matches.forEach(function(tag) {
+    var art = HELP_DATA[tag];
+    var item = HELP_ITEMS.filter(function(x) { return x.tag === tag; })[0] || {icon:'&#10067;'};
+    var btn = document.createElement('button');
+    btn.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:white;border:1.5px solid var(--border);border-radius:5px;cursor:pointer;text-align:left;width:100%;margin-bottom:8px;transition:border-color 0.15s;';
+    btn.innerHTML = '<span style="font-size:1.2rem;">' + item.icon + '</span><span style="font-family:DM Sans,sans-serif;font-size:0.85rem;font-weight:500;">' + art.title + '</span>';
+    btn.addEventListener('click', function() { showHelpArticle(tag); });
+    btn.addEventListener('mouseover', function() { btn.style.borderColor='var(--gold)'; });
+    btn.addEventListener('mouseout',  function() { btn.style.borderColor='var(--border)'; });
+    hb.appendChild(btn);
+  });
+}
+
+function openContact() {
+  var fullName = localStorage.getItem(FULL_NAME_KEY) || '';
+  var info = document.getElementById('contact-name-info');
+  if (info) {
+    if (fullName) {
+      info.style.cssText = 'background:#f0fdf4;border:1px solid var(--sage);color:var(--sage);padding:8px 12px;border-radius:4px;';
+      info.textContent = 'Sending as: ' + fullName;
+    } else {
+      info.style.cssText = 'background:#fff0f0;border:1px solid var(--rust);color:var(--rust);padding:8px 12px;border-radius:4px;line-height:1.6;';
+    }
+  }
+  var o = document.getElementById('contact-overlay');
+  if (o) o.style.display = 'flex';
+}
+
+function closeContact() {
+  var o = document.getElementById('contact-overlay');
+  if (o) o.style.display = 'none';
+}
+
+// EmailJS credentials
+var EJS_SERVICE  = 'service_6a8t7as';
+var EJS_TEMPLATE = '8t4o807';
+var EJS_KEY      = 'owbOhn03Jox8EHZ_y';
+
+function sendSupport() {
+  var fullName = localStorage.getItem(FULL_NAME_KEY) || '';
+  if (!fullName) { showToast('Save your full name in Manage first'); return; }
+  var email   = (document.getElementById('contact-email').value || '').trim();
+  var subject = (document.getElementById('contact-subject').value || '').trim();
+  var msg     = (document.getElementById('contact-msg').value || '').trim();
+  var errEl   = document.getElementById('contact-email-err');
+  var emailOk = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!emailOk) { if (errEl) errEl.textContent = 'Please enter a valid email address'; return; }
+  if (errEl) errEl.textContent = '';
+  if (!subject) { showToast('Please enter a subject'); return; }
+  if (!msg)     { showToast('Please enter a message'); return; }
+
+  // Show sending state
+  var sendBtn = document.getElementById('contact-send-btn');
+  if (sendBtn) { sendBtn.textContent = 'Sending...'; sendBtn.disabled = true; }
+
+  emailjs.send(EJS_SERVICE, EJS_TEMPLATE, {
+    name:    fullName,
+    email:   email,
+    subject: subject,
+    message: msg
+  }).then(function() {
+    showToast('✓ Message sent! We will get back to you soon.');
+    document.getElementById('contact-email').value   = '';
+    document.getElementById('contact-subject').value = '';
+    document.getElementById('contact-msg').value     = '';
+    if (sendBtn) { sendBtn.textContent = '✉ Send Message'; sendBtn.disabled = false; }
+    setTimeout(closeContact, 2000);
+  }).catch(function(err) {
+    var errMsg = err && err.text ? err.text : JSON.stringify(err);
+    showToast('Failed: ' + errMsg);
+    if (sendBtn) { sendBtn.textContent = '✉ Send Message'; sendBtn.disabled = false; }
+  });
+}
+
+document.addEventListener('click', function(e) {
+  var ho = document.getElementById('help-overlay');
+  if (ho && ho.style.display === 'flex' && e.target === ho) closeHelp();
+  var co = document.getElementById('contact-overlay');
+  if (co && co.style.display === 'flex' && e.target === co) closeContact();
+});
+
+// Initialize EmailJS once at startup
+if (typeof emailjs !== 'undefined') {
+  emailjs.init({ publicKey: 'owbOhn03Jox8EHZ_y' });
+}
+
 renderMonthPicker();
 updateHeader();
 populateFilters();
@@ -9078,6 +9432,15 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function(e){ console.log('SW:', e); });
   });
 }
+
+// Write last_active immediately on every page load - before syncInit checks it
+// This ensures refresh always looks like recent activity
+(function() {
+  var uid = localStorage.getItem('expense_user_uid');
+  if (uid) {
+    localStorage.setItem('last_active', String(Date.now()));
+  }
+})();
 </script>
 </body>
-</html>
+</html
