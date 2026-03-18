@@ -158,6 +158,175 @@ function userCol(name) {
 
 // ── Init: restore session from localStorage ──
 
+// ══ DATE LOOKUP ══
+function shiftLookupDate(delta) {
+  var inp = document.getElementById('date-lookup-input');
+  if (!inp) return;
+  var current = inp.value ? new Date(inp.value + 'T00:00:00') : new Date();
+  current.setDate(current.getDate() + delta);
+  var y = current.getFullYear();
+  var m = String(current.getMonth()+1).padStart(2,'0');
+  var d = String(current.getDate()).padStart(2,'0');
+  inp.value = y+'-'+m+'-'+d;
+  runDateLookup();
+}
+
+function openDateLookupFromTab(mode) {
+  var modeSel = document.getElementById('date-lookup-mode');
+  if (modeSel) modeSel.value = mode;
+  openDateLookup();
+}
+
+function openDateLookup() {
+  var overlay = document.getElementById('date-lookup-overlay');
+  if (overlay) overlay.style.display = 'flex';
+  // Set mode to match current app mode
+  var modeSel = document.getElementById('date-lookup-mode');
+  if (modeSel) modeSel.value = _appMode === 'income' ? 'income' : 'expenses';
+  // Set today's date as default
+  var inp = document.getElementById('date-lookup-input');
+  if (inp && !inp.value) {
+    inp.value = new Date().toISOString().substring(0, 10);
+    runDateLookup();
+  }
+}
+
+function closeDateLookup() {
+  var overlay = document.getElementById('date-lookup-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function runDateLookup() {
+  var inp     = document.getElementById('date-lookup-input');
+  var modeSel = document.getElementById('date-lookup-mode');
+  var results = document.getElementById('date-lookup-results');
+  var date    = inp ? inp.value : '';
+  var mode    = modeSel ? modeSel.value : 'expenses';
+  if (!date) { results.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Select a date above</div>'; return; }
+
+  // Update button label
+  var lbl = document.getElementById('hdr-cal-label');
+  if (lbl) {
+    var d = new Date(date + 'T00:00:00');
+    lbl.textContent = d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+  }
+
+  var expItems = [];
+  var incItems = [];
+  if (mode === 'expenses' || mode === 'both') {
+    expItems = loadData().filter(function(i){ return i.date === date; });
+  }
+  if (mode === 'income' || mode === 'both') {
+    incItems = loadIncomeData().filter(function(i){ return i.date === date; });
+  }
+
+  if (!expItems.length && !incItems.length) {
+    results.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:30px;">&#128683; No data recorded for this date</div>';
+    return;
+  }
+
+  var html = '';
+
+  function buildTable(items, type) {
+    if (!items.length) return '';
+    var allCats = type === 'income' ? getAllIncomeCats() : getAllCategories();
+    var color = type === 'income' ? 'var(--sage)' : 'var(--gold)';
+    var label = type === 'income' ? '&#128176; Income' : '&#128184; Expenses';
+
+    var tbl = '<div style="margin-bottom:16px;">';
+    if (mode === 'both') tbl += '<div style="font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:2px;text-transform:uppercase;color:'+color+';margin-bottom:8px;">'+label+'</div>';
+    tbl += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
+    tbl += '<table style="width:100%;min-width:420px;border-collapse:collapse;font-size:0.82rem;">';
+    tbl += '<thead><tr style="background:var(--ink);color:var(--paper);">' +
+      '<th style="padding:7px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DESCRIPTION</th>' +
+      '<th style="padding:7px 10px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">CATEGORY</th>' +
+      '<th style="padding:7px 10px;text-align:right;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">AMOUNT</th>' +
+      '</tr></thead><tbody>';
+
+    items.forEach(function(item, idx) {
+      var catColor = type === 'income' ? getIncCatColor(item.category) : getCatColor(item.category, 0);
+      tbl += '<tr style="border-bottom:1px solid var(--border);'+(idx%2===0?'background:white;':'background:#faf6ee;')+'">' +
+        '<td style="padding:8px 10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+item.desc.replace(/"/g,'&quot;')+'">'+item.desc+'</td>' +
+        '<td style="padding:8px 10px;">' +
+        '<span class="dlcat-pill" data-id="'+String(item.id)+'" data-type="'+type+'" ' +
+          'style="font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+catColor+'18;color:'+catColor+';border:1px solid '+catColor+'30;cursor:pointer;white-space:nowrap;" title="Tap to change">'+item.category+'</span>' +
+        '</td>' +
+        '<td style="padding:8px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:600;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';">'+fmtAmt(item.amount,item.currency)+'</td>' +
+        '</tr>';
+    });
+    tbl += '</tbody></table></div>';
+
+    // Totals per currency
+    var byCur = {};
+    items.forEach(function(i){ if(i.amount>0) byCur[i.currency]=(byCur[i.currency]||0)+i.amount; });
+    if (Object.keys(byCur).length) {
+      tbl += '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px;padding-top:8px;border-top:2px solid var(--border);">';
+      Object.keys(byCur).forEach(function(c) {
+        tbl += '<span style="font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;padding:3px 10px;border-radius:12px;background:'+color+'18;color:'+color+';">'+(SYMS[c]||'')+fmtNum(byCur[c])+' '+c+'</span>';
+      });
+      tbl += '</div>';
+    }
+    tbl += '</div>';
+    return tbl;
+  }
+
+  html += buildTable(expItems, 'expenses');
+  html += buildTable(incItems, 'income');
+  results.innerHTML = html;
+}
+
+function editDateLookupCat(pill, itemId, type) {
+  var allCats = type === 'income' ? getAllIncomeCats() : getAllCategories();
+  var sel = document.createElement('select');
+  sel.style.cssText = 'font-size:0.78rem;padding:3px 6px;border:1.5px solid var(--gold);border-radius:3px;background:white;outline:none;max-width:140px;';
+  allCats.forEach(function(c) {
+    var o = document.createElement('option'); o.value = c; o.textContent = c;
+    if (c === pill.textContent) o.selected = true;
+    sel.appendChild(o);
+  });
+  // Add new category option
+  var newOpt = document.createElement('option'); newOpt.value = '__new__'; newOpt.textContent = '+ New category...'; sel.appendChild(newOpt);
+
+  sel.addEventListener('change', function() {
+    var newCat = sel.value;
+    if (newCat === '__new__') {
+      var typed = prompt('Enter new category name:');
+      if (!typed || !typed.trim()) { sel.replaceWith(pill); return; }
+      newCat = typed.trim();
+      if (type === 'income') saveIncomeCustomCat(newCat); else saveCustomCategory(newCat);
+    }
+    // Save to ledger
+    if (type === 'income') {
+      var data = loadIncomeData();
+      data.forEach(function(i){ if(String(i.id)===String(itemId)) i.category=newCat; });
+      saveIncomeData(data);
+    } else {
+      var data2 = loadData();
+      data2.forEach(function(i){ if(String(i.id)===String(itemId)) i.category=newCat; });
+      saveData(data2);
+    }
+    var catColor = type === 'income' ? getIncCatColor(newCat) : getCatColor(newCat, 0);
+    pill.textContent = newCat;
+    pill.style.color = catColor;
+    pill.style.background = catColor+'18';
+    pill.style.borderColor = catColor+'30';
+    sel.replaceWith(pill);
+    showToast('Category updated to "'+newCat+'"');
+  });
+  sel.addEventListener('blur', function(){ sel.replaceWith(pill); });
+  pill.replaceWith(sel); sel.focus();
+}
+
+// Close overlay on background click
+document.addEventListener('click', function(e) {
+  var overlay = document.getElementById('date-lookup-overlay');
+  if (overlay && overlay.style.display === 'flex' && e.target === overlay) closeDateLookup();
+  // Category pill click via delegation
+  if (e.target && e.target.classList && e.target.classList.contains('dlcat-pill')) {
+    editDateLookupCat(e.target, e.target.getAttribute('data-id'), e.target.getAttribute('data-type'));
+  }
+});
+
 // ── Get full name for reports ──
 function getReportName() {
   return localStorage.getItem(FULL_NAME_KEY) || _userName || 'Account Holder';
@@ -1454,6 +1623,12 @@ nav.tabs.header-hidden button {
         </div>
       </div>
     </div>
+    <!-- Centered date lookup icon — 🔍📆 use magnifying glass with calendar -->
+    <div style="flex:1;display:flex;justify-content:center;">
+      <button onclick="openDateLookup()" title="Date lookup" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;display:flex;align-items:center;gap:4px;">
+        <span>&#128467;</span>
+      </button>
+    </div>
     <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" title="Show/Hide header" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128065;</button>
   </div>
   <!-- Row 2: switch · mode label · logout (injected by JS) -->
@@ -2446,6 +2621,35 @@ nav.tabs.header-hidden button {
 </div>
 
 <div id="toast"></div>
+
+<!-- ══ DATE LOOKUP OVERLAY ══ -->
+<div id="date-lookup-overlay" style="display:none;position:fixed;inset:0;z-index:99990;background:rgba(26,20,16,0.7);align-items:flex-start;justify-content:center;padding:20px;padding-top:80px;overflow-y:auto;">
+  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:600px;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--ink);border-radius:6px 6px 0 0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.2rem;">&#128197;</span>
+        <span style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--gold2);">Date Lookup</span>
+      </div>
+      <button onclick="closeDateLookup()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;padding:0 4px;line-height:1;">&#10005;</button>
+    </div>
+    <!-- Date picker with prev/next arrows -->
+    <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <button onclick="shiftLookupDate(-1)" style="background:none;border:1.5px solid var(--border);border-radius:4px;color:var(--gold);cursor:pointer;padding:8px 14px;font-size:1rem;font-weight:700;line-height:1;flex-shrink:0;">&#8592;</button>
+      <input type="date" id="date-lookup-input" onchange="runDateLookup()" style="flex:1;min-width:140px;padding:10px 14px;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;background:white;color:var(--ink);outline:none;cursor:pointer;">
+      <button onclick="shiftLookupDate(1)" style="background:none;border:1.5px solid var(--border);border-radius:4px;color:var(--gold);cursor:pointer;padding:8px 14px;font-size:1rem;font-weight:700;line-height:1;flex-shrink:0;">&#8594;</button>
+      <select id="date-lookup-mode" onchange="runDateLookup()" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;background:white;color:var(--ink);outline:none;cursor:pointer;">
+        <option value="expenses">Expenses</option>
+        <option value="income">Income</option>
+        <option value="both">Both</option>
+      </select>
+    </div>
+    <!-- Results -->
+    <div id="date-lookup-results" style="padding:16px 20px;min-height:80px;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Select a date above to view transactions</div>
+    </div>
+  </div>
+</div>
 
 <!-- ══ RENAME CATEGORY MODAL ══ -->
 <div id="rename-modal" style="display:none;position:fixed;inset:0;background:rgba(26,20,16,0.6);z-index:10000;align-items:center;justify-content:center;">
