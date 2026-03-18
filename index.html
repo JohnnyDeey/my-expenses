@@ -704,6 +704,20 @@ nav.tabs{position:relative;}
 
 /* Sticky topbar handles mobile too */
 
+/* ── Biometric fingerprint animations ── */
+@keyframes bio-pulse {
+  0%   { transform: scale(1);    opacity: 1; }
+  50%  { transform: scale(1.18); opacity: 0.7; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+@keyframes bio-ring {
+  0%   { transform: scale(0.85); opacity: 0.6; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+#bio-thumb-icon { display:inline-block; animation: bio-pulse 1.6s ease-in-out infinite; font-size:4rem; line-height:1; }
+#bio-ring-wrap  { position:relative; display:inline-flex; align-items:center; justify-content:center; width:90px; height:90px; margin-bottom:20px; }
+#bio-ring       { position:absolute; inset:0; border-radius:50%; border:3px solid rgba(200,150,46,0.5); animation: bio-ring 1.6s ease-out infinite; }
+
 /* ── Collapsible category bars ── */
 .cat-bars-preview{max-height:none;}
 .cat-bars-collapsed{max-height:260px;overflow:hidden;position:relative;}
@@ -823,20 +837,6 @@ nav.tabs.header-hidden button {
     padding: 1px 4px !important;
   }
 }
-
-/* ── Biometric fingerprint animations ── */
-@keyframes bio-pulse {
-  0%   { transform: scale(1);    opacity: 1; }
-  50%  { transform: scale(1.18); opacity: 0.7; }
-  100% { transform: scale(1);    opacity: 1; }
-}
-@keyframes bio-ring {
-  0%   { transform: scale(0.85); opacity: 0.6; }
-  100% { transform: scale(1.55); opacity: 0; }
-}
-#bio-thumb-icon { display:inline-block; animation: bio-pulse 1.6s ease-in-out infinite; font-size:4rem; line-height:1; }
-#bio-ring-wrap  { position:relative; display:inline-flex; align-items:center; justify-content:center; width:90px; height:90px; margin-bottom:20px; }
-#bio-ring       { position:absolute; inset:0; border-radius:50%; border:3px solid rgba(200,150,46,0.5); animation: bio-ring 1.6s ease-out infinite; }
 
 </style>
 </head>
@@ -1209,14 +1209,14 @@ nav.tabs.header-hidden button {
       <option value="USD">USD</option><option value="GBP">GBP</option>
     </select>
     <select id="led-cat" onchange="renderLedger()"><option value="all">All Categories</option></select>
-    <input type="text" id="led-search" placeholder="Search..." oninput="debouncedLedgerSearch()">
+    <input type="text" id="led-search" placeholder="Search... (use commas for multiple: rice, water, fleet)" oninput="debouncedLedgerSearch()">
     <button class="btn btn-danger" onclick="clearLedgerFilters()">Clear All</button>
   </div>
 
   <!-- Ledger bulk assign bar -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
     <span class="filter-label">Search desc:</span>
-    <input type="text" id="led-bulk-search" placeholder="Filter by description..." oninput="debouncedLedgerSearch()"
+    <input type="text" id="led-bulk-search" placeholder="Filter by description... (commas for multiple: rice, water)" oninput="debouncedLedgerSearch()"
       style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
     <span id="led-bulk-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
     <span class="filter-label" style="margin-left:4px;">Assign all filtered to:</span>
@@ -1637,13 +1637,13 @@ nav.tabs.header-hidden button {
       <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
     </select>
     <select id="inc-led-cat" onchange="renderIncomeLedger()"><option value="all">All Categories</option></select>
-    <input type="text" id="inc-led-search" placeholder="Search..." oninput="renderIncomeLedger()">
+    <input type="text" id="inc-led-search" placeholder="Search... (use commas for multiple: salary, bonus)" oninput="renderIncomeLedger()">
     <button class="btn btn-danger" onclick="clearIncomeLedgerFilters()">Clear All</button>
   </div>
   <!-- Bulk assign bar -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
     <span class="filter-label">Search desc:</span>
-    <input type="text" id="inc-bulk-search" placeholder="Filter by description..." oninput="renderIncomeLedger()"
+    <input type="text" id="inc-bulk-search" placeholder="Filter by description... (commas: salary, bonus, gift)" oninput="renderIncomeLedger()"
       style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
     <span id="inc-bulk-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
     <span class="filter-label" style="margin-left:4px;">Assign all to:</span>
@@ -1851,10 +1851,7 @@ nav.tabs.header-hidden button {
           <input id="login-code" type="password" inputmode="numeric" maxlength="8" placeholder="••••••" autocomplete="new-password" style="width:100%;padding:14px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--paper);outline:none;letter-spacing:8px;text-align:center;" onkeydown="if(event.key==='Enter')submitLogin()">
         </div>
         <div id="login-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
-        <!-- Wrong attempt hint (shown after 3 fails) -->
-        <div id="reset-attempt-hint" style="display:none;background:rgba(181,69,27,0.12);border:1px solid rgba(181,69,27,0.4);border-radius:4px;padding:10px 12px;margin-bottom:12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#e07040;line-height:1.7;">
-          &#128274; Having trouble? <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold2);cursor:pointer;text-decoration:underline;padding:0;">Reset your access code</button>
-        </div>
+        <div id="reset-attempt-hint" style="display:none;background:rgba(181,69,27,0.12);border:1px solid rgba(181,69,27,0.4);border-radius:4px;padding:10px 12px;margin-bottom:12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#e07040;line-height:1.7;">&#128274; Having trouble? <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold2);cursor:pointer;text-decoration:underline;padding:0;">Reset your access code</button></div>
         <button onclick="submitLogin()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Sign In</button>
 
         <div style="display:flex;align-items:center;gap:8px;margin-top:14px;margin-bottom:4px;">
@@ -1878,7 +1875,7 @@ nav.tabs.header-hidden button {
         <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--gold2);margin-bottom:6px;">Touch to Sign In</div>
         <div id="bio-prompt-name" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:16px;"></div>
         <div id="bio-prompt-status" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--gold);min-height:20px;margin-bottom:20px;"></div>
-        <!-- Buttons only appear AFTER fingerprint is accepted or declined -->
+        <!-- Only shown AFTER fingerprint resolves (success/fail/cancel) -->
         <div id="bio-action-btns" style="display:none;">
           <button onclick="showLoginInstead()" style="width:100%;padding:11px;background:none;border:1px solid rgba(200,150,46,0.3);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;cursor:pointer;">Use access code instead</button>
         </div>
@@ -1904,24 +1901,20 @@ nav.tabs.header-hidden button {
   <div style="background:#1e1812;border:2px solid var(--gold);border-radius:10px;width:100%;max-width:400px;padding:28px;">
     <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">&#128274; Reset Access Code</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;margin-bottom:20px;">Verify your identity to get a new code</div>
-
-    <!-- Step A: enter phone -->
     <div id="reset-step-phone">
       <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:14px;line-height:1.7;">Enter the phone number you registered with. We will verify your account and show you a temporary reset code.</div>
       <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number</label>
       <input id="reset-phone-input" type="tel" placeholder="e.g. 07012345678" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;margin-bottom:10px;" onkeydown="if(event.key==='Enter')submitResetRequest()">
       <div id="reset-phone-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:16px;"></div>
       <button onclick="submitResetRequest()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:10px;">Verify My Account</button>
-      <button onclick="closeResetOverlay()" style="width:100%;padding:10px;background:none;border:1px solid rgba(200,150,46,0.25);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">← Back to Sign In</button>
+      <button onclick="closeResetOverlay()" style="width:100%;padding:10px;background:none;border:1px solid rgba(200,150,46,0.25);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">&#8592; Back to Sign In</button>
     </div>
-
-    <!-- Step B: show reset code -->
     <div id="reset-step-code" style="display:none;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:16px;line-height:1.7;">Identity verified. Here is your one-time reset code. It expires in <strong style="color:var(--gold);">15 minutes</strong>. Use it to sign in, then change your code immediately in Manage → Change Access Code.</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:16px;line-height:1.7;">Identity verified. Here is your one-time reset code. It expires in <strong style="color:var(--gold);">15 minutes</strong>. Use it to sign in, then change your code immediately in Manage.</div>
       <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Your Temporary Code</div>
       <div id="reset-code-display" style="font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:900;color:var(--gold2);letter-spacing:10px;text-align:center;padding:18px;background:#2a2018;border-radius:6px;margin-bottom:8px;border:1px solid rgba(200,150,46,0.3);"></div>
       <div id="reset-code-timer" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--gold);text-align:center;margin-bottom:16px;"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#b5451b;background:rgba(181,69,27,0.1);border:1px solid rgba(181,69,27,0.3);border-radius:4px;padding:10px 12px;margin-bottom:16px;line-height:1.7;">&#9888; Screenshot this code now. For security, it will not be shown again after you close this screen.</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#b5451b;background:rgba(181,69,27,0.1);border:1px solid rgba(181,69,27,0.3);border-radius:4px;padding:10px 12px;margin-bottom:16px;line-height:1.7;">&#9888; Screenshot this code now. For security it will not be shown again after you close this screen.</div>
       <button onclick="useResetCodeNow()" style="width:100%;padding:13px;background:var(--sage);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px;">&#10003; Use This Code to Sign In</button>
       <button onclick="closeResetOverlay()" style="width:100%;padding:10px;background:none;border:1px solid rgba(200,150,46,0.25);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">Close</button>
     </div>
@@ -2008,7 +2001,7 @@ nav.tabs.header-hidden button {
       <div id="contact-name-info" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:16px;padding:8px 12px;border-radius:4px;"></div>
       <p style="font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--ink);line-height:1.7;margin-bottom:20px;">Tap the button below to open your email app. Your account name will be included automatically so we know who you are.</p>
       <button onclick="sendSupport()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:12px;">&#9993; Open Email App</button>
-      <p style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);text-align:center;line-height:1.6;">This opens your Gmail or mail app with a pre-filled message.<br><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="cba6b2ada2a5aaa5a8aea7aeafacaeb9aabbbb8baca6aaa2a7e5a8a4a6">[email&#160;protected]</a></p>
+      <p style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);text-align:center;line-height:1.6;">This opens your Gmail or mail app with a pre-filled message.<br><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="05687c636c6b646b6660696061626077647575456268646c692b666a68">[email&#160;protected]</a></p>
     </div>
   </div>
 </div>
@@ -4289,8 +4282,12 @@ function ledgerBulkAssign() {
   if (month !== 'all') filtered = filtered.filter(function(i){ return i.date.substring(5,7) === month; });
   if (currency !== 'all') filtered = filtered.filter(function(i){ return i.currency === currency; });
   if (cat !== 'all') filtered = filtered.filter(function(i){ return i.category === cat; });
-  if (search) filtered = filtered.filter(function(i){ return i.desc.toLowerCase().indexOf(search) !== -1 || i.category.toLowerCase().indexOf(search) !== -1; });
-  filtered = filtered.filter(function(i){ return i.desc.toLowerCase().indexOf(ledgerBulkFilter) !== -1; });
+  if (search) {
+    var sTerms = search.split(',').map(function(t){return t.trim();}).filter(Boolean);
+    filtered = filtered.filter(function(i){ var d=i.desc.toLowerCase(); var c=i.category.toLowerCase(); return sTerms.some(function(t){ return d.indexOf(t)!==-1||c.indexOf(t)!==-1; }); });
+  }
+  var bTerms = ledgerBulkFilter.split(',').map(function(t){return t.trim();}).filter(Boolean);
+  filtered = filtered.filter(function(i){ var d=i.desc.toLowerCase(); return bTerms.some(function(t){ return d.indexOf(t)!==-1; }); });
   filtered.forEach(function(i){ matchingIds[i.id] = true; });
 
   if (!filtered.length) { showToast('No matching entries found'); return; }
@@ -4527,13 +4524,32 @@ function renderLedger(){
   if(month!=='all')    data=data.filter(function(i){return i.date.substring(5,7)===month;});
   if(currency!=='all') data=data.filter(function(i){return i.currency===currency;});
   if(cat!=='all')      data=data.filter(function(i){return i.category===cat;});
-  if(search)           data=data.filter(function(i){return i.desc.toLowerCase().indexOf(search)!==-1||i.category.toLowerCase().indexOf(search)!==-1;});
-  if(ledgerBulkFilter) data=data.filter(function(i){return i.desc.toLowerCase().indexOf(ledgerBulkFilter)!==-1;});
+  if(search) {
+    var searchTerms = search.split(',').map(function(t){ return t.trim(); }).filter(function(t){ return t.length > 0; });
+    data = data.filter(function(i){
+      var d = i.desc.toLowerCase(); var c = i.category.toLowerCase();
+      return searchTerms.some(function(t){ return d.indexOf(t) !== -1 || c.indexOf(t) !== -1; });
+    });
+  }
+  if(ledgerBulkFilter) {
+    var bulkTerms = ledgerBulkFilter.split(',').map(function(t){ return t.trim(); }).filter(function(t){ return t.length > 0; });
+    data = data.filter(function(i){
+      var d = i.desc.toLowerCase();
+      return bulkTerms.some(function(t){ return d.indexOf(t) !== -1; });
+    });
+  }
   // Filter out manually excluded items
   if(Object.keys(_ledExcludedIds).length) data=data.filter(function(i){return !_ledExcludedIds[String(i.id)];});
 
   var matchEl=document.getElementById('led-bulk-match');
-  if(matchEl) matchEl.textContent=ledgerBulkFilter?(data.length+' match'+(data.length===1?'':'es')):'';
+  if(matchEl) {
+    if (ledgerBulkFilter) {
+      var bt = ledgerBulkFilter.split(',').map(function(t){return t.trim();}).filter(Boolean);
+      var label = data.length+' match'+(data.length===1?'':'es');
+      if (bt.length > 1) label += ' (' + bt.length + ' terms)';
+      matchEl.textContent = label;
+    } else { matchEl.textContent = ''; }
+  }
 
   var acc = document.getElementById('ledger-accordion');
 
@@ -8009,10 +8025,29 @@ function renderIncomeLedger() {
   if (month !== 'all') data = data.filter(function(i){ return i.date.substring(5,7)===month; });
   if (cur   !== 'all') data = data.filter(function(i){ return i.currency===cur; });
   if (cat   !== 'all') data = data.filter(function(i){ return i.category===cat; });
-  if (srch)            data = data.filter(function(i){ return i.desc.toLowerCase().indexOf(srch)!==-1; });
-  if (incBulkSrch) data = data.filter(function(i){ return i.desc.toLowerCase().indexOf(incBulkSrch.toLowerCase())!==-1; });
+  if (srch) {
+    var srchTerms = srch.split(',').map(function(t){ return t.trim(); }).filter(function(t){ return t.length > 0; });
+    data = data.filter(function(i){
+      var d = i.desc.toLowerCase();
+      return srchTerms.some(function(t){ return d.indexOf(t) !== -1; });
+    });
+  }
+  if (incBulkSrch) {
+    var incBulkTerms = incBulkSrch.split(',').map(function(t){ return t.trim(); }).filter(function(t){ return t.length > 0; });
+    data = data.filter(function(i){
+      var d = i.desc.toLowerCase();
+      return incBulkTerms.some(function(t){ return d.indexOf(t) !== -1; });
+    });
+  }
   var matchEl = document.getElementById('inc-bulk-match');
-  if (matchEl) matchEl.textContent = incBulkSrch ? data.length+' match'+(data.length===1?'':'es') : '';
+  if (matchEl) {
+    if (incBulkSrch) {
+      var ibt = incBulkSrch.split(',').map(function(t){return t.trim();}).filter(Boolean);
+      var ilabel = data.length+' match'+(data.length===1?'':'es');
+      if (ibt.length > 1) ilabel += ' (' + ibt.length + ' terms)';
+      matchEl.textContent = ilabel;
+    } else { matchEl.textContent = ''; }
+  }
   data.sort(function(a,b){ return b.date.localeCompare(a.date); });
 
   if (!data.length) {
@@ -8134,9 +8169,13 @@ function incomeBulkAssign() {
   var newCat  = document.getElementById('inc-bulk-cat-sel').value;
   if (!newCat)   { showToast('Select a category first'); return; }
   if (!search)   { showToast('Enter a keyword to filter first'); return; }
+  var terms = search.split(',').map(function(t){ return t.trim(); }).filter(Boolean);
   var data = loadIncomeData();
   var count = 0;
-  data.forEach(function(i){ if(i.desc.toLowerCase().indexOf(search)!==-1){ i.category=newCat; count++; } });
+  data.forEach(function(i){
+    var d = i.desc.toLowerCase();
+    if (terms.some(function(t){ return d.indexOf(t) !== -1; })) { i.category = newCat; count++; }
+  });
   if (!count) { showToast('No matching entries'); return; }
   saveIncomeData(data);
   document.getElementById('inc-bulk-search').value='';
@@ -8610,26 +8649,22 @@ function checkBiometricAvailable() {
   PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
     .then(function(available) {
       if (!available) return;
-      // Show the fingerprint screen instead of login
       var loginStep = document.getElementById('pin-step-login');
       var bioStep   = document.getElementById('pin-step-biometric');
       if (loginStep) loginStep.style.display = 'none';
       if (bioStep)   bioStep.style.display   = 'block';
       // Reset animation
       var thumbIcon = document.getElementById('bio-thumb-icon');
-      if (thumbIcon) { thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite'; thumbIcon.innerHTML = '&#128077;'; }
+      if (thumbIcon) { thumbIcon.innerHTML = '&#128077;'; thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite'; }
       var bioRing = document.getElementById('bio-ring');
       if (bioRing) bioRing.style.animation = 'bio-ring 1.6s ease-out infinite';
-      // Hide action buttons until needed
       var bioActionBtns = document.getElementById('bio-action-btns');
       if (bioActionBtns) bioActionBtns.style.display = 'none';
-      // Set the user's name in the prompt
       var savedName = localStorage.getItem(NAME_KEY) || localStorage.getItem(FULL_NAME_KEY) || '';
       var nameEl = document.getElementById('bio-prompt-name');
       if (nameEl && savedName) nameEl.textContent = 'Signing in as ' + savedName;
       var statusEl = document.getElementById('bio-prompt-status');
       if (statusEl) statusEl.textContent = 'Touch your fingerprint sensor';
-      // Auto-trigger immediately
       setTimeout(loginWithBiometric, 300);
     }).catch(function(){});
 }
@@ -8642,15 +8677,15 @@ function showLoginInstead() {
   if (loginStep) loginStep.style.display = 'block';
   var statusEl = document.getElementById('bio-prompt-status');
   if (statusEl) statusEl.textContent = '';
-  // Stop bio animation
+  // Stop animations
   var thumbIcon = document.getElementById('bio-thumb-icon');
   if (thumbIcon) thumbIcon.style.animation = 'none';
   var bioRing = document.getElementById('bio-ring');
   if (bioRing) bioRing.style.animation = 'none';
-  // Hide action buttons again for next time
+  // Reset action buttons for next time
   var bioActionBtns = document.getElementById('bio-action-btns');
   if (bioActionBtns) bioActionBtns.style.display = 'none';
-  setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
+  setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); }, 100);
 }
 
 // ── Fingerprint login ──
@@ -8659,12 +8694,12 @@ function loginWithBiometric() {
   if (!savedCred) { showLoginInstead(); return; }
   var statusEl = document.getElementById('bio-prompt-status');
   if (statusEl) statusEl.textContent = 'Waiting for fingerprint...';
-  // Ensure animation is running while waiting
+  // Ensure animation is active while waiting
   var thumbIcon = document.getElementById('bio-thumb-icon');
-  if (thumbIcon) thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite';
+  if (thumbIcon) { thumbIcon.innerHTML = '&#128077;'; thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite'; }
   var bioRing = document.getElementById('bio-ring');
   if (bioRing) bioRing.style.animation = 'bio-ring 1.6s ease-out infinite';
-  // Hide action buttons while scanning
+  // Hide fallback button while sensor is active
   var bioActionBtns = document.getElementById('bio-action-btns');
   if (bioActionBtns) bioActionBtns.style.display = 'none';
 
@@ -8680,8 +8715,12 @@ function loginWithBiometric() {
       timeout:           20000
     }
   }).then(function(assertion) {
-    if (!assertion) { if (statusEl) statusEl.textContent = 'Try again'; if (bioActionBtns) bioActionBtns.style.display = 'block'; return; }
-    if (statusEl) statusEl.textContent = '✓ Verified';
+    if (!assertion) {
+      if (statusEl) statusEl.textContent = 'Try again';
+      if (bioActionBtns) bioActionBtns.style.display = 'block';
+      return;
+    }
+    if (statusEl) statusEl.textContent = '&#10003; Verified';
     if (thumbIcon) thumbIcon.style.animation = 'none';
     if (bioRing) bioRing.style.animation = 'none';
     if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
@@ -8698,16 +8737,15 @@ function loginWithBiometric() {
 
     sessionStorage.setItem('app_session', '1');
     _resumeSession(uid, name, phone);
-    showToast('✓ Welcome back, ' + name + '!');
+    showToast('&#10003; Welcome back, ' + name + '!');
 
   }).catch(function(e) {
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     // Stop animation and show fallback button
-    if (thumbIcon) { thumbIcon.style.animation = 'none'; thumbIcon.textContent = ''; thumbIcon.innerHTML = '&#128078;'; }
+    if (thumbIcon) { thumbIcon.innerHTML = '&#128078;'; thumbIcon.style.animation = 'none'; }
     if (bioRing) bioRing.style.animation = 'none';
     if (bioActionBtns) bioActionBtns.style.display = 'block';
     if (e.name === 'NotAllowedError') {
-      // User cancelled — show message and fallback button
       if (statusEl) statusEl.textContent = 'Fingerprint cancelled';
     } else if (e.name === 'InvalidStateError') {
       if (statusEl) statusEl.textContent = 'Key not found — re-register in Manage';
@@ -9155,9 +9193,6 @@ function showLoginStep() {
   var ph = document.getElementById('login-phone'); if(ph) ph.value = '';
   var cd = document.getElementById('login-code');  if(cd) cd.value = '';
   var er = document.getElementById('login-error'); if(er) er.textContent = '';
-  // Reset wrong attempt counter display
-  _loginAttempts = 0;
-  var ra = document.getElementById('reset-attempt-hint'); if(ra) ra.style.display = 'none';
   // Check if fingerprint is available — if so show fingerprint screen, else show login form
   var hasCred   = !!localStorage.getItem(BIOMETRIC_KEY);
   var isEnabled = localStorage.getItem(BIOMETRIC_ENABLED) === '1';
@@ -9166,9 +9201,9 @@ function showLoginStep() {
       .then(function(available) {
         if (available) {
           if (bioStep) bioStep.style.display = 'block';
-          // Reset animation state
+          // Reset animation state every time we show this screen
           var thumbIcon = document.getElementById('bio-thumb-icon');
-          if (thumbIcon) { thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite'; thumbIcon.innerHTML = '&#128077;'; }
+          if (thumbIcon) { thumbIcon.innerHTML = '&#128077;'; thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite'; }
           var bioRing = document.getElementById('bio-ring');
           if (bioRing) bioRing.style.animation = 'bio-ring 1.6s ease-out infinite';
           var bioActionBtns = document.getElementById('bio-action-btns');
@@ -9273,11 +9308,13 @@ var _loginAttempts = 0;
 var _resetCode = null;
 var _resetCodeExpiry = 0;
 var _resetTimerInterval = null;
+var _pendingResetPhone = null;
+var _pendingResetName  = null;
+var _pendingResetUID   = null;
 
 function openResetOverlay() {
   var o = document.getElementById('reset-overlay');
   if (o) o.style.display = 'flex';
-  // Reset to step A
   var sa = document.getElementById('reset-step-phone');
   var sb = document.getElementById('reset-step-code');
   if (sa) sa.style.display = 'block';
@@ -9299,39 +9336,32 @@ function submitResetRequest() {
   var err = document.getElementById('reset-phone-error');
   var phone = inp ? inp.value.trim() : '';
   if (!phone || phone.replace(/[^0-9]/g,'').length < 7) {
-    if (err) err.textContent = 'Please enter a valid phone number';
-    return;
+    if (err) err.textContent = 'Please enter a valid phone number'; return;
   }
   if (err) err.textContent = 'Checking...';
   var phoneHash = hashPhone(phone);
   getDB(function(db) {
     db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
       if (!doc.exists) {
-        if (err) err.textContent = 'No account found with this phone number.';
-        return;
+        if (err) err.textContent = 'No account found with this phone number.'; return;
       }
-      // Account exists — generate a time-based reset code and store it
       var data = doc.data();
       _resetCode = String(Math.floor(100000 + Math.random() * 900000));
-      _resetCodeExpiry = Date.now() + 15 * 60 * 1000; // 15 minutes
-      // Store reset code hash in Firebase (temporary — expires)
+      _resetCodeExpiry = Date.now() + 15 * 60 * 1000;
       db.collection('user_registry').doc(phoneHash).update({
         reset_code_hash: hashPin(_resetCode),
         reset_code_expiry: _resetCodeExpiry
       }).then(function() {
         if (err) err.textContent = '';
-        // Show the code
+        _pendingResetPhone = phoneHash;
+        _pendingResetName  = data.name;
+        _pendingResetUID   = data.user_id;
         var sa = document.getElementById('reset-step-phone');
         var sb = document.getElementById('reset-step-code');
         if (sa) sa.style.display = 'none';
         if (sb) sb.style.display = 'block';
         var cd = document.getElementById('reset-code-display');
         if (cd) cd.textContent = _resetCode;
-        // Store the phone hash for useResetCodeNow
-        _pendingResetPhone = phoneHash;
-        _pendingResetName = data.name;
-        _pendingResetUID = data.user_id;
-        // Start countdown timer
         updateResetTimer();
         _resetTimerInterval = setInterval(updateResetTimer, 1000);
       }).catch(function() {
@@ -9343,10 +9373,6 @@ function submitResetRequest() {
   });
 }
 
-var _pendingResetPhone = null;
-var _pendingResetName  = null;
-var _pendingResetUID   = null;
-
 function updateResetTimer() {
   var remaining = Math.max(0, _resetCodeExpiry - Date.now());
   var mins = Math.floor(remaining / 60000);
@@ -9357,8 +9383,7 @@ function updateResetTimer() {
     timerEl.style.color = remaining < 120000 ? '#b5451b' : 'var(--gold)';
   }
   if (remaining === 0) {
-    clearInterval(_resetTimerInterval);
-    _resetTimerInterval = null;
+    clearInterval(_resetTimerInterval); _resetTimerInterval = null;
     if (timerEl) timerEl.textContent = 'Code expired — request a new one';
     var cd = document.getElementById('reset-code-display');
     if (cd) cd.textContent = '------';
@@ -9367,20 +9392,15 @@ function updateResetTimer() {
 
 function useResetCodeNow() {
   if (!_pendingResetPhone || !_resetCode || !_pendingResetUID) { closeResetOverlay(); return; }
-  if (Date.now() > _resetCodeExpiry) {
-    showToast('Code expired — please request a new one');
-    return;
-  }
+  if (Date.now() > _resetCodeExpiry) { showToast('Code expired — please request a new one'); return; }
   closeResetOverlay();
-  // Pre-fill login fields with the reset code and trigger login via code swap
-  // Instead, directly log the user in using stored credentials like a session restore
   _userId    = _pendingResetUID;
   _userName  = _pendingResetName;
   _userPhone = _pendingResetPhone;
   localStorage.setItem(UID_KEY,   _userId);
   localStorage.setItem(NAME_KEY,  _userName);
   localStorage.setItem(PHONE_KEY, _userPhone);
-  // Update the user's pin_hash in Firebase to the reset code so they can also log in with it
+  // Set the reset code as the new pin_hash so it also works as a manual login
   getDB(function(db) {
     db.collection('user_registry').doc(_pendingResetPhone).update({
       pin_hash: hashPin(_resetCode),
@@ -9390,20 +9410,22 @@ function useResetCodeNow() {
   });
   localStorage.setItem('keep_login_pref', '0');
   localStorage.setItem('last_active', String(Date.now()));
+  _loginAttempts = 0;
+  var hint = document.getElementById('reset-attempt-hint');
+  if (hint) hint.style.display = 'none';
   hidePinScreen();
   updateUserDisplay();
   fetchTrashFromFirebase();
   startSync();
-  showToast('✓ Signed in with reset code. Change your access code in Manage now!');
-  // Navigate to Manage tab after a short delay
+  showToast('Signed in! Change your access code in Manage now.');
   setTimeout(function() {
     var manageBtn = document.querySelector('#main-nav button[onclick*="manage"]');
     if (manageBtn) manageBtn.click();
     setTimeout(function() {
-      var pinCard = document.getElementById('manage-pin-input');
-      if (pinCard) pinCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      var pinInp = document.getElementById('manage-pin-input');
+      if (pinInp) pinInp.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 400);
-  }, 1000);
+  }, 1200);
 }
 
 // ── Login: validate phone + PIN, get UUID from registry ──
@@ -9428,13 +9450,13 @@ function submitLogin() {
     var data = doc.data();
     if (data.pin_hash !== pinHash) {
       _loginAttempts++;
-      var attemptsLeft = Math.max(0, 3 - _loginAttempts);
       if (_loginAttempts >= 3) {
         if(errEl) errEl.textContent = 'Incorrect access code.';
         var hint = document.getElementById('reset-attempt-hint');
         if (hint) hint.style.display = 'block';
       } else {
-        if(errEl) errEl.textContent = 'Incorrect access code. ' + attemptsLeft + ' attempt' + (attemptsLeft === 1 ? '' : 's') + ' left.';
+        var left = 3 - _loginAttempts;
+        if(errEl) errEl.textContent = 'Incorrect access code. ' + left + ' attempt' + (left === 1 ? '' : 's') + ' left.';
       }
       return true; // found user but wrong code
     }
@@ -9758,6 +9780,7 @@ var HELP_ITEMS = [
   {icon:'&#128065;', label:'Header',     tag:'header'},
   {icon:'&#128077;', label:'Biometric',  tag:'biometric'},
   {icon:'&#8679;',   label:'Scroll',     tag:'scroll'},
+  {icon:'&#128269;', label:'Multi-Search',tag:'multisearch'},
   {icon:'&#10067;',  label:'Help',       tag:'help'}
 ];
 
@@ -9788,9 +9811,24 @@ var HELP_DATA = {
   },
   'ledger': {
     title: '📜 Ledger — Full Transaction List',
-    steps: ['Use filters (Year, Month, Currency, Category) to narrow results.','Use Search to find entries by keyword.','Use Search Desc + Assign to bulk-change categories.','Tap a category pill on any row to change it.','Tap × to delete — goes to Recycle Bin.','Tap − to temporarily hide from current view.'],
-    example: 'User sa0819 searched water and found 23 entries across 8 months. She bulk-assigned all to Utilities in one click.',
-    tip: 'The ledger shows 200 entries per page. Use Next and Prev to navigate.'
+    steps: ['Use filters (Year, Month, Currency, Category) to narrow results.','Use Search to find entries by keyword — or search multiple words at once using commas e.g. rice, water, fleet.','Use Search Desc + Assign to bulk-change categories — multi-word search works here too.','Tap a category pill on any row to change it.','Tap × to delete — goes to Recycle Bin.','Tap − to temporarily hide from current view.'],
+    example: 'User sa0819 searched water and found 23 entries across 8 months. She bulk-assigned all to Utilities in one click.\n\nUser jd0292 typed: rice, water, fleet — and instantly saw all 3 household item types together in one list.',
+    tip: 'Multi-word search works in both the top Search bar and the Search Desc bulk-assign bar. Use it in Expenses Ledger and Income Ledger.'
+  },
+  'multisearch': {
+    title: '🔍 Multi-Word Search — Find Multiple Items at Once',
+    steps: [
+      'Go to the Ledger tab (Expenses or Income).',
+      'In the Search bar or the Search Desc bar, type your words separated by commas.',
+      'Example: rice, water, fleet — this will show every entry whose description contains rice OR water OR fleet.',
+      'Spaces around the commas do not matter — rice,water,fleet and rice, water, fleet both work.',
+      'The match counter shows how many results were found and how many terms were used e.g. "12 matches (3 terms)".',
+      'You can then bulk-assign a category to ALL matching entries at once — useful for grouping similar household items.',
+      'Works the same way in both Expenses Ledger and Income Ledger.',
+      'To clear the search, tap the × button next to the search bar.'
+    ],
+    example: 'User jd0292 wanted to assign all household consumables to one category.\nHe typed: rice, water, fleet, soap, biscuit in the Search Desc bar.\nThe ledger showed 47 matching entries across 6 months.\nHe selected "Household" from the category picker and clicked Assign.\nAll 47 entries were updated in one click.',
+    tip: 'Single-word search still works exactly as before — just type one word and no comma. Multi-word only activates when you include a comma.'
   },
   'budget': {
     title: '🎯 Budget — Monthly Spending Targets',
@@ -9922,6 +9960,7 @@ function runHelpSearch(q) {
     header:['header','hide','collapse','eye','show header','screen space'],
     biometric:['biometric','fingerprint','face','touch id','face id','quick login'],
     scroll:['scroll','top','bottom','navigate','jump','floating button'],
+    multisearch:['multi','multiple','search','comma','rice','water','fleet','several','words','terms','bulk search','multi-word','multisearch'],
     help:['help','support','contact','question','how to','guide']
   };
   var matches = Object.keys(kw).filter(function(tag) {
@@ -9985,4 +10024,7 @@ renderMonthPicker();
 updateHeader();
 populateFilters();
 
-s
+syncInit();
+</script>
+</body>
+</html>
