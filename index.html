@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
+  <!-- Google Analytics (invisible to users) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-GYDLHGMNGB"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-GYDLHGMNGB');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -702,21 +710,45 @@ nav.tabs{position:relative;}
   .tab-icon{font-size:1.1rem;}
 }
 
-/* Sticky topbar handles mobile too */
+@keyframes pin-shake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-8px); }
+  40%     { transform: translateX(8px); }
+  60%     { transform: translateX(-5px); }
+  80%     { transform: translateX(5px); }
+}
+.pin-pad-btn {
+  padding: 16px 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid rgba(200,150,46,0.25);
+  border-radius: 6px;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--gold2);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.pin-pad-btn:active {
+  background: rgba(200,150,46,0.25);
+  border-color: var(--gold);
+}
+.pin-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(200,150,46,0.5);
+  transition: background 0.15s, border-color 0.15s;
+}
+.pin-dot.filled {
+  background: var(--gold);
+  border-color: var(--gold);
+}
 
-/* ── Biometric fingerprint animations ── */
-@keyframes bio-pulse {
-  0%   { transform: scale(1);    opacity: 1; }
-  50%  { transform: scale(1.18); opacity: 0.7; }
-  100% { transform: scale(1);    opacity: 1; }
-}
-@keyframes bio-ring {
-  0%   { transform: scale(0.85); opacity: 0.6; }
-  100% { transform: scale(1.55); opacity: 0; }
-}
-#bio-thumb-icon { display:inline-block; animation: bio-pulse 1.6s ease-in-out infinite; font-size:4rem; line-height:1; }
-#bio-ring-wrap  { position:relative; display:inline-flex; align-items:center; justify-content:center; width:90px; height:90px; margin-bottom:20px; }
-#bio-ring       { position:absolute; inset:0; border-radius:50%; border:3px solid rgba(200,150,46,0.5); animation: bio-ring 1.6s ease-out infinite; }
+
 
 /* ── Collapsible category bars ── */
 .cat-bars-preview{max-height:none;}
@@ -1338,13 +1370,6 @@ nav.tabs.header-hidden button {
     </div>
   </div>
 
-  <!-- ── 3c. FINGERPRINT LOGIN ── -->
-  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold);">
-    <label>&#128077; Fingerprint Login</label>
-    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Use your fingerprint or face to open the app instantly — no password needed.</p>
-    <div id="bio-manage-status" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:14px;padding:8px 12px;border-radius:4px;"></div>
-    <div id="bio-manage-btns"></div>
-  </div>
 
   <!-- ── 4. DANGER ZONE ── -->
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
@@ -1651,7 +1676,7 @@ nav.tabs.header-hidden button {
       <option value="">Pick category...</option>
     </select>
     <button class="btn btn-success" style="padding:8px 16px;font-size:0.8rem;" onclick="incomeBulkAssign()">&#10003; Assign</button>
-    <button class="btn btn-ghost" style="padding:8px 10px;" onclick="document.getElementById('inc-bulk-search').value='';renderIncomeLedger();">&#10005;</button>
+    <button class="btn btn-ghost" style="padding:8px 10px;" onclick="_incExcludedIds={};document.getElementById('inc-bulk-search').value='';renderIncomeLedger();">&#10005;</button>
   </div>
   <div id="inc-ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No income entries yet.</p></div>
   <div id="inc-ledger-wrap" style="display:none;"><div id="inc-ledger-accordion"></div></div>
@@ -1688,13 +1713,6 @@ nav.tabs.header-hidden button {
     </div>
   </div>
 
-  <!-- ── FINGERPRINT LOGIN ── -->
-  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--sage);">
-    <label>&#128077; Fingerprint Login</label>
-    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Use your fingerprint or face to open the app instantly — no password needed.</p>
-    <div id="bio-manage-status-inc" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:14px;padding:8px 12px;border-radius:4px;"></div>
-    <div id="bio-manage-btns-inc"></div>
-  </div>
 
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
@@ -1786,9 +1804,6 @@ nav.tabs.header-hidden button {
     <div id="pin-step-register" style="display:none;">
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:left;">
         <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">First time? Create your account</div>
-
-
-        <!-- Step A: Full name + phone -->
         <div id="reg-step-name">
           <div style="margin-bottom:14px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Full name</label>
@@ -1801,15 +1816,13 @@ nav.tabs.header-hidden button {
           <div id="reg-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
           <button onclick="showUsernameStep()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Next →</button>
         </div>
-
-        <!-- Step B: Choose username -->
         <div id="reg-step-username" style="display:none;">
           <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:16px;">Choose a username (4–10 characters, letters + numbers):</div>
           <div id="reg-username-suggestions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
           <div style="border-top:1px solid #3a3020;padding-top:14px;margin-bottom:12px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Or enter your own (4–10 chars, letters+numbers)</label>
             <div style="display:flex;gap:8px;">
-              <input id="reg-custom-username" type="text" maxlength="10" placeholder="e.g. jd0292 (4–10 chars)" style="flex:1;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;letter-spacing:2px;" oninput="validateCustomUsername(this)">
+              <input id="reg-custom-username" type="text" maxlength="10" placeholder="e.g. jd0292" style="flex:1;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;letter-spacing:2px;" oninput="validateCustomUsername(this)">
               <button onclick="selectCustomUsername()" style="padding:10px 14px;background:#3a3020;border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;">Use this</button>
             </div>
             <div id="reg-username-error" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#b5451b;margin-top:6px;min-height:16px;"></div>
@@ -1818,7 +1831,6 @@ nav.tabs.header-hidden button {
           <button onclick="generateCode()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Generate my access code</button>
           <button onclick="document.getElementById('reg-step-name').style.display='block';document.getElementById('reg-step-username').style.display='none';" style="width:100%;padding:10px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;margin-top:8px;">← Back</button>
         </div>
-
         <div style="text-align:center;margin-top:16px;">
           <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;">Already have a code? </span>
           <button onclick="showLoginStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--gold);cursor:pointer;text-decoration:underline;">Sign in</button>
@@ -1837,62 +1849,58 @@ nav.tabs.header-hidden button {
       </div>
     </div>
 
-    <!-- Step 3: Sign in with phone + code -->
+    <!-- Step 3a: PIN-only login (normal, 90% of the time) -->
     <div id="pin-step-login" style="display:block;">
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:left;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">Welcome back</div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Enter your phone number and access code.</div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:center;">
+        <div id="pin-login-username-display" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--gold2);letter-spacing:2px;margin-bottom:6px;min-height:20px;"></div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Enter your PIN</div>
+        <!-- PIN dot display -->
+        <div id="pin-dots" style="display:flex;justify-content:center;gap:10px;margin-bottom:20px;min-height:18px;"></div>
+        <!-- PIN pad -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 16px;">
+          <button onclick="pinPadPress('1')" class="pin-pad-btn">1</button>
+          <button onclick="pinPadPress('2')" class="pin-pad-btn">2</button>
+          <button onclick="pinPadPress('3')" class="pin-pad-btn">3</button>
+          <button onclick="pinPadPress('4')" class="pin-pad-btn">4</button>
+          <button onclick="pinPadPress('5')" class="pin-pad-btn">5</button>
+          <button onclick="pinPadPress('6')" class="pin-pad-btn">6</button>
+          <button onclick="pinPadPress('7')" class="pin-pad-btn">7</button>
+          <button onclick="pinPadPress('8')" class="pin-pad-btn">8</button>
+          <button onclick="pinPadPress('9')" class="pin-pad-btn">9</button>
+          <button onclick="pinPadClear()" class="pin-pad-btn" style="font-size:0.65rem;color:#6b5e50;">CLR</button>
+          <button onclick="pinPadPress('0')" class="pin-pad-btn">0</button>
+          <button onclick="pinPadDelete()" class="pin-pad-btn" style="font-size:1.1rem;">⌫</button>
+        </div>
+        <div id="login-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:18px;text-align:center;"></div>
+        <div id="reset-attempt-hint" style="display:none;background:rgba(181,69,27,0.12);border:1px solid rgba(181,69,27,0.4);border-radius:4px;padding:10px 12px;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#e07040;line-height:1.7;">&#128274; Having trouble? <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold2);cursor:pointer;text-decoration:underline;padding:0;">Reset your access code</button></div>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+          <button onclick="showRegisterStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">New user? Create account</button>
+          <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a3e30;cursor:pointer;text-decoration:underline;">Forgot your PIN?</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3b: Full verification (username + PIN, shown randomly every 1–2 weeks) -->
+    <div id="pin-step-full-verify" style="display:none;">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.35);border-radius:8px;padding:28px;text-align:left;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:4px;">Security Check</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;line-height:1.7;">Just making sure it's still you — enter your username and PIN.</div>
         <div style="margin-bottom:14px;">
-          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number or Username</label>
-          <input id="login-phone" type="text" placeholder="e.g. 07012345678 or jd0292" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('login-code').focus()">
+          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Username</label>
+          <input id="fv-username" type="text" placeholder="Your username e.g. jd0292" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('fv-pin').focus()">
         </div>
-        <div style="margin-bottom:20px;">
-          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Access code</label>
-          <input id="login-code" type="password" inputmode="numeric" maxlength="8" placeholder="••••••" autocomplete="new-password" style="width:100%;padding:14px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--paper);outline:none;letter-spacing:8px;text-align:center;" onkeydown="if(event.key==='Enter')submitLogin()">
+        <div style="margin-bottom:16px;">
+          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">PIN</label>
+          <input id="fv-pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••••" autocomplete="new-password" style="width:100%;padding:14px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--paper);outline:none;letter-spacing:8px;text-align:center;" onkeydown="if(event.key==='Enter')submitFullVerify()">
         </div>
-        <div id="login-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
-        <div id="reset-attempt-hint" style="display:none;background:rgba(181,69,27,0.12);border:1px solid rgba(181,69,27,0.4);border-radius:4px;padding:10px 12px;margin-bottom:12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#e07040;line-height:1.7;">&#128274; Having trouble? <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold2);cursor:pointer;text-decoration:underline;padding:0;">Reset your access code</button></div>
-        <button onclick="submitLogin()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Sign In</button>
-
-        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;margin-bottom:4px;">
-          <input type="checkbox" id="keep-logged-in" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold);">
-          <label for="keep-logged-in" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;cursor:pointer;">Keep me logged in</label>
-        </div>
-        <div style="text-align:center;margin-top:12px;display:flex;flex-direction:column;gap:6px;">
-          <button onclick="showRegisterStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;text-decoration:underline;">New user? Create account</button>
-          <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Forgot your access code?</button>
+        <div id="fv-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
+        <button onclick="submitFullVerify()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Confirm Identity</button>
+        <div style="text-align:center;margin-top:12px;">
+          <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Forgot your PIN?</button>
         </div>
       </div>
     </div>
 
-    <!-- Fingerprint auto-prompt screen (shown instead of login when biometric is enabled) -->
-    <div id="pin-step-biometric" style="display:none;">
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:36px 28px;text-align:center;">
-        <div id="bio-ring-wrap">
-          <div id="bio-ring"></div>
-          <span id="bio-thumb-icon">&#128077;</span>
-        </div>
-        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--gold2);margin-bottom:6px;">Touch to Sign In</div>
-        <div id="bio-prompt-name" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:16px;"></div>
-        <div id="bio-prompt-status" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--gold);min-height:20px;margin-bottom:20px;"></div>
-        <!-- Only shown AFTER fingerprint resolves (success/fail/cancel) -->
-        <div id="bio-action-btns" style="display:none;">
-          <button onclick="showLoginInstead()" style="width:100%;padding:11px;background:none;border:1px solid rgba(200,150,46,0.3);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;cursor:pointer;">Use access code instead</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ══ BIOMETRIC SETUP PROMPT (shown after first login) ══ -->
-<div id="bio-setup-overlay" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(26,20,16,0.92);align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:400px;padding:28px;text-align:center;">
-    <div style="font-size:3rem;margin-bottom:12px;">&#128077;</div>
-    <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--ink);margin-bottom:8px;">Enable Fingerprint Login?</div>
-    <div style="font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--muted);line-height:1.7;margin-bottom:24px;">Skip the password next time — just touch the fingerprint sensor to open your app instantly. You can turn this off anytime in Manage.</div>
-    <button onclick="acceptBioSetup()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:10px;">&#128077; Yes — Take Me There</button>
-    <button onclick="declineBioSetup()" style="width:100%;padding:11px;background:none;border:1px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);cursor:pointer;">No thanks</button>
   </div>
 </div>
 
@@ -1926,7 +1934,7 @@ nav.tabs.header-hidden button {
 <div id="inactivity-warning" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99998;background:var(--ink);border:2px solid var(--gold);border-radius:8px;padding:20px 28px;min-width:300px;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.4);flex-direction:column;align-items:center;gap:12px;">
   <div style="font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);">Still there?</div>
   <div style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--paper);text-align:center;line-height:1.5;">
-    You'll be logged out in <span id="inactivity-countdown" style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--gold);">60</span> seconds
+    App will lock in <span id="inactivity-countdown" style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--gold);">60</span> seconds
   </div>
   <div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">
     <div id="inactivity-bar" style="height:100%;width:100%;background:var(--gold);border-radius:2px;transition:width 1s linear;"></div>
@@ -4170,7 +4178,8 @@ function toggleDailySort() {
 // ════════════════════════════════
 var ledgerBulkFilter = '';
 var _ledSearchTimer = null;
-var _ledExcludedIds = {}; // IDs excluded from current search view
+var _ledExcludedIds = {}; // IDs excluded from current expense search view
+var _incExcludedIds = {}; // IDs excluded from current income search view
 
 function debouncedLedgerSearch() {
   clearTimeout(_ledSearchTimer);
@@ -4193,6 +4202,7 @@ function applyLedgerBulkSearch() {
 
 function clearLedgerBulkSearch() {
   ledgerBulkFilter = '';
+  _ledExcludedIds = {};
   var el = document.getElementById('led-bulk-search'); if (el) el.value = '';
   renderLedger();
 }
@@ -4288,6 +4298,10 @@ function ledgerBulkAssign() {
   }
   var bTerms = ledgerBulkFilter.split(',').map(function(t){return t.trim();}).filter(Boolean);
   filtered = filtered.filter(function(i){ var d=i.desc.toLowerCase(); return bTerms.some(function(t){ return d.indexOf(t)!==-1; }); });
+  // IMPORTANT: exclude items the user has hidden with the − button
+  if (Object.keys(_ledExcludedIds).length) {
+    filtered = filtered.filter(function(i){ return !_ledExcludedIds[String(i.id)]; });
+  }
   filtered.forEach(function(i){ matchingIds[i.id] = true; });
 
   if (!filtered.length) { showToast('No matching entries found'); return; }
@@ -4662,7 +4676,7 @@ function renderLedger(){
     var minusBtn = document.createElement('button');
     minusBtn.style.cssText = 'padding:2px 6px;font-size:0.8rem;color:#aaa;margin-right:3px;font-weight:700;background:none;border:1px solid #ddd;border-radius:2px;cursor:pointer;';
     minusBtn.textContent = '−';
-    minusBtn.title = 'Hide from results';
+    minusBtn.title = 'Hide from view & protect from bulk assign';
     minusBtn.addEventListener('click', function(){ _ledExcludedIds[String(item.id)]=true; renderLedger(); });
     var delBtn = document.createElement('button');
     delBtn.style.cssText = 'padding:2px 7px;font-size:0.7rem;font-weight:700;color:white;background:#b5451b;border:none;border-radius:2px;cursor:pointer;';
@@ -5202,7 +5216,7 @@ function switchTab(name,btn){
   if(name==='dashboard'){populateFilters();renderDashboard();}
   if(name==='ledger'){populateFilters();renderLedger();}
   if(name==='daily'){populateDailyFilters();renderDailyView();}
-  if(name==='manage'){renderManagePanel();renderBioManage();}
+  if(name==='manage'){renderManagePanel();}
   if(name==='budget')renderBudget();
 }
 
@@ -5253,13 +5267,27 @@ function populateFilters(){
 
 
 // ════════════════════════════════
-//  INACTIVITY AUTO-LOGOUT TIMER
+//  INACTIVITY AUTO-LOCK TIMER (10 minutes → PIN pad)
 // ════════════════════════════════
 var _inactivityTimer   = null;
 var _countdownTimer    = null;
 var _countdownSeconds  = 0;
-var INACTIVE_MINUTES   = 2; // overridden at login based on checkbox
+var INACTIVE_MS        = 10 * 60 * 1000; // 10 minutes fixed
 var COUNTDOWN_SECONDS  = 60;
+
+// ── Lock app to PIN pad (keeps session data, just re-asks for PIN) ──
+function lockApp() {
+  if (!_userId) return;
+  clearTimeout(_inactivityTimer);
+  clearInterval(_countdownTimer);
+  hideInactivityWarning();
+  // Stop Firebase listeners to save battery while locked
+  if (_syncUnsubscribe)   { _syncUnsubscribe();   _syncUnsubscribe   = null; }
+  if (_incomeUnsubscribe) { _incomeUnsubscribe();  _incomeUnsubscribe = null; }
+  // Show PIN pad — do NOT clear userId/data, just lock the UI
+  showPinScreen();
+  showPinPadStep();
+}
 
 function resetInactivityTimer() {
   if (!_userId) return;
@@ -5267,11 +5295,9 @@ function resetInactivityTimer() {
   clearInterval(_countdownTimer);
   hideInactivityWarning();
   localStorage.setItem('last_active', String(Date.now()));
-  var keepLogin = localStorage.getItem('keep_login_pref');
-  var minutes   = keepLogin === '1' ? 30 : 5;
   _inactivityTimer = setTimeout(function() {
-    logOut(); // silent logout — no countdown, no warning
-  }, minutes * 60 * 1000);
+    startInactivityCountdown();
+  }, INACTIVE_MS - COUNTDOWN_SECONDS * 1000);
 }
 
 function startInactivityCountdown() {
@@ -5283,8 +5309,7 @@ function startInactivityCountdown() {
     if (_countdownSeconds <= 0) {
       clearInterval(_countdownTimer);
       hideInactivityWarning();
-      logOut();
-      showToast('Logged out due to inactivity');
+      lockApp();
     }
   }, 1000);
 }
@@ -5312,17 +5337,18 @@ function hideInactivityWarning() {
   if (w) w.style.display = 'none';
 }
 
-// Track user activity
+// Track user activity — reset timer on any interaction
 ['click','keydown','touchstart','scroll','mousemove'].forEach(function(evt) {
   document.addEventListener(evt, function() {
     if (_userId) {
       localStorage.setItem('last_active', String(Date.now()));
+      if (!_inactivityTimer) return; // already locked, ignore
       resetInactivityTimer();
     }
   }, { passive: true });
 });
 
-// Keep last_active fresh every 15s so refresh always works
+// Keep last_active fresh every 15s while app is in use
 setInterval(function() {
   if (_userId) localStorage.setItem('last_active', String(Date.now()));
 }, 15000);
@@ -6862,7 +6888,7 @@ function switchIncomeTab(name, btn) {
   if (name === 'inc-monthly')     { incPopulateDailyFilters(); renderIncomeMonthly(); }
   if (name === 'inc-dashboard')   renderIncomeDashboard();
   if (name === 'inc-ledger')      { incPopulateFilters(); renderIncomeLedger(); }
-  if (name === 'inc-manage')      { renderIncomeManage(); setTimeout(renderBioManage, 100); }
+  if (name === 'inc-manage')      { renderIncomeManage(); }
 }
 
 // ── Income month picker ──
@@ -8015,12 +8041,18 @@ function renderIncomeLedger() {
   populateIncBulkCatSel();
   var incBulkEl = document.getElementById('inc-bulk-search');
   var incBulkSrch = incBulkEl ? incBulkEl.value.toLowerCase().trim() : '';
+  var srch = document.getElementById('inc-led-search').value.toLowerCase().trim();
+  // Reset exclusions whenever the search terms change (new search = fresh slate)
+  var newSrchKey = srch + '||' + incBulkSrch;
+  if (!renderIncomeLedger._lastSrchKey || renderIncomeLedger._lastSrchKey !== newSrchKey) {
+    if (renderIncomeLedger._lastSrchKey !== undefined) _incExcludedIds = {};
+    renderIncomeLedger._lastSrchKey = newSrchKey;
+  }
   var data = loadIncomeData();
   var year = document.getElementById('inc-led-year').value;
   var month= document.getElementById('inc-led-month').value;
   var cur  = document.getElementById('inc-led-currency').value;
   var cat  = document.getElementById('inc-led-cat').value;
-  var srch = document.getElementById('inc-led-search').value.toLowerCase().trim();
   if (year  !== 'all') data = data.filter(function(i){ return i.date.indexOf(year)===0; });
   if (month !== 'all') data = data.filter(function(i){ return i.date.substring(5,7)===month; });
   if (cur   !== 'all') data = data.filter(function(i){ return i.currency===cur; });
@@ -8039,13 +8071,19 @@ function renderIncomeLedger() {
       return incBulkTerms.some(function(t){ return d.indexOf(t) !== -1; });
     });
   }
+  // Filter out items hidden with − button
+  var incExcludedCount = Object.keys(_incExcludedIds).length;
+  if (incExcludedCount) data = data.filter(function(i){ return !_incExcludedIds[String(i.id)]; });
   var matchEl = document.getElementById('inc-bulk-match');
   if (matchEl) {
     if (incBulkSrch) {
       var ibt = incBulkSrch.split(',').map(function(t){return t.trim();}).filter(Boolean);
       var ilabel = data.length+' match'+(data.length===1?'':'es');
       if (ibt.length > 1) ilabel += ' (' + ibt.length + ' terms)';
-      matchEl.textContent = ilabel;
+      if (incExcludedCount) ilabel += ' · <span style="color:var(--rust);cursor:pointer;" onclick="_incExcludedIds={};renderIncomeLedger();" title="Click to restore">'+incExcludedCount+' hidden (restore)</span>';
+      matchEl.innerHTML = ilabel;
+    } else if (incExcludedCount) {
+      matchEl.innerHTML = '<span style="color:var(--rust);cursor:pointer;" onclick="_incExcludedIds={};renderIncomeLedger();" title="Click to restore">'+incExcludedCount+' hidden (restore)</span>';
     } else { matchEl.textContent = ''; }
   }
   data.sort(function(a,b){ return b.date.localeCompare(a.date); });
@@ -8135,8 +8173,8 @@ function renderIncomeLedger() {
     var minusBtn = document.createElement('button');
     minusBtn.style.cssText = 'padding:2px 6px;font-size:0.8rem;color:#aaa;margin-right:3px;font-weight:700;background:none;border:1px solid #ddd;border-radius:2px;cursor:pointer;';
     minusBtn.textContent = '−';
-    minusBtn.title = 'Hide from results';
-    minusBtn.addEventListener('click', function(){ tr.style.display='none'; });
+    minusBtn.title = 'Hide from view & protect from bulk assign';
+    minusBtn.addEventListener('click', function(){ _incExcludedIds[String(item.id)]=true; renderIncomeLedger(); });
     actTd.appendChild(minusBtn);
     var delBtn = document.createElement('button');
     delBtn.style.cssText = 'padding:2px 7px;font-size:0.7rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;';
@@ -8174,6 +8212,8 @@ function incomeBulkAssign() {
   var count = 0;
   data.forEach(function(i){
     var d = i.desc.toLowerCase();
+    // Skip items hidden with − button
+    if (_incExcludedIds[String(i.id)]) return;
     if (terms.some(function(t){ return d.indexOf(t) !== -1; })) { i.category = newCat; count++; }
   });
   if (!count) { showToast('No matching entries'); return; }
@@ -8198,6 +8238,8 @@ function clearIncomeLedgerFilters() {
   document.getElementById('inc-led-currency').value = 'all';
   document.getElementById('inc-led-cat').value = 'all';
   var s = document.getElementById('inc-led-search'); if(s) s.value = '';
+  var b = document.getElementById('inc-bulk-search'); if(b) b.value = '';
+  _incExcludedIds = {};
   renderIncomeLedger();
 }
 
@@ -8475,10 +8517,24 @@ function showUpdateBanner() {
 // Update check disabled
 
 // Re-sync when user returns to the app (tab focus, phone unlock)
-// onSnapshot handles live sync — just refresh trash on visibility change
+// Also lock if they've been away for 10+ minutes
 document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'visible' && _userId && _db) {
-    if (!window._trashDeletePending) fetchTrashFromFirebase();
+  if (document.visibilityState === 'visible') {
+    if (_userId) {
+      var lastActive = parseInt(localStorage.getItem('last_active') || '0', 10);
+      var awayMs = Date.now() - lastActive;
+      if (awayMs >= INACTIVE_MS) {
+        // Been away too long — lock to PIN pad
+        lockApp();
+        return;
+      }
+      // Back within time — refresh trash and reset timer
+      if (_db && !window._trashDeletePending) fetchTrashFromFirebase();
+      resetInactivityTimer();
+    }
+  } else {
+    // App going to background — record the time
+    if (_userId) localStorage.setItem('last_active', String(Date.now()));
   }
 });
 
@@ -8511,342 +8567,245 @@ function getReportName() {
   return localStorage.getItem(FULL_NAME_KEY) || _userName || 'Account Holder';
 }
 
-// ── Biometric / Fingerprint Login ──
-var BIOMETRIC_KEY     = 'finance_biometric_cred';
-var BIOMETRIC_ENABLED = 'finance_biometric_on';  // '1' = user wants fingerprint login
-var BIO_PROMPTED      = 'finance_bio_prompted';   // '1' = already asked this user
 
-// ── Render biometric status in Manage tab (both expense + income) ──
-function renderBioManage() {
-  _renderBioManageInto('bio-manage-status', 'bio-manage-btns');
-  _renderBioManageInto('bio-manage-status-inc', 'bio-manage-btns-inc');
+// ════════════════════════════════════════════════
+//  PIN PAD + LOGIN SYSTEM
+// ════════════════════════════════════════════════
+
+var _pinBuffer = '';   // digits entered so far on the PIN pad
+var FULL_VERIFY_KEY = 'expense_last_full_verify'; // localStorage key
+
+// How often to require full verify: random between 7–14 days
+function getNextFullVerifyInterval() {
+  return (7 + Math.floor(Math.random() * 8)) * 24 * 60 * 60 * 1000;
 }
 
-function _renderBioManageInto(statusId, btnsId) {
-  var statusEl = document.getElementById(statusId);
-  var btnsEl   = document.getElementById(btnsId);
-  if (!statusEl || !btnsEl) return;
+function needsFullVerify() {
+  var stored = localStorage.getItem(FULL_VERIFY_KEY);
+  if (!stored) return true; // never done full verify → require it
+  var last = parseInt(stored, 10);
+  var interval = localStorage.getItem('expense_fv_interval');
+  if (!interval) {
+    interval = getNextFullVerifyInterval();
+    localStorage.setItem('expense_fv_interval', String(interval));
+  } else {
+    interval = parseInt(interval, 10);
+  }
+  return (Date.now() - last) >= interval;
+}
 
-  if (!window.PublicKeyCredential) {
-    statusEl.style.cssText = 'background:#fff0f0;border:1px solid var(--rust);color:var(--rust);padding:8px 12px;border-radius:4px;';
-    statusEl.textContent = 'Fingerprint login is not supported on this browser or device.';
-    btnsEl.innerHTML = '';
+function recordFullVerify() {
+  localStorage.setItem(FULL_VERIFY_KEY, String(Date.now()));
+  // Pick a new random interval for next time
+  localStorage.setItem('expense_fv_interval', String(getNextFullVerifyInterval()));
+}
+
+// ── PIN pad button handlers ──
+function pinPadPress(digit) {
+  if (_pinBuffer.length >= 8) return;
+  _pinBuffer += digit;
+  updatePinDots();
+  if (_pinBuffer.length >= 4) {
+    // Auto-submit once 4+ digits entered and user pauses (or they can keep typing up to 8)
+    // We auto-submit at 6 digits (most common PIN length)
+    if (_pinBuffer.length === 6) setTimeout(submitPinLogin, 100);
+  }
+}
+
+function pinPadDelete() {
+  if (_pinBuffer.length > 0) {
+    _pinBuffer = _pinBuffer.slice(0, -1);
+    updatePinDots();
+  }
+  var er = document.getElementById('login-error'); if(er) er.textContent = '';
+}
+
+function pinPadClear() {
+  _pinBuffer = '';
+  updatePinDots();
+  var er = document.getElementById('login-error'); if(er) er.textContent = '';
+}
+
+function updatePinDots() {
+  var container = document.getElementById('pin-dots');
+  if (!container) return;
+  container.innerHTML = '';
+  var maxDots = Math.max(6, _pinBuffer.length);
+  for (var i = 0; i < maxDots; i++) {
+    var dot = document.createElement('div');
+    dot.className = 'pin-dot' + (i < _pinBuffer.length ? ' filled' : '');
+    container.appendChild(dot);
+  }
+}
+
+// ── PIN-only login (local hash check — instant) ──
+function submitPinLogin() {
+  if (_pinBuffer.length < 4) {
+    var er = document.getElementById('login-error');
+    if (er) er.textContent = 'PIN must be at least 4 digits';
     return;
   }
-
-  var hasCred   = !!localStorage.getItem(BIOMETRIC_KEY);
-  var isEnabled = localStorage.getItem(BIOMETRIC_ENABLED) === '1';
-
-  if (hasCred && isEnabled) {
-    statusEl.style.cssText = 'background:#f0fdf4;border:1px solid var(--sage);color:var(--sage);padding:8px 12px;border-radius:4px;';
-    statusEl.textContent = '✓ Fingerprint login is active on this device';
-    btnsEl.innerHTML =
-      '<button class="btn btn-danger" style="width:100%;padding:11px;justify-content:center;font-size:0.78rem;" onclick="bioDeactivate()">Deactivate Fingerprint Login</button>';
-  } else if (hasCred && !isEnabled) {
-    statusEl.style.cssText = 'background:#fffbf0;border:1px solid var(--gold);color:#7a4800;padding:8px 12px;border-radius:4px;';
-    statusEl.textContent = 'Fingerprint registered but currently disabled.';
-    btnsEl.innerHTML =
-      '<div style="display:flex;gap:8px;">' +
-      '<button class="btn btn-primary" style="flex:1;padding:11px;justify-content:center;font-size:0.78rem;" onclick="bioActivate()">&#128077; Activate</button>' +
-      '<button class="btn btn-danger" style="flex:1;padding:11px;justify-content:center;font-size:0.78rem;" onclick="bioRemove()">Remove</button>' +
-      '</div>';
-  } else {
-    statusEl.style.cssText = 'background:#f5f5f0;border:1px solid var(--border);color:var(--muted);padding:8px 12px;border-radius:4px;';
-    statusEl.textContent = 'No fingerprint registered on this device.';
-    btnsEl.innerHTML =
-      '<button class="btn btn-primary" style="width:100%;padding:11px;justify-content:center;font-size:0.78rem;" onclick="bioRegisterFromManage()">&#128077; Set Up Fingerprint Login</button>';
-  }
-}
-
-function bioActivate() {
-  localStorage.setItem(BIOMETRIC_ENABLED, '1');
-  renderBioManage();
-  showToast('Fingerprint login activated');
-}
-
-function bioDeactivate() {
-  localStorage.setItem(BIOMETRIC_ENABLED, '0');
-  renderBioManage();
-  showToast('Fingerprint login deactivated');
-}
-
-function bioRemove() {
-  localStorage.removeItem(BIOMETRIC_KEY);
-  localStorage.removeItem(BIOMETRIC_ENABLED);
-  renderBioManage();
-  showToast('Fingerprint removed');
-}
-
-function bioRegisterFromManage() {
-  registerBiometric(function(success) {
-    if (success) {
-      localStorage.setItem(BIOMETRIC_ENABLED, '1');
-      renderBioManage();
-    }
-  });
-}
-
-// ── Show fingerprint setup prompt after first login ──
-function maybePromptBioSetup() {
-  if (localStorage.getItem(BIO_PROMPTED)) return;        // already responded
-  if (localStorage.getItem(BIOMETRIC_KEY)) return;        // already registered
-  if (!window.PublicKeyCredential) return;                 // not supported
-  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-    .then(function(available) {
-      if (!available) return;
-      // Don't mark as prompted yet — only mark when user responds
-      var o = document.getElementById('bio-setup-overlay');
-      if (o) o.style.display = 'flex';
-    }).catch(function(){});
-}
-
-function acceptBioSetup() {
-  localStorage.setItem(BIO_PROMPTED, '1'); // record that user responded
-  var o = document.getElementById('bio-setup-overlay');
-  if (o) o.style.display = 'none';
-  // Navigate to the correct Manage tab depending on current mode
-  if (_appMode === 'income') {
-    var incManageBtn = document.querySelector('nav.tabs button[onclick*="inc-manage"]');
-    if (incManageBtn) incManageBtn.click();
-    setTimeout(function() {
-      var bioCard = document.getElementById('bio-manage-status-inc');
-      if (bioCard) bioCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  } else {
-    var manageBtn = document.querySelector('nav.tabs button[onclick*="\'manage\'"]');
-    if (!manageBtn) manageBtn = document.querySelector('nav.tabs button[onclick*="manage"]');
-    if (manageBtn) manageBtn.click();
-    setTimeout(function() {
-      var bioCard = document.getElementById('bio-manage-status');
-      if (bioCard) bioCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  }
-  showToast('👆 Tap "Set Up Fingerprint Login" below to activate');
-}
-
-function declineBioSetup() {
-  localStorage.setItem(BIO_PROMPTED, '1'); // record that user responded
-  var o = document.getElementById('bio-setup-overlay');
-  if (o) o.style.display = 'none';
-  // Brief notification — dismisses automatically
-  var note = document.createElement('div');
-  note.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99999;background:var(--ink);border:1px solid rgba(200,150,46,0.4);border-radius:6px;padding:12px 20px;font-family:DM Mono,monospace;font-size:0.75rem;color:var(--gold2);text-align:center;line-height:1.6;max-width:300px;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
-  note.textContent = 'You can always enable fingerprint login later in the Manage tab.';
-  document.body.appendChild(note);
-  setTimeout(function() {
-    note.style.transition = 'opacity 0.5s';
-    note.style.opacity = '0';
-    setTimeout(function() { if (note.parentNode) note.parentNode.removeChild(note); }, 500);
-  }, 4000);
-}
-
-// ── On app open: if fingerprint is enabled show fingerprint screen, not login ──
-function checkBiometricAvailable() {
-  var hasCred   = !!localStorage.getItem(BIOMETRIC_KEY);
-  var isEnabled = localStorage.getItem(BIOMETRIC_ENABLED) === '1';
-  if (!hasCred || !isEnabled) return;
-  if (!window.PublicKeyCredential) return;
-  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-    .then(function(available) {
-      if (!available) return;
-      var loginStep = document.getElementById('pin-step-login');
-      var bioStep   = document.getElementById('pin-step-biometric');
-      if (loginStep) loginStep.style.display = 'none';
-      if (bioStep)   bioStep.style.display   = 'block';
-      // Reset animation
-      var thumbIcon = document.getElementById('bio-thumb-icon');
-      if (thumbIcon) { thumbIcon.innerHTML = '&#128077;'; thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite'; }
-      var bioRing = document.getElementById('bio-ring');
-      if (bioRing) bioRing.style.animation = 'bio-ring 1.6s ease-out infinite';
-      var bioActionBtns = document.getElementById('bio-action-btns');
-      if (bioActionBtns) bioActionBtns.style.display = 'none';
-      var savedName = localStorage.getItem(NAME_KEY) || localStorage.getItem(FULL_NAME_KEY) || '';
-      var nameEl = document.getElementById('bio-prompt-name');
-      if (nameEl && savedName) nameEl.textContent = 'Signing in as ' + savedName;
-      var statusEl = document.getElementById('bio-prompt-status');
-      if (statusEl) statusEl.textContent = 'Touch your fingerprint sensor';
-      setTimeout(loginWithBiometric, 300);
-    }).catch(function(){});
-}
-
-// ── User taps "use access code instead" from fingerprint screen ──
-function showLoginInstead() {
-  var bioStep   = document.getElementById('pin-step-biometric');
-  var loginStep = document.getElementById('pin-step-login');
-  if (bioStep)   bioStep.style.display   = 'none';
-  if (loginStep) loginStep.style.display = 'block';
-  var statusEl = document.getElementById('bio-prompt-status');
-  if (statusEl) statusEl.textContent = '';
-  // Stop animations
-  var thumbIcon = document.getElementById('bio-thumb-icon');
-  if (thumbIcon) thumbIcon.style.animation = 'none';
-  var bioRing = document.getElementById('bio-ring');
-  if (bioRing) bioRing.style.animation = 'none';
-  // Reset action buttons for next time
-  var bioActionBtns = document.getElementById('bio-action-btns');
-  if (bioActionBtns) bioActionBtns.style.display = 'none';
-  setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); }, 100);
-}
-
-// ── Fingerprint login ──
-function loginWithBiometric() {
-  var savedCred = localStorage.getItem(BIOMETRIC_KEY);
-  if (!savedCred) { showLoginInstead(); return; }
-  var statusEl = document.getElementById('bio-prompt-status');
-  if (statusEl) statusEl.textContent = 'Waiting for fingerprint...';
-  // Ensure animation is active while waiting
-  var thumbIcon = document.getElementById('bio-thumb-icon');
-  if (thumbIcon) { thumbIcon.innerHTML = '&#128077;'; thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite'; }
-  var bioRing = document.getElementById('bio-ring');
-  if (bioRing) bioRing.style.animation = 'bio-ring 1.6s ease-out infinite';
-  // Hide fallback button while sensor is active
-  var bioActionBtns = document.getElementById('bio-action-btns');
-  if (bioActionBtns) bioActionBtns.style.display = 'none';
-
-  var credData  = JSON.parse(savedCred);
-  var challenge = new Uint8Array(16);
-  window.crypto.getRandomValues(challenge);
-
-  navigator.credentials.get({
-    publicKey: {
-      challenge:         challenge,
-      allowCredentials: [{ id: base64ToBuffer(credData.id), type: 'public-key', transports: ['internal'] }],
-      userVerification: 'discouraged',
-      timeout:           20000
-    }
-  }).then(function(assertion) {
-    if (!assertion) {
-      if (statusEl) statusEl.textContent = 'Try again';
-      if (bioActionBtns) bioActionBtns.style.display = 'block';
-      return;
-    }
-    if (statusEl) statusEl.textContent = '&#10003; Verified';
-    if (thumbIcon) thumbIcon.style.animation = 'none';
-    if (bioRing) bioRing.style.animation = 'none';
-    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
-
-    var uid   = localStorage.getItem(UID_KEY);
-    var name  = localStorage.getItem(NAME_KEY);
-    var phone = localStorage.getItem(PHONE_KEY);
-    if (!uid || !name || !phone) {
-      if (statusEl) statusEl.textContent = 'Session expired — use your access code';
-      if (bioActionBtns) bioActionBtns.style.display = 'block';
-      showLoginInstead();
-      return;
-    }
-
-    sessionStorage.setItem('app_session', '1');
-    _resumeSession(uid, name, phone);
-    showToast('&#10003; Welcome back, ' + name + '!');
-
-  }).catch(function(e) {
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    // Stop animation and show fallback button
-    if (thumbIcon) { thumbIcon.innerHTML = '&#128078;'; thumbIcon.style.animation = 'none'; }
-    if (bioRing) bioRing.style.animation = 'none';
-    if (bioActionBtns) bioActionBtns.style.display = 'block';
-    if (e.name === 'NotAllowedError') {
-      if (statusEl) statusEl.textContent = 'Fingerprint cancelled';
-    } else if (e.name === 'InvalidStateError') {
-      if (statusEl) statusEl.textContent = 'Key not found — re-register in Manage';
-    } else {
-      if (statusEl) statusEl.textContent = 'Try again or use access code';
-    }
-  });
-}
-
-// ── Register fingerprint (used from setup prompt and Manage) ──
-function registerBiometric(callback) {
-  if (!window.PublicKeyCredential) { showToast('Biometric not supported on this device'); if (callback) callback(false); return; }
-  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-    .then(function(available) {
-      if (!available) { showToast('No fingerprint/face sensor found'); if (callback) callback(false); return; }
-      var challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
-      var userId = new TextEncoder().encode(_userId || 'user');
-      navigator.credentials.create({
-        publicKey: {
-          challenge:    challenge,
-          rp:           { name: 'My Finance Ledger', id: location.hostname },
-          user:         { id: userId, name: _userName || 'user', displayName: _userName || 'User' },
-          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
-          timeout:      60000
-        }
-      }).then(function(cred) {
-        localStorage.setItem(BIOMETRIC_KEY, JSON.stringify({ id: bufferToBase64(cred.rawId) }));
-        showToast('✓ Fingerprint registered! You can now log in with your fingerprint.');
-        if (callback) callback(true);
-      }).catch(function(e) {
-        showToast('Could not register fingerprint: ' + (e.message || 'cancelled'));
-        if (callback) callback(false);
-      });
-    });
-}
-
-function bufferToBase64(buffer) {
-  var bytes = new Uint8Array(buffer);
-  var str = '';
-  bytes.forEach(function(b){ str += String.fromCharCode(b); });
-  return btoa(str);
-}
-function base64ToBuffer(base64) {
-  var str = atob(base64);
-  var buf = new Uint8Array(str.length);
-  for (var i = 0; i < str.length; i++) buf[i] = str.charCodeAt(i);
-  return buf.buffer;
-}
-
-function syncInit() {
   var uid   = localStorage.getItem(UID_KEY);
   var name  = localStorage.getItem(NAME_KEY);
   var phone = localStorage.getItem(PHONE_KEY);
-
-  // ── CASE 1: Active session (refresh / tab still alive) ──
-  // sessionStorage survives F5 but is wiped on fresh open
-  var isActiveSession = sessionStorage.getItem('app_session') === '1';
-  if (isActiveSession && uid && name && phone) {
-    _resumeSession(uid, name, phone);
+  var savedHash = localStorage.getItem('expense_pin_hash_local');
+  if (!uid || !name || !phone || !savedHash) {
+    // No local session — fall back to full login
+    showFullVerifyStep();
     return;
   }
-
-  // ── CASE 2: Fingerprint enabled — trigger silently, show NO login screen ──
-  var hasCred   = !!localStorage.getItem(BIOMETRIC_KEY);
-  var isEnabled = localStorage.getItem(BIOMETRIC_ENABLED) === '1';
-  if (hasCred && isEnabled && uid && name && phone && window.PublicKeyCredential) {
-    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-      .then(function(available) {
-        if (available) {
-          // Trigger fingerprint with overlay still HIDDEN — user sees no login screen
-          _silentBiometricLogin(uid, name, phone);
-        } else {
-          // Sensor unavailable — fall through to login
-          showPinScreen();
-          showLoginStep();
-        }
-      }).catch(function() {
-        showPinScreen();
-        showLoginStep();
-      });
-    return; // don't show anything yet
+  if (hashPin(_pinBuffer) !== savedHash) {
+    _loginAttempts++;
+    var er = document.getElementById('login-error');
+    if (_loginAttempts >= 3) {
+      if (er) er.textContent = 'Incorrect PIN.';
+      var hint = document.getElementById('reset-attempt-hint');
+      if (hint) hint.style.display = 'block';
+    } else {
+      var left = 3 - _loginAttempts;
+      if (er) er.textContent = 'Incorrect PIN. ' + left + ' attempt' + (left === 1 ? '' : 's') + ' left.';
+    }
+    // Shake the dots
+    var dots = document.getElementById('pin-dots');
+    if (dots) { dots.style.animation = 'none'; setTimeout(function(){ dots.style.animation = 'pin-shake 0.35s'; }, 10); }
+    _pinBuffer = '';
+    setTimeout(updatePinDots, 350);
+    return;
   }
-
-  // ── CASE 3: No session, no fingerprint — show login ──
-  showPinScreen();
-  if (phone) { showLoginStep(); } else { showRegisterStep(); }
+  // Correct PIN — set globals and enter app
+  _loginAttempts = 0;
+  _pinBuffer = '';
+  updatePinDots();
+  // Set globals from localStorage (they may be null if this is a lock re-entry)
+  _userId    = uid;
+  _userName  = name;
+  _userPhone = phone;
+  sessionStorage.setItem('app_session', '1');
+  localStorage.setItem('last_active', String(Date.now()));
+  var pinO = document.getElementById('pin-overlay');
+  if (pinO) pinO.style.display = 'none';
+  updateUserDisplay();
+  resetInactivityTimer();
+  // Restart Firebase listeners (stopped during lock, or first time entering)
+  if (_db && !_syncUnsubscribe) {
+    syncSetStatus('live');
+    syncStartListener();
+    updateHeaderContext();
+    renderMonthPicker();
+    populateFilters();
+  } else if (!_db) {
+    getDB(function() {
+      syncSetStatus('live');
+      syncStartListener();
+      renderSyncSetupUI();
+      updateHeaderContext();
+      renderMonthPicker();
+      populateFilters();
+    });
+  }
+  showToast('Welcome back, ' + name + '!');
 }
 
-// Resume session without any login UI (refresh / active session)
+// ── Full verify (username + PIN, against Firebase) ──
+function submitFullVerify() {
+  var usernameEl = document.getElementById('fv-username');
+  var pinEl      = document.getElementById('fv-pin');
+  var errEl      = document.getElementById('fv-error');
+  var username   = usernameEl ? usernameEl.value.trim() : '';
+  var pin        = pinEl      ? pinEl.value.trim()      : '';
+  if (!username) { if(errEl) errEl.textContent = 'Please enter your username'; return; }
+  if (pin.length < 4) { if(errEl) errEl.textContent = 'Please enter your PIN'; return; }
+  if(errEl) errEl.textContent = 'Verifying...';
+  var pinHash = hashPin(pin);
+  getDB(function(db) {
+    db.collection('user_registry').where('name', '==', username).get().then(function(snap) {
+      if (snap.empty) { if(errEl) errEl.textContent = 'Username not found'; return; }
+      var doc  = snap.docs[0];
+      var data = doc.data();
+      if (data.pin_hash !== pinHash) {
+        _loginAttempts++;
+        var left = Math.max(0, 3 - _loginAttempts);
+        if(errEl) errEl.textContent = _loginAttempts >= 3
+          ? 'Incorrect PIN.' : 'Incorrect PIN. ' + left + ' attempt' + (left===1?'':'s') + ' left.';
+        if (_loginAttempts >= 3) {
+          var hint = document.getElementById('reset-attempt-hint');
+          if (hint) hint.style.display = 'block';
+        }
+        return;
+      }
+      // Success — save local hash for future PIN-only logins
+      _loginAttempts = 0;
+      var uid = data.user_id;
+      var name = data.name;
+      var phone = doc.id;
+      localStorage.setItem(UID_KEY,   uid);
+      localStorage.setItem(NAME_KEY,  name);
+      localStorage.setItem(PHONE_KEY, phone);
+      localStorage.setItem('expense_pin_hash_local', pinHash);
+      if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
+      recordFullVerify();
+      _resumeSession(uid, name, phone);
+      showToast('Identity confirmed. Welcome back, ' + name + '!');
+    }).catch(function() {
+      if(errEl) errEl.textContent = 'Connection error. Check your internet.';
+    });
+  });
+}
+
+// ── showLoginStep: show PIN pad or full-verify depending on check ──
+function showLoginStep() {
+  document.getElementById('pin-step-register').style.display   = 'none';
+  document.getElementById('pin-step-code').style.display       = 'none';
+  document.getElementById('pin-step-login').style.display      = 'none';
+  document.getElementById('pin-step-full-verify').style.display = 'none';
+  _loginAttempts = 0;
+  var hint = document.getElementById('reset-attempt-hint'); if(hint) hint.style.display = 'none';
+  var uid = localStorage.getItem(UID_KEY);
+  if (uid && needsFullVerify()) {
+    showFullVerifyStep();
+  } else if (uid) {
+    showPinPadStep();
+  } else {
+    showRegisterStep();
+  }
+}
+
+function showPinPadStep() {
+  _pinBuffer = '';
+  updatePinDots();
+  var er = document.getElementById('login-error'); if(er) er.textContent = '';
+  var hint = document.getElementById('reset-attempt-hint'); if(hint) hint.style.display = 'none';
+  var nameEl = document.getElementById('pin-login-username-display');
+  if (nameEl) { var n = localStorage.getItem(NAME_KEY); nameEl.textContent = n ? n.toUpperCase() : ''; }
+  document.getElementById('pin-step-login').style.display = 'block';
+  // Focus the overlay so keyboard shortcuts work (no visible input to focus)
+}
+
+function showFullVerifyStep() {
+  var el = document.getElementById('pin-step-full-verify');
+  if (el) el.style.display = 'block';
+  var fvU = document.getElementById('fv-username'); if(fvU) fvU.value = '';
+  var fvP = document.getElementById('fv-pin');      if(fvP) fvP.value = '';
+  var fvE = document.getElementById('fv-error');    if(fvE) fvE.textContent = '';
+  setTimeout(function(){ var u = document.getElementById('fv-username'); if(u) u.focus(); }, 80);
+}
+
+// ── _resumeSession: enter app immediately, fire Firebase sync in background ──
 function _resumeSession(uid, name, phone) {
   _userId = uid; _userName = name; _userPhone = phone;
   localStorage.setItem('last_active', String(Date.now()));
   var pinO = document.getElementById('pin-overlay');
   if (pinO) pinO.style.display = 'none';
+  sessionStorage.setItem('app_session', '1');
   updateUserDisplay();
   var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
   _appMode = savedMode;
   applyMode();
   adjustMainPadding();
+  setTimeout(resetInactivityTimer, 500);
+  setTimeout(checkBackupReminder, 3000);
+  setTimeout(showModeOverlay, 200);
+  // Fire sync in background — app is already usable
   loadIncomeFromFirebase(function(){});
   getDB(function() {
     syncSetStatus('live');
@@ -8855,56 +8814,45 @@ function _resumeSession(uid, name, phone) {
     updateHeaderContext();
     renderMonthPicker();
     populateFilters();
-    setTimeout(checkPrivacy, 600);
+    setTimeout(checkPrivacy, 800);
   });
-  setTimeout(resetInactivityTimer, 1000);
 }
 
-// Trigger fingerprint silently — login overlay stays hidden until needed
-function _silentBiometricLogin(uid, name, phone) {
-  var savedCred = localStorage.getItem(BIOMETRIC_KEY);
-  if (!savedCred) { showPinScreen(); showLoginStep(); return; }
+// ── syncInit: called on page load ──
+function syncInit() {
+  var uid   = localStorage.getItem(UID_KEY);
+  var name  = localStorage.getItem(NAME_KEY);
+  var phone = localStorage.getItem(PHONE_KEY);
+  var pinHash = localStorage.getItem('expense_pin_hash_local');
+  var lastActive = parseInt(localStorage.getItem('last_active') || '0', 10);
 
-  var credData  = JSON.parse(savedCred);
-  var challenge = new Uint8Array(16);
-  window.crypto.getRandomValues(challenge);
+  // If we have a full local session AND were active recently → resume without PIN
+  // "Recently" = within the inactivity window (10 min)
+  var isActiveSession = sessionStorage.getItem('app_session') === '1';
+  var wasRecentlyActive = lastActive > 0 && (Date.now() - lastActive) < INACTIVE_MS;
 
-  navigator.credentials.get({
-    publicKey: {
-      challenge:         challenge,
-      allowCredentials: [{ id: base64ToBuffer(credData.id), type: 'public-key', transports: ['internal'] }],
-      userVerification: 'discouraged',
-      timeout:           20000
-    }
-  }).then(function(assertion) {
-    if (!assertion) { showPinScreen(); showLoginStep(); return; }
-    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
-    // Success — resume exactly like a session restore, no login screen ever shown
-    sessionStorage.setItem('app_session', '1');
+  if (uid && name && phone && pinHash && (isActiveSession || wasRecentlyActive)) {
+    // Resume silently — no PIN needed for a fresh page load within 10 min
     _resumeSession(uid, name, phone);
-    showToast('✓ Welcome back, ' + name + '!');
+    return;
+  }
 
-  }).catch(function(e) {
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    // Any failure or cancel — now show the login screen
-    showPinScreen();
-    if (e.name === 'NotAllowedError') {
-      // User cancelled fingerprint — show normal login
-      showLoginStep();
-    } else {
-      // Sensor error — show login with message
-      showLoginStep();
-      var errEl = document.getElementById('login-error');
-      if (errEl) errEl.textContent = 'Fingerprint failed — enter your access code';
-    }
-  });
+  // Show login screen immediately
+  showPinScreen();
+  if (!uid || !pinHash) {
+    // New device or never logged in
+    showRegisterStep();
+  } else if (needsFullVerify()) {
+    showFullVerifyStep();
+  } else {
+    showPinPadStep();
+  }
 }
 
 function startSync() {
   syncSetStatus('connecting');
   getDB(function() {
     setTimeout(checkPrivacy, 500);
-    setTimeout(maybePromptBioSetup, 10000); // ask about fingerprint 10s after app loads
     if (_userPhone && _userId) {
       // Load data and start listeners — skip re-validation to prevent showPinScreen() race
       syncLoadFromFirebase(function() {
@@ -9161,23 +9109,15 @@ function showPinScreen() {
   if (o) o.style.display = 'flex';
 }
 function hidePinScreen() {
-  var o = document.getElementById('pin-overlay');
-  if (o) o.style.display = 'none';
-  // Mark this as an active session — survives refresh, cleared on tab close
-  sessionStorage.setItem('app_session', '1');
-  var loginStep = document.getElementById('pin-step-login');
-  var regStep   = document.getElementById('pin-step-register');
-  if (loginStep) loginStep.style.display = 'block';
-  if (regStep)   regStep.style.display   = 'none';
-  setTimeout(resetInactivityTimer, 1000);
-  setTimeout(checkBackupReminder, 3000);
-  // Always show mode selection after every login
-  _appMode = 'expenses';
-  applyMode();
-  adjustMainPadding();
-  updateUserDisplay();
-  loadIncomeFromFirebase(function(){});
-  setTimeout(showModeOverlay, 300);
+  // Used by confirmCode and useResetCodeNow after first registration or reset
+  // _userId/_userName/_userPhone must be set before calling
+  if (_userId && _userName && _userPhone) {
+    _resumeSession(_userId, _userName, _userPhone);
+  } else {
+    var o = document.getElementById('pin-overlay');
+    if (o) o.style.display = 'none';
+    sessionStorage.setItem('app_session', '1');
+  }
 }
 function showRegisterStep() {
   document.getElementById('pin-step-register').style.display = 'block';
@@ -9187,45 +9127,13 @@ function showRegisterStep() {
 function showLoginStep() {
   document.getElementById('pin-step-register').style.display = 'none';
   document.getElementById('pin-step-code').style.display    = 'none';
-  document.getElementById('pin-step-login').style.display   = 'none'; // hide until bio check done
-  var bioStep = document.getElementById('pin-step-biometric');
-  if (bioStep) bioStep.style.display = 'none';
+  document.getElementById('pin-step-login').style.display   = 'block';
   var ph = document.getElementById('login-phone'); if(ph) ph.value = '';
   var cd = document.getElementById('login-code');  if(cd) cd.value = '';
   var er = document.getElementById('login-error'); if(er) er.textContent = '';
-  // Check if fingerprint is available — if so show fingerprint screen, else show login form
-  var hasCred   = !!localStorage.getItem(BIOMETRIC_KEY);
-  var isEnabled = localStorage.getItem(BIOMETRIC_ENABLED) === '1';
-  if (hasCred && isEnabled && window.PublicKeyCredential) {
-    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-      .then(function(available) {
-        if (available) {
-          if (bioStep) bioStep.style.display = 'block';
-          // Reset animation state every time we show this screen
-          var thumbIcon = document.getElementById('bio-thumb-icon');
-          if (thumbIcon) { thumbIcon.innerHTML = '&#128077;'; thumbIcon.style.animation = 'bio-pulse 1.6s ease-in-out infinite'; }
-          var bioRing = document.getElementById('bio-ring');
-          if (bioRing) bioRing.style.animation = 'bio-ring 1.6s ease-out infinite';
-          var bioActionBtns = document.getElementById('bio-action-btns');
-          if (bioActionBtns) bioActionBtns.style.display = 'none';
-          var savedName = localStorage.getItem(NAME_KEY) || localStorage.getItem(FULL_NAME_KEY) || '';
-          var nameEl = document.getElementById('bio-prompt-name');
-          if (nameEl && savedName) nameEl.textContent = 'Signing in as ' + savedName;
-          var statusEl = document.getElementById('bio-prompt-status');
-          if (statusEl) statusEl.textContent = 'Touch your fingerprint sensor';
-          setTimeout(loginWithBiometric, 300);
-        } else {
-          document.getElementById('pin-step-login').style.display = 'block';
-          setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
-        }
-      }).catch(function() {
-        document.getElementById('pin-step-login').style.display = 'block';
-        setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
-      });
-  } else {
-    document.getElementById('pin-step-login').style.display = 'block';
-    setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
-  }
+  _loginAttempts = 0;
+  var hint = document.getElementById('reset-attempt-hint'); if(hint) hint.style.display = 'none';
+  setTimeout(function(){ var el = document.getElementById('login-code'); if(el) el.focus(); }, 80);
 }
 function showCodeStep() {
   document.getElementById('pin-step-register').style.display = 'none';
@@ -9292,6 +9200,10 @@ function confirmCode() {
     } catch(e){}
   }
   localStorage.removeItem('_pending_uid');
+  // Save PIN hash locally for instant PIN-only login next time
+  localStorage.setItem('expense_pin_hash_local', hashPin(_generatedCode));
+  // Record full verify since they just registered
+  recordFullVerify();
   // Clear any previous user data from this device
   localStorage.removeItem('expense_ledger');
   localStorage.removeItem('custom_categories');
@@ -9400,24 +9312,25 @@ function useResetCodeNow() {
   localStorage.setItem(UID_KEY,   _userId);
   localStorage.setItem(NAME_KEY,  _userName);
   localStorage.setItem(PHONE_KEY, _userPhone);
-  // Set the reset code as the new pin_hash so it also works as a manual login
+  // Save new pin hash locally and to Firebase
+  var newHash = hashPin(_resetCode);
+  localStorage.setItem('expense_pin_hash_local', newHash);
+  recordFullVerify();
   getDB(function(db) {
     db.collection('user_registry').doc(_pendingResetPhone).update({
-      pin_hash: hashPin(_resetCode),
+      pin_hash: newHash,
       reset_code_hash: null,
       reset_code_expiry: null
     }).catch(function(){});
   });
-  localStorage.setItem('keep_login_pref', '0');
   localStorage.setItem('last_active', String(Date.now()));
   _loginAttempts = 0;
   var hint = document.getElementById('reset-attempt-hint');
   if (hint) hint.style.display = 'none';
   hidePinScreen();
-  updateUserDisplay();
   fetchTrashFromFirebase();
   startSync();
-  showToast('Signed in! Change your access code in Manage now.');
+  showToast('Signed in! Change your PIN in Manage now.');
   setTimeout(function() {
     var manageBtn = document.querySelector('#main-nav button[onclick*="manage"]');
     if (manageBtn) manageBtn.click();
@@ -9474,15 +9387,14 @@ function submitLogin() {
     // Load full name from registry if available
     if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
     if(errEl) errEl.textContent = '';
-    var keepCb = document.getElementById('keep-logged-in');
-    var keepVal = (keepCb && keepCb.checked) ? '1' : '0';
-    localStorage.setItem('keep_login_pref', keepVal);
     localStorage.setItem('last_active', String(Date.now()));
+    // Save PIN hash locally for future instant PIN-only logins
+    localStorage.setItem('expense_pin_hash_local', pinHash);
+    recordFullVerify();
     _loginAttempts = 0;
     var hint = document.getElementById('reset-attempt-hint');
     if (hint) hint.style.display = 'none';
     hidePinScreen();
-    updateUserDisplay();
     fetchTrashFromFirebase();
     startSync();
     return true;
@@ -9589,7 +9501,7 @@ function logOut() {
   localStorage.removeItem(UID_KEY);
   localStorage.removeItem('last_active');
   localStorage.removeItem('keep_login_pref');
-  localStorage.removeItem(BIO_PROMPTED);
+  localStorage.removeItem('expense_pin_hash_local');
   sessionStorage.removeItem('app_session');
   showPinScreen();
   showLoginStep();
@@ -9687,14 +9599,19 @@ function renderSyncSetupUI() {
 }
 
 function changePin() {
-  // Try manage card input first, fall back to sync setup input
   var inp = document.getElementById('manage-pin-input') || document.getElementById('change-pin-input');
   var newCode = inp ? inp.value.trim() : '';
   if (newCode.length < 4) { showToast('Code must be at least 4 digits'); return; }
   if (!/^[0-9]+$/.test(newCode)) { showToast('Code must be numbers only'); return; }
   if (!_db || !_userPhone) { showToast('Not connected'); return; }
-  _db.collection('user_registry').doc(_userPhone).update({ pin_hash: hashPin(newCode) })
-    .then(function() { showToast('Access code changed!'); if(inp) inp.value=''; })
+  var newHash = hashPin(newCode);
+  _db.collection('user_registry').doc(_userPhone).update({ pin_hash: newHash })
+    .then(function() {
+      // Keep local hash in sync so PIN pad works immediately after change
+      localStorage.setItem('expense_pin_hash_local', newHash);
+      showToast('PIN changed!');
+      if(inp) inp.value = '';
+    })
     .catch(function(e) { showToast('Error: ' + e.message); });
 }
 
@@ -9778,9 +9695,9 @@ var HELP_ITEMS = [
   {icon:'&#128196;', label:'PDF',        tag:'pdf'},
   {icon:'&#128260;', label:'Switch',     tag:'switch'},
   {icon:'&#128065;', label:'Header',     tag:'header'},
-  {icon:'&#128077;', label:'Biometric',  tag:'biometric'},
-  {icon:'&#8679;',   label:'Scroll',     tag:'scroll'},
-  {icon:'&#128269;', label:'Multi-Search',tag:'multisearch'},
+  {icon:'&#128077;', label:'PIN Login',  tag:'biometric'},
+  {icon:'&#8679;',   label:'Scroll',      tag:'scroll'},
+  {icon:'&#128269;', label:'Multi-Search', tag:'multisearch'},
   {icon:'&#10067;',  label:'Help',       tag:'help'}
 ];
 
@@ -9856,7 +9773,7 @@ var HELP_DATA = {
   },
   'login': {
     title: '🔓 Login & Registration',
-    steps: ['First time: enter your full name and phone number.','Choose or create a username (4-10 characters).','Your access code is generated — screenshot it or write it down!','Returning user: enter phone or username and access code.','Tick Keep me logged in to stay logged in for 30 minutes of inactivity.','Change your access code anytime in the Manage tab.'],
+    steps: ['First time: enter your full name and phone number.','Choose or create a username (4–10 characters).','Your access code is generated — screenshot it or write it down!','Returning user: just tap your PIN on the number pad — no username needed.','Once every 1–2 weeks a security check will ask for your username AND PIN.','Change your PIN anytime in the Manage tab → Change Access Code.'],
     example: 'New user mk0374 registered with phone 08012345678.\nUsername suggestions: mk0374, mi0392, mk9283.\nShe chose mk0374. Access code: 847291 — she screenshotted it.',
     tip: 'Your phone number is scrambled before storage. Nobody can read it. If you forget your code contact support.'
   },
@@ -9885,10 +9802,18 @@ var HELP_DATA = {
     tip: 'The header state is not saved between sessions — it always resets to visible on next login.'
   },
   'biometric': {
-    title: '👍 Biometric Login — Fingerprint & Face',
-    steps: ['After your first successful login a prompt will appear asking if you want to enable fingerprint login.','Tap Yes, enable fingerprint and scan your finger when prompted.','From then on, opening the app automatically triggers your fingerprint sensor — no login screen shown.','If the fingerprint fails or you cancel, the normal login form appears instead.','To turn fingerprint on or off go to the Manage tab and find the Fingerprint Login card.','You can also remove and re-register your fingerprint from the same card.'],
-    example: 'User sa0819 logged in for the first time.\nAfter entering the app a prompt appeared asking about fingerprint.\nShe tapped Yes and scanned her thumb.\nNext time she opened the app her fingerprint sensor triggered instantly — she was in within 1 second.',
-    tip: 'Fingerprint is stored on your device only — never sent to any server. If you change phones you will need to set it up again on the new device via the Manage tab.'
+    title: '👍 PIN Login — Fast & Secure',
+    steps: [
+      'When you open the app you see a PIN pad — just tap your digits, no username needed.',
+      'Your PIN is 4 to 8 digits. The app auto-submits after 6 digits, or you can tap more.',
+      'Once in a while (every 1 to 2 weeks, randomly) the app will ask for your username AND PIN — this is a security check to make sure you still remember your credentials.',
+      'If you enter the wrong PIN 3 times the app offers a reset option.',
+      'To change your PIN go to Manage → Change Access Code and enter a new number.',
+      'After changing your PIN the new one works on the PIN pad immediately.',
+      'If you forget your PIN use the Forgot your PIN? link on the login screen.'
+    ],
+    example: 'User jd0292 opens the app.\nThe PIN pad appears instantly — he taps 8 4 7 2 9 1.\nThe app opens in under a second.\n\nTwo weeks later the app shows the Security Check screen.\nHe types his username jd0292 and his PIN.\nThe check passes and the normal PIN pad resumes next time.',
+    tip: 'Your PIN is stored securely as a one-way hash — nobody can read it, not even us. Write it down somewhere safe in case you forget.'
   },
   'scroll': {
     title: '⇧ Scroll Buttons — Quick Navigation',
@@ -9958,7 +9883,7 @@ function runHelpSearch(q) {
     pdf:['pdf','report','print','download','save report'],
     switch:['switch','module','mode','change to income','change to expense','toggle mode'],
     header:['header','hide','collapse','eye','show header','screen space'],
-    biometric:['biometric','fingerprint','face','touch id','face id','quick login'],
+    biometric:['pin','pin pad','pin login','security check','weekly check','login','fast login','access code'],
     scroll:['scroll','top','bottom','navigate','jump','floating button'],
     multisearch:['multi','multiple','search','comma','rice','water','fleet','several','words','terms','bulk search','multi-word','multisearch'],
     help:['help','support','contact','question','how to','guide']
