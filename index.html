@@ -1324,6 +1324,14 @@ nav.tabs.header-hidden button {
     </div>
   </div>
 
+  <!-- ── 3c. FINGERPRINT LOGIN ── -->
+  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold);">
+    <label>&#128077; Fingerprint Login</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Use your fingerprint or face to open the app instantly — no password needed.</p>
+    <div id="bio-manage-status" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:14px;padding:8px 12px;border-radius:4px;"></div>
+    <div id="bio-manage-btns"></div>
+  </div>
+
   <!-- ── 4. DANGER ZONE ── -->
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
@@ -1666,6 +1674,14 @@ nav.tabs.header-hidden button {
     </div>
   </div>
 
+  <!-- ── FINGERPRINT LOGIN ── -->
+  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--sage);">
+    <label>&#128077; Fingerprint Login</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Use your fingerprint or face to open the app instantly — no password needed.</p>
+    <div id="bio-manage-status-inc" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:14px;padding:8px 12px;border-radius:4px;"></div>
+    <div id="bio-manage-btns-inc"></div>
+  </div>
+
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
     <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="clearAllIncome()">&#128465; Delete ALL Income Data</button>
@@ -1833,6 +1849,29 @@ nav.tabs.header-hidden button {
       </div>
     </div>
 
+    <!-- Fingerprint auto-prompt screen (shown instead of login when biometric is enabled) -->
+    <div id="pin-step-biometric" style="display:none;">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:36px 28px;text-align:center;">
+        <div style="font-size:3.5rem;margin-bottom:16px;line-height:1;">&#128077;</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--gold2);margin-bottom:8px;">Touch to Sign In</div>
+        <div id="bio-prompt-name" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:24px;"></div>
+        <div id="bio-prompt-status" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--gold);min-height:20px;margin-bottom:20px;"></div>
+        <button onclick="loginWithBiometric()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.85rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:12px;">&#128077; Use Fingerprint</button>
+        <button onclick="showLoginInstead()" style="width:100%;padding:11px;background:none;border:1px solid rgba(200,150,46,0.3);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;cursor:pointer;">Use access code instead</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ BIOMETRIC SETUP PROMPT (shown after first login) ══ -->
+<div id="bio-setup-overlay" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(26,20,16,0.92);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:400px;padding:28px;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:12px;">&#128077;</div>
+    <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--ink);margin-bottom:8px;">Enable Fingerprint Login?</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--muted);line-height:1.7;margin-bottom:24px;">Skip the password next time — just touch the fingerprint sensor to open your app instantly. You can turn this off anytime in Manage.</div>
+    <button onclick="acceptBioSetup()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:10px;">&#128077; Yes — Take Me There</button>
+    <button onclick="declineBioSetup()" style="width:100%;padding:11px;background:none;border:1px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);cursor:pointer;">No thanks</button>
   </div>
 </div>
 
@@ -5094,7 +5133,7 @@ function switchTab(name,btn){
   if(name==='dashboard'){populateFilters();renderDashboard();}
   if(name==='ledger'){populateFilters();renderLedger();}
   if(name==='daily'){populateDailyFilters();renderDailyView();}
-  if(name==='manage')renderManagePanel();
+  if(name==='manage'){renderManagePanel();renderBioManage();}
   if(name==='budget')renderBudget();
 }
 
@@ -6754,7 +6793,7 @@ function switchIncomeTab(name, btn) {
   if (name === 'inc-monthly')     { incPopulateDailyFilters(); renderIncomeMonthly(); }
   if (name === 'inc-dashboard')   renderIncomeDashboard();
   if (name === 'inc-ledger')      { incPopulateFilters(); renderIncomeLedger(); }
-  if (name === 'inc-manage')      { renderIncomeManage(); setTimeout(renderIncomeBioStatus, 100); }
+  if (name === 'inc-manage')      { renderIncomeManage(); setTimeout(renderBioManage, 100); }
 }
 
 // ── Income month picker ──
@@ -8381,128 +8420,265 @@ function getReportName() {
 }
 
 // ── Biometric / Fingerprint Login ──
-var BIOMETRIC_KEY = 'finance_biometric_cred';
+var BIOMETRIC_KEY     = 'finance_biometric_cred';
+var BIOMETRIC_ENABLED = 'finance_biometric_on';  // '1' = user wants fingerprint login
+var BIO_PROMPTED      = 'finance_bio_prompted';   // '1' = already asked this user
 
-function renderIncomeBioStatus() {
-  var el = document.getElementById('inc-bio-status');
-  if (!el) return;
-  var hasCred = !!localStorage.getItem(BIOMETRIC_KEY);
-  if (hasCred) {
-    el.innerHTML = '<span style="color:var(--sage);">&#10003; Fingerprint registered on this device</span>';
+// ── Render biometric status in Manage tab (both expense + income) ──
+function renderBioManage() {
+  _renderBioManageInto('bio-manage-status', 'bio-manage-btns');
+  _renderBioManageInto('bio-manage-status-inc', 'bio-manage-btns-inc');
+}
+
+function _renderBioManageInto(statusId, btnsId) {
+  var statusEl = document.getElementById(statusId);
+  var btnsEl   = document.getElementById(btnsId);
+  if (!statusEl || !btnsEl) return;
+
+  if (!window.PublicKeyCredential) {
+    statusEl.style.cssText = 'background:#fff0f0;border:1px solid var(--rust);color:var(--rust);padding:8px 12px;border-radius:4px;';
+    statusEl.textContent = 'Fingerprint login is not supported on this browser or device.';
+    btnsEl.innerHTML = '';
+    return;
+  }
+
+  var hasCred   = !!localStorage.getItem(BIOMETRIC_KEY);
+  var isEnabled = localStorage.getItem(BIOMETRIC_ENABLED) === '1';
+
+  if (hasCred && isEnabled) {
+    statusEl.style.cssText = 'background:#f0fdf4;border:1px solid var(--sage);color:var(--sage);padding:8px 12px;border-radius:4px;';
+    statusEl.textContent = '✓ Fingerprint login is active on this device';
+    btnsEl.innerHTML =
+      '<button class="btn btn-danger" style="width:100%;padding:11px;justify-content:center;font-size:0.78rem;" onclick="bioDeactivate()">Deactivate Fingerprint Login</button>';
+  } else if (hasCred && !isEnabled) {
+    statusEl.style.cssText = 'background:#fffbf0;border:1px solid var(--gold);color:#7a4800;padding:8px 12px;border-radius:4px;';
+    statusEl.textContent = 'Fingerprint registered but currently disabled.';
+    btnsEl.innerHTML =
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="btn btn-primary" style="flex:1;padding:11px;justify-content:center;font-size:0.78rem;" onclick="bioActivate()">&#128077; Activate</button>' +
+      '<button class="btn btn-danger" style="flex:1;padding:11px;justify-content:center;font-size:0.78rem;" onclick="bioRemove()">Remove</button>' +
+      '</div>';
   } else {
-    el.innerHTML = '<span style="color:var(--muted);">No fingerprint registered yet</span>';
+    statusEl.style.cssText = 'background:#f5f5f0;border:1px solid var(--border);color:var(--muted);padding:8px 12px;border-radius:4px;';
+    statusEl.textContent = 'No fingerprint registered on this device.';
+    btnsEl.innerHTML =
+      '<button class="btn btn-primary" style="width:100%;padding:11px;justify-content:center;font-size:0.78rem;" onclick="bioRegisterFromManage()">&#128077; Set Up Fingerprint Login</button>';
   }
 }
 
-function checkBiometricAvailable() {
-  if (!window.PublicKeyCredential) return;
+function bioActivate() {
+  localStorage.setItem(BIOMETRIC_ENABLED, '1');
+  renderBioManage();
+  showToast('Fingerprint login activated');
+}
+
+function bioDeactivate() {
+  localStorage.setItem(BIOMETRIC_ENABLED, '0');
+  renderBioManage();
+  showToast('Fingerprint login deactivated');
+}
+
+function bioRemove() {
+  localStorage.removeItem(BIOMETRIC_KEY);
+  localStorage.removeItem(BIOMETRIC_ENABLED);
+  renderBioManage();
+  showToast('Fingerprint removed');
+}
+
+function bioRegisterFromManage() {
+  registerBiometric(function(success) {
+    if (success) {
+      localStorage.setItem(BIOMETRIC_ENABLED, '1');
+      renderBioManage();
+    }
+  });
+}
+
+// ── Show fingerprint setup prompt after first login ──
+function maybePromptBioSetup() {
+  if (localStorage.getItem(BIO_PROMPTED)) return;        // already responded
+  if (localStorage.getItem(BIOMETRIC_KEY)) return;        // already registered
+  if (!window.PublicKeyCredential) return;                 // not supported
   PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
     .then(function(available) {
-      var wrap = document.getElementById('biometric-btn-wrap');
-      // Only show if available AND user has saved biometric cred
-      var savedCred = localStorage.getItem(BIOMETRIC_KEY);
-      if (available && savedCred && wrap) {
-        wrap.style.display = 'block';
-      }
+      if (!available) return;
+      // Don't mark as prompted yet — only mark when user responds
+      var o = document.getElementById('bio-setup-overlay');
+      if (o) o.style.display = 'flex';
     }).catch(function(){});
 }
 
+function acceptBioSetup() {
+  localStorage.setItem(BIO_PROMPTED, '1'); // record that user responded
+  var o = document.getElementById('bio-setup-overlay');
+  if (o) o.style.display = 'none';
+  // Navigate to the correct Manage tab depending on current mode
+  if (_appMode === 'income') {
+    var incManageBtn = document.querySelector('nav.tabs button[onclick*="inc-manage"]');
+    if (incManageBtn) incManageBtn.click();
+    setTimeout(function() {
+      var bioCard = document.getElementById('bio-manage-status-inc');
+      if (bioCard) bioCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  } else {
+    var manageBtn = document.querySelector('nav.tabs button[onclick*="\'manage\'"]');
+    if (!manageBtn) manageBtn = document.querySelector('nav.tabs button[onclick*="manage"]');
+    if (manageBtn) manageBtn.click();
+    setTimeout(function() {
+      var bioCard = document.getElementById('bio-manage-status');
+      if (bioCard) bioCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }
+  showToast('👆 Tap "Set Up Fingerprint Login" below to activate');
+}
+
+function declineBioSetup() {
+  localStorage.setItem(BIO_PROMPTED, '1'); // record that user responded
+  var o = document.getElementById('bio-setup-overlay');
+  if (o) o.style.display = 'none';
+  // Brief notification — dismisses automatically
+  var note = document.createElement('div');
+  note.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99999;background:var(--ink);border:1px solid rgba(200,150,46,0.4);border-radius:6px;padding:12px 20px;font-family:DM Mono,monospace;font-size:0.75rem;color:var(--gold2);text-align:center;line-height:1.6;max-width:300px;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+  note.textContent = 'You can always enable fingerprint login later in the Manage tab.';
+  document.body.appendChild(note);
+  setTimeout(function() {
+    note.style.transition = 'opacity 0.5s';
+    note.style.opacity = '0';
+    setTimeout(function() { if (note.parentNode) note.parentNode.removeChild(note); }, 500);
+  }, 4000);
+}
+
+// ── On app open: if fingerprint is enabled show fingerprint screen, not login ──
+function checkBiometricAvailable() {
+  var hasCred   = !!localStorage.getItem(BIOMETRIC_KEY);
+  var isEnabled = localStorage.getItem(BIOMETRIC_ENABLED) === '1';
+  if (!hasCred || !isEnabled) return;
+  if (!window.PublicKeyCredential) return;
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+    .then(function(available) {
+      if (!available) return;
+      // Show the fingerprint screen instead of login
+      var loginStep = document.getElementById('pin-step-login');
+      var bioStep   = document.getElementById('pin-step-biometric');
+      if (loginStep) loginStep.style.display = 'none';
+      if (bioStep)   bioStep.style.display   = 'block';
+      // Set the user's name in the prompt
+      var savedName = localStorage.getItem(NAME_KEY) || localStorage.getItem(FULL_NAME_KEY) || '';
+      var nameEl = document.getElementById('bio-prompt-name');
+      if (nameEl && savedName) nameEl.textContent = 'Signing in as ' + savedName;
+      var statusEl = document.getElementById('bio-prompt-status');
+      if (statusEl) statusEl.textContent = 'Touch your fingerprint sensor';
+      // Auto-trigger immediately
+      setTimeout(loginWithBiometric, 300);
+    }).catch(function(){});
+}
+
+// ── User taps "use access code instead" from fingerprint screen ──
+function showLoginInstead() {
+  var bioStep   = document.getElementById('pin-step-biometric');
+  var loginStep = document.getElementById('pin-step-login');
+  if (bioStep)   bioStep.style.display   = 'none';
+  if (loginStep) loginStep.style.display = 'block';
+  var statusEl = document.getElementById('bio-prompt-status');
+  if (statusEl) statusEl.textContent = '';
+}
+
+// ── Fingerprint login ──
 function loginWithBiometric() {
   var savedCred = localStorage.getItem(BIOMETRIC_KEY);
-  if (!savedCred) { showToast('No fingerprint registered. Sign in with code first.'); return; }
-  var errEl = document.getElementById('login-error');
-  if (errEl) errEl.textContent = 'Touch fingerprint sensor...';
+  if (!savedCred) { showLoginInstead(); return; }
+  var statusEl = document.getElementById('bio-prompt-status');
+  if (statusEl) statusEl.textContent = 'Touch fingerprint sensor...';
 
-  var credData = JSON.parse(savedCred);
-  var challenge = new Uint8Array(16); // smaller = faster
+  var credData  = JSON.parse(savedCred);
+  var challenge = new Uint8Array(16);
   window.crypto.getRandomValues(challenge);
 
-  // Minimal options = fastest response on Android
   navigator.credentials.get({
     publicKey: {
-      challenge: challenge,
-      allowCredentials: [{
-        id: base64ToBuffer(credData.id),
-        type: 'public-key',
-        transports: ['internal'] // only internal sensor, no scanning for external
-      }],
-      userVerification: 'discouraged', // fastest — no PIN fallback prompt
-      timeout: 20000
+      challenge:         challenge,
+      allowCredentials: [{ id: base64ToBuffer(credData.id), type: 'public-key', transports: ['internal'] }],
+      userVerification: 'discouraged',
+      timeout:           20000
     }
   }).then(function(assertion) {
-    if (!assertion) { showToast('Try again'); return; }
-    if (errEl) errEl.textContent = '';
-    if (navigator.vibrate) navigator.vibrate([60, 40, 60]); // quick double pulse
+    if (!assertion) { if (statusEl) statusEl.textContent = 'Try again'; return; }
+    if (statusEl) statusEl.textContent = '';
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
 
     var uid   = localStorage.getItem(UID_KEY);
     var name  = localStorage.getItem(NAME_KEY);
     var phone = localStorage.getItem(PHONE_KEY);
-
     if (!uid || !name || !phone) {
-      showToast('Session expired — please sign in with your code');
+      if (statusEl) statusEl.textContent = 'Session expired — use your access code';
+      showLoginInstead();
       return;
     }
 
-    // Set credentials
     _userId = uid; _userName = name; _userPhone = phone;
+    sessionStorage.setItem('app_session', '1');
+    localStorage.setItem('last_active', String(Date.now()));
 
-    // Use normal login path but skip mode selection overlay
-    _userId = uid; _userName = name; _userPhone = phone;
-    // Hide pin overlay
     var pinO = document.getElementById('pin-overlay');
     if (pinO) pinO.style.display = 'none';
-    // Restore last used mode
     var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
     _appMode = savedMode;
     applyMode();
     updateUserDisplay();
     adjustMainPadding();
     setTimeout(resetInactivityTimer, 1000);
-    setTimeout(checkBackupReminder, 3000);
     loadIncomeFromFirebase(function(){});
     getDB(function() {
       syncSetStatus('live');
       syncStartListener();
+      renderSyncSetupUI();
+      updateHeaderContext();
+      renderMonthPicker();
+      populateFilters();
+      setTimeout(checkPrivacy, 600);
     });
     showToast('✓ Welcome back, ' + name + '!');
 
   }).catch(function(e) {
-    if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
-    if (errEl) errEl.textContent = '';
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     if (e.name === 'NotAllowedError') {
-      showToast('Fingerprint not recognised — try again');
+      // User cancelled — drop back to login form silently
+      if (statusEl) statusEl.textContent = '';
+      showLoginInstead();
     } else if (e.name === 'InvalidStateError') {
-      showToast('Fingerprint key not found — re-register in Manage');
+      if (statusEl) statusEl.textContent = 'Key not found — re-register in Manage';
+      showLoginInstead();
     } else {
-      showToast('Biometric error: ' + (e.message || 'try your access code'));
+      if (statusEl) statusEl.textContent = 'Try again or use access code';
     }
   });
 }
 
-function registerBiometric() {
-  if (!window.PublicKeyCredential) { showToast('Biometric not supported on this device'); return; }
+// ── Register fingerprint (used from setup prompt and Manage) ──
+function registerBiometric(callback) {
+  if (!window.PublicKeyCredential) { showToast('Biometric not supported on this device'); if (callback) callback(false); return; }
   PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
     .then(function(available) {
-      if (!available) { showToast('No fingerprint/face sensor found'); return; }
+      if (!available) { showToast('No fingerprint/face sensor found'); if (callback) callback(false); return; }
       var challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
       var userId = new TextEncoder().encode(_userId || 'user');
       navigator.credentials.create({
         publicKey: {
-          challenge: challenge,
-          rp: { name: 'My Finance Ledger', id: location.hostname },
-          user: { id: userId, name: _userName || 'user', displayName: _userName || 'User' },
+          challenge:    challenge,
+          rp:           { name: 'My Finance Ledger', id: location.hostname },
+          user:         { id: userId, name: _userName || 'user', displayName: _userName || 'User' },
           pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
           authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
-          timeout: 60000
+          timeout:      60000
         }
       }).then(function(cred) {
-        localStorage.setItem(BIOMETRIC_KEY, JSON.stringify({
-          id: bufferToBase64(cred.rawId)
-        }));
-        showToast('Fingerprint registered! You can now use it to log in.');
+        localStorage.setItem(BIOMETRIC_KEY, JSON.stringify({ id: bufferToBase64(cred.rawId) }));
+        showToast('✓ Fingerprint registered! You can now log in with your fingerprint.');
+        if (callback) callback(true);
       }).catch(function(e) {
-        showToast('Could not register fingerprint: ' + e.message);
+        showToast('Could not register fingerprint: ' + (e.message || 'cancelled'));
+        if (callback) callback(false);
       });
     });
 }
@@ -8562,8 +8738,8 @@ function syncInit() {
 function startSync() {
   syncSetStatus('connecting');
   getDB(function() {
-    // Check privacy acceptance once DB is ready — Firebase read needs _db set
     setTimeout(checkPrivacy, 500);
+    setTimeout(maybePromptBioSetup, 10000); // ask about fingerprint 10s after app loads
     if (_userPhone && _userId) {
       // Load data and start listeners — skip re-validation to prevent showPinScreen() race
       syncLoadFromFirebase(function() {
@@ -8846,11 +9022,38 @@ function showRegisterStep() {
 function showLoginStep() {
   document.getElementById('pin-step-register').style.display = 'none';
   document.getElementById('pin-step-code').style.display    = 'none';
-  document.getElementById('pin-step-login').style.display   = 'block';
+  document.getElementById('pin-step-login').style.display   = 'none'; // hide until bio check done
+  var bioStep = document.getElementById('pin-step-biometric');
+  if (bioStep) bioStep.style.display = 'none';
   var ph = document.getElementById('login-phone'); if(ph) ph.value = '';
   var cd = document.getElementById('login-code');  if(cd) cd.value = '';
   var er = document.getElementById('login-error'); if(er) er.textContent = '';
-  setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
+  // Check if fingerprint is available — if so show fingerprint screen, else show login form
+  var hasCred   = !!localStorage.getItem(BIOMETRIC_KEY);
+  var isEnabled = localStorage.getItem(BIOMETRIC_ENABLED) === '1';
+  if (hasCred && isEnabled && window.PublicKeyCredential) {
+    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+      .then(function(available) {
+        if (available) {
+          if (bioStep) bioStep.style.display = 'block';
+          var savedName = localStorage.getItem(NAME_KEY) || localStorage.getItem(FULL_NAME_KEY) || '';
+          var nameEl = document.getElementById('bio-prompt-name');
+          if (nameEl && savedName) nameEl.textContent = 'Signing in as ' + savedName;
+          var statusEl = document.getElementById('bio-prompt-status');
+          if (statusEl) statusEl.textContent = 'Touch your fingerprint sensor';
+          setTimeout(loginWithBiometric, 300);
+        } else {
+          document.getElementById('pin-step-login').style.display = 'block';
+          setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
+        }
+      }).catch(function() {
+        document.getElementById('pin-step-login').style.display = 'block';
+        setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
+      });
+  } else {
+    document.getElementById('pin-step-login').style.display = 'block';
+    setTimeout(function(){ var el=document.getElementById('login-phone'); if(el) el.focus(); },100);
+  }
 }
 function showCodeStep() {
   document.getElementById('pin-step-register').style.display = 'none';
@@ -9078,6 +9281,7 @@ function logOut() {
   localStorage.removeItem(UID_KEY);
   localStorage.removeItem('last_active');
   localStorage.removeItem('keep_login_pref');
+  localStorage.removeItem(BIO_PROMPTED);
   sessionStorage.removeItem('app_session');
   showPinScreen();
   showLoginStep();
@@ -9138,7 +9342,7 @@ function fullResetConfirmed() {
     allKeys.push(localStorage.key(i));
   }
   allKeys.forEach(function(k) {
-    if (k && (k.indexOf('expense_') === 0 || k.indexOf('inc_') === 0 || k === 'privacy_ok' || k === 'keep_login_pref' || k === 'last_active' || k === 'reload_time')) {
+    if (k && (k.indexOf('expense_') === 0 || k.indexOf('inc_') === 0 || k.indexOf('finance_') === 0 || k === 'privacy_ok' || k === 'keep_login_pref' || k === 'last_active' || k === 'reload_time')) {
       localStorage.removeItem(k);
     }
   });
@@ -9358,9 +9562,9 @@ var HELP_DATA = {
   },
   'biometric': {
     title: '👍 Biometric Login — Fingerprint & Face',
-    steps: ['Biometric login lets you sign in with your fingerprint or face instead of your access code.','First sign in once with your access code as normal.','In the login screen tap Set up Fingerprint Login.','Your device will prompt you to scan your fingerprint or face.','Next time you open the app tap Use Fingerprint to log in instantly.','Biometric data never leaves your device — it is handled entirely by your phone.'],
-    example: 'User sa0819 set up fingerprint login after her first sign-in.\nFrom then on she just tapped Use Fingerprint.\nHer thumb scan took under a second and she was straight into her ledger.',
-    tip: 'If biometric fails (e.g. wet fingers) you can always fall back to your access code. Biometric registration is per device — you must set it up again on a new phone.'
+    steps: ['After your first successful login a prompt will appear asking if you want to enable fingerprint login.','Tap Yes, enable fingerprint and scan your finger when prompted.','From then on, opening the app automatically triggers your fingerprint sensor — no login screen shown.','If the fingerprint fails or you cancel, the normal login form appears instead.','To turn fingerprint on or off go to the Manage tab and find the Fingerprint Login card.','You can also remove and re-register your fingerprint from the same card.'],
+    example: 'User sa0819 logged in for the first time.\nAfter entering the app a prompt appeared asking about fingerprint.\nShe tapped Yes and scanned her thumb.\nNext time she opened the app her fingerprint sensor triggered instantly — she was in within 1 second.',
+    tip: 'Fingerprint is stored on your device only — never sent to any server. If you change phones you will need to set it up again on the new device via the Manage tab.'
   },
   'scroll': {
     title: '⇧ Scroll Buttons — Quick Navigation',
