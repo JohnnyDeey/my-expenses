@@ -12,7 +12,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Expense Ledger</title>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
@@ -1337,6 +1336,17 @@ nav.tabs.header-hidden button {
         <button class="btn btn-ghost" style="flex:1;padding:8px;justify-content:center;" onclick="clearAllCancel()">Cancel</button>
       </div>
     </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f0d0d0;">
+      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Full Reset signs you out completely and wipes all local app data — your Firebase data is preserved. Use this to start fresh or hand the device to a new user.</p>
+      <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;background:transparent;border-color:var(--rust);color:var(--rust);" onclick="fullReset()">&#9851; Full Reset — Sign Out &amp; Clear Device</button>
+      <div id="full-reset-confirm" style="display:none;flex-direction:column;gap:8px;padding:12px;background:#fff0f0;border:1px solid var(--rust);border-radius:4px;margin-top:10px;">
+        <div style="font-family:DM Mono,monospace;font-size:0.75rem;color:var(--rust);font-weight:600;line-height:1.7;">This will sign you out and clear all local data on this device. Your data in Firebase is safe and you can log back in anytime.</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-danger" style="flex:1;padding:8px;justify-content:center;" onclick="fullResetConfirmed()">Yes, reset this device</button>
+          <button class="btn btn-ghost" style="flex:1;padding:8px;justify-content:center;" onclick="fullResetCancel()">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ── 5. RECYCLE BIN (last) ── -->
@@ -1897,27 +1907,16 @@ nav.tabs.header-hidden button {
 
 <!-- CONTACT OVERLAY -->
 <div id="contact-overlay" style="display:none;position:fixed;inset:0;z-index:99992;background:rgba(26,20,16,0.9);align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:480px;">
+  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:420px;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--ink);border-radius:6px 6px 0 0;">
       <span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);">&#9993; Contact Support</span>
       <button onclick="closeContact()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;padding:0 4px;">&#10005;</button>
     </div>
-    <div style="padding:20px;">
-      <div id="contact-name-info" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:14px;padding:8px 12px;border-radius:4px;"></div>
-      <div style="margin-bottom:12px;">
-        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Your Email *</label>
-        <input type="email" id="contact-email" placeholder="your@email.com" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.88rem;background:white;outline:none;box-sizing:border-box;">
-        <div id="contact-email-err" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--rust);margin-top:4px;min-height:14px;"></div>
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Subject *</label>
-        <input type="text" id="contact-subject" placeholder="Brief description of your issue" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.88rem;background:white;outline:none;box-sizing:border-box;">
-      </div>
-      <div style="margin-bottom:16px;">
-        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Message *</label>
-        <textarea id="contact-msg" rows="5" placeholder="Describe your issue..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.88rem;background:white;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
-      </div>
-      <button id="contact-send-btn" onclick="sendSupport()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;">&#9993; Send Message</button>
+    <div style="padding:24px 20px;">
+      <div id="contact-name-info" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:16px;padding:8px 12px;border-radius:4px;"></div>
+      <p style="font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--ink);line-height:1.7;margin-bottom:20px;">Tap the button below to open your email app. Your account name will be included automatically so we know who you are.</p>
+      <button onclick="sendSupport()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:12px;">&#9993; Open Email App</button>
+      <p style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);text-align:center;line-height:1.6;">This opens your Gmail or mail app with a pre-filled message.<br>myfinanceledgerapp@gmail.com</p>
     </div>
   </div>
 </div>
@@ -8522,49 +8521,40 @@ function base64ToBuffer(base64) {
 }
 
 function syncInit() {
-  var phone      = localStorage.getItem(PHONE_KEY);
-  var keepLogin  = localStorage.getItem('keep_login_pref');
-  var lastActive = parseInt(localStorage.getItem('last_active') || '0');
-  var now        = Date.now();
-  var timeout    = keepLogin === '1' ? 30 * 60 * 1000 : 5 * 60 * 1000;
-  var sinceActive = now - lastActive;
+  var uid   = localStorage.getItem(UID_KEY);
+  var name  = localStorage.getItem(NAME_KEY);
+  var phone = localStorage.getItem(PHONE_KEY);
 
-  // REFRESH DETECTION:
-  // Pull-to-refresh on mobile can take 3-10 seconds
-  // We treat anything within 60 seconds as a refresh — resume no matter what
-  var isRefresh = lastActive && sinceActive < 180000; // 3 min window covers slow mobile restores
+  // sessionStorage survives F5 refresh but is wiped when the tab is closed or
+  // the app is opened fresh. This is the ONLY gate we need:
+  // — Refresh within same session → sessionStorage has 'app_session' → resume
+  // — Fresh open / new tab        → sessionStorage is empty          → show login
+  var isActiveSession = sessionStorage.getItem('app_session') === '1';
 
-  // RESUME if: it's a refresh, OR within the inactivity window
-  var shouldResume = isRefresh || (lastActive && sinceActive < timeout);
-
-  if (shouldResume) {
-    var uid  = localStorage.getItem(UID_KEY);
-    var name = localStorage.getItem(NAME_KEY);
-    if (uid && name && phone) {
-      _userId = uid; _userName = name; _userPhone = phone;
-      localStorage.setItem('last_active', String(Date.now()));
-      updateUserDisplay();
-      var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
-      _appMode = savedMode;
-      applyMode();
-      adjustMainPadding();
-      loadIncomeFromFirebase(function(){});
-      // Skip startSync() on refresh — it re-validates Firebase and can call showPinScreen()
-      // Instead go straight to data + listener
-      getDB(function() {
-        syncSetStatus('live');
-        syncStartListener();
-        renderSyncSetupUI();
-        updateHeaderContext();
-        renderMonthPicker();
-        populateFilters();
-      });
-      setTimeout(resetInactivityTimer, 1000);
-      return;
-    }
+  if (isActiveSession && uid && name && phone) {
+    _userId = uid; _userName = name; _userPhone = phone;
+    localStorage.setItem('last_active', String(Date.now()));
+    var pinO = document.getElementById('pin-overlay');
+    if (pinO) pinO.style.display = 'none';
+    updateUserDisplay();
+    var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
+    _appMode = savedMode;
+    applyMode();
+    adjustMainPadding();
+    loadIncomeFromFirebase(function(){});
+    getDB(function() {
+      syncSetStatus('live');
+      syncStartListener();
+      renderSyncSetupUI();
+      updateHeaderContext();
+      renderMonthPicker();
+      populateFilters();
+    });
+    setTimeout(resetInactivityTimer, 1000);
+    return;
   }
 
-  // Require login
+  // No active session — require login
   showPinScreen();
   if (phone) { showLoginStep(); } else { showRegisterStep(); }
 }
@@ -8572,6 +8562,8 @@ function syncInit() {
 function startSync() {
   syncSetStatus('connecting');
   getDB(function() {
+    // Check privacy acceptance once DB is ready — Firebase read needs _db set
+    setTimeout(checkPrivacy, 500);
     if (_userPhone && _userId) {
       // Load data and start listeners — skip re-validation to prevent showPinScreen() race
       syncLoadFromFirebase(function() {
@@ -8830,13 +8822,14 @@ function showPinScreen() {
 function hidePinScreen() {
   var o = document.getElementById('pin-overlay');
   if (o) o.style.display = 'none';
+  // Mark this as an active session — survives refresh, cleared on tab close
+  sessionStorage.setItem('app_session', '1');
   var loginStep = document.getElementById('pin-step-login');
   var regStep   = document.getElementById('pin-step-register');
   if (loginStep) loginStep.style.display = 'block';
   if (regStep)   regStep.style.display   = 'none';
   setTimeout(resetInactivityTimer, 1000);
   setTimeout(checkBackupReminder, 3000);
-  setTimeout(checkPrivacy, 800);
   // Always show mode selection after every login
   _appMode = 'expenses';
   applyMode();
@@ -9085,6 +9078,7 @@ function logOut() {
   localStorage.removeItem(UID_KEY);
   localStorage.removeItem('last_active');
   localStorage.removeItem('keep_login_pref');
+  sessionStorage.removeItem('app_session');
   showPinScreen();
   showLoginStep();
   syncSetStatus('off');
@@ -9108,6 +9102,51 @@ function switchUser() {
   showRegisterStep();
   syncSetStatus('off');
   updateHeaderContext();
+}
+
+function fullReset() {
+  var btn = document.getElementById('full-reset-confirm');
+  if (btn) btn.style.display = 'flex';
+}
+
+function fullResetCancel() {
+  var btn = document.getElementById('full-reset-confirm');
+  if (btn) btn.style.display = 'none';
+}
+
+function fullResetConfirmed() {
+  // Stop any active Firebase listeners
+  if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
+  _db = null; _userId = null; _userName = null; _userPhone = null;
+
+  // Wipe every single app key from localStorage
+  var keysToRemove = [
+    UID_KEY, NAME_KEY, FULL_NAME_KEY, PHONE_KEY,
+    'expense_ledger', 'custom_categories', 'custom_cat_rules',
+    'last_active', 'keep_login_pref', 'privacy_ok',
+    APP_MODE_KEY, 'reload_time', 'budgets_data',
+    'expense_budget_data', 'expense_income_data',
+    TRASH_KEY, 'expense_backup_reminder'
+  ];
+  // Also remove any user-specific keys
+  if (_userId) {
+    keysToRemove.push(TRASH_KEY + '_' + _userId);
+  }
+  // Catch-all: remove any remaining expense_ keys
+  var allKeys = [];
+  for (var i = 0; i < localStorage.length; i++) {
+    allKeys.push(localStorage.key(i));
+  }
+  allKeys.forEach(function(k) {
+    if (k && (k.indexOf('expense_') === 0 || k.indexOf('inc_') === 0 || k === 'privacy_ok' || k === 'keep_login_pref' || k === 'last_active' || k === 'reload_time')) {
+      localStorage.removeItem(k);
+    }
+  });
+  keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
+  sessionStorage.removeItem('app_session');
+
+  // Reload page — app will start completely fresh as new user
+  window.location.reload();
 }
 
 function renderSyncSetupUI() {
@@ -9159,8 +9198,30 @@ setInterval(function() {
 // ════════════════════════
 var PRIVACY_VER = '2026-03';
 
+// Called after login — checks Firebase first, then localStorage as fallback
 function checkPrivacy() {
-  if (localStorage.getItem('privacy_ok') === PRIVACY_VER) return;
+  // If we have a DB connection, check Firebase for this user's acceptance record
+  if (_db && _userId) {
+    userCol('settings').doc('privacy').get().then(function(doc) {
+      var data = doc.exists ? doc.data() : {};
+      if (data.version === PRIVACY_VER) {
+        // Already accepted — make sure localStorage is in sync
+        localStorage.setItem('privacy_ok', PRIVACY_VER);
+        return;
+      }
+      // Not accepted yet — show the policy
+      _showPrivacyOverlay();
+    }).catch(function() {
+      // Firebase read failed — fall back to localStorage
+      if (localStorage.getItem('privacy_ok') !== PRIVACY_VER) _showPrivacyOverlay();
+    });
+  } else {
+    // No DB yet — use localStorage as fallback
+    if (localStorage.getItem('privacy_ok') !== PRIVACY_VER) _showPrivacyOverlay();
+  }
+}
+
+function _showPrivacyOverlay() {
   var o = document.getElementById('privacy-overlay');
   if (o) o.style.display = 'flex';
 }
@@ -9168,7 +9229,22 @@ function checkPrivacy() {
 function acceptPrivacy() {
   var cb = document.getElementById('privacy-cb');
   if (!cb || !cb.checked) { showToast('Please tick the checkbox to agree'); return; }
+
+  // Save to localStorage immediately
   localStorage.setItem('privacy_ok', PRIVACY_VER);
+
+  // Save to Firebase so it persists across devices and browsers
+  if (_db && _userId) {
+    userCol('settings').doc('privacy').set({
+      version:   PRIVACY_VER,
+      accepted:  true,
+      timestamp: Date.now(),
+      date:      new Date().toISOString()
+    }).catch(function(e) {
+      console.warn('Privacy record save failed:', e);
+    });
+  }
+
   var o = document.getElementById('privacy-overlay');
   if (o) o.style.display = 'none';
 }
@@ -9188,6 +9264,10 @@ var HELP_ITEMS = [
   {icon:'&#128467;', label:'Date',       tag:'date'},
   {icon:'&#128275;', label:'Login',      tag:'login'},
   {icon:'&#128196;', label:'PDF',        tag:'pdf'},
+  {icon:'&#128260;', label:'Switch',     tag:'switch'},
+  {icon:'&#128065;', label:'Header',     tag:'header'},
+  {icon:'&#128077;', label:'Biometric',  tag:'biometric'},
+  {icon:'&#8679;',   label:'Scroll',     tag:'scroll'},
   {icon:'&#10067;',  label:'Help',       tag:'help'}
 ];
 
@@ -9260,9 +9340,33 @@ var HELP_DATA = {
   },
   'help': {
     title: '❓ Help & Support',
-    steps: ['Tap any icon in the grid to read a guide for that feature.','Type a question in plain language in the search box.','Tap a suggested topic to read the full guide.','If you still need help tap Contact Support at the bottom.','Enter your email, subject and message then tap Send.','Your name is pulled from your account automatically.'],
+    steps: ['Tap any icon in the grid to read a guide for that feature.','Type a question in plain language in the search box.','Tap a suggested topic to read the full guide.','If you still need help tap Contact Support at the bottom.','Tap Open Email App to send us a message directly.','Your name is pulled from your account automatically.'],
     example: 'User sa0819 typed total expenses January 2024.\nThe search suggested Dashboard and Ledger.\nShe clicked Dashboard and found the filter instructions she needed.',
     tip: 'Make sure your full name is saved in Manage before contacting support so we know who you are.'
+  },
+  'switch': {
+    title: '🔁 Mode Switch — Expenses & Income',
+    steps: ['The 🔁 button appears in the top header bar once you are logged in.','Tap it to open the module switcher.','Choose Expenses to manage your spending ledger.','Choose Income to manage your earnings ledger.','Your data for each module is stored separately.','The header label updates to show which module you are in.'],
+    example: 'User jd0292 finished entering his March expenses.\nHe tapped 🔁 and switched to Income.\nHe pasted his March salary and freelance earnings.\nSwitched back to Expenses to check his budget.',
+    tip: 'Expenses and Income are completely separate modules. Switching does not affect or delete either dataset.'
+  },
+  'header': {
+    title: '👁 Show / Hide Header',
+    steps: ['The 👁 eye button is in the top right of the header bar.','Tap it to collapse the header and gain more screen space.','Tap it again to restore the full header.','All navigation tabs remain accessible whether the header is collapsed or not.','On small screens collapsing the header is useful when reading the ledger or charts.'],
+    example: 'User mk0374 was reviewing her December ledger on a small phone.\nShe tapped 👁 to hide the header.\nThe ledger took up the full screen.\nShe tapped 👁 again to get back the header and navigation.',
+    tip: 'The header state is not saved between sessions — it always resets to visible on next login.'
+  },
+  'biometric': {
+    title: '👍 Biometric Login — Fingerprint & Face',
+    steps: ['Biometric login lets you sign in with your fingerprint or face instead of your access code.','First sign in once with your access code as normal.','In the login screen tap Set up Fingerprint Login.','Your device will prompt you to scan your fingerprint or face.','Next time you open the app tap Use Fingerprint to log in instantly.','Biometric data never leaves your device — it is handled entirely by your phone.'],
+    example: 'User sa0819 set up fingerprint login after her first sign-in.\nFrom then on she just tapped Use Fingerprint.\nHer thumb scan took under a second and she was straight into her ledger.',
+    tip: 'If biometric fails (e.g. wet fingers) you can always fall back to your access code. Biometric registration is per device — you must set it up again on a new phone.'
+  },
+  'scroll': {
+    title: '⇧ Scroll Buttons — Quick Navigation',
+    steps: ['Two floating buttons appear on the right side of the screen when the page is scrollable.','The up arrow ⇧ jumps back to the very top of the page instantly.','The down arrow ⇩ jumps to the very bottom of the page.','The buttons appear automatically when you scroll down.','They disappear when you are already at the top or bottom.','Useful for long ledger lists or the dashboard with many charts.'],
+    example: 'User jd0292 scrolled halfway through a 300-entry ledger.\nHe tapped ⇩ to jump to the latest entries at the bottom.\nThen tapped ⇧ to return to the filters at the top.',
+    tip: 'These buttons work on all tabs — Import, Ledger, Dashboard, Budget, and Income.'
   }
 };
 
@@ -9324,6 +9428,10 @@ function runHelpSearch(q) {
     date:['date','lookup','january','february','march','april','may','june','july','august','september','october','november','december','what did','what spend','check'],
     login:['login','sign in','password','access code','register','forgot'],
     pdf:['pdf','report','print','download','save report'],
+    switch:['switch','module','mode','change to income','change to expense','toggle mode'],
+    header:['header','hide','collapse','eye','show header','screen space'],
+    biometric:['biometric','fingerprint','face','touch id','face id','quick login'],
+    scroll:['scroll','top','bottom','navigate','jump','floating button'],
     help:['help','support','contact','question','how to','guide']
   };
   var matches = Object.keys(kw).filter(function(tag) {
@@ -9352,10 +9460,11 @@ function openContact() {
   var info = document.getElementById('contact-name-info');
   if (info) {
     if (fullName) {
-      info.style.cssText = 'background:#f0fdf4;border:1px solid var(--sage);color:var(--sage);padding:8px 12px;border-radius:4px;';
+      info.style.cssText = 'background:#f0fdf4;border:1px solid var(--sage);color:var(--sage);padding:8px 12px;border-radius:4px;display:block;';
       info.textContent = 'Sending as: ' + fullName;
     } else {
-      info.style.cssText = 'background:#fff0f0;border:1px solid var(--rust);color:var(--rust);padding:8px 12px;border-radius:4px;line-height:1.6;';
+      info.style.cssText = 'background:#fff0f0;border:1px solid var(--rust);color:var(--rust);padding:8px 12px;border-radius:4px;line-height:1.6;display:block;';
+      info.textContent = 'Tip: save your full name in Manage so we know who you are.';
     }
   }
   var o = document.getElementById('contact-overlay');
@@ -9367,45 +9476,12 @@ function closeContact() {
   if (o) o.style.display = 'none';
 }
 
-// EmailJS credentials
-var EJS_SERVICE  = 'service_6a8t7as';
-var EJS_TEMPLATE = '8t4o807';
-var EJS_KEY      = 'owbOhn03Jox8EHZ_y';
-
 function sendSupport() {
-  var fullName = localStorage.getItem(FULL_NAME_KEY) || '';
-  if (!fullName) { showToast('Save your full name in Manage first'); return; }
-  var email   = (document.getElementById('contact-email').value || '').trim();
-  var subject = (document.getElementById('contact-subject').value || '').trim();
-  var msg     = (document.getElementById('contact-msg').value || '').trim();
-  var errEl   = document.getElementById('contact-email-err');
-  var emailOk = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  if (!emailOk) { if (errEl) errEl.textContent = 'Please enter a valid email address'; return; }
-  if (errEl) errEl.textContent = '';
-  if (!subject) { showToast('Please enter a subject'); return; }
-  if (!msg)     { showToast('Please enter a message'); return; }
-
-  // Show sending state
-  var sendBtn = document.getElementById('contact-send-btn');
-  if (sendBtn) { sendBtn.textContent = 'Sending...'; sendBtn.disabled = true; }
-
-  emailjs.send(EJS_SERVICE, EJS_TEMPLATE, {
-    name:    fullName,
-    email:   email,
-    subject: subject,
-    message: msg
-  }).then(function() {
-    showToast('✓ Message sent! We will get back to you soon.');
-    document.getElementById('contact-email').value   = '';
-    document.getElementById('contact-subject').value = '';
-    document.getElementById('contact-msg').value     = '';
-    if (sendBtn) { sendBtn.textContent = '✉ Send Message'; sendBtn.disabled = false; }
-    setTimeout(closeContact, 2000);
-  }).catch(function(err) {
-    var errMsg = err && err.text ? err.text : JSON.stringify(err);
-    showToast('Failed: ' + errMsg);
-    if (sendBtn) { sendBtn.textContent = '✉ Send Message'; sendBtn.disabled = false; }
-  });
+  var fullName = localStorage.getItem(FULL_NAME_KEY) || 'App User';
+  var subject  = encodeURIComponent('[App Support] Support Request');
+  var body     = encodeURIComponent('From: ' + fullName + '\n\nDescribe your issue here:\n\n');
+  window.location.href = 'mailto:myfinanceledgerapp@gmail.com?subject=' + subject + '&body=' + body;
+  setTimeout(closeContact, 800);
 }
 
 document.addEventListener('click', function(e) {
@@ -9415,14 +9491,10 @@ document.addEventListener('click', function(e) {
   if (co && co.style.display === 'flex' && e.target === co) closeContact();
 });
 
-// Initialize EmailJS once at startup
-if (typeof emailjs !== 'undefined') {
-  emailjs.init({ publicKey: 'owbOhn03Jox8EHZ_y' });
-}
-
 renderMonthPicker();
 updateHeader();
 populateFilters();
+
 syncInit();
 
 </script>
@@ -9432,15 +9504,6 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function(e){ console.log('SW:', e); });
   });
 }
-
-// Write last_active immediately on every page load - before syncInit checks it
-// This ensures refresh always looks like recent activity
-(function() {
-  var uid = localStorage.getItem('expense_user_uid');
-  if (uid) {
-    localStorage.setItem('last_active', String(Date.now()));
-  }
-})();
 </script>
 </body>
-</html
+</html>
