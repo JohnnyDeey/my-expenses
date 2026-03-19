@@ -1737,6 +1737,10 @@ nav.tabs.header-hidden button {
         <div id="inc-manage-total" style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--sage);">0</div>
       </div>
       <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="exportIncomeCSV()">&#8595; Export Income CSV</button>
+      <label style="display:block;margin-top:8px;">
+        <div class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;cursor:pointer;text-align:center;font-family:'DM Mono',monospace;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;">&#8593; Import Income CSV</div>
+        <input type="file" accept=".csv" onchange="importIncomeCSV(event)" style="display:none;">
+      </label>
       <button class="btn btn-primary" style="width:100%;padding:12px;justify-content:center;margin-top:8px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
     </div>
     <div class="card">
@@ -5351,42 +5355,51 @@ function importCSV(event) {
     var lines = text.split('\n').filter(function(l){ return l.trim(); });
     if (!lines.length) { showToast('Empty file'); return; }
 
-    // Detect header row
+    // Detect header row and column positions
     var startIdx = 0;
+    var colDate = 0, colDesc = 1, colAmt = 2, colCur = 3, colCat = 4;
     var firstLine = lines[0].toLowerCase();
     if (firstLine.indexOf('date') !== -1 || firstLine.indexOf('description') !== -1) {
-      startIdx = 1; // skip header
+      startIdx = 1;
+      // Parse header to find column positions dynamically
+      var headers = parseCSVLine(lines[0]).map(function(h){ return h.trim().toLowerCase().replace(/"/g,''); });
+      var hi = function(names) {
+        for (var n = 0; n < names.length; n++) {
+          var idx = headers.indexOf(names[n]);
+          if (idx !== -1) return idx;
+        }
+        return -1;
+      };
+      colDate = hi(['date']) !== -1 ? hi(['date']) : 0;
+      colDesc = hi(['description','desc','item','name']) !== -1 ? hi(['description','desc','item','name']) : 1;
+      colAmt  = hi(['amount','amt','value']) !== -1 ? hi(['amount','amt','value']) : 2;
+      colCur  = hi(['currency','cur','curr']) !== -1 ? hi(['currency','cur','curr']) : 3;
+      colCat  = hi(['category','cat','type']) !== -1 ? hi(['category','cat','type']) : 4;
     }
 
     var existing = loadData();
-    // Count occurrences so same item can appear multiple times per day
     var existingCounts2 = {};
     existing.forEach(function(e){
       var k = e.date+'|'+e.desc+'|'+e.amount+'|'+e.currency;
       existingCounts2[k] = (existingCounts2[k]||0) + 1;
     });
     var pendingCounts2 = {};
-
-    var imported = 0;
-    var skipped  = 0;
+    var imported = 0, skipped = 0;
     var newEntries = [];
 
     for (var i = startIdx; i < lines.length; i++) {
       var line = lines[i].trim();
       if (!line) continue;
-      // Parse CSV — handle quoted fields
       var cols = parseCSVLine(line);
-      if (cols.length < 4) { skipped++; continue; }
-      // Expected columns: date, description, amount, currency, category
-      var date     = (cols[0]||'').trim().replace(/"/g,'');
-      var desc     = (cols[1]||'').trim().replace(/"/g,'');
-      var amount   = parseFloat((cols[2]||'').replace(/[^0-9.-]/g,''));
-      var currency = (cols[3]||'').trim().replace(/"/g,'').toUpperCase();
-      var category = (cols[4]||'Other').trim().replace(/"/g,'');
-      if (!date || !desc || isNaN(amount)) { skipped++; continue; }
-      // Validate currency
-      if (['EUR','NGN','USD','GBP'].indexOf(currency) === -1) currency = 'EUR';
-      // Deduplicate — allow multiple same items per day
+      if (cols.length < 3) { skipped++; continue; }
+      var date     = (cols[colDate]||'').trim().replace(/"/g,'');
+      var desc     = (cols[colDesc]||'').trim().replace(/"/g,'');
+      var amount   = parseFloat((cols[colAmt]||'').replace(/[^0-9.-]/g,''));
+      var currency = colCur < cols.length ? (cols[colCur]||'').trim().replace(/"/g,'').toUpperCase() : 'NGN';
+      var category = colCat < cols.length ? (cols[colCat]||'Other').trim().replace(/"/g,'') : 'Other';
+      if (!date || !desc || isNaN(amount) || amount <= 0) { skipped++; continue; }
+      // Accept any non-empty currency code — auto-detection handles the rest
+      if (!currency || currency.length < 2) currency = 'NGN';
       var key = date+'|'+desc+'|'+amount+'|'+currency;
       pendingCounts2[key] = (pendingCounts2[key]||0) + 1;
       if (pendingCounts2[key] <= (existingCounts2[key]||0)) { skipped++; continue; }
@@ -8735,6 +8748,84 @@ function exportIncomeCSV() {
   a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
   a.download = 'income_export.csv'; a.click();
   showToast('Income CSV exported');
+}
+
+function importIncomeCSV(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    var lines = text.split('\n').filter(function(l){ return l.trim(); });
+    if (!lines.length) { showToast('Empty file'); return; }
+
+    // Detect header row and column positions dynamically
+    var startIdx = 0;
+    var colDate = 0, colDesc = 1, colAmt = 2, colCur = 3, colCat = 4;
+    var firstLine = lines[0].toLowerCase();
+    if (firstLine.indexOf('date') !== -1 || firstLine.indexOf('description') !== -1) {
+      startIdx = 1;
+      var headers = parseCSVLine(lines[0]).map(function(h){ return h.trim().toLowerCase().replace(/"/g,''); });
+      var hi = function(names) {
+        for (var n = 0; n < names.length; n++) {
+          var idx = headers.indexOf(names[n]);
+          if (idx !== -1) return idx;
+        }
+        return -1;
+      };
+      colDate = hi(['date']) !== -1 ? hi(['date']) : 0;
+      colDesc = hi(['description','desc','item','name']) !== -1 ? hi(['description','desc','item','name']) : 1;
+      colAmt  = hi(['amount','amt','value']) !== -1 ? hi(['amount','amt','value']) : 2;
+      colCur  = hi(['currency','cur','curr']) !== -1 ? hi(['currency','cur','curr']) : 3;
+      colCat  = hi(['category','cat','type']) !== -1 ? hi(['category','cat','type']) : 4;
+    }
+
+    var existing = loadIncomeData();
+    var existingCounts = {};
+    existing.forEach(function(e){
+      var k = e.date+'|'+e.desc+'|'+e.amount+'|'+e.currency;
+      existingCounts[k] = (existingCounts[k]||0) + 1;
+    });
+    var pendingCounts = {};
+    var imported = 0, skipped = 0;
+    var newEntries = [];
+
+    for (var i = startIdx; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line) continue;
+      var cols = parseCSVLine(line);
+      if (cols.length < 3) { skipped++; continue; }
+      var date     = (cols[colDate]||'').trim().replace(/"/g,'');
+      var desc     = (cols[colDesc]||'').trim().replace(/"/g,'');
+      var amount   = parseFloat((cols[colAmt]||'').replace(/[^0-9.-]/g,''));
+      var currency = colCur < cols.length ? (cols[colCur]||'').trim().replace(/"/g,'').toUpperCase() : 'NGN';
+      var category = colCat < cols.length ? (cols[colCat]||'Other').trim().replace(/"/g,'') : 'Other';
+      if (!date || !desc || isNaN(amount) || amount <= 0) { skipped++; continue; }
+      if (!currency || currency.length < 2) currency = 'NGN';
+      var key = date+'|'+desc+'|'+amount+'|'+currency;
+      pendingCounts[key] = (pendingCounts[key]||0) + 1;
+      if (pendingCounts[key] <= (existingCounts[key]||0)) { skipped++; continue; }
+      newEntries.push({
+        id: Date.now() + Math.random(),
+        date: date, desc: desc, amount: amount,
+        currency: currency, category: category
+      });
+      imported++;
+    }
+
+    if (newEntries.length) {
+      var merged = existing.concat(newEntries);
+      merged.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+      saveIncomeData(merged);
+      renderIncomeLedger();
+      showToast('Imported ' + imported + ' income entries' + (skipped?' ('+skipped+' skipped)':''));
+    } else {
+      showToast('No new income entries found' + (skipped?' — '+skipped+' already exist':''));
+    }
+    // Reset file input
+    event.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 function renderIncomeTrash() {
