@@ -430,18 +430,6 @@ nav.tabs button.active{color:var(--gold2);border-bottom-color:var(--gold);}
 /* Account for fixed nav bar */
 #sticky-topbar + main, main { margin-top: 0; }
 main{max-width:1300px;margin:0 auto;padding:20px 40px;}
-/* Hide app chrome until session confirmed — opacity:0 renders content invisibly (no white gap)
-   then fades in when app-ready is added. Much better than visibility:hidden which leaves white space. */
-#hdr-user-bar, #main-nav, #income-nav, #income-main, main {
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  pointer-events: none;
-}
-body.app-ready #hdr-user-bar, body.app-ready #main-nav, body.app-ready #income-nav,
-body.app-ready #income-main, body.app-ready main {
-  opacity: 1;
-  pointer-events: auto;
-}
 .panel{display:none;}.panel.active{display:block;}
 .section-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:12px;}
 .section-title::before{content:'';display:inline-block;width:8px;height:28px;background:var(--gold);border-radius:2px;}
@@ -6137,22 +6125,13 @@ function populateFilters(){
 
 
 // ════════════════════════════════
-//  INACTIVITY AUTO-LOCK — timestamp based (immune to browser throttling)
+//  INACTIVITY AUTO-LOCK — silent, timestamp-based
 // ════════════════════════════════
-var INACTIVE_MS       = 10 * 60 * 1000; // 10 minutes
-var COUNTDOWN_SECONDS = 60;
-var _inactivityTimer  = null; // kept for legacy compatibility
-var _countdownTimer   = null;
-var _countdownSeconds = 0;
-var _countdownActive  = false;
+var INACTIVE_MS      = 10 * 60 * 1000; // 10 minutes — silent lock, no countdown
+var _inactivityTimer = null; // unused but kept for compatibility
 
-// ── Lock app to PIN pad ──
 function lockApp() {
   if (!_userId) return;
-  clearTimeout(_inactivityTimer);  _inactivityTimer = null;
-  clearInterval(_countdownTimer);  _countdownTimer  = null;
-  _countdownActive = false;
-  hideInactivityWarning();
   localStorage.removeItem('last_active');
   sessionStorage.removeItem('app_session');
   document.body.classList.remove('app-ready');
@@ -6162,104 +6141,57 @@ function lockApp() {
   showPinPadStep();
 }
 
-// ── Record user activity ──
 function resetInactivityTimer() {
   if (!_userId) return;
   localStorage.setItem('last_active', String(Date.now()));
-  _countdownActive = false;
-  clearInterval(_countdownTimer); _countdownTimer = null;
-  clearTimeout(_inactivityTimer); _inactivityTimer = null;
-  hideInactivityWarning();
 }
 
-function stayLoggedIn() {
-  resetInactivityTimer();
-}
+function stayLoggedIn() { resetInactivityTimer(); }
 
-// ── Check elapsed time — called on every visibility/focus/tick event ──
+// Check elapsed time — lock silently if 10 minutes passed
 function checkInactivity() {
   if (!_userId) return;
   var lastActive = parseInt(localStorage.getItem('last_active') || '0', 10);
-  if (!lastActive) return; // already locked
-  var elapsed = Date.now() - lastActive;
-
-  if (elapsed >= INACTIVE_MS) {
-    // Lock immediately — 10 minutes exceeded
-    _countdownActive = false;
-    clearInterval(_countdownTimer); _countdownTimer = null;
-    lockApp();
-    return;
-  }
-
-  var remaining = INACTIVE_MS - elapsed; // ms until lock
-  var countdownMs = COUNTDOWN_SECONDS * 1000;
-
-  if (remaining <= countdownMs) {
-    // Within the 60-second countdown window
-    if (!_countdownActive) {
-      _countdownActive = true;
-      _countdownSeconds = Math.ceil(remaining / 1000);
-      showInactivityWarning(_countdownSeconds);
-      clearInterval(_countdownTimer);
-      _countdownTimer = setInterval(function() {
-        var la = parseInt(localStorage.getItem('last_active') || '0', 10);
-        if (!la) { clearInterval(_countdownTimer); _countdownTimer = null; _countdownActive = false; return; }
-        var secs = Math.ceil((INACTIVE_MS - (Date.now() - la)) / 1000);
-        if (secs <= 0) {
-          clearInterval(_countdownTimer); _countdownTimer = null; _countdownActive = false;
-          hideInactivityWarning();
-          lockApp();
-        } else {
-          _countdownSeconds = secs;
-          updateInactivityWarning(secs);
-        }
-      }, 500); // 500ms tick — more accurate than 1000ms
-    }
-  } else {
-    // Not yet in countdown — hide warning if showing
-    if (_countdownActive) {
-      _countdownActive = false;
-      clearInterval(_countdownTimer); _countdownTimer = null;
-      hideInactivityWarning();
-    }
-  }
+  if (!lastActive) return;
+  if (Date.now() - lastActive >= INACTIVE_MS) lockApp();
 }
 
-function showInactivityWarning(secs) {
-  var w = document.getElementById('inactivity-warning');
-  if (w) { w.style.display = 'flex'; updateInactivityWarning(secs); }
-}
-function updateInactivityWarning(secs) {
-  var el = document.getElementById('inactivity-countdown');
-  if (el) el.textContent = secs;
-  var bar = document.getElementById('inactivity-bar');
-  if (bar) bar.style.width = (secs / COUNTDOWN_SECONDS * 100) + '%';
-}
-function hideInactivityWarning() {
-  var w = document.getElementById('inactivity-warning');
-  if (w) w.style.display = 'none';
-}
-
-// ── Record activity on meaningful user interactions ──
+// Record user activity
 ['click','keydown','touchstart','touchend','pointerdown'].forEach(function(evt) {
   document.addEventListener(evt, function() {
-    if (!_userId) return;
-    if (!localStorage.getItem('last_active')) return; // already locked
-    localStorage.setItem('last_active', String(Date.now()));
-    if (_countdownActive) {
-      _countdownActive = false;
-      clearInterval(_countdownTimer); _countdownTimer = null;
-      hideInactivityWarning();
+    if (_userId && localStorage.getItem('last_active')) {
+      localStorage.setItem('last_active', String(Date.now()));
     }
   }, { passive: true });
 });
 
-// ── Primary check: runs every 15 seconds ──
-// Works even when tab is visible but idle
-// Combined with visibility/focus/blur events = fully reliable
-setInterval(function() {
-  if (_userId && localStorage.getItem('last_active')) checkInactivity();
-}, 15000);
+// ── Web Worker ticker — cannot be throttled by browser, even when page is idle ──
+// The worker sends a tick every 15 seconds; the main thread checks inactivity on each tick.
+(function startInactivityWorker() {
+  var workerCode = [
+    'var _tick = setInterval(function() { postMessage("tick"); }, 15000);',
+    'self.onmessage = function(e) { if (e.data === "stop") { clearInterval(_tick); self.close(); } };'
+  ].join('\n');
+  try {
+    var blob = new Blob([workerCode], { type: 'application/javascript' });
+    var worker = new Worker(URL.createObjectURL(blob));
+    worker.onmessage = function() {
+      if (_userId && localStorage.getItem('last_active')) checkInactivity();
+    };
+    worker.onerror = function() {
+      // Web Worker failed — fall back to plain interval
+      setInterval(function() {
+        if (_userId && localStorage.getItem('last_active')) checkInactivity();
+      }, 15000);
+    };
+  } catch(e) {
+    // Fallback for browsers that block blob workers
+    setInterval(function() {
+      if (_userId && localStorage.getItem('last_active')) checkInactivity();
+    }, 15000);
+  }
+})();
+
 
 // ════════════════════════════════
 //  RECYCLE BIN
@@ -10177,6 +10109,10 @@ function _resumeSession(uid, name, phone) {
   _userId = uid; _userName = name; _userPhone = phone;
   localStorage.setItem('last_active', String(Date.now()));
   sessionStorage.setItem('app_session', '1');
+  // Show app immediately — hide PIN overlay, reveal content
+  var pinO = document.getElementById('pin-overlay');
+  if (pinO) pinO.style.display = 'none';
+  document.body.classList.add('app-ready');
   buildSYMS();
   refreshAllCurrencyDropdowns();
   updateUserDisplay();
@@ -10184,7 +10120,6 @@ function _resumeSession(uid, name, phone) {
   _appMode = savedMode;
   applyMode();
   adjustMainPadding();
-  // Restore tab
   setTimeout(function() {
     if (_appMode === 'income') {
       var savedIncTab = localStorage.getItem('expense_active_inc_tab');
@@ -10194,15 +10129,6 @@ function _resumeSession(uid, name, phone) {
       if (savedTab) switchTab(savedTab, null);
     }
   }, 50);
-  // Show app content THEN hide pin overlay — one rAF ensures content is painted first
-  document.body.classList.add('app-ready');
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      // Two rAFs = content has definitely painted before overlay disappears
-      var pinO = document.getElementById('pin-overlay');
-      if (pinO) pinO.style.display = 'none';
-    });
-  });
   setTimeout(function() { checkInactivity(); }, 500);
   setTimeout(checkBackupReminder, 3000);
   // Fire sync in background — app is already usable
