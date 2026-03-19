@@ -1332,6 +1332,27 @@ nav.tabs.header-hidden button {
     </div>
   </div>
 
+  <!-- ── CURRENCY MANAGER ── -->
+  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--slate);">
+    <label>&#128177; Currencies</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Choose the currencies you use. They will appear in all dropdowns, charts, and reports across the whole app.</p>
+    <div id="currency-manager-content"></div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:8px;letter-spacing:1px;text-transform:uppercase;">Add a currency</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select id="currency-add-select" style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.82rem;background:white;color:var(--ink);outline:none;">
+          <option value="">Pick from list...</option>
+        </select>
+        <button class="btn btn-primary" style="padding:9px 16px;font-size:0.8rem;" onclick="addCurrencyFromSelect()">+ Add</button>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <input id="currency-custom-code" type="text" maxlength="5" placeholder="Code e.g. GHS" style="width:90px;padding:9px 10px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.82rem;background:white;color:var(--ink);outline:none;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+        <input id="currency-custom-sym" type="text" maxlength="5" placeholder="Symbol e.g. ₵" style="width:80px;padding:9px 10px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.82rem;background:white;color:var(--ink);outline:none;">
+        <button class="btn btn-ghost" style="padding:9px 14px;font-size:0.8rem;" onclick="addCustomCurrency()">+ Custom</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── 3a. EDIT FULL NAME ── -->
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold);">
     <label>&#9999; Your Full Name (used in PDF reports)</label>
@@ -2152,7 +2173,137 @@ var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov',
 var MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 var CAT_COLORS = {'Food & Groceries':'#4a7c59','Rent & Utilities':'#3d5a73','Transport':'#8b5e3c','Health & Pharmacy':'#b5451b','Subscriptions':'#6b3d8c','Family Support (Nigeria)':'#2e7d8a','Loans & Fees':'#c8962e','Personal Care':'#7c4a4a','Documents & Legal':'#5a6b3d','Other':'#6b5e50'};
 var CAT_COLORS_FB = ['#3d5a73','#4a7c59','#c8962e','#b5451b','#8b5e3c','#6b3d8c','#2e7d8a','#7c4a4a','#5a6b3d','#6b5e50'];
+// ── Currency system — dynamic, user-configurable ──
+var CURRENCY_STORAGE_KEY = 'expense_user_currencies';
+
+// Master list of world currencies available to pick from
+var ALL_WORLD_CURRENCIES = [
+  {code:'NGN', sym:'₦', name:'Nigerian Naira'},
+  {code:'EUR', sym:'€', name:'Euro'},
+  {code:'USD', sym:'$', name:'US Dollar'},
+  {code:'GBP', sym:'£', name:'British Pound'},
+  {code:'GHS', sym:'₵', name:'Ghanaian Cedi'},
+  {code:'KES', sym:'KSh', name:'Kenyan Shilling'},
+  {code:'ZAR', sym:'R',  name:'South African Rand'},
+  {code:'TZS', sym:'TSh',name:'Tanzanian Shilling'},
+  {code:'UGX', sym:'USh',name:'Ugandan Shilling'},
+  {code:'XOF', sym:'CFA',name:'West African CFA Franc'},
+  {code:'XAF', sym:'FCFA',name:'Central African CFA Franc'},
+  {code:'EGP', sym:'E£', name:'Egyptian Pound'},
+  {code:'MAD', sym:'MAD',name:'Moroccan Dirham'},
+  {code:'ETB', sym:'Br', name:'Ethiopian Birr'},
+  {code:'RWF', sym:'FRw',name:'Rwandan Franc'},
+  {code:'CAD', sym:'C$', name:'Canadian Dollar'},
+  {code:'AUD', sym:'A$', name:'Australian Dollar'},
+  {code:'JPY', sym:'¥',  name:'Japanese Yen'},
+  {code:'CNY', sym:'¥',  name:'Chinese Yuan'},
+  {code:'INR', sym:'₹',  name:'Indian Rupee'},
+  {code:'BRL', sym:'R$', name:'Brazilian Real'},
+  {code:'MXN', sym:'MX$',name:'Mexican Peso'},
+  {code:'AED', sym:'د.إ',name:'UAE Dirham'},
+  {code:'SAR', sym:'﷼',  name:'Saudi Riyal'},
+  {code:'CHF', sym:'Fr', name:'Swiss Franc'},
+  {code:'SEK', sym:'kr', name:'Swedish Krona'},
+  {code:'NOK', sym:'kr', name:'Norwegian Krone'},
+  {code:'DKK', sym:'kr', name:'Danish Krone'},
+  {code:'PLN', sym:'zł', name:'Polish Złoty'},
+  {code:'TRY', sym:'₺',  name:'Turkish Lira'}
+];
+
+// Default currencies always available
+var DEFAULT_CURRENCIES = ['NGN','EUR','USD','GBP'];
+
+// Load active currencies for this user
+function loadUserCurrencies() {
+  try {
+    var saved = localStorage.getItem(CURRENCY_STORAGE_KEY);
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      // Always ensure defaults are included
+      DEFAULT_CURRENCIES.forEach(function(c){
+        if (parsed.indexOf(c) === -1) parsed.unshift(c);
+      });
+      return parsed;
+    }
+  } catch(e){}
+  return DEFAULT_CURRENCIES.slice();
+}
+
+function saveUserCurrencies(codes) {
+  localStorage.setItem(CURRENCY_STORAGE_KEY, JSON.stringify(codes));
+  // Rebuild SYMS
+  buildSYMS();
+  // Sync to Firebase
+  if (_db && _userId) {
+    userCol('settings').doc('default').update({ user_currencies: JSON.stringify(codes) }).catch(function(){});
+  }
+  // Refresh all currency dropdowns in the DOM
+  refreshAllCurrencyDropdowns();
+}
+
+// Build SYMS object from active currencies
+function buildSYMS() {
+  var active = loadUserCurrencies();
+  var newSYMS = {};
+  active.forEach(function(code) {
+    // Check world list first
+    var found = ALL_WORLD_CURRENCIES.filter(function(c){ return c.code === code; })[0];
+    if (found) { newSYMS[code] = found.sym; return; }
+    // Check custom currencies in localStorage
+    try {
+      var customs = JSON.parse(localStorage.getItem('expense_custom_currencies') || '[]');
+      var custom = customs.filter(function(c){ return c.code === code; })[0];
+      if (custom) newSYMS[code] = custom.sym;
+    } catch(e){}
+  });
+  SYMS = newSYMS;
+}
+
+// Generate currency <option> HTML for a select element
+function currencyOptions(includeAll, selectedCode) {
+  var active = loadUserCurrencies();
+  var opts = '';
+  if (includeAll) opts += '<option value="all">All Currencies</option>';
+  active.forEach(function(code) {
+    var sym = SYMS[code] || code;
+    var sel = (selectedCode && selectedCode === code) ? ' selected' : '';
+    opts += '<option value="' + code + '"' + sel + '>' + code + ' ' + sym + '</option>';
+  });
+  return opts;
+}
+
+// Refresh all currency dropdowns across the app
+function refreshAllCurrencyDropdowns() {
+  // Selects that include "All Currencies" option
+  var withAll = ['led-currency','dash-currency','inc-led-currency','inc-dash-currency'];
+  withAll.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var cur = el.value;
+    el.innerHTML = '<option value="all">All Currencies</option>' + currencyOptions(false);
+    if (cur && el.querySelector('option[value="'+cur+'"]')) el.value = cur;
+    else el.value = 'all';
+  });
+  // Selects that do NOT include "All" — just the currency list
+  var withoutAll = ['budget-currency','inc-monthly-currency','inc-yearly-currency',
+    'inc-cat-dash-currency','inc-heatmap-currency','heatmap-currency'];
+  withoutAll.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var cur = el.value;
+    var active = loadUserCurrencies();
+    el.innerHTML = active.map(function(c){ return '<option value="'+c+'">'+c+' '+(SYMS[c]||c)+'</option>'; }).join('');
+    if (cur && el.querySelector('option[value="'+cur+'"]')) el.value = cur;
+    else if (active.length) el.value = active[0];
+  });
+  // Ledger filter also has currency filter inside income manage month rows etc
+  // Parse stats bar currencies (ps-eur etc are static labels — will refresh on next parse)
+}
+
+// Initialise SYMS on load
 var SYMS = {EUR:'€',NGN:'₦',USD:'$',GBP:'£'};
+buildSYMS();
+
 var CAT_RULES = [
   {cat:'Rent & Utilities',kw:['rent','loan repayment','ewtn','google sub','spotify','chatgpt','data subscription','renfe','tarifa']},
   {cat:'Food & Groceries',kw:['leche','pan','pollo','arroz','tomate','cebolla','flan','yogur','aceite','platano','limon','tortilla','napolitano','napolitana','agua','refresco','coca','galletas','pimienta','ketchup','detergent','cepillo','dentifr','aluminio','estropea','pitos','granja','cereal','patatas','plantain','macho','moi moi','pepper','chocolate','cookies','fish','burger','fanta','scubion','doritos','breakfast','groceries','bolleria']},
@@ -5276,7 +5427,7 @@ function switchTab(name,btn){
   if(name==='dashboard'){populateFilters();renderDashboard();}
   if(name==='ledger'){populateFilters();renderLedger();}
   if(name==='daily'){populateDailyFilters();renderDailyView();}
-  if(name==='manage'){renderManagePanel();}
+  if(name==='manage'){renderManagePanel();renderCurrencyManager();}
   if(name==='budget')renderBudget();
 }
 
@@ -6571,6 +6722,95 @@ function populateTitleSelector() {
     sel.value = saved;
     if (customInp) customInp.style.display = 'none';
   }
+}
+
+// ════════════════════════════════
+//  CURRENCY MANAGER
+// ════════════════════════════════
+function renderCurrencyManager() {
+  var el = document.getElementById('currency-manager-content');
+  if (!el) return;
+  var active = loadUserCurrencies();
+  // Populate add-from-list dropdown
+  var addSel = document.getElementById('currency-add-select');
+  if (addSel) {
+    addSel.innerHTML = '<option value="">Pick from list...</option>';
+    ALL_WORLD_CURRENCIES.forEach(function(c) {
+      if (active.indexOf(c.code) === -1) {
+        var o = document.createElement('option');
+        o.value = c.code;
+        o.textContent = c.code + ' ' + c.sym + ' — ' + c.name;
+        addSel.appendChild(o);
+      }
+    });
+  }
+  // Render active currencies as removable pills
+  el.innerHTML = '';
+  active.forEach(function(code) {
+    var sym = SYMS[code] || code;
+    var isDefault = DEFAULT_CURRENCIES.indexOf(code) !== -1;
+    var pill = document.createElement('div');
+    pill.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--paper2);border:1.5px solid var(--border);border-radius:20px;font-family:DM Mono,monospace;font-size:0.78rem;margin:3px;';
+    pill.innerHTML = '<span style="font-weight:700;color:var(--ink);">' + sym + '</span><span>' + code + '</span>';
+    if (!isDefault) {
+      var rm = document.createElement('button');
+      rm.textContent = '×';
+      rm.style.cssText = 'background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;padding:0 0 0 4px;line-height:1;';
+      rm.title = 'Remove ' + code;
+      (function(c){ rm.addEventListener('click', function(){ removeCurrency(c); }); })(code);
+      pill.appendChild(rm);
+    }
+    el.appendChild(pill);
+  });
+  if (!el.children.length) {
+    el.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.75rem;color:var(--muted);">No currencies active</div>';
+  }
+}
+
+function addCurrencyFromSelect() {
+  var sel = document.getElementById('currency-add-select');
+  if (!sel || !sel.value) { showToast('Pick a currency first'); return; }
+  var code = sel.value;
+  var active = loadUserCurrencies();
+  if (active.indexOf(code) !== -1) { showToast(code + ' is already added'); return; }
+  active.push(code);
+  saveUserCurrencies(active);
+  renderCurrencyManager();
+  showToast(code + ' added to your currencies');
+}
+
+function addCustomCurrency() {
+  var codeEl = document.getElementById('currency-custom-code');
+  var symEl  = document.getElementById('currency-custom-sym');
+  var code = codeEl ? codeEl.value.trim().toUpperCase() : '';
+  var sym  = symEl  ? symEl.value.trim() : '';
+  if (!code || code.length < 2) { showToast('Enter a currency code (e.g. GHS)'); return; }
+  if (!sym) { showToast('Enter a symbol (e.g. ₵)'); return; }
+  var active = loadUserCurrencies();
+  if (active.indexOf(code) !== -1) { showToast(code + ' is already in your list'); return; }
+  // Save to custom currencies list
+  try {
+    var customs = JSON.parse(localStorage.getItem('expense_custom_currencies') || '[]');
+    customs.push({code: code, sym: sym});
+    localStorage.setItem('expense_custom_currencies', JSON.stringify(customs));
+  } catch(e){}
+  active.push(code);
+  saveUserCurrencies(active);
+  if (codeEl) codeEl.value = '';
+  if (symEl)  symEl.value  = '';
+  renderCurrencyManager();
+  showToast(code + ' (' + sym + ') added');
+}
+
+function removeCurrency(code) {
+  if (DEFAULT_CURRENCIES.indexOf(code) !== -1) {
+    showToast(code + ' is a default currency and cannot be removed');
+    return;
+  }
+  var active = loadUserCurrencies().filter(function(c){ return c !== code; });
+  saveUserCurrencies(active);
+  renderCurrencyManager();
+  showToast(code + ' removed');
 }
 
 function updateFullNameDisplay() {
@@ -8994,6 +9234,8 @@ function _resumeSession(uid, name, phone) {
   var pinO = document.getElementById('pin-overlay');
   if (pinO) pinO.style.display = 'none';
   sessionStorage.setItem('app_session', '1');
+  buildSYMS(); // rebuild currency symbols from saved prefs
+  refreshAllCurrencyDropdowns();
   updateUserDisplay();
   var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
   _appMode = savedMode;
@@ -9100,6 +9342,11 @@ function syncLoadFromFirebase(callback) {
         var d = doc.data();
         if (d.custom_categories) localStorage.setItem('custom_categories', d.custom_categories);
         if (d.custom_cat_rules)  localStorage.setItem('custom_cat_rules',  d.custom_cat_rules);
+        if (d.user_currencies) {
+          localStorage.setItem(CURRENCY_STORAGE_KEY, d.user_currencies);
+          buildSYMS();
+          refreshAllCurrencyDropdowns();
+        }
       }
     });
     syncSetStatus('live');
@@ -9145,7 +9392,7 @@ function syncPushNow() {
   // Update known months to current local months
   window._knownFirebaseMonths = localMonths;
   batch.set(userCol('settings').doc('default'), {
-    custom_categories: cats, custom_cat_rules: rules,
+    custom_categories: cats, custom_cat_rules: rules, user_currencies: localStorage.getItem(CURRENCY_STORAGE_KEY) || '',
     display_name: _userName, updated: Date.now()
   });
   var trashData = localStorage.getItem(getTrashKey()) || '[]';
@@ -9197,7 +9444,7 @@ function syncPush() {
     });
     window._knownFirebaseMonths = localMonths2;
     batch.set(userCol('settings').doc('default'), {
-      custom_categories: cats, custom_cat_rules: rules,
+      custom_categories: cats, custom_cat_rules: rules, user_currencies: localStorage.getItem(CURRENCY_STORAGE_KEY) || '',
       display_name: _userName, updated: Date.now()
     });
     // Push trash — only push if non-empty OR if we've already fetched from Firebase
