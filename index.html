@@ -180,21 +180,22 @@ function shiftLookupDate(delta) {
 }
 
 function openDateLookupFromTab(mode) {
-  var modeSel = document.getElementById('date-lookup-mode');
-  if (modeSel) modeSel.value = mode;
+  // Always lock to current app mode — ignore passed mode
   openDateLookup();
 }
 
 function openDateLookup() {
   var overlay = document.getElementById('date-lookup-overlay');
   if (overlay) overlay.style.display = 'flex';
-  // Set mode to match current app mode
+  // Always lock to current app mode
   var modeSel = document.getElementById('date-lookup-mode');
   if (modeSel) modeSel.value = _appMode === 'income' ? 'income' : 'expenses';
   // Set today's date as default
   var inp = document.getElementById('date-lookup-input');
   if (inp && !inp.value) {
     inp.value = new Date().toISOString().substring(0, 10);
+    runDateLookup();
+  } else if (inp && inp.value) {
     runDateLookup();
   }
 }
@@ -221,10 +222,10 @@ function runDateLookup() {
 
   var expItems = [];
   var incItems = [];
-  if (mode === 'expenses' || mode === 'both') {
+  if (mode === 'expenses') {
     expItems = loadData().filter(function(i){ return i.date === date; });
   }
-  if (mode === 'income' || mode === 'both') {
+  if (mode === 'income') {
     incItems = loadIncomeData().filter(function(i){ return i.date === date; });
   }
 
@@ -242,7 +243,6 @@ function runDateLookup() {
     var label = type === 'income' ? '&#128176; Income' : '&#128184; Expenses';
 
     var tbl = '<div style="margin-bottom:16px;">';
-    if (mode === 'both') tbl += '<div style="font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:2px;text-transform:uppercase;color:'+color+';margin-bottom:8px;">'+label+'</div>';
     tbl += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
     tbl += '<table style="width:100%;min-width:420px;border-collapse:collapse;font-size:0.82rem;">';
     tbl += '<thead><tr style="background:var(--ink);color:var(--paper);">' +
@@ -1335,8 +1335,27 @@ nav.tabs.header-hidden button {
   <!-- ── 3a. EDIT FULL NAME ── -->
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold);">
     <label>&#9999; Your Full Name (used in PDF reports)</label>
-    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">This name appears at the top of your printed reports. Enter your real full name here.</p>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">This name appears at the top of your printed reports. Your title is optional and is only for reports — it is not part of your login credentials.</p>
     <div id="current-fullname-display" style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--gold);margin-bottom:10px;padding:8px 12px;background:#fffbf0;border:1px solid var(--gold);border-radius:3px;"></div>
+    <!-- Title selector -->
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+      <select id="title-select" onchange="onTitleSelectChange()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.85rem;background:white;color:var(--ink);outline:none;min-width:130px;">
+        <option value="">No title</option>
+        <option value="Mr">Mr</option>
+        <option value="Mrs">Mrs</option>
+        <option value="Miss">Miss</option>
+        <option value="Ms">Ms</option>
+        <option value="Dr">Dr</option>
+        <option value="Prof">Prof</option>
+        <option value="Eng">Eng</option>
+        <option value="Barr">Barr</option>
+        <option value="Chief">Chief</option>
+        <option value="Pastor">Pastor</option>
+        <option value="Rev">Rev</option>
+        <option value="__custom__">Other (type below)...</option>
+      </select>
+      <input id="title-custom" type="text" placeholder="Type custom title..." style="display:none;flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.85rem;background:white;color:var(--ink);outline:none;">
+    </div>
     <div style="display:flex;gap:8px;">
       <input id="change-fullname-input" type="text" placeholder="e.g. John David Adewumi..." autocomplete="name" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Sans',sans-serif;font-size:0.9rem;background:white;color:var(--ink);outline:none;">
       <button class="btn btn-primary" style="padding:10px 18px;font-size:0.8rem;" onclick="saveFullName()">Save</button>
@@ -1346,7 +1365,8 @@ nav.tabs.header-hidden button {
   <!-- ── 3a2. CHANGE USERNAME ── -->
   <div class="card" style="margin-bottom:14px;">
     <label>&#128100; Change Username</label>
-    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Change your username to a new one of your choice.</p>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Change your username to a new one of your choice.</p>
+    <div id="current-username-display" style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--ink);margin-bottom:10px;padding:8px 12px;background:var(--paper2);border:1px solid var(--border);border-radius:3px;letter-spacing:1px;"></div>
     <div style="display:flex;gap:8px;">
       <input id="change-username-input" type="text" placeholder="New username..." style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.9rem;background:white;color:var(--ink);outline:none;">
       <button class="btn btn-primary" style="padding:10px 18px;font-size:0.8rem;" onclick="changeUsername()">Save</button>
@@ -1359,8 +1379,11 @@ nav.tabs.header-hidden button {
   <div class="card" style="margin-bottom:14px;">
     <label>&#128274; Change Access Code</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Change your login access code. Make sure to remember the new one.</p>
-    <div style="display:flex;gap:8px;">
-      <input id="manage-pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="New code (4+ digits)" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.9rem;background:white;color:var(--ink);outline:none;">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div style="position:relative;flex:1;">
+        <input id="manage-pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="New code (4+ digits)" style="width:100%;padding:10px 44px 10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.9rem;background:white;color:var(--ink);outline:none;box-sizing:border-box;">
+        <button type="button" id="manage-pin-eye" onmousedown="showPin('manage-pin-input','manage-pin-eye')" onmouseup="hidePin('manage-pin-input','manage-pin-eye')" onmouseleave="hidePin('manage-pin-input','manage-pin-eye')" ontouchstart="showPin('manage-pin-input','manage-pin-eye')" ontouchend="hidePin('manage-pin-input','manage-pin-eye')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:2px;color:var(--muted);font-size:1rem;line-height:1;-webkit-tap-highlight-color:transparent;">&#128065;</button>
+      </div>
       <button class="btn btn-primary" style="padding:10px 18px;font-size:0.8rem;" onclick="changePin()">Save</button>
     </div>
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
@@ -1888,11 +1911,31 @@ nav.tabs.header-hidden button {
         <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;line-height:1.7;">Just making sure it's still you — enter your username or phone number, and your PIN.</div>
         <div style="margin-bottom:14px;">
           <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Username or Phone number</label>
-          <input id="fv-username" type="text" placeholder="Username (e.g. jd0292) or phone" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('fv-pin').focus()">
+          <input id="fv-username" type="text" placeholder="Username (e.g. jd0292) or phone" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter'){document.getElementById('fv-pin').focus();}">
         </div>
         <div style="margin-bottom:16px;">
           <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">PIN</label>
-          <input id="fv-pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••••" autocomplete="new-password" style="width:100%;padding:14px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--paper);outline:none;letter-spacing:8px;text-align:center;" onkeydown="if(event.key==='Enter')submitFullVerify()">
+          <!-- Hidden input captures keystrokes — dots shown above, no digits ever visible -->
+          <input id="fv-pin" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"
+            style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;"
+            oninput="fvPinInput()"
+            onfocus="document.getElementById('fv-pin-dots').style.borderColor='var(--gold)';document.getElementById('fv-pin-dots').style.boxShadow='0 0 0 2px rgba(200,150,46,0.25)'"
+            onblur="document.getElementById('fv-pin-dots').style.borderColor='#3a3020';document.getElementById('fv-pin-dots').style.boxShadow='none'"
+            onkeydown="if(event.key==='Enter')submitFullVerify()">
+          <div style="position:relative;">
+            <!-- Dot display row — tapping focuses the hidden input -->
+            <div id="fv-pin-dots" onclick="document.getElementById('fv-pin').focus()"
+              style="display:flex;justify-content:center;align-items:center;gap:12px;padding:16px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;cursor:text;min-height:56px;transition:border-color 0.15s,box-shadow 0.15s;">
+              <span id="fv-pin-hint" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>
+            </div>
+            <!-- Eye icon — hold to reveal, release to hide -->
+            <button type="button" id="fv-pin-eye"
+              onmousedown="fvPinReveal(true)" onmouseup="fvPinReveal(false)"
+              onmouseleave="fvPinReveal(false)"
+              ontouchstart="fvPinReveal(true);event.preventDefault();"
+              ontouchend="fvPinReveal(false);event.preventDefault();"
+              style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:#6b5e50;font-size:1.1rem;line-height:1;-webkit-tap-highlight-color:transparent;" title="Hold to reveal">&#128065;</button>
+          </div>
         </div>
         <div id="fv-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
         <button onclick="submitFullVerify()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Confirm Identity</button>
@@ -2034,10 +2077,9 @@ nav.tabs.header-hidden button {
       <button onclick="shiftLookupDate(-1)" style="background:none;border:1.5px solid var(--border);border-radius:4px;color:var(--gold);cursor:pointer;padding:8px 14px;font-size:1rem;font-weight:700;line-height:1;flex-shrink:0;">&#8592;</button>
       <input type="date" id="date-lookup-input" onchange="runDateLookup()" style="flex:1;min-width:140px;padding:10px 14px;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;background:white;color:var(--ink);outline:none;cursor:pointer;">
       <button onclick="shiftLookupDate(1)" style="background:none;border:1.5px solid var(--border);border-radius:4px;color:var(--gold);cursor:pointer;padding:8px 14px;font-size:1rem;font-weight:700;line-height:1;flex-shrink:0;">&#8594;</button>
-      <select id="date-lookup-mode" onchange="runDateLookup()" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;background:white;color:var(--ink);outline:none;cursor:pointer;">
+      <select id="date-lookup-mode" onchange="runDateLookup()" style="display:none;">
         <option value="expenses">Expenses</option>
         <option value="income">Income</option>
-        <option value="both">Both</option>
       </select>
     </div>
     <!-- Results -->
@@ -4305,8 +4347,9 @@ function ledgerBulkAssign() {
     filtered = filtered.filter(function(i){ return !_ledExcludedIds[String(i.id)]; });
   }
   filtered.forEach(function(i){ matchingIds[i.id] = true; });
+  var excludedCount = Object.keys(_ledExcludedIds).length;
 
-  if (!filtered.length) { showToast('No matching entries found'); return; }
+  if (!filtered.length) { showToast('No matching entries found' + (excludedCount ? ' ('+excludedCount+' hidden/excluded)' : '')); return; }
 
   saveCustomCategory(newCat);
   var count = 0;
@@ -4319,8 +4362,9 @@ function ledgerBulkAssign() {
   });
   localStorage.setItem('expense_ledger', JSON.stringify(data));
   document.getElementById('led-bulk-cat-input').value = '';
+  var excludedMsg = excludedCount ? ' · ' + excludedCount + ' excluded item' + (excludedCount===1?'':'s') + ' skipped' : '';
   clearLedgerBulkSearch();
-  showToast(count + ' entr'+(count===1?'y':'ies')+' assigned to "'+newCat+'"');
+  showToast(count + ' entr'+(count===1?'y':'ies')+' assigned to "'+newCat+'"' + excludedMsg);
   renderLedger();
 }
 
@@ -4516,7 +4560,7 @@ function cleanupCustomRules() {
   showToast('Category rules cleaned up — ' + rules.length + ' rules kept');
 }
 function clearLedgerFilters() {
-  document.getElementById('led-year').value     = String(new Date().getFullYear());
+  document.getElementById('led-year').value     = 'all';
   document.getElementById('led-month').value    = 'all';
   document.getElementById('led-currency').value = 'all';
   document.getElementById('led-cat').value      = 'all';
@@ -4659,8 +4703,15 @@ function renderLedger(){
       var sel = document.createElement('select');
       sel.style.cssText = 'font-size:0.78rem;padding:3px 6px;border:1.5px solid var(--gold);border-radius:3px;background:white;color:var(--ink);outline:none;';
       allCats2.forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; if(c===item.category) o.selected=true; sel.appendChild(o); });
+      var newOpt=document.createElement('option'); newOpt.value='__new__'; newOpt.textContent='+ New category...'; sel.appendChild(newOpt);
       sel.addEventListener('change', function(){
-        var nc=sel.value; var d2=loadData();
+        var nc=sel.value;
+        if(nc==='__new__'){
+          var typed=prompt('Enter new category name:');
+          if(!typed||!typed.trim()){sel.replaceWith(pill);return;}
+          nc=typed.trim(); saveCustomCategory(nc);
+        }
+        var d2=loadData();
         d2.forEach(function(d){ if(String(d.id)===String(item.id)) d.category=nc; });
         saveData(d2); item.category=nc;
         var nc2=getCatColor(nc,0);
@@ -5256,12 +5307,8 @@ function populateFilters(){
     sel.innerHTML='<option value="all">All Years</option>'+years.map(function(y){return'<option value="'+y+'">'+y+'</option>';}).join('');
     if(years.indexOf(cur)!==-1){
       sel.value=cur;
-    } else if(id==='led-year' && cur==='all') {
-      // Default ledger to most recent year for performance
-      var curYear = String(new Date().getFullYear());
-      if(years.indexOf(curYear)!==-1) sel.value = curYear;
-      else if(years.length) sel.value = years[0];
     }
+    // led-year defaults to 'all' — no auto-selection to current year
   });
   document.getElementById('led-cat').innerHTML='<option value="all">All Categories</option>'+cats.map(function(c){return'<option value="'+c+'">'+c+'</option>';}).join('');
   document.getElementById('led-month').innerHTML='<option value="all">All Months</option>'+MONTHS.map(function(m,i){return'<option value="'+pad(i+1)+'">'+m+'</option>';}).join('');
@@ -6461,33 +6508,78 @@ function selectCustomUsername() {
 //  CHANGE USERNAME IN MANAGE
 // ════════════════════════════════
 function saveFullName() {
-  // Read from whichever input is visible
-  var inp = document.getElementById('change-fullname-input') ||
-            document.getElementById('inc-change-fullname-input');
-  // Try both
   var expInp = document.getElementById('change-fullname-input');
   var incInp = document.getElementById('inc-change-fullname-input');
   var newName = (expInp && expInp.value.trim()) || (incInp && incInp.value.trim());
   if (!newName) { showToast('Please enter your full name'); return; }
+  // Get selected title
+  var titleSel = document.getElementById('title-select');
+  var titleCustom = document.getElementById('title-custom');
+  var title = '';
+  if (titleSel) {
+    if (titleSel.value === '__custom__') {
+      title = titleCustom ? titleCustom.value.trim() : '';
+    } else {
+      title = titleSel.value;
+    }
+  }
   localStorage.setItem(FULL_NAME_KEY, newName);
-  // Also save to Firebase
+  localStorage.setItem('expense_user_title', title);
+  // Save to Firebase
   if (_db && _userPhone) {
-    _db.collection('user_registry').doc(_userPhone).update({ full_name: newName })
+    _db.collection('user_registry').doc(_userPhone).update({ full_name: newName, title: title })
       .catch(function(){});
   }
   if (expInp) expInp.value = '';
   if (incInp) incInp.value = '';
   updateFullNameDisplay();
-  showToast('Full name saved: "' + newName + '" — will appear on reports');
+  var displayName = title ? title + ' ' + newName : newName;
+  showToast('Full name saved: "' + displayName + '" — will appear on reports');
+}
+
+function onTitleSelectChange() {
+  var sel = document.getElementById('title-select');
+  var customInp = document.getElementById('title-custom');
+  if (!sel || !customInp) return;
+  if (sel.value === '__custom__') {
+    customInp.style.display = 'block';
+    customInp.focus();
+  } else {
+    customInp.style.display = 'none';
+    customInp.value = '';
+  }
+}
+
+function populateTitleSelector() {
+  var saved = localStorage.getItem('expense_user_title') || '';
+  var sel = document.getElementById('title-select');
+  var customInp = document.getElementById('title-custom');
+  if (!sel) return;
+  var opts = ['','Mr','Mrs','Miss','Ms','Dr','Prof','Eng','Barr','Chief','Pastor','Rev'];
+  if (saved && opts.indexOf(saved) === -1) {
+    // It's a custom title
+    sel.value = '__custom__';
+    if (customInp) { customInp.style.display = 'block'; customInp.value = saved; }
+  } else {
+    sel.value = saved;
+    if (customInp) customInp.style.display = 'none';
+  }
 }
 
 function updateFullNameDisplay() {
   var name = localStorage.getItem(FULL_NAME_KEY) || '';
+  var title = localStorage.getItem('expense_user_title') || '';
   var expEl = document.getElementById('current-fullname-display');
   var incEl = document.getElementById('inc-current-fullname-display');
-  var display = name ? ('Current: ' + name) : 'Not set — enter your full name above';
+  var displayName = title ? title + ' ' + name : name;
+  var display = name ? ('Current: ' + displayName) : 'Not set — enter your full name above';
   if (expEl) expEl.textContent = display;
   if (incEl) incEl.textContent = display;
+  // Also update username display
+  var unEl = document.getElementById('current-username-display');
+  if (unEl) unEl.textContent = _userName ? 'Current username: ' + _userName : 'No username set';
+  // Pre-fill title selector with saved value
+  populateTitleSelector();
 }
 
 function changeUsername() {
@@ -6500,6 +6592,7 @@ function changeUsername() {
       _userName = newName;
       localStorage.setItem('expense_user_name', newName);
       updateUserDisplay();
+      updateFullNameDisplay();
       showToast('Username changed to "' + newName + '"');
       if (inp) inp.value = '';
     })
@@ -8158,8 +8251,15 @@ function renderIncomeLedger() {
       var sel = document.createElement('select');
       sel.style.cssText = 'font-size:0.78rem;padding:3px 6px;border:1.5px solid var(--sage);border-radius:3px;background:white;outline:none;';
       allCats.forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; if(c===item.category) o.selected=true; sel.appendChild(o); });
+      var newOpt=document.createElement('option'); newOpt.value='__new__'; newOpt.textContent='+ New category...'; sel.appendChild(newOpt);
       sel.addEventListener('change', function(){
-        var nc=sel.value; var d2=loadIncomeData();
+        var nc=sel.value;
+        if(nc==='__new__'){
+          var typed=prompt('Enter new category name:');
+          if(!typed||!typed.trim()){sel.replaceWith(pill);return;}
+          nc=typed.trim(); saveIncomeCustomCat(nc);
+        }
+        var d2=loadIncomeData();
         d2.forEach(function(d){ if(String(d.id)===String(item.id)) d.category=nc; });
         saveIncomeData(d2); item.category=nc;
         pill.textContent=nc; pill.style.color=getIncCatColor(nc); sel.replaceWith(pill);
@@ -8566,7 +8666,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
 // ── Get full name for reports ──
 function getReportName() {
-  return localStorage.getItem(FULL_NAME_KEY) || _userName || 'Account Holder';
+  var name  = localStorage.getItem(FULL_NAME_KEY) || _userName || 'Account Holder';
+  var title = localStorage.getItem('expense_user_title') || '';
+  return title ? title + ' ' + name : name;
 }
 
 
@@ -8709,6 +8811,53 @@ function submitPinLogin() {
 }
 
 // ── Full verify (username OR phone + PIN, against Firebase) ──
+// ── PIN eye icon — hold to reveal, release to hide ──
+function showPin(inputId, btnId) {
+  var inp = document.getElementById(inputId);
+  var btn = document.getElementById(btnId);
+  if (inp) inp.type = 'text';
+  if (btn) btn.style.color = 'var(--gold)';
+}
+function hidePin(inputId, btnId) {
+  var inp = document.getElementById(inputId);
+  var btn = document.getElementById(btnId);
+  if (inp) inp.type = 'password';
+  if (btn) btn.style.color = '#6b5e50';
+}
+
+// ── Full verify PIN — custom dot display (no digits ever shown while typing) ──
+function fvPinInput() {
+  var inp = document.getElementById('fv-pin');
+  var dotsEl = document.getElementById('fv-pin-dots');
+  if (!inp || !dotsEl) return;
+  var len = inp.value.length;
+  if (len === 0) {
+    dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < len; i++) {
+    html += '<div style="width:14px;height:14px;border-radius:50%;background:var(--gold);border:2px solid var(--gold);"></div>';
+  }
+  dotsEl.innerHTML = html;
+}
+
+function fvPinReveal(show) {
+  var inp = document.getElementById('fv-pin');
+  var dotsEl = document.getElementById('fv-pin-dots');
+  var btn = document.getElementById('fv-pin-eye');
+  if (!inp) return;
+  if (show && inp.value.length > 0) {
+    // Show actual digits in the dot area
+    dotsEl.innerHTML = '<span style="font-family:\'DM Mono\',monospace;font-size:1.4rem;font-weight:700;color:var(--gold);letter-spacing:8px;">' + inp.value + '</span>';
+    if (btn) btn.style.color = 'var(--gold)';
+  } else {
+    // Return to dots
+    fvPinInput();
+    if (btn) btn.style.color = '#6b5e50';
+  }
+}
+
 function submitFullVerify() {
   var usernameEl = document.getElementById('fv-username');
   var pinEl      = document.getElementById('fv-pin');
@@ -8744,7 +8893,14 @@ function submitFullVerify() {
     localStorage.setItem(PHONE_KEY, phone);
     localStorage.setItem('expense_pin_hash_local', pinHash);
     if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
+    if (data.title !== undefined) localStorage.setItem('expense_user_title', data.title || '');
     recordFullVerify();
+    // Clear fields immediately for security — don't leave username/PIN on screen
+    var fvU = document.getElementById('fv-username'); if(fvU) fvU.value = '';
+    var fvP = document.getElementById('fv-pin');      if(fvP) fvP.value = '';
+    var fvE = document.getElementById('fv-error');    if(fvE) fvE.textContent = '';
+    var dotsEl = document.getElementById('fv-pin-dots');
+    if (dotsEl) dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
     _resumeSession(uid, name, phone);
     showToast('Identity confirmed. Welcome back, ' + name + '!');
     return true;
@@ -8818,6 +8974,9 @@ function showFullVerifyStep() {
   var fvU = document.getElementById('fv-username'); if(fvU) fvU.value = '';
   var fvP = document.getElementById('fv-pin');      if(fvP) fvP.value = '';
   var fvE = document.getElementById('fv-error');    if(fvE) fvE.textContent = '';
+  // Reset dot display
+  var dotsEl = document.getElementById('fv-pin-dots');
+  if (dotsEl) dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
   setTimeout(function(){ var u = document.getElementById('fv-username'); if(u) u.focus(); }, 80);
 }
 
@@ -9417,6 +9576,7 @@ function submitLogin() {
     localStorage.setItem(PHONE_KEY, _userPhone);
     // Load full name from registry if available
     if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
+    if (data.title !== undefined) localStorage.setItem('expense_user_title', data.title || '');
     if(errEl) errEl.textContent = '';
     localStorage.setItem('last_active', String(Date.now()));
     // Save PIN hash locally for future instant PIN-only logins
@@ -9534,6 +9694,12 @@ function logOut() {
   localStorage.removeItem('keep_login_pref');
   localStorage.removeItem('expense_pin_hash_local');
   sessionStorage.removeItem('app_session');
+  // Clear full verify fields so previous user's data is never visible
+  var fvU = document.getElementById('fv-username'); if(fvU) fvU.value = '';
+  var fvP = document.getElementById('fv-pin');      if(fvP) fvP.value = '';
+  var fvE = document.getElementById('fv-error');    if(fvE) fvE.textContent = '';
+  var dotsEl = document.getElementById('fv-pin-dots');
+  if (dotsEl) dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
   showPinScreen();
   showLoginStep();
   syncSetStatus('off');
