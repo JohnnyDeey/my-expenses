@@ -1981,7 +1981,7 @@ nav.tabs.header-hidden button {
 <div id="privacy-overlay" style="display:none;position:fixed;inset:0;z-index:99997;background:#1a1410;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
   <div style="max-width:500px;width:100%;background:var(--paper);border:2px solid var(--gold);border-radius:8px;padding:28px;">
     <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--ink);margin-bottom:4px;">Privacy Policy &amp; Terms</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:16px;">MY EXPENSE LEDGER &middot; JUNE 2026 — Updated</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:16px;">MY EXPENSE LEDGER &middot; SEPTEMBER 2026 — Updated</div>
     <div style="background:#fffbf0;border:1px solid var(--gold);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.7;">
       &#9888; This policy has been updated. Please read and re-agree to continue.
     </div>
@@ -2000,7 +2000,13 @@ nav.tabs.header-hidden button {
       <p style="margin-bottom:12px;">This app contains no advertisements. We do not use your financial data for advertising or marketing purposes of any kind.</p>
       <p style="font-weight:700;margin-bottom:6px;">7. Recycle Bin &amp; Data Deletion</p>
       <p style="margin-bottom:12px;">Deleted entries are moved to a Recycle Bin before permanent deletion. You can restore them anytime. A Full Reset option wipes all local device data while preserving your cloud backup in Firebase. Your cloud data is never deleted without your explicit action.</p>
-      <p style="font-weight:700;margin-bottom:6px;">8. Contact</p>
+      <p style="font-weight:700;margin-bottom:6px;">8. Multi-Currency Data</p>
+      <p style="margin-bottom:12px;">The app supports multiple world currencies. Each transaction records its own currency code. Currency preferences are stored locally on your device and synced to your private Firebase account. No currency conversion is performed or stored — amounts are always saved exactly as you entered them.</p>
+      <p style="font-weight:700;margin-bottom:6px;">9. Print Reports</p>
+      <p style="margin-bottom:12px;">The Print Report feature opens a formatted report in a new browser window on your device. No data is sent to any external server during printing. The report is generated entirely on your device and is only as secure as the device and printer you use. We recommend printing on a trusted private device and network.</p>
+      <p style="font-weight:700;margin-bottom:6px;">10. Tab &amp; Session Continuity</p>
+      <p style="margin-bottom:12px;">The app remembers which tab you were on when you refresh or return within an active session. This preference is stored locally in your browser and is cleared when you log out. It is never shared with any server.</p>
+      <p style="font-weight:700;margin-bottom:6px;">11. Contact</p>
       <p>If you have concerns about your data, use the Help button inside the app to contact support at myfinanceledgerapp@gmail.com.</p>
     </div>
     <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;padding:12px;background:#fffbf0;border:1px solid var(--gold);border-radius:4px;">
@@ -3932,9 +3938,9 @@ function printDashboard(mode, selectedCurrencies) {
     var vals=yrs.map(function(y){return +byY[y].toFixed(2);});
     var sym=SYMS[cur]||'';
     var oc=document.createElement('canvas'); oc.width=800; oc.height=240;
-    var colors=yrs.map(function(y,i){return i===yrs.length-1?'rgba(200,150,46,0.9)':'rgba(200,150,46,0.4)';});
-    if(isIncome) colors=yrs.map(function(y,i){return i===yrs.length-1?'rgba(74,124,89,0.9)':'rgba(74,124,89,0.4)';});
-    var ch=new Chart(oc.getContext('2d'),{type:'bar',data:{labels:yrs,datasets:[{label:cur,data:vals,backgroundColor:colors,borderRadius:3}]},options:{responsive:false,animation:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
+    var borderC=isIncome?'#4a7c59':'#c8962e';
+    var bgC=isIncome?'rgba(74,124,89,0.08)':'rgba(200,150,46,0.08)';
+    var ch=new Chart(oc.getContext('2d'),{type:'line',data:{labels:yrs,datasets:[{label:cur,data:vals,borderColor:borderC,backgroundColor:bgC,tension:0.4,fill:true,pointBackgroundColor:borderC,pointRadius:5,pointHoverRadius:7}]},options:{responsive:false,animation:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
     var src=oc.toDataURL('image/png');
     ch.destroy();
     return '<img src="'+src+'" style="width:100%;height:auto;">';
@@ -10685,7 +10691,7 @@ setInterval(function() {
 // ════════════════════════
 //  PRIVACY POLICY
 // ════════════════════════
-var PRIVACY_VER = '2026-06';
+var PRIVACY_VER = '2026-09';
 
 // Called after login — checks Firebase first, then localStorage as fallback
 function checkPrivacy() {
@@ -10761,6 +10767,7 @@ var HELP_ITEMS = [
   {icon:'&#128274;', label:'Security',    tag:'security'},
   {icon:'&#128477;', label:'Reset PIN',   tag:'resetpin'},
   {icon:'&#128176;', label:'Currencies',  tag:'currencies'},
+  {icon:'&#128438;', label:'Print Report', tag:'print'},
   {icon:'&#10067;',  label:'Help',        tag:'help'}
 ];
 
@@ -10785,9 +10792,19 @@ var HELP_DATA = {
   },
   'dashboard': {
     title: '📈 Dashboard — Charts & Analytics',
-    steps: ['Use Year and Currency filters at the top.','Monthly Trend shows spending per month as a line chart.','Category Breakdown shows spending by category.','Yearly Total compares annual spending.','Heatmap shows high and low spend months.','Year-over-Year shows % change between years.'],
-    example: 'User jd0292 dashboard:\nDec 2023: ₦47,500 (highest).\nJan 2023: ₦18,200 (lowest).\nYear-on-year 2022 to 2023: +38%.',
-    tip: 'On mobile the heatmap shows one year at a time. Use arrows to navigate years.'
+    steps: [
+      'Use the Year, Month, and Currency filters at the top — all three control every chart at once.',
+      'Select All Years + All Months + All Currencies to see your full picture.',
+      'Select a specific year + month + currency to zoom into a single period.',
+      'Monthly Trend shows spending or income per month as a line chart for the selected currency.',
+      'Category Breakdown shows amounts by category — each currency has its own colour-coded bar.',
+      'Yearly Total compares annual totals as a line chart across all years.',
+      'Spending Heatmap shows high and low months — darker = higher amount. When All Currencies is selected, one heatmap is shown per currency.',
+      'Year-over-Year Growth shows % change between consecutive years — green = decrease, red = increase (for expenses).',
+      'Click 🖨 Print Report to choose which currencies to print. Each selected currency generates a complete report section.'
+    ],
+    example: 'User jd0292 selected 2024 · All Months · NGN.\nAll charts switched to NGN automatically.\nCategory breakdown showed Food as highest at ₦89,400.\nHe then clicked Print Report, ticked NGN and EUR, and got a 2-section printed report.',
+    tip: 'Use the Print Report currency picker to print one currency or all at once — each gets its own full report page.'
   },
   'ledger': {
     title: '📜 Ledger — Full Transaction List',
@@ -10845,6 +10862,23 @@ var HELP_DATA = {
     steps: ['Expense Report: Budget tab, select month and currency, click PDF Report.','Income Report: Income then Monthly tab, filter by period, click PDF Report.','A new window opens with the formatted report.','Click Print / Save PDF.','In the print dialog choose Save as PDF.','Your full name appears at the top — set it in Manage first.'],
     example: 'User jd0292 generated March 2024 expense report:\nName: John David at the top.\n67 transactions, total ₦124,500 + €89.00.\nCategory breakdown and budget progress bars included.',
     tip: 'Set your full name in Manage before generating reports so your name appears correctly.'
+  },
+  'print': {
+    title: '🖨️ Print Report — Full Dashboard Report',
+    steps: [
+      'Go to the Dashboard tab (Expenses or Income).',
+      'Set the Year, Month, and Currency filters as desired — these apply to the printed report.',
+      'Click the 🖨 Print Report button.',
+      'A currency picker overlay appears showing all currencies in your data as checkboxes.',
+      'Currencies are pre-ticked based on your current master filter selection.',
+      'Tick one or more currencies you want to print.',
+      'Click Print Selected — a new window opens with the full report.',
+      'Each selected currency generates a complete standalone section: stat cards, monthly trend chart, category breakdown, yearly chart, heatmap, and year-over-year growth.',
+      'Currencies print in the order you selected them, each starting a new page.',
+      'In the browser print dialog, enable Background graphics to ensure all chart colours print correctly.'
+    ],
+    example: 'User jd0292 wanted to print his 2024 annual report for both NGN and EUR.\nHe set Year = 2024, Month = All, Currency = All.\nHe clicked Print Report and ticked NGN and EUR.\nHe got a 2-section report — NGN first, EUR second, each with all 6 charts.',
+    tip: 'Always enable "Background graphics" or "Print backgrounds" in your browser print dialog. Without it the heatmap and category bar colours will not show in the printed copy.'
   },
   'help': {
     title: '❓ Help & Support',
@@ -10920,17 +10954,19 @@ var HELP_DATA = {
   'currencies': {
     title: '💱 Multi-Currency — Tracking in Different Currencies',
     steps: [
-      'The app supports four currencies: ₦ Nigerian Naira (NGN), € Euro (EUR), $ US Dollar (USD), and £ British Pound (GBP).',
-      'Each transaction stores its own currency — you do not need to convert anything.',
-      'When importing, use the correct symbol: ₦ or # for Naira, € for Euro, $ for Dollar, £ for Pound.',
-      'Totals in the header, dashboard, and ledger are shown separately per currency — they are never mixed or converted.',
-      'On the Dashboard use the currency filter to view charts for one currency at a time.',
-      'Budget targets are set per currency — set a ₦ budget and a € budget separately if needed.',
-      'On the Ledger use the Currency filter dropdown to see only one currency at a time.',
-      'PDF reports show totals grouped by currency so each amount is clearly identified.'
+      'The app supports any world currency. Four defaults are always present: ₦ NGN, € EUR, $ USD, £ GBP.',
+      'Add more currencies in Manage → Currency Manager. Pick from 30 world currencies or type a custom code and symbol.',
+      'Each transaction stores its own currency — you never need to convert anything.',
+      'When importing, use the correct symbol: ₦ or # for Naira, € for Euro, $ for Dollar, £ for Pound, ₵ for Ghana Cedi, etc.',
+      'Totals in the header are shown separately per currency with colour-coded pills — each currency has its own colour.',
+      'On the Dashboard, the master filter controls all charts. Select All Currencies to see all; select one to focus.',
+      'Category Breakdown shows one colour-coded bar per currency for each category.',
+      'When All Currencies is selected, the Heatmap shows a separate grid per currency.',
+      'Print Report lets you tick which currencies to print — each selected currency generates its own full report section.',
+      'Budget targets are set per currency — set a ₦ budget and a € budget separately if needed.'
     ],
-    example: 'User sa0819 lives between Nigeria and Spain.\nShe tracks rent in € and daily spending in ₦.\nHer dashboard shows two separate total cards: ₦ total and € total.\nShe sets a ₦40,000 monthly food budget and a €500 rent budget separately.',
-    tip: 'Always use the correct currency symbol when typing in the import box. If you use the wrong symbol the amount will be saved in the wrong currency and you will need to re-import or edit it.'
+    example: 'User sa0819 added GHS (Ghana Cedis) in Manage → Currency Manager.\nShe used ₵ as the symbol.\nHer header now shows four colour-coded pills: ₦ green, € blue, $ orange, ₵ gold.\nShe printed a report ticking NGN and GHS — got two separate full reports in one print.',
+    tip: 'The four default currencies (NGN, EUR, USD, GBP) cannot be removed. Additional currencies can be added or removed freely in the Currency Manager.'
   }
 };
 
@@ -10992,6 +11028,24 @@ var ONBOARD_EXPENSES_SLIDES = [
     color: '#4a7c59'
   },
   {
+    icon: '📊',
+    title: 'Dashboard — One Filter Controls All',
+    body: 'The Dashboard has a single master filter: Year, Month, and Currency. Select any combination and every chart — monthly trend, category breakdown, yearly totals, heatmap, and year-over-year growth — all update at once.',
+    color: '#6b3d8c'
+  },
+  {
+    icon: '🌍',
+    title: 'Multi-Currency Support',
+    body: 'The app supports any world currency. Your header shows colour-coded pills for each currency with the symbol and amount. Add new currencies in <strong>Manage → Currency Manager</strong>. Each transaction records its own currency — nothing is converted.',
+    color: '#2e7d8a'
+  },
+  {
+    icon: '🖨️',
+    title: 'Print Reports — Per Currency',
+    body: 'Click <strong>🖨 Print Report</strong> on the Dashboard. A picker lets you choose which currencies to include. Each selected currency generates a complete report section — stats, charts, heatmap, and year-over-year growth — all stacked in one print.',
+    color: '#b5451b'
+  },
+  {
     icon: '🚀',
     title: 'You Are Ready!',
     body: 'Start by going to <strong>Import</strong> and adding your first expenses. Everything is saved to the cloud automatically — you can switch devices anytime.',
@@ -11029,6 +11083,18 @@ var ONBOARD_INCOME_SLIDES = [
     icon: '📊',
     title: 'Income Dashboard',
     body: 'Charts show your income breakdown by category and month. Compare earnings across currencies. Track your monthly totals and yearly trends.',
+    color: '#6b3d8c'
+  },
+  {
+    icon: '📊',
+    title: 'Income Dashboard — Master Filter',
+    body: 'Use the Year, Month, and Currency filter at the top of the Income Dashboard. All charts — monthly trend, income by category, yearly totals, heatmap, and year-over-year growth — all respond together instantly.',
+    color: '#2e7d8a'
+  },
+  {
+    icon: '🖨️',
+    title: 'Print Income Reports',
+    body: 'Click <strong>🖨 Print Report</strong> on the Income Dashboard. Tick the currencies you want — each one prints a full standalone report section with all 6 charts. Perfect for monthly or annual income reviews.',
     color: '#6b3d8c'
   },
   {
