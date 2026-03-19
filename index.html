@@ -2304,6 +2304,40 @@ function refreshAllCurrencyDropdowns() {
 var SYMS = {EUR:'€',NGN:'₦',USD:'$',GBP:'£'};
 buildSYMS();
 
+// Auto-detect new currencies from imported/saved data and add them silently
+function autoDetectCurrencies(dataArray) {
+  if (!dataArray || !dataArray.length) return;
+  var active = loadUserCurrencies();
+  var added = [];
+  dataArray.forEach(function(item) {
+    var c = item.currency || item.Currency;
+    if (!c) return;
+    c = c.toUpperCase().trim();
+    if (active.indexOf(c) === -1) {
+      active.push(c);
+      added.push(c);
+      // Try to find symbol from world list
+      var found = ALL_WORLD_CURRENCIES.filter(function(w){ return w.code === c; })[0];
+      if (!found) {
+        // Save as custom with code as symbol placeholder
+        try {
+          var customs = JSON.parse(localStorage.getItem('expense_custom_currencies') || '[]');
+          if (!customs.filter(function(x){ return x.code === c; }).length) {
+            customs.push({code: c, sym: c});
+            localStorage.setItem('expense_custom_currencies', JSON.stringify(customs));
+          }
+        } catch(e){}
+      }
+    }
+  });
+  if (added.length) {
+    localStorage.setItem(CURRENCY_STORAGE_KEY, JSON.stringify(active));
+    buildSYMS();
+    refreshAllCurrencyDropdowns();
+    showToast('New currenc' + (added.length === 1 ? 'y' : 'ies') + ' detected and added: ' + added.join(', '));
+  }
+}
+
 var CAT_RULES = [
   {cat:'Rent & Utilities',kw:['rent','loan repayment','ewtn','google sub','spotify','chatgpt','data subscription','renfe','tarifa']},
   {cat:'Food & Groceries',kw:['leche','pan','pollo','arroz','tomate','cebolla','flan','yogur','aceite','platano','limon','tortilla','napolitano','napolitana','agua','refresco','coca','galletas','pimienta','ketchup','detergent','cepillo','dentifr','aluminio','estropea','pitos','granja','cereal','patatas','plantain','macho','moi moi','pepper','chocolate','cookies','fish','burger','fanta','scubion','doritos','breakfast','groceries','bolleria']},
@@ -2394,10 +2428,10 @@ function learnKeywordsFromEntry(desc, cat) {
 function getCatColor(cat, idx) { return CAT_COLORS[cat] || CAT_COLORS_FB[idx % CAT_COLORS_FB.length]; }
 
 function saveData(data) {
-  window._deletePending = true; // block listener while we push
+  window._deletePending = true;
   localStorage.setItem('expense_ledger', JSON.stringify(data));
+  autoDetectCurrencies(data);
   syncPush();
-  // Clear after push delay
   clearTimeout(window._deletePendingTimer);
   window._deletePendingTimer = setTimeout(function(){ window._deletePending = false; }, 6000);
 }
@@ -6959,6 +6993,7 @@ function saveIncomeData(data) {
   window._incLastDeleteTime = Date.now();
   window._incDeletePending = true;
   localStorage.setItem(getIncKey(), JSON.stringify(data));
+  autoDetectCurrencies(data);
   syncIncomeToFirebase();
 }
 function loadIncomeCustomCats() {
@@ -9328,6 +9363,7 @@ function syncLoadFromFirebase(callback) {
     if (remoteCount > 0 && localCount === 0) {
       // Fresh login — load from Firebase
       localStorage.setItem('expense_ledger', JSON.stringify(allEntries));
+      autoDetectCurrencies(allEntries); // silently add any new currencies found
       populateFilters();
       updateHeaderContext();
       renderMonthPicker();
