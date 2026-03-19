@@ -117,9 +117,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-// ══════════════════════════════════════════════════════
-//  CLOUD SYNC — Secure multi-user (UUID-based isolation)
-// ══════════════════════════════════════════════════════
+// ── Arrow key scroll — Up/Down arrows control the floating scroll buttons ──
+// Only fires when NOT typing in an input, and NOT inside date lookup (which has its own left/right)
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  var tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  // Don't intercept if date lookup is open (it uses left/right, but avoid confusion)
+  var dlOverlay = document.getElementById('date-lookup-overlay');
+  if (dlOverlay && dlOverlay.style.display === 'flex') return;
+  e.preventDefault();
+  if (e.key === 'ArrowUp') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+  }
+});
+
+
 var _db            = null;
 var _syncUnsubscribe = null;
 var _syncPushTimer   = null;
@@ -391,6 +406,18 @@ document.addEventListener('click', function(e) {
   if (e.target && e.target.classList && e.target.classList.contains('dlcat-pill')) {
     editDateLookupCat(e.target, e.target.getAttribute('data-id'), e.target.getAttribute('data-type'));
   }
+});
+
+// Arrow keys for date lookup — left = previous day, right = next day
+document.addEventListener('keydown', function(e) {
+  var overlay = document.getElementById('date-lookup-overlay');
+  if (!overlay || overlay.style.display !== 'flex') return;
+  // Don't intercept if user is typing in a field
+  var tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); shiftLookupDate(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); shiftLookupDate(1);  }
+  if (e.key === 'Escape')     { e.preventDefault(); closeDateLookup();   }
 });
 
 </script>
@@ -10923,7 +10950,7 @@ function changePin() {
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-09';
-var APP_VERSION = '1.5.0'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '1.6.0'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
@@ -11104,9 +11131,19 @@ var HELP_DATA = {
   },
   'date': {
     title: '🗓️ Date Lookup — Find Transactions by Date',
-    steps: ['Tap the 🗓️ icon in the top header bar.','Select a date using the date picker.','Choose Expenses, Income or Both.','All transactions appear in a scrollable table.','Use the left arrow to go to the previous day.','Use the right arrow to go to the next day.','Tap any category to change it — saves automatically.'],
-    example: 'User jd0292 checked 14 Feb 2024:\nDinner €45.00 (Food)\nFlowers ₦8,000 (Personal Care)\nCinema €12.00 (Entertainment)\nTotal: ₦8,000 + €57.00',
-    tip: 'Use the arrows to browse day by day through an entire month without reopening the picker.'
+    steps: [
+      'Tap the 🗓️ icon in the top header bar.',
+      'Select a date using the date picker.',
+      'Choose Expenses, Income or Both.',
+      'All transactions appear in a scrollable table.',
+      'Use the ← left arrow button to go to the previous day.',
+      'Use the → right arrow button to go to the next day.',
+      'On a laptop keyboard: press the ← Left arrow key for previous day, → Right arrow key for next day.',
+      'Press Escape on the keyboard to close the Date Lookup overlay.',
+      'Tap any category to change it — saves automatically.'
+    ],
+    example: 'User jd0292 opened Date Lookup on his laptop.\nHe picked 14 Feb 2024 from the date picker.\nThen pressed → five times to browse to 19 Feb without touching the mouse.\nHe pressed Escape to close it.',
+    tip: 'Use keyboard arrows (← →) on a laptop to browse day by day quickly — much faster than clicking the buttons each time.'
   },
   'login': {
     title: '🔓 Login & Registration',
@@ -11179,9 +11216,17 @@ var HELP_DATA = {
   },
   'scroll': {
     title: '⇧ Scroll Buttons — Quick Navigation',
-    steps: ['Two floating buttons appear on the right side of the screen when the page is scrollable.','The up arrow ⇧ jumps back to the very top of the page instantly.','The down arrow ⇩ jumps to the very bottom of the page.','The buttons appear automatically when you scroll down.','They disappear when you are already at the top or bottom.','Useful for long ledger lists or the dashboard with many charts.'],
-    example: 'User jd0292 scrolled halfway through a 300-entry ledger.\nHe tapped ⇩ to jump to the latest entries at the bottom.\nThen tapped ⇧ to return to the filters at the top.',
-    tip: 'These buttons work on all tabs — Import, Ledger, Dashboard, Budget, and Income.'
+    steps: [
+      'Two floating buttons appear on the right side of the screen when the page is scrollable.',
+      'The up arrow ⇧ jumps back to the very top of the page instantly.',
+      'The down arrow ⇩ jumps to the very bottom of the page.',
+      'The buttons appear automatically when you scroll down and fade when not needed.',
+      'On a laptop or desktop keyboard: press the ↑ Up arrow key to jump to the top, and ↓ Down arrow key to jump to the bottom.',
+      'Keyboard arrows only work when you are not typing in a text field.',
+      'Useful for long ledger lists or the dashboard with many charts.'
+    ],
+    example: 'User jd0292 was reviewing a 300-entry ledger on his laptop.\nHe pressed the ↓ Down arrow key to jump to the latest entries.\nThen pressed ↑ Up arrow to return to the filters at the top.\nNo mouse movement needed.',
+    tip: 'On mobile use the floating buttons. On laptop use the keyboard arrow keys — faster than scrolling with a mouse.'
   },
   'security': {
     title: '🔒 Security — Auto-Lock & Verification',
@@ -11312,6 +11357,12 @@ var ONBOARD_EXPENSES_SLIDES = [
     color: '#b5451b'
   },
   {
+    icon: '⌨️',
+    title: 'Laptop Keyboard Shortcuts',
+    body: 'On a laptop or desktop: <strong>↑ Up arrow</strong> jumps to the top of the page, <strong>↓ Down arrow</strong> jumps to the bottom — same as the floating scroll buttons. In Date Lookup, <strong>← Left arrow</strong> goes to the previous day, <strong>→ Right arrow</strong> goes to the next day, and <strong>Escape</strong> closes it. On the PIN pad, just type your digits directly and press <strong>Enter</strong> to log in.',
+    color: '#3d5a73'
+  },
+  {
     icon: '🚀',
     title: 'You Are Ready!',
     body: 'Start by going to <strong>Import</strong> and adding your first expenses. Everything is saved to the cloud automatically — you can switch devices anytime.',
@@ -11362,6 +11413,12 @@ var ONBOARD_INCOME_SLIDES = [
     title: 'Print Income Reports',
     body: 'Click <strong>🖨 Print Report</strong> on the Income Dashboard. Tick the currencies you want — each one prints a full standalone report section with all 6 charts. Perfect for monthly or annual income reviews.',
     color: '#6b3d8c'
+  },
+  {
+    icon: '⌨️',
+    title: 'Laptop Keyboard Shortcuts',
+    body: 'On a laptop or desktop: <strong>↑ Up arrow</strong> jumps to the top of the page, <strong>↓ Down arrow</strong> jumps to the bottom — same as the floating scroll buttons. In Date Lookup, <strong>← Left arrow</strong> goes to the previous day, <strong>→ Right arrow</strong> goes to the next day, and <strong>Escape</strong> closes it. On the PIN pad, just type your digits and press <strong>Enter</strong>.',
+    color: '#3d5a73'
   },
   {
     icon: '🚀',
