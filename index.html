@@ -9,17 +9,86 @@
   gtag('js', new Date());
   gtag('config', 'G-GYDLHGMNGB');
 </script>
-<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="My Finance Ledger">
-  <meta name="theme-color" content="#1a1410">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icon-192.png">
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Expense Ledger">
+<meta name="application-name" content="My Expense Ledger">
+<meta name="description" content="Personal finance tracker — record spending, track income, set budgets and generate reports.">
+<meta name="theme-color" content="#1a1410">
 <title>My Expense Ledger</title>
+
+<!-- PWA: inline manifest so the single-file app is installable -->
+<script>
+(function(){
+  // Build SVG icon as data URL
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="90" fill="#1a1410"/><rect x="60" y="60" width="392" height="392" rx="60" fill="#1a1410" stroke="#c8962e" stroke-width="16"/><text x="256" y="210" text-anchor="middle" font-family="Georgia,serif" font-size="130" font-weight="900" fill="#c8962e">₦</text><text x="256" y="330" text-anchor="middle" font-family="Georgia,serif" font-size="72" font-weight="700" fill="#c8962e">€$£</text><rect x="90" y="365" width="332" height="6" rx="3" fill="rgba(200,150,46,0.4)"/><text x="256" y="430" text-anchor="middle" font-family=\'DM Mono\',monospace font-size="38" fill="rgba(200,150,46,0.7)" letter-spacing="2">LEDGER</text></svg>';
+  var svgBlob = new Blob([svg], {type:'image/svg+xml'});
+  var svgUrl  = URL.createObjectURL(svgBlob);
+
+  // Inject apple-touch-icon
+  var appleIcon = document.createElement('link');
+  appleIcon.rel = 'apple-touch-icon';
+  appleIcon.href = svgUrl;
+  document.head.appendChild(appleIcon);
+
+  // Inject favicon
+  var favicon = document.createElement('link');
+  favicon.rel = 'icon';
+  favicon.type = 'image/svg+xml';
+  favicon.href = svgUrl;
+  document.head.appendChild(favicon);
+
+  // Build and inject manifest
+  var manifest = {
+    name: 'My Expense Ledger',
+    short_name: 'Expense Ledger',
+    description: 'Personal finance tracker — expenses, income, budgets and reports.',
+    start_url: './',
+    display: 'standalone',
+    orientation: 'portrait-primary',
+    background_color: '#1a1410',
+    theme_color: '#1a1410',
+    icons: [
+      {src: svgUrl, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable'},
+      {src: svgUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable'}
+    ]
+  };
+  var mBlob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  var mUrl  = URL.createObjectURL(mBlob);
+  var mLink = document.createElement('link');
+  mLink.rel  = 'manifest';
+  mLink.href = mUrl;
+  document.head.appendChild(mLink);
+})();
+</script>
+
+<!-- PWA: register inline service worker for installability -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    var swCode = [
+      "var CACHE = 'expense-ledger-v1';",
+      "self.addEventListener('install', function(e){",
+      "  self.skipWaiting();",
+      "});",
+      "self.addEventListener('activate', function(e){",
+      "  e.waitUntil(clients.claim());",
+      "});",
+      "self.addEventListener('fetch', function(e){",
+      "  e.respondWith(fetch(e.request).catch(function(){",
+      "    return caches.match(e.request);",
+      "  }));",
+      "});"
+    ].join('\n');
+    var swBlob = new Blob([swCode], {type: 'application/javascript'});
+    var swUrl  = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(function(){});
+  });
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
@@ -3917,13 +3986,14 @@ function printDashboard(mode, selectedCurrencies) {
     var byM={}; d.forEach(function(i){var k=i.date.substring(0,7);byM[k]=(byM[k]||0)+i.amount;});
     var keys=Object.keys(byM).sort();
     if(!keys.length) return '';
-    var labels=keys.map(function(k){var p=k.split('-');return MONTHS[parseInt(p[1])-1]+' '+p[0].slice(2);});
+    var labels=keys.map(function(k){var p=k.split('-');return MONTHS[parseInt(p[1])-1]+' '+p[0];});
     var vals=keys.map(function(k){return +byM[k].toFixed(2);});
     var sym=SYMS[cur]||'';
     var oc=document.createElement('canvas'); oc.width=800; oc.height=260;
     var borderC=isGold?'#c8962e':'#4a7c59';
     var bgC=isGold?'rgba(200,150,46,0.08)':'rgba(74,124,89,0.08)';
-    var ch=new Chart(oc.getContext('2d'),{type:'line',data:{labels:labels,datasets:[{label:cur,data:vals,borderColor:borderC,backgroundColor:bgC,tension:0.4,fill:true,pointBackgroundColor:borderC,pointRadius:3}]},options:{responsive:false,animation:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
+    var step=keys.length<=24?1:keys.length<=72?6:keys.length<=144?12:24;
+    var ch=new Chart(oc.getContext('2d'),{type:'line',data:{labels:labels,datasets:[{label:cur,data:vals,borderColor:borderC,backgroundColor:bgC,tension:0.4,fill:true,pointBackgroundColor:borderC,pointRadius:keys.length<=36?3:0,pointHitRadius:8}]},options:{responsive:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){return it[0].label;},label:function(c){return' '+sym+c.parsed.y.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}}}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false},ticks:{maxRotation:45,minRotation:0,autoSkip:false,callback:function(val,idx){return idx%step===0?this.getLabelForValue(val):'';}}}}}}); 
     var src=oc.toDataURL('image/png');
     ch.destroy();
     return '<img src="'+src+'" style="width:100%;height:auto;">';
@@ -4285,25 +4355,50 @@ function renderYearlyChart(data, cur) {
   });
 }
 
+// ── Smart X-axis label skip for monthly charts ──
+// Always shows the full line; only thins out the labels as data grows.
+function monthlyTickConfig(count) {
+  // step = how many months between shown labels
+  var step = count <= 24 ? 1 : count <= 72 ? 6 : count <= 144 ? 12 : 24;
+  return {
+    maxRotation: 45,
+    minRotation: 0,
+    autoSkip: false,
+    callback: function(val, idx) {
+      return idx % step === 0 ? this.getLabelForValue(val) : '';
+    }
+  };
+}
+
 function renderMonthlyChart(data, cur){
   var sym = SYMS[cur]||'';
   var byMonth={};
   data.forEach(function(i){var k=i.date.substring(0,7);byMonth[k]=(byMonth[k]||0)+i.amount;});
   var keys=Object.keys(byMonth).sort();
-  var labels=keys.map(function(k){var p=k.split('-');return MONTHS[parseInt(p[1])-1]+' '+p[0].slice(2);});
+  var labels=keys.map(function(k){var p=k.split('-');return MONTHS[parseInt(p[1])-1]+' '+p[0];});
   var values=keys.map(function(k){return+byMonth[k].toFixed(2);});
   var sub=document.getElementById('monthly-sub');
-  if(sub) sub.textContent=labels.length?'Showing '+labels.length+' months in '+cur:'No data for '+cur;
+  if(sub) sub.textContent=labels.length?labels.length+' months · '+cur:'No data for '+cur;
   destroyChart('chart-monthly');
-  if(!keys.length){return;}
+  if(!keys.length) return;
+  // Point radius: hide dots when many months so the line stays clean
+  var ptRadius = keys.length <= 36 ? 3 : 0;
+  var ptHover  = keys.length <= 36 ? 5 : 4;
   var ctx=document.getElementById('chart-monthly').getContext('2d');
   charts['chart-monthly']=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{
-    label:cur+' Spend',data:values,borderColor:'#c8962e',backgroundColor:'rgba(200,150,46,0.08)',
-    tension:0.4,fill:true,pointBackgroundColor:'#c8962e',pointRadius:3
-  }]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
-    tooltip:{callbacks:{label:function(c){return sym+c.parsed.y.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}}}},
-    scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},
-    x:{grid:{display:false}}}}});
+    label:cur,data:values,borderColor:'#c8962e',backgroundColor:'rgba(200,150,46,0.08)',
+    tension:0.4,fill:true,pointBackgroundColor:'#c8962e',
+    pointRadius:ptRadius,pointHoverRadius:ptHover,pointHitRadius:12
+  }]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},
+      tooltip:{callbacks:{
+        title:function(items){return items[0].label;},
+        label:function(c){return ' '+sym+c.parsed.y.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}
+      }}},
+    scales:{
+      y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},
+      x:{grid:{display:false},ticks:monthlyTickConfig(keys.length)}
+    }}});
 }
 
 
@@ -8645,12 +8740,17 @@ function renderIncomeDashboard() {
   var mData = filtered.filter(function(i){ return i.currency===mCur; });
   var byMonth = {}; mData.forEach(function(i){ var k=i.date.substring(0,7); byMonth[k]=(byMonth[k]||0)+i.amount; });
   var mKeys = Object.keys(byMonth).sort();
-  var mLabels = mKeys.map(function(k){ var p=k.split("-"); return MONTHS[parseInt(p[1])-1]+" "+p[0].slice(2); });
+  var mLabels = mKeys.map(function(k){ var p=k.split("-"); return MONTHS[parseInt(p[1])-1]+" "+p[0]; });
   var mVals = mKeys.map(function(k){ return +byMonth[k].toFixed(2); });
   var subEl = document.getElementById("inc-monthly-sub");
-  if(subEl) subEl.textContent = mLabels.length+" months in "+mCur;
+  if(subEl) subEl.textContent = mLabels.length+" months · "+mCur;
   if(incCharts["inc-chart-monthly"]) incCharts["inc-chart-monthly"].destroy();
-  if(mKeys.length){ var ctx=document.getElementById("inc-chart-monthly").getContext("2d"); incCharts["inc-chart-monthly"]=new Chart(ctx,{type:"line",data:{labels:mLabels,datasets:[{label:mCur,data:mVals,borderColor:"#4a7c59",backgroundColor:"rgba(74,124,89,0.08)",tension:0.4,fill:true,pointBackgroundColor:"#4a7c59",pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},states:{x:{grid:{display:false}},y:{ticks:{callback:function(v){return(SYMS[mCur]||"")+fmtCompact(v);}},grid:{color:"rgba(0,0,0,0.04)"}}},scales:{y:{ticks:{callback:function(v){return(SYMS[mCur]||"")+fmtCompact(v);}},grid:{color:"rgba(0,0,0,0.04)"}},x:{grid:{display:false}}}}}); }
+  if(mKeys.length){
+    var mPtRadius = mKeys.length <= 36 ? 3 : 0;
+    var mPtHover  = mKeys.length <= 36 ? 5 : 4;
+    var ctx=document.getElementById("inc-chart-monthly").getContext("2d");
+    incCharts["inc-chart-monthly"]=new Chart(ctx,{type:"line",data:{labels:mLabels,datasets:[{label:mCur,data:mVals,borderColor:"#4a7c59",backgroundColor:"rgba(74,124,89,0.08)",tension:0.4,fill:true,pointBackgroundColor:"#4a7c59",pointRadius:mPtRadius,pointHoverRadius:mPtHover,pointHitRadius:12}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(items){return items[0].label;},label:function(c){return" "+(SYMS[mCur]||"")+c.parsed.y.toLocaleString("en",{minimumFractionDigits:2,maximumFractionDigits:2});}}}},scales:{y:{ticks:{callback:function(v){return(SYMS[mCur]||"")+fmtCompact(v);}},grid:{color:"rgba(0,0,0,0.04)"}},x:{grid:{display:false},ticks:monthlyTickConfig(mKeys.length)}}}});
+  }
 
   // Income category bars — per-currency breakdown, same style as expenses
   var catCont = document.getElementById("inc-cat-bars-container");
