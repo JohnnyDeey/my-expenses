@@ -429,6 +429,10 @@ nav.tabs button.active{color:var(--gold2);border-bottom-color:var(--gold);}
 /* Account for fixed nav bar */
 #sticky-topbar + main, main { margin-top: 0; }
 main{max-width:1300px;margin:0 auto;padding:20px 40px;}
+/* Hide app chrome until session confirmed — prevents blink on refresh */
+#hdr-user-bar, #main-nav, #income-nav, #income-main, main { visibility:hidden; }
+body.app-ready #hdr-user-bar, body.app-ready #main-nav, body.app-ready #income-nav,
+body.app-ready #income-main, body.app-ready main { visibility:visible; }
 .panel{display:none;}.panel.active{display:block;}
 .section-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:12px;}
 .section-title::before{content:'';display:inline-block;width:8px;height:28px;background:var(--gold);border-radius:2px;}
@@ -1967,20 +1971,14 @@ nav.tabs.header-hidden button {
         </div>
         <div style="margin-bottom:16px;">
           <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">PIN</label>
-          <!-- Hidden input captures keystrokes — dots shown above, no digits ever visible -->
-          <input id="fv-pin" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"
-            style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;"
-            oninput="fvPinInput()"
-            onfocus="document.getElementById('fv-pin-dots').style.borderColor='var(--gold)';document.getElementById('fv-pin-dots').style.boxShadow='0 0 0 2px rgba(200,150,46,0.25)'"
-            onblur="document.getElementById('fv-pin-dots').style.borderColor='#3a3020';document.getElementById('fv-pin-dots').style.boxShadow='none'"
-            onkeydown="if(event.key==='Enter')submitFullVerify()">
           <div style="position:relative;">
-            <!-- Dot display row — tapping focuses the hidden input -->
-            <div id="fv-pin-dots" onclick="document.getElementById('fv-pin').focus()"
-              style="display:flex;justify-content:center;align-items:center;gap:12px;padding:16px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;cursor:text;min-height:56px;transition:border-color 0.15s,box-shadow 0.15s;">
-              <span id="fv-pin-hint" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>
-            </div>
-            <!-- Eye icon — hold to reveal, release to hide -->
+            <input id="fv-pin" type="password" inputmode="numeric" maxlength="8"
+              autocomplete="new-password" autocorrect="off" autocapitalize="off"
+              placeholder="&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;"
+              style="width:100%;padding:14px 44px 14px 16px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:1.4rem;letter-spacing:8px;color:var(--gold);outline:none;box-sizing:border-box;-webkit-text-security:disc;"
+              onfocus="this.style.borderColor='var(--gold)';this.style.boxShadow='0 0 0 2px rgba(200,150,46,0.25)'"
+              onblur="this.style.borderColor='#3a3020';this.style.boxShadow='none'"
+              onkeydown="if(event.key==='Enter')submitFullVerify()">
             <button type="button" id="fv-pin-eye"
               onmousedown="fvPinReveal(true)" onmouseup="fvPinReveal(false)"
               onmouseleave="fvPinReveal(false)"
@@ -6147,9 +6145,9 @@ function lockApp() {
   _countdownTimer  = null;
   hideInactivityWarning();
   // Clear session flags — so a page refresh after locking shows the PIN screen
-  // NOT a silent resume
   localStorage.removeItem('last_active');
   sessionStorage.removeItem('app_session');
+  document.body.classList.remove('app-ready');
   // Stop Firebase listeners to save battery while locked
   if (_syncUnsubscribe)   { _syncUnsubscribe();   _syncUnsubscribe   = null; }
   if (_incomeUnsubscribe) { _incomeUnsubscribe();  _incomeUnsubscribe = null; }
@@ -9844,13 +9842,14 @@ function pinPadClear() {
 }
 
 // ── Keyboard support for PIN pad ──
-// Fires when pin-overlay is visible — number keys, backspace, enter all work
 document.addEventListener('keydown', function(e) {
   var overlay = document.getElementById('pin-overlay');
   var loginStep = document.getElementById('pin-step-login');
   if (!overlay || overlay.style.display === 'none') return;
   if (!loginStep || loginStep.style.display === 'none') return;
-  // Number keys 0-9 (both main keyboard and numpad)
+  // Don't intercept if focus is on a text input (full-verify username/pin fields)
+  var tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
   if ((e.key >= '0' && e.key <= '9') || (e.code && e.code.startsWith('Numpad') && e.key >= '0' && e.key <= '9')) {
     e.preventDefault();
     pinPadPress(e.key);
@@ -9962,36 +9961,14 @@ function hidePin(inputId, btnId) {
 }
 
 // ── Full verify PIN — custom dot display (no digits ever shown while typing) ──
-function fvPinInput() {
-  var inp = document.getElementById('fv-pin');
-  var dotsEl = document.getElementById('fv-pin-dots');
-  if (!inp || !dotsEl) return;
-  var len = inp.value.length;
-  if (len === 0) {
-    dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
-    return;
-  }
-  var html = '';
-  for (var i = 0; i < len; i++) {
-    html += '<div style="width:14px;height:14px;border-radius:50%;background:var(--gold);border:2px solid var(--gold);"></div>';
-  }
-  dotsEl.innerHTML = html;
-}
+function fvPinInput() { /* no-op — direct password input now used */ }
 
 function fvPinReveal(show) {
   var inp = document.getElementById('fv-pin');
-  var dotsEl = document.getElementById('fv-pin-dots');
   var btn = document.getElementById('fv-pin-eye');
   if (!inp) return;
-  if (show && inp.value.length > 0) {
-    // Show actual digits in the dot area
-    dotsEl.innerHTML = '<span style="font-family:\'DM Mono\',monospace;font-size:1.4rem;font-weight:700;color:var(--gold);letter-spacing:8px;">' + inp.value + '</span>';
-    if (btn) btn.style.color = 'var(--gold)';
-  } else {
-    // Return to dots
-    fvPinInput();
-    if (btn) btn.style.color = '#6b5e50';
-  }
+  inp.type = show ? 'text' : 'password';
+  if (btn) btn.style.color = show ? 'var(--gold)' : '#6b5e50';
 }
 
 function submitFullVerify() {
@@ -10114,12 +10091,14 @@ function showPinPadStep() {
 function showFullVerifyStep() {
   var el = document.getElementById('pin-step-full-verify');
   if (el) el.style.display = 'block';
+  // Hide other steps
+  ['pin-step-register','pin-step-code','pin-step-login'].forEach(function(id){
+    var s = document.getElementById(id); if(s) s.style.display = 'none';
+  });
   var fvU = document.getElementById('fv-username'); if(fvU) fvU.value = '';
-  var fvP = document.getElementById('fv-pin');      if(fvP) fvP.value = '';
-  var fvE = document.getElementById('fv-error');    if(fvE) fvE.textContent = '';
-  // Reset dot display
-  var dotsEl = document.getElementById('fv-pin-dots');
-  if (dotsEl) dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
+  var fvP = document.getElementById('fv-pin');
+  if(fvP) { fvP.value = ''; fvP.type = 'password'; }
+  var fvE = document.getElementById('fv-error'); if(fvE) fvE.textContent = '';
   setTimeout(function(){ var u = document.getElementById('fv-username'); if(u) u.focus(); }, 80);
 }
 
@@ -10129,6 +10108,7 @@ function _resumeSession(uid, name, phone) {
   localStorage.setItem('last_active', String(Date.now()));
   var pinO = document.getElementById('pin-overlay');
   if (pinO) pinO.style.display = 'none';
+  document.body.classList.add('app-ready'); // reveal app chrome — no blink
   sessionStorage.setItem('app_session', '1');
   buildSYMS(); // rebuild currency symbols from saved prefs
   refreshAllCurrencyDropdowns();
