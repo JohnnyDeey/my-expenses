@@ -20,72 +20,59 @@
 <meta name="theme-color" content="#1a1410">
 <title>My Expense Ledger</title>
 
-<!-- PWA: inline manifest so the single-file app is installable -->
+<!-- PWA: inline manifest with base64 icon — works on desktop Chrome + Android -->
 <script>
 (function(){
-  // Build SVG icon as data URL
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="90" fill="#1a1410"/><rect x="60" y="60" width="392" height="392" rx="60" fill="#1a1410" stroke="#c8962e" stroke-width="16"/><text x="256" y="210" text-anchor="middle" font-family="Georgia,serif" font-size="130" font-weight="900" fill="#c8962e">₦</text><text x="256" y="330" text-anchor="middle" font-family="Georgia,serif" font-size="72" font-weight="700" fill="#c8962e">€$£</text><rect x="90" y="365" width="332" height="6" rx="3" fill="rgba(200,150,46,0.4)"/><text x="256" y="430" text-anchor="middle" font-family=\'DM Mono\',monospace font-size="38" fill="rgba(200,150,46,0.7)" letter-spacing="2">LEDGER</text></svg>';
-  var svgBlob = new Blob([svg], {type:'image/svg+xml'});
-  var svgUrl  = URL.createObjectURL(svgBlob);
+  var iconB64 = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxOTInIGhlaWdodD0nMTkyJyB2aWV3Qm94PScwIDAgMTkyIDE5Mic+PHJlY3Qgd2lkdGg9JzE5MicgaGVpZ2h0PScxOTInIHJ4PSczMicgZmlsbD0nIzFhMTQxMCcvPjxyZWN0IHg9JzE2JyB5PScxNicgd2lkdGg9JzE2MCcgaGVpZ2h0PScxNjAnIHJ4PScyNCcgZmlsbD0nIzFhMTQxMCcgc3Ryb2tlPScjYzg5NjJlJyBzdHJva2Utd2lkdGg9JzYnLz48dGV4dCB4PSc5NicgeT0nOTInIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZvbnQtZmFtaWx5PSdHZW9yZ2lhLHNlcmlmJyBmb250LXNpemU9JzUyJyBmb250LXdlaWdodD0nOTAwJyBmaWxsPScjYzg5NjJlJz7igqbigqw8L3RleHQ+PHRleHQgeD0nOTYnIHk9JzEzOCcgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0dlb3JnaWEsc2VyaWYnIGZvbnQtc2l6ZT0nMzgnIGZvbnQtd2VpZ2h0PSc3MDAnIGZpbGw9JyNjODk2MmUnPiTCozwvdGV4dD48cmVjdCB4PSczMicgeT0nMTUyJyB3aWR0aD0nMTI4JyBoZWlnaHQ9JzQnIHJ4PScyJyBmaWxsPSdyZ2JhKDIwMCwxNTAsNDYsMC41KScvPjwvc3ZnPg==';
 
-  // Inject apple-touch-icon
-  var appleIcon = document.createElement('link');
-  appleIcon.rel = 'apple-touch-icon';
-  appleIcon.href = svgUrl;
-  document.head.appendChild(appleIcon);
+  // Apple touch icon
+  var al = document.createElement('link');
+  al.rel = 'apple-touch-icon'; al.href = iconB64;
+  document.head.appendChild(al);
 
-  // Inject favicon
-  var favicon = document.createElement('link');
-  favicon.rel = 'icon';
-  favicon.type = 'image/svg+xml';
-  favicon.href = svgUrl;
-  document.head.appendChild(favicon);
+  // Favicon
+  var fl = document.createElement('link');
+  fl.rel = 'icon'; fl.type = 'image/svg+xml'; fl.href = iconB64;
+  document.head.appendChild(fl);
 
-  // Build and inject manifest
+  // Manifest — must use purpose 'any' (not 'maskable') for desktop Chrome to accept base64
   var manifest = {
     name: 'My Expense Ledger',
     short_name: 'Expense Ledger',
     description: 'Personal finance tracker — expenses, income, budgets and reports.',
     start_url: './',
+    scope: './',
     display: 'standalone',
     orientation: 'portrait-primary',
     background_color: '#1a1410',
     theme_color: '#1a1410',
     icons: [
-      {src: svgUrl, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable'},
-      {src: svgUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable'}
+      { src: iconB64, sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+      { src: iconB64, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' }
     ]
   };
-  var mBlob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
-  var mUrl  = URL.createObjectURL(mBlob);
-  var mLink = document.createElement('link');
-  mLink.rel  = 'manifest';
-  mLink.href = mUrl;
-  document.head.appendChild(mLink);
+  var mb = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  var ml = document.createElement('link');
+  ml.rel = 'manifest'; ml.href = URL.createObjectURL(mb);
+  document.head.appendChild(ml);
 })();
 </script>
 
-<!-- PWA: register inline service worker for installability -->
+<!-- PWA: service worker for installability -->
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    var swCode = [
-      "var CACHE = 'expense-ledger-v1';",
-      "self.addEventListener('install', function(e){",
-      "  self.skipWaiting();",
-      "});",
-      "self.addEventListener('activate', function(e){",
-      "  e.waitUntil(clients.claim());",
-      "});",
-      "self.addEventListener('fetch', function(e){",
-      "  e.respondWith(fetch(e.request).catch(function(){",
-      "    return caches.match(e.request);",
-      "  }));",
+    var sw = [
+      "var CACHE='mel-v2';",
+      "self.addEventListener('install',function(e){self.skipWaiting();});",
+      "self.addEventListener('activate',function(e){e.waitUntil(clients.claim());});",
+      "self.addEventListener('fetch',function(e){",
+      "  if(e.request.method!=='GET') return;",
+      "  e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request);}));",
       "});"
     ].join('\n');
-    var swBlob = new Blob([swCode], {type: 'application/javascript'});
-    var swUrl  = URL.createObjectURL(swBlob);
-    navigator.serviceWorker.register(swUrl).catch(function(){});
+    var swb = new Blob([sw], {type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(swb)).catch(function(e){console.log('SW:',e);});
   });
 }
 </script>
