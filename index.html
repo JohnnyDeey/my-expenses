@@ -4377,20 +4377,29 @@ function renderYearlyChart(data, cur) {
 
 // ── Smart X-axis label skip for monthly charts ──
 function monthlyTickConfig(count) {
-  var step = count <= 24 ? 1 : count <= 72 ? 6 : count <= 144 ? 12 : 24;
+  var step = count <= 12 ? 1 : count <= 24 ? 2 : count <= 72 ? 6 : count <= 144 ? 12 : 24;
+  var fontSize = count <= 24 ? 10 : count <= 72 ? 9 : 8;
   return {
     maxRotation: 0,
     minRotation: 0,
     autoSkip: false,
-    font: { size: 10, family: 'DM Mono' },
+    font: { size: fontSize, family: 'DM Mono' },
     callback: function(val, idx) {
       if (idx % step !== 0) return '';
       var lbl = this.getLabelForValue(val);
       if (!lbl) return '';
-      // Shorten label on small screens: "January 2024" → "Jan '24"
       var parts = lbl.split(' ');
-      if (parts.length === 2) return parts[0].substring(0,3) + " '" + parts[1].slice(2);
-      return lbl;
+      if (parts.length !== 2) return lbl;
+      var mon = parts[0].substring(0, 3);
+      var yr  = "'" + parts[1].slice(2);
+      // ≤12 months: just show 3-letter month; show year only on January
+      if (count <= 12) return mon === 'Jan' ? mon + ' ' + yr : mon;
+      // ≤24 months: show month + short year
+      if (count <= 24) return mon + ' ' + yr;
+      // >72 months: dense — Jan shows year only, others show 3-letter month
+      if (count > 72)  return mon === 'Jan' ? yr : mon;
+      // default
+      return mon + ' ' + yr;
     }
   };
 }
@@ -4497,6 +4506,9 @@ function renderMonthlyChart(data, cur){
   if(sub) sub.textContent=keys.length+' months · '+cur+(keys.length<allKeys.length?' ('+allKeys.length+' total)':'');
 
   destroyChart('chart-monthly');
+  // Taller chart when zoomed in — more room to see detail
+  var chartWrap = document.querySelector('#chart-monthly').parentElement;
+  if (chartWrap) chartWrap.style.height = (keys.length <= 24 ? '280px' : '240px');
   var ptRadius = keys.length <= 36 ? 3 : 0;
   var ptHover  = keys.length <= 36 ? 5 : 4;
   var ctx=document.getElementById('chart-monthly').getContext('2d');
@@ -6184,21 +6196,17 @@ function hideInactivityWarning() {
   if (w) w.style.display = 'none';
 }
 
-// Track user activity — reset timer on any interaction
-['click','keydown','touchstart','scroll','mousemove'].forEach(function(evt) {
+// Track user activity — reset timer on meaningful interactions only
+['click','keydown','touchstart','touchend','pointerdown'].forEach(function(evt) {
   document.addEventListener(evt, function() {
-    if (_userId) {
-      localStorage.setItem('last_active', String(Date.now()));
-      if (!_inactivityTimer) return; // already locked, ignore
-      resetInactivityTimer();
-    }
+    if (!_userId) return;
+    localStorage.setItem('last_active', String(Date.now()));
+    // If countdown is running, user activity cancels it
+    if (_countdownTimer) { stayLoggedIn(); return; }
+    if (!_inactivityTimer) return; // already locked, ignore
+    resetInactivityTimer();
   }, { passive: true });
 });
-
-// Keep last_active fresh every 15s while app is in use
-setInterval(function() {
-  if (_userId) localStorage.setItem('last_active', String(Date.now()));
-}, 15000);
 
 
 // ════════════════════════════════
