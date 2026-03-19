@@ -9727,7 +9727,7 @@ document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible') {
     if (_userId) {
       var lastActive = parseInt(localStorage.getItem('last_active') || '0', 10);
-      // If last_active is 0/missing the app was already locked — just show PIN
+      // If last_active is missing the app was already locked — show PIN
       if (!lastActive) {
         var pinOv = document.getElementById('pin-overlay');
         if (!pinOv || pinOv.style.display === 'none') {
@@ -9740,17 +9740,50 @@ document.addEventListener('visibilitychange', function() {
         lockApp();
         return;
       }
-      // Back within time — refresh and reset timer
+      // Back within time — restart timer with remaining time accounted for
       if (_db && !window._trashDeletePending) fetchTrashFromFirebase();
       resetInactivityTimer();
     }
   } else {
-    // Going to background — only record time if NOT already locked
+    // Going to background/minimize — record the exact time
     if (_userId && localStorage.getItem('last_active')) {
       localStorage.setItem('last_active', String(Date.now()));
     }
+    // Clear the inactivity timer — it won't fire reliably while hidden
+    // The visibilitychange 'visible' handler will check elapsed time on return
+    if (_inactivityTimer) { clearTimeout(_inactivityTimer); _inactivityTimer = null; }
+    if (_countdownTimer)  { clearInterval(_countdownTimer);  _countdownTimer  = null; }
+    hideInactivityWarning();
   }
 });
+
+// Also catch window minimize/blur on desktop (laptop)
+window.addEventListener('blur', function() {
+  if (_userId && localStorage.getItem('last_active')) {
+    localStorage.setItem('last_active', String(Date.now()));
+  }
+});
+
+window.addEventListener('focus', function() {
+  if (_userId) {
+    var lastActive = parseInt(localStorage.getItem('last_active') || '0', 10);
+    if (!lastActive) { showPinScreen(); showPinPadStep(); return; }
+    var awayMs = Date.now() - lastActive;
+    if (awayMs >= INACTIVE_MS) { lockApp(); return; }
+    resetInactivityTimer();
+  }
+});
+
+// Safety net: check every 30 seconds if the app should be locked
+// This catches cases where blur/visibilitychange didn't fire (e.g. some OS/browser combos)
+setInterval(function() {
+  if (!_userId) return; // not logged in
+  if (!localStorage.getItem('last_active')) return; // already locked
+  var lastActive = parseInt(localStorage.getItem('last_active') || '0', 10);
+  if (lastActive && (Date.now() - lastActive) >= INACTIVE_MS) {
+    lockApp();
+  }
+}, 30000);
 
 // INIT - adjust main padding
 // INIT - adjust main padding to account for fixed nav bar
@@ -9999,6 +10032,7 @@ function submitFullVerify() {
     }
     // Success
     _loginAttempts = 0;
+    _fvRetryCount = 0; // reset retry counter on success
     var uid = data.user_id;
     var name = data.name;
     var phone = doc.id;
@@ -10061,11 +10095,9 @@ function submitFullVerify() {
           db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
             if (snap.empty) { if(errEl) errEl.textContent = 'Account not found. Check your username or phone.'; }
             else doVerify(snap.docs[0]);
-          });
+          }).catch(function() { autoRetryFullVerify(errEl); });
         }
-      }).catch(function() {
-        if(errEl) errEl.innerHTML = 'Connection error. <button onclick="submitFullVerify()" style="background:none;border:none;color:var(--gold);cursor:pointer;text-decoration:underline;font-family:DM Mono,monospace;font-size:0.7rem;padding:0;">Tap to retry</button>';
-      });
+      }).catch(function() { autoRetryFullVerify(errEl); });
     } else {
       db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
         if (!snap.empty) {
@@ -10076,13 +10108,28 @@ function submitFullVerify() {
             if (!doVerify(doc)) {
               if(errEl) errEl.textContent = 'Account not found. Check your username or phone.';
             }
-          });
+          }).catch(function() { autoRetryFullVerify(errEl); });
         }
-      }).catch(function() {
-        if(errEl) errEl.innerHTML = 'Connection error. <button onclick="submitFullVerify()" style="background:none;border:none;color:var(--gold);cursor:pointer;text-decoration:underline;font-family:DM Mono,monospace;font-size:0.7rem;padding:0;">Tap to retry</button>';
-      });
+      }).catch(function() { autoRetryFullVerify(errEl); });
     }
   });
+}
+
+// Auto-retry submitFullVerify after a short delay — handles race condition where
+// Firebase SDK is still loading on first attempt
+var _fvRetryCount = 0;
+function autoRetryFullVerify(errEl) {
+  _fvRetryCount++;
+  if (_fvRetryCount <= 3) {
+    // Show connecting message and retry automatically
+    if(errEl) errEl.textContent = 'Connecting' + '.'.repeat(_fvRetryCount) + ' please wait';
+    setTimeout(function() {
+      submitFullVerify();
+    }, 1200 * _fvRetryCount); // 1.2s, 2.4s, 3.6s
+  } else {
+    _fvRetryCount = 0;
+    if(errEl) errEl.innerHTML = 'Connection failed. Check your internet and <button onclick="_fvRetryCount=0;submitFullVerify()" style="background:none;border:none;color:var(--gold);cursor:pointer;text-decoration:underline;font-family:DM Mono,monospace;font-size:0.7rem;padding:0;">try again</button>';
+  }
 }
 
 // ── showLoginStep: show PIN pad or full-verify depending on check ──
@@ -10117,6 +10164,7 @@ function showPinPadStep() {
 }
 
 function showFullVerifyStep() {
+  _fvRetryCount = 0; // reset auto-retry counter
   var el = document.getElementById('pin-step-full-verify');
   if (el) el.style.display = 'block';
   // Hide other steps
@@ -10137,6 +10185,8 @@ function _resumeSession(uid, name, phone) {
   var pinO = document.getElementById('pin-overlay');
   if (pinO) pinO.style.display = 'none';
   document.body.classList.add('app-ready'); // reveal app chrome — no blink
+  // Force repaint on mobile browsers (fixes white area on tablet)
+  void document.body.offsetHeight;
   sessionStorage.setItem('app_session', '1');
   buildSYMS(); // rebuild currency symbols from saved prefs
   refreshAllCurrencyDropdowns();
@@ -10187,6 +10237,11 @@ function syncInit() {
   if (uid && name && phone && pinHash && (isActiveSession || wasRecentlyActive)) {
     // Mark app as ready IMMEDIATELY — prevents white screen during resume
     document.body.classList.add('app-ready');
+    // Force repaint on mobile browsers that defer visibility changes
+    document.body.style.display = 'none';
+    // eslint-disable-next-line no-unused-expressions
+    document.body.offsetHeight; // trigger reflow
+    document.body.style.display = '';
     // Resume silently — no PIN needed for a fresh page load within 10 min
     _resumeSession(uid, name, phone);
     return;
