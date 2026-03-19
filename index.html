@@ -1925,7 +1925,7 @@ nav.tabs.header-hidden button {
         <!-- PIN dot display -->
         <div id="pin-dots" style="display:flex;justify-content:center;gap:10px;margin-bottom:20px;min-height:18px;"></div>
         <!-- PIN pad -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 16px;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 10px;">
           <button onclick="pinPadPress('1')" class="pin-pad-btn">1</button>
           <button onclick="pinPadPress('2')" class="pin-pad-btn">2</button>
           <button onclick="pinPadPress('3')" class="pin-pad-btn">3</button>
@@ -1938,6 +1938,10 @@ nav.tabs.header-hidden button {
           <button onclick="pinPadClear()" class="pin-pad-btn" style="font-size:0.65rem;color:#6b5e50;">CLR</button>
           <button onclick="pinPadPress('0')" class="pin-pad-btn">0</button>
           <button onclick="pinPadDelete()" class="pin-pad-btn" style="font-size:1.1rem;">⌫</button>
+        </div>
+        <!-- ENTER button — for PINs shorter than 6 digits -->
+        <div style="max-width:240px;margin:0 auto 14px;">
+          <button onclick="submitPinLogin()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.88rem;font-weight:900;letter-spacing:3px;color:var(--ink);cursor:pointer;text-transform:uppercase;">&#10003; ENTER</button>
         </div>
         <div id="login-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:18px;text-align:center;"></div>
         <div id="reset-attempt-hint" style="display:none;background:rgba(181,69,27,0.12);border:1px solid rgba(181,69,27,0.4);border-radius:4px;padding:10px 12px;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#e07040;line-height:1.7;">&#128274; Having trouble? <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold2);cursor:pointer;text-decoration:underline;padding:0;">Reset your access code</button></div>
@@ -10073,10 +10077,13 @@ function showPinPadStep() {
   updatePinDots();
   var er = document.getElementById('login-error'); if(er) er.textContent = '';
   var hint = document.getElementById('reset-attempt-hint'); if(hint) hint.style.display = 'none';
+  // Hide all other steps first
+  ['pin-step-register','pin-step-code','pin-step-full-verify'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.style.display = 'none';
+  });
   var nameEl = document.getElementById('pin-login-username-display');
   if (nameEl) { var n = localStorage.getItem(NAME_KEY); nameEl.textContent = n ? n.toUpperCase() : ''; }
   document.getElementById('pin-step-login').style.display = 'block';
-  // Focus the overlay so keyboard shortcuts work (no visible input to focus)
 }
 
 function showFullVerifyStep() {
