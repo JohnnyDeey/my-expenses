@@ -1213,6 +1213,15 @@ nav.tabs.header-hidden button {
     <div class="charts-grid">
       <div class="chart-card">
         <h3>Monthly Spending Trend</h3>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+          <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">FROM</span>
+          <select id="monthly-from-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="monthly-from-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;margin-left:4px;">TO</span>
+          <select id="monthly-to-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="monthly-to-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <button onclick="resetMonthlyRange('exp')" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:3px 8px;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;" title="Reset to full range">&#8635; All</button>
+        </div>
         <div class="chart-sub" id="monthly-sub"></div>
         <div class="chart-wrap"><canvas id="chart-monthly"></canvas></div>
       </div>
@@ -1670,6 +1679,15 @@ nav.tabs.header-hidden button {
     <div class="charts-grid">
       <div class="chart-card">
         <h3>Monthly Income Trend</h3>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+          <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">FROM</span>
+          <select id="inc-monthly-from-year" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="inc-monthly-from-month" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;margin-left:4px;">TO</span>
+          <select id="inc-monthly-to-year" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="inc-monthly-to-month" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <button onclick="resetMonthlyRange('inc')" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:3px 8px;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;" title="Reset to full range">&#8635; All</button>
+        </div>
         <div class="chart-sub" id="inc-monthly-sub"></div>
         <div class="chart-wrap"><canvas id="inc-chart-monthly"></canvas></div>
       </div>
@@ -3972,8 +3990,20 @@ function printDashboard(mode, selectedCurrencies) {
     if(yr!=='all') d=d.filter(function(i){return i.date.substring(0,4)===yr;});
     if(mo!=='all') d=d.filter(function(i){return i.date.substring(5,7)===mo;});
     var byM={}; d.forEach(function(i){var k=i.date.substring(0,7);byM[k]=(byM[k]||0)+i.amount;});
-    var keys=Object.keys(byM).sort();
-    if(!keys.length) return '';
+    var allKeys=Object.keys(byM).sort();
+    if(!allKeys.length) return '';
+
+    // Read the range picker selection (use whatever user last selected)
+    var prefix = isIncome ? 'inc-monthly' : 'monthly';
+    var fromYEl = document.getElementById(prefix+'-from-year');
+    var fromMEl = document.getElementById(prefix+'-from-month');
+    var toYEl   = document.getElementById(prefix+'-to-year');
+    var toMEl   = document.getElementById(prefix+'-to-month');
+    var fromKey = (fromYEl && fromMEl && fromYEl.value && fromMEl.value) ? fromYEl.value+'-'+fromMEl.value : allKeys[0];
+    var toKey   = (toYEl   && toMEl   && toYEl.value   && toMEl.value)   ? toYEl.value+'-'+toMEl.value     : allKeys[allKeys.length-1];
+    var keys = allKeys.filter(function(k){ return k >= fromKey && k <= toKey; });
+    if (!keys.length) keys = allKeys;
+
     var labels=keys.map(function(k){var p=k.split('-');return MONTHS[parseInt(p[1])-1]+' '+p[0];});
     var vals=keys.map(function(k){return +byM[k].toFixed(2);});
     var sym=SYMS[cur]||'';
@@ -3981,7 +4011,7 @@ function printDashboard(mode, selectedCurrencies) {
     var borderC=isGold?'#c8962e':'#4a7c59';
     var bgC=isGold?'rgba(200,150,46,0.08)':'rgba(74,124,89,0.08)';
     var step=keys.length<=24?1:keys.length<=72?6:keys.length<=144?12:24;
-    var ch=new Chart(oc.getContext('2d'),{type:'line',data:{labels:labels,datasets:[{label:cur,data:vals,borderColor:borderC,backgroundColor:bgC,tension:0.4,fill:true,pointBackgroundColor:borderC,pointRadius:keys.length<=36?3:0,pointHitRadius:8}]},options:{responsive:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){return it[0].label;},label:function(c){return' '+sym+c.parsed.y.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}}}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false},ticks:{maxRotation:45,minRotation:0,autoSkip:false,callback:function(val,idx){return idx%step===0?this.getLabelForValue(val):'';}}}}}}); 
+    var ch=new Chart(oc.getContext('2d'),{type:'line',data:{labels:labels,datasets:[{label:cur,data:vals,borderColor:borderC,backgroundColor:bgC,tension:0.4,fill:true,pointBackgroundColor:borderC,pointRadius:keys.length<=36?3:0,pointHitRadius:8}]},options:{responsive:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){return it[0].label;},label:function(c){return' '+sym+c.parsed.y.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}}}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10},callback:function(val,idx){return idx%step===0?this.getLabelForValue(val).replace(/^(\w{3})\w+ /,'$1 '):'';}}}}}}); 
     var src=oc.toDataURL('image/png');
     ch.destroy();
     return '<img src="'+src+'" style="width:100%;height:auto;">';
@@ -4365,18 +4395,108 @@ function monthlyTickConfig(count) {
   };
 }
 
+function resetMonthlyRange(mode) {
+  if (mode === 'inc') {
+    var fy = document.getElementById('inc-monthly-from-year');
+    var fm = document.getElementById('inc-monthly-from-month');
+    var ty = document.getElementById('inc-monthly-to-year');
+    var tm = document.getElementById('inc-monthly-to-month');
+    if(fy) fy.selectedIndex = 0;
+    if(fm) fm.selectedIndex = 0;
+    if(ty && ty.options.length) ty.selectedIndex = ty.options.length - 1;
+    if(tm) tm.selectedIndex = tm.options.length - 1;
+    renderIncomeDashboard();
+  } else {
+    var fy2 = document.getElementById('monthly-from-year');
+    var fm2 = document.getElementById('monthly-from-month');
+    var ty2 = document.getElementById('monthly-to-year');
+    var tm2 = document.getElementById('monthly-to-month');
+    if(fy2) fy2.selectedIndex = 0;
+    if(fm2) fm2.selectedIndex = 0;
+    if(ty2 && ty2.options.length) ty2.selectedIndex = ty2.options.length - 1;
+    if(tm2) tm2.selectedIndex = tm2.options.length - 1;
+    renderDashboard();
+  }
+}
+
+function _populateMonthlyRangePickers(keys, prefix) {
+  // keys: sorted array of 'YYYY-MM' strings
+  if (!keys.length) return;
+  var years = [];
+  keys.forEach(function(k){ var y=k.substring(0,4); if(years.indexOf(y)===-1) years.push(y); });
+
+  var fromYEl = document.getElementById(prefix+'-from-year');
+  var fromMEl = document.getElementById(prefix+'-from-month');
+  var toYEl   = document.getElementById(prefix+'-to-year');
+  var toMEl   = document.getElementById(prefix+'-to-month');
+  if (!fromYEl) return;
+
+  // Save current selections
+  var savedFromY = fromYEl.value;
+  var savedFromM = fromMEl.value;
+  var savedToY   = toYEl.value;
+  var savedToM   = toMEl.value;
+
+  var yearOpts = years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  var monthOpts = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m.substring(0,3)+'</option>'; }).join('');
+
+  fromYEl.innerHTML = yearOpts;
+  fromMEl.innerHTML = monthOpts;
+  toYEl.innerHTML   = yearOpts;
+  toMEl.innerHTML   = monthOpts;
+
+  // Restore or default: from = earliest, to = latest
+  var firstKey = keys[0]; var lastKey = keys[keys.length-1];
+  fromYEl.value = (savedFromY && years.indexOf(savedFromY)!==-1) ? savedFromY : firstKey.substring(0,4);
+  fromMEl.value = savedFromM || firstKey.substring(5,7);
+  toYEl.value   = (savedToY && years.indexOf(savedToY)!==-1)   ? savedToY   : lastKey.substring(0,4);
+  toMEl.value   = savedToM || lastKey.substring(5,7);
+
+  // Clamp: ensure from <= to
+  var fromKey = fromYEl.value+'-'+fromMEl.value;
+  var toKey   = toYEl.value+'-'+toMEl.value;
+  if (fromKey > toKey) {
+    fromYEl.value = firstKey.substring(0,4);
+    fromMEl.value = firstKey.substring(5,7);
+    toYEl.value   = lastKey.substring(0,4);
+    toMEl.value   = lastKey.substring(5,7);
+  }
+}
+
 function renderMonthlyChart(data, cur){
   var sym = SYMS[cur]||'';
   var byMonth={};
   data.forEach(function(i){var k=i.date.substring(0,7);byMonth[k]=(byMonth[k]||0)+i.amount;});
-  var keys=Object.keys(byMonth).sort();
-  var labels=keys.map(function(k){var p=k.split('-');return MONTHS[parseInt(p[1])-1]+' '+p[0];});
-  var values=keys.map(function(k){return+byMonth[k].toFixed(2);});
+  var allKeys=Object.keys(byMonth).sort();
+  if(!allKeys.length){
+    var sub=document.getElementById('monthly-sub');
+    if(sub) sub.textContent='No data for '+cur;
+    destroyChart('chart-monthly');
+    return;
+  }
+
+  // Populate range pickers with all available months
+  _populateMonthlyRangePickers(allKeys, 'monthly');
+
+  // Read selected range
+  var fromY = document.getElementById('monthly-from-year');
+  var fromM = document.getElementById('monthly-from-month');
+  var toY   = document.getElementById('monthly-to-year');
+  var toM   = document.getElementById('monthly-to-month');
+  var fromKey = (fromY && fromM) ? fromY.value+'-'+fromM.value : allKeys[0];
+  var toKey   = (toY   && toM)   ? toY.value+'-'+toM.value     : allKeys[allKeys.length-1];
+
+  // Slice to selected range
+  var keys = allKeys.filter(function(k){ return k >= fromKey && k <= toKey; });
+  if (!keys.length) keys = allKeys; // fallback to all if range invalid
+
+  var labels = keys.map(function(k){var p=k.split('-');return MONTHS[parseInt(p[1])-1]+' '+p[0];});
+  var values = keys.map(function(k){return+byMonth[k].toFixed(2);});
+
   var sub=document.getElementById('monthly-sub');
-  if(sub) sub.textContent=labels.length?labels.length+' months · '+cur:'No data for '+cur;
+  if(sub) sub.textContent=keys.length+' months · '+cur+(keys.length<allKeys.length?' ('+allKeys.length+' total)':'');
+
   destroyChart('chart-monthly');
-  if(!keys.length) return;
-  // Point radius: hide dots when many months so the line stays clean
   var ptRadius = keys.length <= 36 ? 3 : 0;
   var ptHover  = keys.length <= 36 ? 5 : 4;
   var ctx=document.getElementById('chart-monthly').getContext('2d');
@@ -8730,15 +8850,28 @@ function renderIncomeDashboard() {
   Object.keys(byCur).sort().forEach(function(c){ statItems.push({label:"Total "+c,value:byCur[c],sym:SYMS[c]||"",isCur:true,cls:"naira"}); });
   statsRow.innerHTML = statItems.map(function(s){ return "<div class=\"stat-card "+s.cls+"\"><div class=\"stat-label\">"+s.label+"</div><div class=\"stat-value\" style=\"color:var(--sage);\">"+( s.isCur?s.sym+fmtNum(s.value):s.value)+"</div></div>"; }).join("");
 
-  // Monthly trend
+  // Monthly trend with range picker
   var mCur = cur !== "all" ? cur : (incCurs[0]||"NGN");
   var mData = filtered.filter(function(i){ return i.currency===mCur; });
   var byMonth = {}; mData.forEach(function(i){ var k=i.date.substring(0,7); byMonth[k]=(byMonth[k]||0)+i.amount; });
-  var mKeys = Object.keys(byMonth).sort();
+  var allMKeys = Object.keys(byMonth).sort();
+
+  // Populate income range pickers
+  _populateMonthlyRangePickers(allMKeys, 'inc-monthly');
+
+  // Read selected range
+  var incFromY = document.getElementById("inc-monthly-from-year");
+  var incFromM = document.getElementById("inc-monthly-from-month");
+  var incToY   = document.getElementById("inc-monthly-to-year");
+  var incToM   = document.getElementById("inc-monthly-to-month");
+  var incFromKey = (incFromY && incFromM) ? incFromY.value+"-"+incFromM.value : (allMKeys[0]||"");
+  var incToKey   = (incToY   && incToM)   ? incToY.value+"-"+incToM.value     : (allMKeys[allMKeys.length-1]||"");
+  var mKeys = allMKeys.filter(function(k){ return k >= incFromKey && k <= incToKey; });
+  if (!mKeys.length) mKeys = allMKeys;
   var mLabels = mKeys.map(function(k){ var p=k.split("-"); return MONTHS[parseInt(p[1])-1]+" "+p[0]; });
   var mVals = mKeys.map(function(k){ return +byMonth[k].toFixed(2); });
   var subEl = document.getElementById("inc-monthly-sub");
-  if(subEl) subEl.textContent = mLabels.length+" months · "+mCur;
+  if(subEl) subEl.textContent = mKeys.length+" months · "+mCur+(mKeys.length<allMKeys.length?" ("+allMKeys.length+" total)":'');
   if(incCharts["inc-chart-monthly"]) incCharts["inc-chart-monthly"].destroy();
   if(mKeys.length){
     var mPtRadius = mKeys.length <= 36 ? 3 : 0;
