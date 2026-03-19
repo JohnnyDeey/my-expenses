@@ -2069,8 +2069,30 @@ nav.tabs.header-hidden button {
       <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Select an icon above or type to search</div>
     </div>
     <div style="padding:14px 20px;border-top:1px solid var(--border);background:#fffbf0;">
+      <button onclick="startOnboarding(_appMode, true)" style="width:100%;padding:10px;background:none;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;color:var(--gold);cursor:pointer;margin-bottom:8px;">&#127916; Replay App Tour</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:8px;">Still need help? Send us a message.</div>
       <button onclick="openContact()" style="width:100%;padding:11px;background:var(--ink);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;">&#9993; Contact Support</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ONBOARDING TOUR OVERLAY ══ -->
+<div id="onboard-overlay" style="display:none;position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:16px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.4);overflow:hidden;position:relative;">
+    <!-- Progress bar -->
+    <div style="height:4px;background:#f0ede8;">
+      <div id="onboard-progress" style="height:100%;background:var(--gold);transition:width 0.3s;"></div>
+    </div>
+    <!-- Skip button -->
+    <button onclick="skipOnboarding()" style="position:absolute;top:14px;right:14px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#aaa;cursor:pointer;z-index:1;letter-spacing:1px;">SKIP</button>
+    <!-- Slide content -->
+    <div id="onboard-slide" style="padding:36px 28px 24px;text-align:center;min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;"></div>
+    <!-- Navigation -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px 24px;border-top:1px solid #f0ede8;">
+      <button id="onboard-back" onclick="onboardNav(-1)" style="background:none;border:1.5px solid #ddd;border-radius:8px;padding:10px 20px;font-family:'DM Mono',monospace;font-size:0.78rem;color:#888;cursor:pointer;">← Back</button>
+      <!-- Dot indicators -->
+      <div id="onboard-dots" style="display:flex;gap:6px;"></div>
+      <button id="onboard-next" onclick="onboardNav(1)" style="background:var(--gold);border:none;border-radius:8px;padding:10px 22px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--ink);cursor:pointer;">Next →</button>
     </div>
   </div>
 </div>
@@ -7108,6 +7130,8 @@ function selectMode(mode) {
   hideModeOverlay();
   hideSwitchPrompt();
   applyMode();
+  // Show onboarding tour the first time user enters each module
+  setTimeout(function(){ startOnboarding(mode, false); }, 400);
 }
 
 // ── Inline switch prompt ──
@@ -9784,6 +9808,8 @@ function confirmCode() {
   hidePinScreen();
   updateUserDisplay();
   startSync();
+  // Show onboarding for brand new users after a short delay
+  setTimeout(function(){ startOnboarding('expenses', false); }, 1200);
 }
 
 // ── Wrong attempt tracker & password reset ──
@@ -10451,6 +10477,183 @@ var HELP_DATA = {
     tip: 'Always use the correct currency symbol when typing in the import box. If you use the wrong symbol the amount will be saved in the wrong currency and you will need to re-import or edit it.'
   }
 };
+
+// ════════════════════════════════════════════════
+//  ONBOARDING TOUR
+// ════════════════════════════════════════════════
+var ONBOARD_EXPENSES_KEY = 'expense_onboard_expenses_done';
+var ONBOARD_INCOME_KEY   = 'expense_onboard_income_done';
+var _onboardSlides = [];
+var _onboardIndex  = 0;
+
+var ONBOARD_EXPENSES_SLIDES = [
+  {
+    icon: '👋',
+    title: 'Welcome to My Expense Ledger!',
+    body: 'Your personal finance tracker — record spending, track income, set budgets, and generate reports. This quick tour shows you how everything works.',
+    color: '#c8962e'
+  },
+  {
+    icon: '📥',
+    title: 'Import Tab — Add Your Expenses',
+    body: 'Paste your expense text or import a CSV file. Select the month, paste your data, and click <strong>Parse</strong>. The app reads each line and extracts the date, description, and amount automatically.',
+    color: '#3d5a73'
+  },
+  {
+    icon: '🏷️',
+    title: 'Categorize — Sort Your Spending',
+    body: 'After parsing, review each entry and assign a category — Food, Transport, Rent, etc. The app learns your patterns and suggests categories automatically over time.',
+    color: '#4a7c59'
+  },
+  {
+    icon: '📋',
+    title: 'Ledger — Your Full Record',
+    body: 'The Ledger shows all your entries. Filter by year, month, currency, or category. Use the search bar to find specific items. Tap a category pill to change it instantly.',
+    color: '#8b5e3c'
+  },
+  {
+    icon: '📊',
+    title: 'Dashboard — Charts & Totals',
+    body: 'See your spending broken down by category, month, and currency. Charts update in real time as you add data. Use the currency filter to view one currency at a time.',
+    color: '#6b3d8c'
+  },
+  {
+    icon: '🎯',
+    title: 'Budget — Set Monthly Limits',
+    body: 'Set a spending limit for each category. The app tracks how much you have used and alerts you when you are getting close. Set budgets per currency.',
+    color: '#b5451b'
+  },
+  {
+    icon: '⚙️',
+    title: 'Manage — Settings & Backup',
+    body: 'Export your data as CSV, change your PIN, update your name, manage currencies, and delete old months. Your data is always backed up to the cloud automatically.',
+    color: '#2e7d8a'
+  },
+  {
+    icon: '🔁',
+    title: 'Switch to Income Anytime',
+    body: 'Tap the 🔁 button in the header to switch between Expenses and Income modules. Each module has its own ledger, dashboard, and import — completely separate.',
+    color: '#4a7c59'
+  },
+  {
+    icon: '🚀',
+    title: 'You Are Ready!',
+    body: 'Start by going to <strong>Import</strong> and adding your first expenses. Everything is saved to the cloud automatically — you can switch devices anytime.',
+    color: '#c8962e',
+    last: true
+  }
+];
+
+var ONBOARD_INCOME_SLIDES = [
+  {
+    icon: '💰',
+    title: 'Welcome to Income Module!',
+    body: 'Track all your earnings here — salary, freelance payments, allowances, gifts, and more. Income is kept completely separate from your expenses.',
+    color: '#4a7c59'
+  },
+  {
+    icon: '📥',
+    title: 'Import Income Data',
+    body: 'Paste your income text or import a CSV file. Select the month, paste your data (one entry per line with date, description, and amount), and click <strong>Parse Income</strong>.',
+    color: '#3d5a73'
+  },
+  {
+    icon: '🏷️',
+    title: 'Categorize Your Income',
+    body: 'Assign categories like Salary, Freelance, Commission, Gift, or Refund. You can create custom categories for your specific income sources.',
+    color: '#2e7d8a'
+  },
+  {
+    icon: '📋',
+    title: 'Income Ledger',
+    body: 'View all income entries, filter by year, month, currency, or category. The minus (−) button hides an entry from bulk operations without deleting it.',
+    color: '#8b5e3c'
+  },
+  {
+    icon: '📊',
+    title: 'Income Dashboard',
+    body: 'Charts show your income breakdown by category and month. Compare earnings across currencies. Track your monthly totals and yearly trends.',
+    color: '#6b3d8c'
+  },
+  {
+    icon: '🚀',
+    title: 'Start Tracking Income!',
+    body: 'Go to <strong>Import</strong> and add your first income entries. Switch back to Expenses anytime using the 🔁 button in the header.',
+    color: '#4a7c59',
+    last: true
+  }
+];
+
+function startOnboarding(mode, force) {
+  var key = (mode === 'income') ? ONBOARD_INCOME_KEY : ONBOARD_EXPENSES_KEY;
+  if (!force && localStorage.getItem(key) === '1') return; // already seen
+  _onboardSlides = (mode === 'income') ? ONBOARD_INCOME_SLIDES : ONBOARD_EXPENSES_SLIDES;
+  _onboardIndex  = 0;
+  // Close help overlay if open
+  var ho = document.getElementById('help-overlay');
+  if (ho) ho.style.display = 'none';
+  renderOnboardSlide();
+  var ov = document.getElementById('onboard-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+
+function renderOnboardSlide() {
+  var slide = _onboardSlides[_onboardIndex];
+  var total = _onboardSlides.length;
+  // Progress bar
+  var pb = document.getElementById('onboard-progress');
+  if (pb) pb.style.width = ((_onboardIndex + 1) / total * 100) + '%';
+  // Dots
+  var dotsEl = document.getElementById('onboard-dots');
+  if (dotsEl) {
+    dotsEl.innerHTML = '';
+    for (var i = 0; i < total; i++) {
+      var d = document.createElement('div');
+      d.style.cssText = 'width:8px;height:8px;border-radius:50%;background:' + (i === _onboardIndex ? slide.color : '#e0dbd4') + ';transition:background 0.2s;';
+      dotsEl.appendChild(d);
+    }
+  }
+  // Back button
+  var backBtn = document.getElementById('onboard-back');
+  if (backBtn) backBtn.style.visibility = _onboardIndex === 0 ? 'hidden' : 'visible';
+  // Next button
+  var nextBtn = document.getElementById('onboard-next');
+  if (nextBtn) {
+    nextBtn.style.background = slide.color;
+    nextBtn.textContent = slide.last ? "Let's go! 🚀" : 'Next →';
+  }
+  // Slide content
+  var slideEl = document.getElementById('onboard-slide');
+  if (slideEl) {
+    slideEl.innerHTML =
+      '<div style="font-size:3.5rem;margin-bottom:16px;line-height:1;">' + slide.icon + '</div>' +
+      '<div style="font-family:\'Playfair Display\',serif;font-size:1.25rem;font-weight:900;color:#1a1410;margin-bottom:12px;line-height:1.3;">' + slide.title + '</div>' +
+      '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#5a4e3e;line-height:1.75;max-width:320px;">' + slide.body + '</div>';
+  }
+}
+
+function onboardNav(dir) {
+  var newIdx = _onboardIndex + dir;
+  if (newIdx < 0) return;
+  if (newIdx >= _onboardSlides.length) {
+    finishOnboarding();
+    return;
+  }
+  _onboardIndex = newIdx;
+  renderOnboardSlide();
+}
+
+function finishOnboarding() {
+  var mode = (_onboardSlides === ONBOARD_INCOME_SLIDES) ? 'income' : 'expenses';
+  var key  = (mode === 'income') ? ONBOARD_INCOME_KEY : ONBOARD_EXPENSES_KEY;
+  localStorage.setItem(key, '1');
+  var ov = document.getElementById('onboard-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function skipOnboarding() {
+  finishOnboarding();
+}
 
 function openHelp() {
   var o = document.getElementById('help-overlay');
