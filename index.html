@@ -1143,7 +1143,7 @@ nav.tabs.header-hidden button {
       <select id="dash-year" onchange="renderDashboard()"><option value="all">All Years</option></select>
       <select id="dash-month" onchange="renderDashboard()"><option value="all">All Months</option></select>
       <select id="dash-currency" onchange="renderDashboard()"><option value="all">All Currencies</option></select>
-      <button onclick="printDashboard('expenses')" style="margin-left:auto;padding:6px 14px;background:var(--ink);border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
+      <button onclick="openPrintPicker('expenses')" style="margin-left:auto;padding:6px 14px;background:var(--ink);border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
     </div>
     <!-- Hidden selectors kept for JS compatibility — always synced to master -->
     <select id="monthly-currency"    style="display:none;"></select>
@@ -1602,7 +1602,7 @@ nav.tabs.header-hidden button {
       <select id="inc-dash-year"     onchange="renderIncomeDashboard()"><option value="all">All Years</option></select>
       <select id="inc-dash-month"    onchange="renderIncomeDashboard()"><option value="all">All Months</option></select>
       <select id="inc-dash-currency" onchange="renderIncomeDashboard()"><option value="all">All Currencies</option></select>
-      <button onclick="printDashboard('income')" style="margin-left:auto;padding:6px 14px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
+      <button onclick="openPrintPicker('income')" style="margin-left:auto;padding:6px 14px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
     </div>
     <!-- Hidden selectors kept for JS compatibility -->
     <select id="inc-monthly-currency"  style="display:none;"></select>
@@ -1947,6 +1947,19 @@ nav.tabs.header-hidden button {
   </div>
 </div>
 
+
+<!-- ══ PRINT PICKER OVERLAY ══ -->
+<div id="print-picker-overlay" style="display:none;position:fixed;inset:0;z-index:100010;background:rgba(26,20,16,0.85);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:10px;width:100%;max-width:380px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,0.5);">
+    <div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:900;color:var(--ink);margin-bottom:4px;">&#128438; Select Currencies to Print</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Each selected currency prints as a full report section — totals, monthly trend, category breakdown, yearly chart, heatmap, and YoY growth.</div>
+    <div id="print-picker-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;max-height:260px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="closePrintPicker()" style="flex:1;padding:11px;background:none;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);cursor:pointer;">Cancel</button>
+      <button onclick="executePrint()" id="print-picker-go" style="flex:2;padding:11px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--ink);cursor:pointer;letter-spacing:1px;">&#128438; Print Selected</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ INACTIVITY WARNING ══ -->
 <div id="inactivity-warning" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99998;background:var(--ink);border:2px solid var(--gold);border-radius:8px;padding:20px 28px;min-width:300px;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.4);flex-direction:column;align-items:center;gap:12px;">
@@ -3669,7 +3682,62 @@ function incDashMasterCurrencyChange() {
 }
 
 // ── Print Dashboard ──
-function printDashboard(mode) {
+// ── Print Currency Picker ──
+var _printPickerMode = 'expenses';
+
+function openPrintPicker(mode) {
+  _printPickerMode = mode;
+  var isIncome = mode === 'income';
+  var data = isIncome ? loadIncomeData() : loadData();
+  var curSel = document.getElementById(isIncome ? 'inc-dash-currency' : 'dash-currency');
+  var masterCur = curSel ? curSel.value : 'all';
+
+  // Collect all currencies in data
+  var allCurs = [];
+  data.forEach(function(i){ if(i.currency && allCurs.indexOf(i.currency)===-1) allCurs.push(i.currency); });
+  allCurs.sort();
+
+  var list = document.getElementById('print-picker-list');
+  list.innerHTML = '';
+
+  var accentColor = isIncome ? 'var(--sage)' : 'var(--gold)';
+
+  allCurs.forEach(function(c) {
+    var sym = SYMS[c] || c;
+    var count = data.filter(function(i){ return i.currency === c; }).length;
+    // Pre-tick: if master is specific currency tick only that, else tick all
+    var checked = (masterCur === 'all' || masterCur === c);
+
+    var row = document.createElement('label');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8f5f0;border:1.5px solid #e0dbd4;border-radius:6px;cursor:pointer;transition:border-color 0.15s;';
+    row.innerHTML =
+      '<input type="checkbox" value="'+c+'" '+(checked?'checked':'')+' style="width:18px;height:18px;cursor:pointer;accent-color:'+accentColor+';flex-shrink:0;">'+
+      '<div style="flex:1;">'+
+        '<div style="font-family:\'DM Mono\',monospace;font-size:0.82rem;font-weight:700;color:var(--ink);">'+sym+' '+c+'</div>'+
+        '<div style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:var(--muted);">'+count+' entries</div>'+
+      '</div>';
+    list.appendChild(row);
+  });
+
+  var ov = document.getElementById('print-picker-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+
+function closePrintPicker() {
+  var ov = document.getElementById('print-picker-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function executePrint() {
+  var list = document.getElementById('print-picker-list');
+  var checked = [];
+  list.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb){ checked.push(cb.value); });
+  if (!checked.length) { showToast('Select at least one currency'); return; }
+  closePrintPicker();
+  printDashboard(_printPickerMode, checked);
+}
+
+function printDashboard(mode, selectedCurrencies) {
   var isIncome = mode === 'income';
   var contentId = isIncome ? 'inc-dash-content' : 'dash-content';
   var contentEl = document.getElementById(contentId);
@@ -3690,84 +3758,89 @@ function printDashboard(mode) {
   var effMonth = monthSel ? monthSel.value : 'all';
   var effCur   = curSel   ? curSel.value   : 'all';
 
-  var printWin = window.open('', '_blank', 'width=860,height=900');
+  var printWin = window.open('', '_blank', 'width=900,height=900');
   if (!printWin) { showToast('Please allow popups to print'); return; }
 
-  // ── Build CSS ──
+  var rawData = isIncome ? loadIncomeData() : loadData();
+  var printCurs = selectedCurrencies && selectedCurrencies.length
+    ? selectedCurrencies
+    : [effCur !== 'all' ? effCur : (rawData.length ? rawData[0].currency : 'NGN')];
+
+  var hmPal = isIncome
+    ? ['#eafaf1','#a9dfbf','#52be80','#1e8449','#0b5329']
+    : ['#fdf6e3','#f5d98b','#e8a825','#c8962e','#7a5a10'];
+  var isGold = !isIncome;
+
+  // ── CSS ──
   var css =
     '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
-    'body{font-family:Georgia,serif;margin:0;padding:20px 28px;color:#1a1410;background:#fff;}' +
-    'h1{font-size:1.35rem;font-weight:900;margin:0 0 3px;}' +
-    '.sub{font-family:monospace;font-size:0.76rem;color:#6b5e50;margin-bottom:3px;}' +
-    '.meta{font-family:monospace;font-size:0.68rem;color:#9e8e7e;border-bottom:2px solid #c8962e;padding-bottom:10px;margin-bottom:16px;}' +
-    '.stat-cards{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}' +
-    '.scard{border:1px solid #e0dbd4;border-radius:5px;padding:8px 14px;min-width:110px;}' +
-    '.slbl{font-family:monospace;font-size:0.58rem;letter-spacing:1px;text-transform:uppercase;color:#9e8e7e;}' +
-    '.sval{font-size:1.2rem;font-weight:900;color:#1a1410;margin:1px 0;}' +
-    '.chart-box{border:1px solid #e0dbd4;border-radius:6px;padding:14px;margin-bottom:14px;page-break-inside:avoid;break-inside:avoid;}' +
-    '.chart-box h3{font-family:monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:#6b5e50;margin:0 0 10px;}' +
+    'body{font-family:Georgia,serif;margin:0;padding:16px 24px;color:#1a1410;background:#fff;font-size:13px;}' +
+    'h1{font-size:1.25rem;font-weight:900;margin:0 0 2px;}' +
+    '.sub{font-family:monospace;font-size:0.72rem;color:#6b5e50;margin-bottom:2px;}' +
+    '.meta{font-family:monospace;font-size:0.65rem;color:#9e8e7e;padding-bottom:8px;margin-bottom:14px;border-bottom:2px solid '+(isGold?'#c8962e':'#4a7c59')+'}' +
+    '.cur-section{page-break-before:auto;margin-bottom:0;}' +
+    '.cur-section+.cur-section{page-break-before:always;padding-top:8px;}' +
+    '.cur-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;border-radius:6px;background:'+(isGold?'rgba(200,150,46,0.08)':'rgba(74,124,89,0.08)')+';border-left:4px solid '+(isGold?'#c8962e':'#4a7c59')+'}' +
+    '.cur-name{font-family:monospace;font-size:1.1rem;font-weight:900;color:'+(isGold?'#c8962e':'#4a7c59')+'}' +
+    '.cur-sym{font-size:1.4rem;font-weight:900;color:#1a1410;}' +
+    '.stat-cards{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}' +
+    '.scard{border:1px solid #e0dbd4;border-radius:4px;padding:7px 12px;min-width:100px;}' +
+    '.slbl{font-family:monospace;font-size:0.56rem;letter-spacing:1px;text-transform:uppercase;color:#9e8e7e;}' +
+    '.sval{font-size:1.05rem;font-weight:900;color:#1a1410;margin:1px 0;}' +
+    '.chart-box{border:1px solid #e0dbd4;border-radius:5px;padding:12px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;}' +
+    '.chart-box h3{font-family:monospace;font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;color:#6b5e50;margin:0 0 8px;}' +
     '.chart-box img{width:100%;height:auto;display:block;}' +
-    '.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}' +
-    '.bar-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}' +
-    '.bar-lbl{width:150px;font-family:monospace;font-size:0.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5a4e3e;}' +
-    '.bar-track{flex:1;background:#f0ede8;border-radius:3px;height:13px;}' +
+    '.bar-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}' +
+    '.bar-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}' +
+    '.bar-lbl{width:140px;font-family:monospace;font-size:0.68rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5a4e3e;}' +
+    '.bar-track{flex:1;background:#f0ede8;border-radius:3px;height:11px;}' +
     '.bar-fill{height:100%;border-radius:3px;}' +
-    '.bar-val{width:100px;text-align:right;font-family:monospace;font-size:0.72rem;font-weight:700;color:#1a1410;}' +
+    '.bar-val{width:90px;text-align:right;font-family:monospace;font-size:0.68rem;font-weight:700;color:#1a1410;}' +
     '.hm-wrap{overflow-x:auto;}' +
-    '.hm-table{border-collapse:collapse;width:100%;font-family:monospace;font-size:0.58rem;table-layout:fixed;}' +
-    '.hm-table td,.hm-table th{padding:3px 2px;text-align:center;}' +
-    '.hm-yr{font-weight:700;text-align:left!important;color:#5a4e3e;white-space:nowrap;width:36px;}' +
-    '.hm-hdr{color:#9e8e7e;font-weight:700;font-size:0.55rem;}' +
+    '.hm-table{border-collapse:collapse;width:100%;font-family:monospace;font-size:0.55rem;table-layout:fixed;}' +
+    '.hm-table td,.hm-table th{padding:2px 1px;text-align:center;}' +
+    '.hm-yr{font-weight:700;text-align:left!important;color:#5a4e3e;white-space:nowrap;width:34px;}' +
+    '.hm-hdr{color:#9e8e7e;font-weight:700;}' +
     '.hm-cell{border-radius:2px;}' +
-    '.hm-leg{display:flex;align-items:center;gap:4px;margin-top:6px;font-family:monospace;font-size:0.6rem;color:#9e8e7e;}' +
-    '.hm-swatch{display:inline-block;width:18px;height:9px;border-radius:2px;}' +
-    '.yoy-strip{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}' +
-    '.yoy-block{border-radius:4px;padding:8px 12px;min-width:80px;border:1px solid #e0dbd4;border-top-width:3px;}' +
-    '.yoy-yr{font-family:monospace;font-size:0.58rem;letter-spacing:1px;color:#9e8e7e;margin-bottom:2px;}' +
-    '.yoy-tot{font-size:0.95rem;font-weight:900;color:#1a1410;margin-bottom:3px;}' +
-    '.yoy-pct{font-family:monospace;font-size:0.7rem;font-weight:700;padding:2px 6px;border-radius:10px;display:inline-block;}' +
-    '.yoy-up{background:#fee2e2;color:#b91c1c;}' +
-    '.yoy-dn{background:#dcfce7;color:#166534;}' +
-    '.yoy-fl{background:#f3f4f6;color:#6b7280;}' +
-    '.yoy-bs{color:#9e8e7e;font-size:0.65rem;}' +
-    '.footer{margin-top:16px;padding-top:10px;border-top:1px solid #e0dbd4;font-family:monospace;font-size:0.6rem;color:#9e8e7e;text-align:center;}' +
+    '.hm-swatch{display:inline-block;width:16px;height:8px;border-radius:2px;}' +
+    '.hm-leg{display:flex;align-items:center;gap:3px;margin-top:5px;font-family:monospace;font-size:0.55rem;color:#9e8e7e;}' +
+    '.yoy-strip{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}' +
+    '.yoy-block{border-radius:4px;padding:7px 10px;min-width:72px;border:1px solid #e0dbd4;border-top-width:3px;}' +
+    '.yoy-yr{font-family:monospace;font-size:0.55rem;letter-spacing:1px;color:#9e8e7e;margin-bottom:2px;}' +
+    '.yoy-tot{font-size:0.88rem;font-weight:900;color:#1a1410;margin-bottom:3px;}' +
+    '.yoy-pct{font-family:monospace;font-size:0.65rem;font-weight:700;padding:2px 5px;border-radius:8px;display:inline-block;}' +
+    '.yoy-up{background:#fee2e2;color:#b91c1c;}.yoy-dn{background:#dcfce7;color:#166534;}.yoy-fl{background:#f3f4f6;color:#6b7280;}.yoy-bs{color:#9e8e7e;}' +
+    '.footer{margin-top:12px;padding-top:8px;border-top:1px solid #e0dbd4;font-family:monospace;font-size:0.58rem;color:#9e8e7e;text-align:center;}' +
     '@page{margin:10mm;size:A4 portrait;}' +
     '@media print{body{padding:0;}}';
 
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+title+'</title><style>'+css+'</style></head><body>';
-
-  // ── Header ──
-  html += '<h1>'+title+'</h1>';
-  html += '<div class="sub">'+userName+'</div>';
-  html += '<div class="meta">Printed '+now+' &nbsp;·&nbsp; My Expense Ledger</div>';
-
-  // ── Stat cards ──
-  var statsRow = document.getElementById(isIncome ? 'inc-stats-row' : 'stats-row');
-  if (statsRow && statsRow.children.length) {
-    html += '<div class="stat-cards">';
-    statsRow.querySelectorAll('.stat-card').forEach(function(card) {
-      var lbl = card.querySelector('.stat-label');
-      var val = card.querySelector('.stat-value');
-      html += '<div class="scard"><div class="slbl">'+(lbl?lbl.textContent:'')+'</div><div class="sval">'+(val?val.textContent:'')+'</div></div>';
-    });
-    html += '</div>';
+  // ── Helper: stats for one currency ──
+  function buildStatCards(data, cur, yr, mo) {
+    var d = data.filter(function(i){return i.amount>0 && i.currency===cur;});
+    if(yr!=='all') d=d.filter(function(i){return i.date.substring(0,4)===yr;});
+    if(mo!=='all') d=d.filter(function(i){return i.date.substring(5,7)===mo;});
+    var total=d.reduce(function(s,i){return s+i.amount;},0);
+    var sym=SYMS[cur]||'';
+    return '<div class="stat-cards">'+
+      '<div class="scard"><div class="slbl">Entries</div><div class="sval">'+d.length+'</div></div>'+
+      '<div class="scard"><div class="slbl">Total '+cur+'</div><div class="sval">'+sym+fmtNum(total)+'</div></div>'+
+      '</div>';
   }
 
-  // ── Helper: build category bars section as print HTML ──
-  function buildCatBarsHtml(data, curFilter, yearFilter, monthFilter, colorFn) {
-    var filtered = data.filter(function(i){return i.amount>0;});
-    if (yearFilter  !== 'all') filtered = filtered.filter(function(i){return i.date.substring(0,4)===yearFilter;});
-    if (monthFilter !== 'all') filtered = filtered.filter(function(i){return i.date.substring(5,7)===monthFilter;});
-    if (curFilter   !== 'all') filtered = filtered.filter(function(i){return i.currency===curFilter;});
-    var byCat = {};
-    filtered.forEach(function(i){ byCat[i.category]=(byCat[i.category]||0)+i.amount; });
-    var cats = Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a];}).slice(0,15);
-    if (!cats.length) return '<div style="font-family:monospace;font-size:0.75rem;color:#9e8e7e;">No data</div>';
-    var maxV = byCat[cats[0]] || 1;
-    var sym  = curFilter !== 'all' ? (SYMS[curFilter]||curFilter) : '';
-    return cats.map(function(cat, idx) {
-      var pct   = Math.round(byCat[cat]/maxV*100);
-      var color = colorFn(cat, idx);
+  // ── Helper: category bars ──
+  function buildCatBarsHtml(data, cur, yr, mo, colorFn) {
+    var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
+    if(yr!=='all') d=d.filter(function(i){return i.date.substring(0,4)===yr;});
+    if(mo!=='all') d=d.filter(function(i){return i.date.substring(5,7)===mo;});
+    var byCat={};
+    d.forEach(function(i){byCat[i.category]=(byCat[i.category]||0)+i.amount;});
+    var cats=Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a];}).slice(0,15);
+    if(!cats.length) return '<div style="font-family:monospace;font-size:0.72rem;color:#9e8e7e;">No data</div>';
+    var maxV=byCat[cats[0]]||1;
+    var sym=SYMS[cur]||'';
+    return cats.map(function(cat,idx){
+      var pct=Math.round(byCat[cat]/maxV*100);
+      var color=colorFn(cat,idx);
       return '<div class="bar-row">'+
         '<div class="bar-dot" style="background:'+color+'"></div>'+
         '<div class="bar-lbl">'+cat+'</div>'+
@@ -3777,139 +3850,151 @@ function printDashboard(mode) {
     }).join('');
   }
 
-  // ── Helper: build heatmap as print HTML (table layout, colors inlined) ──
-  function buildHeatmapHtml(data, cur, colorPal) {
-    var filtered = data.filter(function(i){return i.amount>0 && i.currency===cur;});
-    var byYM = {};
-    filtered.forEach(function(i){
+  // ── Helper: heatmap ──
+  function buildHeatmapHtml(data, cur) {
+    var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
+    var byYM={};
+    d.forEach(function(i){
       var y=i.date.substring(0,4); var m=parseInt(i.date.substring(5,7))-1;
       if(!byYM[y]) byYM[y]=new Array(12).fill(0);
       byYM[y][m]+=i.amount;
     });
-    var years = Object.keys(byYM).sort();
-    if (!years.length) return '<div style="font-family:monospace;font-size:0.75rem;color:#9e8e7e;">No data for '+cur+'</div>';
+    var years=Object.keys(byYM).sort();
+    if(!years.length) return '<div style="font-family:monospace;font-size:0.72rem;color:#9e8e7e;">No data</div>';
     var allVals=[]; years.forEach(function(y){byYM[y].forEach(function(v){if(v>0)allVals.push(v);});});
-    var maxVal = allVals.length ? Math.max.apply(null,allVals) : 1;
-    function getHmColor(v){ if(!v) return '#f5f5f0'; var r=Math.pow(v/maxVal,0.5); return colorPal[Math.min(Math.floor(r*(colorPal.length-1)),colorPal.length-1)]; }
-    var sym = SYMS[cur]||cur;
-    var out = '<div class="hm-wrap"><table class="hm-table"><thead><tr><th class="hm-yr"></th>';
-    MONTHS.forEach(function(m){ out += '<th class="hm-hdr">'+m.substring(0,3)+'</th>'; });
-    out += '</tr></thead><tbody>';
+    var maxVal=allVals.length?Math.max.apply(null,allVals):1;
+    var pal=hmPal;
+    function gc(v){if(!v)return'#f5f5f0';var r=Math.pow(v/maxVal,0.5);return pal[Math.min(Math.floor(r*(pal.length-1)),pal.length-1)];}
+    var sym=SYMS[cur]||cur;
+    var out='<div class="hm-wrap"><table class="hm-table"><thead><tr><th class="hm-yr"></th>';
+    MONTHS.forEach(function(m){out+='<th class="hm-hdr">'+m.substring(0,1)+'</th>';});
+    out+='</tr></thead><tbody>';
     years.forEach(function(y){
-      out += '<tr><td class="hm-yr">'+y+'</td>';
+      out+='<tr><td class="hm-yr">'+y+'</td>';
       byYM[y].forEach(function(v,mi){
-        var bg = getHmColor(v);
-        var textColor = v > maxVal*0.55 ? '#fff' : '#555';
-        var tip = v>0 ? sym+fmtNum(v) : '';
-        out += '<td class="hm-cell" style="background:'+bg+';color:'+textColor+';" title="'+MONTHS[mi]+' '+y+': '+tip+'">' +
-          (v>0 ? '<span style="font-size:0.5rem;opacity:0.8;">'+(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v))+'</span>' : '') +
-          '</td>';
+        var bg=gc(v); var tc=v>maxVal*0.55?'#fff':'#555';
+        out+='<td class="hm-cell" style="background:'+bg+';color:'+tc+';" title="'+MONTHS[mi]+' '+y+(v>0?': '+sym+fmtNum(v):'')+'">'+(v>0?'<span style="font-size:0.48rem;">'+(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v))+'</span>':'')+'</td>';
       });
-      out += '</tr>';
+      out+='</tr>';
     });
-    out += '</tbody></table>';
-    out += '<div class="hm-leg"><span>Low</span>';
-    colorPal.forEach(function(c){ out += '<span class="hm-swatch" style="background:'+c+';"></span>'; });
-    out += '<span>High</span></div></div>';
+    out+='</tbody></table><div class="hm-leg"><span>Low</span>';
+    pal.forEach(function(c){out+='<span class="hm-swatch" style="background:'+c+'"></span>';});
+    out+='<span>High</span></div></div>';
     return out;
   }
 
-  // ── Helper: build YoY strip as print HTML ──
+  // ── Helper: YoY ──
   function buildYoYHtml(data, cur) {
-    var filtered = data.filter(function(i){return i.amount>0 && i.currency===cur;});
-    var byY = {};
-    filtered.forEach(function(i){ var y=i.date.substring(0,4); byY[y]=(byY[y]||0)+i.amount; });
-    var years = Object.keys(byY).sort();
-    if (!years.length) return '';
-    var sym = SYMS[cur]||cur;
-    var yearColors = ['#3d5a73','#c8962e','#4a7c59','#b5451b','#6b3d8c','#2e7d8a','#8b5e3c','#7c4a4a'];
-    var out = '<div class="yoy-strip">';
-    years.forEach(function(y, i){
-      var total = byY[y];
-      var prevTotal = i>0 ? byY[years[i-1]] : null;
-      var pctHtml = '';
-      if(prevTotal === null){
-        pctHtml = '<span class="yoy-pct yoy-bs">Baseline</span>';
-      } else if(prevTotal === 0){
-        pctHtml = '<span class="yoy-pct yoy-dn">New</span>';
-      } else {
-        var pct = ((total - prevTotal) / prevTotal * 100);
-        var cls = Math.abs(pct)<2 ? 'yoy-fl' : pct>0 ? 'yoy-up' : 'yoy-dn';
-        pctHtml = '<span class="yoy-pct '+cls+'">'+(pct>0?'+':'')+pct.toFixed(1)+'%</span>';
-      }
-      out += '<div class="yoy-block" style="border-top-color:'+yearColors[i%yearColors.length]+';">'+
-        '<div class="yoy-yr">'+y+'</div>'+
-        '<div class="yoy-tot">'+sym+fmtNum(total)+'</div>'+
-        pctHtml+'</div>';
+    var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
+    var byY={};
+    d.forEach(function(i){var y=i.date.substring(0,4);byY[y]=(byY[y]||0)+i.amount;});
+    var yrs=Object.keys(byY).sort();
+    if(!yrs.length) return '';
+    var sym=SYMS[cur]||cur;
+    var yc=['#3d5a73','#c8962e','#4a7c59','#b5451b','#6b3d8c','#2e7d8a','#8b5e3c','#7c4a4a'];
+    var out='<div class="yoy-strip">';
+    yrs.forEach(function(y,i){
+      var tot=byY[y]; var prev=i>0?byY[yrs[i-1]]:null;
+      var pctHtml=prev===null?'<span class="yoy-pct yoy-bs">Baseline</span>':
+        prev===0?'<span class="yoy-pct yoy-dn">New</span>':
+        (function(){var p=((tot-prev)/prev*100);var cl=Math.abs(p)<2?'yoy-fl':p>0?'yoy-up':'yoy-dn';return'<span class="yoy-pct '+cl+'">'+(p>0?'+':'')+p.toFixed(1)+'%</span>';}());
+      out+='<div class="yoy-block" style="border-top-color:'+yc[i%yc.length]+';"><div class="yoy-yr">'+y+'</div><div class="yoy-tot">'+sym+fmtNum(tot)+'</div>'+pctHtml+'</div>';
     });
-    out += '</div>';
-    return out;
+    return out+'</div>';
   }
 
-  // ── Render all 4 charts, each full width ──
-  var rawData   = isIncome ? loadIncomeData() : loadData();
-  var catCurSel = document.getElementById(isIncome ? 'inc-cat-dash-currency' : 'cat-dash-currency');
-  var catCur    = catCurSel ? catCurSel.value : effCur;
-  var hmCurSel  = document.getElementById(isIncome ? 'inc-heatmap-currency' : 'heatmap-currency');
-  var hmCur     = hmCurSel ? hmCurSel.value : (rawData.length ? (rawData.find(function(i){return !!i.currency;})||{currency:effCur}).currency : effCur);
-  if (effCur !== 'all') hmCur = effCur;
-
-  // 1. Monthly Trend (canvas)
-  var monthlyCanvas = document.getElementById(isIncome ? 'inc-chart-monthly' : 'chart-monthly');
-  if (monthlyCanvas) {
-    try {
-      html += '<div class="chart-box"><h3>'+(isIncome?'Monthly Income Trend':'Monthly Spending Trend')+'</h3>';
-      html += '<img src="'+monthlyCanvas.toDataURL('image/png')+'"></div>';
-    } catch(e){}
+  // ── Helper: monthly chart as canvas image (renders offscreen) ──
+  function buildMonthlyChartImg(data, cur, yr, mo) {
+    var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
+    if(yr!=='all') d=d.filter(function(i){return i.date.substring(0,4)===yr;});
+    if(mo!=='all') d=d.filter(function(i){return i.date.substring(5,7)===mo;});
+    var byM={}; d.forEach(function(i){var k=i.date.substring(0,7);byM[k]=(byM[k]||0)+i.amount;});
+    var keys=Object.keys(byM).sort();
+    if(!keys.length) return '';
+    var labels=keys.map(function(k){var p=k.split('-');return MONTHS[parseInt(p[1])-1]+' '+p[0].slice(2);});
+    var vals=keys.map(function(k){return +byM[k].toFixed(2);});
+    var sym=SYMS[cur]||'';
+    var oc=document.createElement('canvas'); oc.width=800; oc.height=260;
+    var borderC=isGold?'#c8962e':'#4a7c59';
+    var bgC=isGold?'rgba(200,150,46,0.08)':'rgba(74,124,89,0.08)';
+    var ch=new Chart(oc.getContext('2d'),{type:'line',data:{labels:labels,datasets:[{label:cur,data:vals,borderColor:borderC,backgroundColor:bgC,tension:0.4,fill:true,pointBackgroundColor:borderC,pointRadius:3}]},options:{responsive:false,animation:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
+    var src=oc.toDataURL('image/png');
+    ch.destroy();
+    return '<img src="'+src+'" style="width:100%;height:auto;">';
   }
 
-  // 2. Category Breakdown (DOM bars — re-rendered with colors)
-  var catTitle = isIncome ? 'Income by Category' : 'Category Breakdown';
-  var colorFn  = isIncome
+  // ── Helper: yearly chart as canvas image ──
+  function buildYearlyChartImg(data, cur) {
+    var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
+    var byY={}; d.forEach(function(i){var y=i.date.substring(0,4);byY[y]=(byY[y]||0)+i.amount;});
+    var yrs=Object.keys(byY).sort();
+    if(!yrs.length) return '';
+    var vals=yrs.map(function(y){return +byY[y].toFixed(2);});
+    var sym=SYMS[cur]||'';
+    var oc=document.createElement('canvas'); oc.width=800; oc.height=240;
+    var colors=yrs.map(function(y,i){return i===yrs.length-1?'rgba(200,150,46,0.9)':'rgba(200,150,46,0.4)';});
+    if(isIncome) colors=yrs.map(function(y,i){return i===yrs.length-1?'rgba(74,124,89,0.9)':'rgba(74,124,89,0.4)';});
+    var ch=new Chart(oc.getContext('2d'),{type:'bar',data:{labels:yrs,datasets:[{label:cur,data:vals,backgroundColor:colors,borderRadius:3}]},options:{responsive:false,animation:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
+    var src=oc.toDataURL('image/png');
+    ch.destroy();
+    return '<img src="'+src+'" style="width:100%;height:auto;">';
+  }
+
+  var colorFn = isIncome
     ? function(cat){ return INC_CAT_COLORS[cat] || '#6b5e50'; }
-    : function(cat, idx){ return CAT_COLORS[cat] || CAT_COLORS_FB[idx % CAT_COLORS_FB.length]; };
-  html += '<div class="chart-box"><h3>'+catTitle+' ('+(catCur==='all'?'All Currencies':catCur)+')</h3>';
-  html += buildCatBarsHtml(rawData, catCur, effYear, effMonth, colorFn);
-  html += '</div>';
+    : function(cat,idx){ return CAT_COLORS[cat] || CAT_COLORS_FB[idx % CAT_COLORS_FB.length]; };
 
-  // 3. Yearly Totals (canvas)
-  var yearlyCanvas = document.getElementById(isIncome ? 'inc-chart-yearly' : 'chart-yearly');
-  if (yearlyCanvas) {
-    try {
-      html += '<div class="chart-box"><h3>'+(isIncome?'Yearly Income':'Yearly Total Spending')+'</h3>';
-      html += '<img src="'+yearlyCanvas.toDataURL('image/png')+'"></div>';
-    } catch(e){}
-  }
+  // ── Build one section per selected currency ──
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+title+'</title>'+
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"><\/script>'+
+    '<style>'+css+'</style></head><body>';
 
-  // 4+5. Heatmap + YoY — one section per currency
-  var hmPal = isIncome ? ['#eafaf1','#a9dfbf','#52be80','#1e8449','#0b5329']
-                       : ['#fdf6e3','#f5d98b','#e8a825','#c8962e','#7a5a10'];
+  html += '<h1>'+(isIncome?'Income Report':'Expense Report')+' — '+userName+'</h1>';
+  html += '<div class="sub">'+(effYear==='all'?'All Years':effYear)+(effMonth!=='all'?' · '+MONTHS[parseInt(effMonth,10)-1]:'')+'</div>';
+  html += '<div class="meta">Printed '+now+' &nbsp;·&nbsp; My Expense Ledger &nbsp;·&nbsp; '+printCurs.length+' '+(printCurs.length===1?'currency':'currencies')+' selected</div>';
 
-  // Determine which currencies to render
-  var printCurs = [];
-  if (effCur !== 'all') {
-    printCurs = [effCur];
-  } else {
-    // All currencies that have data
-    rawData.forEach(function(i){
-      if (i.currency && printCurs.indexOf(i.currency) === -1) printCurs.push(i.currency);
-    });
-    printCurs.sort();
-  }
-
-  printCurs.forEach(function(c) {
-    var cData = rawData.filter(function(i){ return i.amount > 0 && i.currency === c; });
-    if (!cData.length) return;
+  printCurs.forEach(function(c, ci) {
     var sym = SYMS[c] || c;
-    html += '<div class="chart-box"><h3>'+(isIncome?'Income Heatmap':'Spending Heatmap')+' — '+c+' '+sym+'</h3>';
-    html += buildHeatmapHtml(rawData, c, hmPal);
+    var cData = rawData.filter(function(i){return i.currency===c;});
+    if (!cData.length) return;
+
+    html += '<div class="cur-section">';
+
+    // Currency header
+    html += '<div class="cur-header"><span class="cur-sym">'+sym+'</span><span class="cur-name">'+c+'</span></div>';
+
+    // Stat cards
+    html += buildStatCards(rawData, c, effYear, effMonth);
+
+    // Monthly trend
+    var mImg = buildMonthlyChartImg(rawData, c, effYear, effMonth);
+    if (mImg) {
+      html += '<div class="chart-box"><h3>Monthly '+(isIncome?'Income':'Spending')+' Trend</h3>'+mImg+'</div>';
+    }
+
+    // Category breakdown
+    html += '<div class="chart-box"><h3>'+(isIncome?'Income by Category':'Category Breakdown')+'</h3>';
+    html += buildCatBarsHtml(rawData, c, effYear, effMonth, colorFn);
     html += '</div>';
+
+    // Yearly totals
+    var yImg = buildYearlyChartImg(rawData, c);
+    if (yImg) {
+      html += '<div class="chart-box"><h3>Yearly '+(isIncome?'Income':'Spending')+'</h3>'+yImg+'</div>';
+    }
+
+    // Heatmap
+    html += '<div class="chart-box"><h3>'+(isIncome?'Income':'Spending')+' Heatmap</h3>';
+    html += buildHeatmapHtml(rawData, c);
+    html += '</div>';
+
+    // YoY
     var yoyHtml = buildYoYHtml(rawData, c);
     if (yoyHtml) {
-      html += '<div class="chart-box"><h3>Year-over-Year Growth — '+c+' '+sym+'</h3>';
-      html += yoyHtml;
-      html += '</div>';
+      html += '<div class="chart-box"><h3>Year-over-Year Growth</h3>'+yoyHtml+'</div>';
     }
+
+    html += '</div>'; // .cur-section
   });
 
   html += '<div class="footer">My Expense Ledger &nbsp;·&nbsp; '+userName+' &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; '+now+'</div>';
@@ -3918,7 +4003,7 @@ function printDashboard(mode) {
   printWin.document.write(html);
   printWin.document.close();
   printWin.focus();
-  setTimeout(function(){ printWin.print(); }, 900);
+  setTimeout(function(){ printWin.print(); }, 1200);
 }
 
 function renderDashboard(){
