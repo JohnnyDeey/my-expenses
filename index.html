@@ -6143,6 +6143,10 @@ function lockApp() {
   _inactivityTimer = null;
   _countdownTimer  = null;
   hideInactivityWarning();
+  // Clear session flags — so a page refresh after locking shows the PIN screen
+  // NOT a silent resume
+  localStorage.removeItem('last_active');
+  sessionStorage.removeItem('app_session');
   // Stop Firebase listeners to save battery while locked
   if (_syncUnsubscribe)   { _syncUnsubscribe();   _syncUnsubscribe   = null; }
   if (_incomeUnsubscribe) { _incomeUnsubscribe();  _incomeUnsubscribe = null; }
@@ -9721,19 +9725,28 @@ document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible') {
     if (_userId) {
       var lastActive = parseInt(localStorage.getItem('last_active') || '0', 10);
+      // If last_active is 0/missing the app was already locked — just show PIN
+      if (!lastActive) {
+        var pinOv = document.getElementById('pin-overlay');
+        if (!pinOv || pinOv.style.display === 'none') {
+          showPinScreen(); showPinPadStep();
+        }
+        return;
+      }
       var awayMs = Date.now() - lastActive;
       if (awayMs >= INACTIVE_MS) {
-        // Been away too long — lock to PIN pad
         lockApp();
         return;
       }
-      // Back within time — refresh trash and reset timer
+      // Back within time — refresh and reset timer
       if (_db && !window._trashDeletePending) fetchTrashFromFirebase();
       resetInactivityTimer();
     }
   } else {
-    // App going to background — record the time
-    if (_userId) localStorage.setItem('last_active', String(Date.now()));
+    // Going to background — only record time if NOT already locked
+    if (_userId && localStorage.getItem('last_active')) {
+      localStorage.setItem('last_active', String(Date.now()));
+    }
   }
 });
 
