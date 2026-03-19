@@ -1995,24 +1995,31 @@ nav.tabs.header-hidden button {
 <div id="privacy-overlay" style="display:none;position:fixed;inset:0;z-index:99997;background:#1a1410;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
   <div style="max-width:500px;width:100%;background:var(--paper);border:2px solid var(--gold);border-radius:8px;padding:28px;">
     <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--ink);margin-bottom:4px;">Privacy Policy &amp; Terms</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:16px;">MY EXPENSE LEDGER &middot; MARCH 2026</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:16px;">MY EXPENSE LEDGER &middot; JUNE 2026 — Updated</div>
+    <div style="background:#fffbf0;border:1px solid var(--gold);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.7;">
+      &#9888; This policy has been updated. Please read and re-agree to continue.
+    </div>
     <div style="max-height:300px;overflow-y:auto;font-family:'DM Sans',sans-serif;font-size:0.82rem;color:var(--ink);line-height:1.8;margin-bottom:16px;padding:14px;border:1px solid var(--border);border-radius:4px;">
       <p style="font-weight:700;margin-bottom:6px;">1. Your Data &amp; Privacy</p>
-      <p style="margin-bottom:12px;">All financial data you enter is stored in your personal Firebase account. It is completely private. No other user can access your data. Your phone number is stored as a one-way hash that cannot be reversed.</p>
+      <p style="margin-bottom:12px;">All financial data you enter is stored in your personal Firebase account under a unique private ID. It is completely private. No other user can access your data. Your phone number is stored as a one-way hash that cannot be reversed or read by anyone.</p>
       <p style="font-weight:700;margin-bottom:6px;">2. Data Storage</p>
-      <p style="margin-bottom:12px;">Your data is stored in Google Firebase Firestore, protected by security rules ensuring only you can read or write your data. We do not sell, share, or transfer your data to any third party.</p>
-      <p style="font-weight:700;margin-bottom:6px;">3. Authentication</p>
-      <p style="margin-bottom:12px;">You are identified by your phone number hash and access code. Your access code is hashed before storage and is never stored in plain text. We cannot recover your access code if lost.</p>
-      <p style="font-weight:700;margin-bottom:6px;">4. Session Security</p>
-      <p style="margin-bottom:12px;">The app automatically logs you out after a period of inactivity. Closing the app or browser tab ends your session.</p>
-      <p style="font-weight:700;margin-bottom:6px;">5. No Advertising</p>
-      <p style="margin-bottom:12px;">This app contains no advertisements. We do not use your data for advertising or marketing purposes.</p>
-      <p style="font-weight:700;margin-bottom:6px;">6. Contact</p>
-      <p>If you have concerns about your data, use the Help button inside the app to contact support.</p>
+      <p style="margin-bottom:12px;">Your data is stored in Google Firebase Firestore, protected by security rules ensuring only you can read or write your data. We do not sell, share, or transfer your data to any third party. Data is separated by expenses and income modules and stored per monthly period.</p>
+      <p style="font-weight:700;margin-bottom:6px;">3. Authentication &amp; PIN Security</p>
+      <p style="margin-bottom:12px;">You are identified by your phone number hash and PIN. Your PIN is hashed before storage using a one-way algorithm and is never stored in plain text — not even the app developer can read it. The app uses a PIN pad for daily login. For added security, a periodic full identity check (username/phone + PIN) is triggered randomly every 1 to 2 weeks.</p>
+      <p style="font-weight:700;margin-bottom:6px;">4. Session Security &amp; Inactivity Lock</p>
+      <p style="margin-bottom:12px;">The app automatically locks to the PIN screen after 10 minutes of inactivity. If you return within 10 minutes the app resumes without requiring a PIN. Logging out clears all local session data immediately. The app never stores your PIN in a readable form on your device.</p>
+      <p style="font-weight:700;margin-bottom:6px;">5. Usage Analytics</p>
+      <p style="margin-bottom:12px;">This app uses Google Analytics to collect anonymous usage statistics such as how many people open the app, which country they are in, and what device they use. No personal financial data is ever sent to Google Analytics. No names, phone numbers, or transaction details are tracked. Analytics data is used only by the app developer to understand app usage and improve the experience.</p>
+      <p style="font-weight:700;margin-bottom:6px;">6. No Advertising</p>
+      <p style="margin-bottom:12px;">This app contains no advertisements. We do not use your financial data for advertising or marketing purposes of any kind.</p>
+      <p style="font-weight:700;margin-bottom:6px;">7. Recycle Bin &amp; Data Deletion</p>
+      <p style="margin-bottom:12px;">Deleted entries are moved to a Recycle Bin before permanent deletion. You can restore them anytime. A Full Reset option wipes all local device data while preserving your cloud backup in Firebase. Your cloud data is never deleted without your explicit action.</p>
+      <p style="font-weight:700;margin-bottom:6px;">8. Contact</p>
+      <p>If you have concerns about your data, use the Help button inside the app to contact support at myfinanceledgerapp@gmail.com.</p>
     </div>
     <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;padding:12px;background:#fffbf0;border:1px solid var(--gold);border-radius:4px;">
       <input type="checkbox" id="privacy-cb" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;accent-color:var(--gold);cursor:pointer;">
-      <label for="privacy-cb" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);cursor:pointer;line-height:1.6;">I have read and agree to the Privacy Policy and Terms of Use for My Expense Ledger.</label>
+      <label for="privacy-cb" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);cursor:pointer;line-height:1.6;">I have read and agree to the updated Privacy Policy and Terms of Use for My Expense Ledger.</label>
     </div>
     <button onclick="acceptPrivacy()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;">&#10003; I Agree &mdash; Continue</button>
   </div>
@@ -9822,7 +9829,7 @@ setInterval(function() {
 // ════════════════════════
 //  PRIVACY POLICY
 // ════════════════════════
-var PRIVACY_VER = '2026-03';
+var PRIVACY_VER = '2026-06';
 
 // Called after login — checks Firebase first, then localStorage as fallback
 function checkPrivacy() {
@@ -9895,7 +9902,10 @@ var HELP_ITEMS = [
   {icon:'&#128077;', label:'PIN Login',  tag:'biometric'},
   {icon:'&#8679;',   label:'Scroll',      tag:'scroll'},
   {icon:'&#128269;', label:'Multi-Search', tag:'multisearch'},
-  {icon:'&#10067;',  label:'Help',       tag:'help'}
+  {icon:'&#128274;', label:'Security',    tag:'security'},
+  {icon:'&#128477;', label:'Reset PIN',   tag:'resetpin'},
+  {icon:'&#128176;', label:'Currencies',  tag:'currencies'},
+  {icon:'&#10067;',  label:'Help',        tag:'help'}
 ];
 
 var HELP_DATA = {
@@ -10017,6 +10027,54 @@ var HELP_DATA = {
     steps: ['Two floating buttons appear on the right side of the screen when the page is scrollable.','The up arrow ⇧ jumps back to the very top of the page instantly.','The down arrow ⇩ jumps to the very bottom of the page.','The buttons appear automatically when you scroll down.','They disappear when you are already at the top or bottom.','Useful for long ledger lists or the dashboard with many charts.'],
     example: 'User jd0292 scrolled halfway through a 300-entry ledger.\nHe tapped ⇩ to jump to the latest entries at the bottom.\nThen tapped ⇧ to return to the filters at the top.',
     tip: 'These buttons work on all tabs — Import, Ledger, Dashboard, Budget, and Income.'
+  },
+  'security': {
+    title: '🔒 Security Check — Periodic Full Verification',
+    steps: [
+      'Most of the time, you log in using only your PIN on the PIN pad — fast and simple.',
+      'Every 1 to 2 weeks (randomly), the app shows a Security Check screen instead of the PIN pad.',
+      'On the Security Check screen you must enter your username OR phone number AND your PIN.',
+      'This confirms that you still remember your credentials and that the device has not been taken by someone else.',
+      'After passing the check the app returns to normal PIN-only login until the next random check.',
+      'The Security Check also runs automatically the first time you log in on a new device.',
+      'If you fail 3 times you will see a Reset PIN option — use that if you have forgotten your PIN.',
+      'The PIN dot area lights up with a gold border when it is focused and ready to receive your input.'
+    ],
+    example: 'User jd0292 opened the app on a Monday morning.\nInstead of the PIN pad he saw the Security Check screen.\nHe typed his username jd0292, tapped the PIN box, typed his PIN.\nThe app confirmed his identity and he was in.\nThe next random check will appear 8–12 days later.',
+    tip: 'Your username and PIN are cleared from the screen immediately after you log in successfully — they are never left visible for the next person who opens the app.'
+  },
+  'resetpin': {
+    title: '🔑 Forgot PIN — How to Reset',
+    steps: [
+      'On the PIN pad screen tap the Forgot your PIN? link at the bottom.',
+      'On the Security Check screen there is also a Forgot your PIN? link.',
+      'A Reset Access Code overlay will appear.',
+      'Enter the phone number you registered with.',
+      'The app verifies your phone number against the database.',
+      'If found, a 6-digit one-time code is shown on screen — valid for 15 minutes.',
+      'Screenshot or write down the code immediately.',
+      'Tap Use This Code to Sign In — you are logged in straight away.',
+      'You are taken directly to Manage → Change Access Code.',
+      'Set a new PIN immediately so you do not need the temporary code again.',
+      'The temporary code is automatically replaced by whatever new PIN you set.'
+    ],
+    example: 'User mk0374 forgot her PIN after a holiday.\nShe tapped Forgot your PIN? and entered her phone number.\nA code 847291 appeared — she screenshotted it.\nShe tapped Use This Code, was taken to Manage, and set a new PIN 559021.',
+    tip: 'The reset code expires after 15 minutes. If it expires before you use it, simply request a new one by repeating the process.'
+  },
+  'currencies': {
+    title: '💱 Multi-Currency — Tracking in Different Currencies',
+    steps: [
+      'The app supports four currencies: ₦ Nigerian Naira (NGN), € Euro (EUR), $ US Dollar (USD), and £ British Pound (GBP).',
+      'Each transaction stores its own currency — you do not need to convert anything.',
+      'When importing, use the correct symbol: ₦ or # for Naira, € for Euro, $ for Dollar, £ for Pound.',
+      'Totals in the header, dashboard, and ledger are shown separately per currency — they are never mixed or converted.',
+      'On the Dashboard use the currency filter to view charts for one currency at a time.',
+      'Budget targets are set per currency — set a ₦ budget and a € budget separately if needed.',
+      'On the Ledger use the Currency filter dropdown to see only one currency at a time.',
+      'PDF reports show totals grouped by currency so each amount is clearly identified.'
+    ],
+    example: 'User sa0819 lives between Nigeria and Spain.\nShe tracks rent in € and daily spending in ₦.\nHer dashboard shows two separate total cards: ₦ total and € total.\nShe sets a ₦40,000 monthly food budget and a €500 rent budget separately.',
+    tip: 'Always use the correct currency symbol when typing in the import box. If you use the wrong symbol the amount will be saved in the wrong currency and you will need to re-import or edit it.'
   }
 };
 
@@ -10083,6 +10141,9 @@ function runHelpSearch(q) {
     biometric:['pin','pin pad','pin login','security check','weekly check','login','fast login','access code'],
     scroll:['scroll','top','bottom','navigate','jump','floating button'],
     multisearch:['multi','multiple','search','comma','rice','water','fleet','several','words','terms','bulk search','multi-word','multisearch'],
+    security:['security','check','verify','verification','weekly','periodic','random','full check','identity'],
+    resetpin:['reset','forgot','pin','password','lost','code','temporary','one-time'],
+    currencies:['currency','currencies','naira','euro','dollar','pound','ngn','eur','usd','gbp','multi-currency','symbol'],
     help:['help','support','contact','question','how to','guide']
   };
   var matches = Object.keys(kw).filter(function(tag) {
