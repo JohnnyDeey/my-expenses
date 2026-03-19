@@ -1023,7 +1023,7 @@ nav.tabs.header-hidden button {
         <div id="parse-stats" style="display:none;">
           <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);padding:6px 0;">
             Parsed: <strong id="ps-count" style="color:var(--gold);">0</strong> items &nbsp;|&nbsp;
-            EUR: <strong id="ps-eur">0</strong> &nbsp; NGN: <strong id="ps-ngn">0</strong> &nbsp; USD: <strong id="ps-usd">0</strong>
+            <span id="ps-by-currency"></span>
           </div>
           <!-- Skipped lines warning -->
           <div id="ps-skipped" style="display:none;margin:10px 0 6px;background:#fdf0f8;border:1.5px solid #b5451b;border-radius:4px;padding:12px 16px;">
@@ -1140,11 +1140,10 @@ nav.tabs.header-hidden button {
     <div class="filter-bar">
       <span class="filter-label">Filter:</span>
       <select id="dash-year" onchange="renderDashboard()"><option value="all">All Years</option></select>
-      <select id="dash-currency" onchange="renderDashboard()">
+      <select id="dash-currency" onchange="dashMasterCurrencyChange()">
         <option value="all">All Currencies</option>
-        <option value="EUR">EUR Euro</option><option value="NGN">NGN Naira</option>
-        <option value="USD">USD Dollar</option><option value="GBP">GBP Pound</option>
       </select>
+      <button onclick="printDashboard('expenses')" style="margin-left:auto;padding:6px 14px;background:var(--ink);border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
     </div>
     <div class="stats-row" id="stats-row"></div>
     <div class="charts-grid">
@@ -1636,11 +1635,10 @@ nav.tabs.header-hidden button {
     <div class="filter-bar">
       <span class="filter-label">Filter:</span>
       <select id="inc-dash-year" onchange="renderIncomeDashboard()"><option value="all">All Years</option></select>
-      <select id="inc-dash-currency" onchange="renderIncomeDashboard()">
+      <select id="inc-dash-currency" onchange="incDashMasterCurrencyChange()">
         <option value="all">All Currencies</option>
-        <option value="NGN">NGN &#8358;</option><option value="EUR">EUR &euro;</option>
-        <option value="USD">USD $</option><option value="GBP">GBP &pound;</option>
       </select>
+      <button onclick="printDashboard('income')" style="margin-left:auto;padding:6px 14px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
     </div>
     <div class="stats-row" id="inc-stats-row"></div>
     <div class="charts-grid">
@@ -2323,7 +2321,7 @@ function refreshAllCurrencyDropdowns() {
     else if (active.length) el.value = active[0];
   });
   // Ledger filter also has currency filter inside income manage month rows etc
-  // Parse stats bar currencies (ps-eur etc are static labels — will refresh on next parse)
+  // Parse stats bar will rebuild on next parse via ps-by-currency span
 }
 
 // Initialise SYMS on load
@@ -3061,13 +3059,15 @@ function parseInput() {
     });
   });
 
-  var eur = pendingItems.filter(function(i){return i.currency==='EUR';}).length;
-  var ngn = pendingItems.filter(function(i){return i.currency==='NGN';}).length;
-  var usd = pendingItems.filter(function(i){return i.currency==='USD';}).length;
+  // Build dynamic currency count for parse stats bar
+  var psByCur = {};
+  pendingItems.forEach(function(i){ psByCur[i.currency] = (psByCur[i.currency]||0) + 1; });
+  var psCurHtml = Object.keys(psByCur).sort().map(function(c){
+    return c + ': <strong>' + psByCur[c] + '</strong>';
+  }).join(' &nbsp; ');
   document.getElementById('ps-count').textContent = pendingItems.length;
-  document.getElementById('ps-eur').textContent = eur;
-  document.getElementById('ps-ngn').textContent = ngn;
-  document.getElementById('ps-usd').textContent = usd;
+  var psByCurEl = document.getElementById('ps-by-currency');
+  if (psByCurEl) psByCurEl.innerHTML = psCurHtml;
   document.getElementById('parse-stats').style.display = 'block';
 
   pendingItems.forEach(function(item){
@@ -3674,6 +3674,102 @@ function toggleDay(date){openDayKey=(openDayKey===date)?null:date;renderDailyVie
 //  DASHBOARD
 // ════════════════════════════════
 var charts={};
+// ── Master currency selector — syncs all charts at once ──
+function dashMasterCurrencyChange() {
+  renderDashboard();
+}
+function incDashMasterCurrencyChange() {
+  renderIncomeDashboard();
+}
+
+// ── Print Dashboard ──
+function printDashboard(mode) {
+  var isIncome = mode === 'income';
+  var contentId = isIncome ? 'inc-dash-content' : 'dash-content';
+  var contentEl = document.getElementById(contentId);
+  if (!contentEl) return;
+
+  var userName = getReportName();
+  var yearSel  = document.getElementById(isIncome ? 'inc-dash-year' : 'dash-year');
+  var curSel   = document.getElementById(isIncome ? 'inc-dash-currency' : 'dash-currency');
+  var yearLabel = yearSel ? (yearSel.value === 'all' ? 'All Years' : yearSel.value) : '';
+  var curLabel  = curSel  ? (curSel.value  === 'all' ? 'All Currencies' : curSel.value)  : '';
+  var title = (isIncome ? 'Income Dashboard' : 'Expense Dashboard') + ' — ' + yearLabel + ' · ' + curLabel;
+  var now = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+
+  // Capture all chart canvases as images
+  var canvases = contentEl.querySelectorAll('canvas');
+  var canvasImages = [];
+  canvases.forEach(function(c) {
+    try { canvasImages.push({id:c.id, src:c.toDataURL('image/png')}); } catch(e){}
+  });
+
+  var printWin = window.open('','_blank','width=900,height=700');
+  if (!printWin) { showToast('Please allow popups to print'); return; }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+    '<title>'+title+'</title>' +
+    '<style>' +
+    'body{font-family:Georgia,serif;margin:0;padding:24px 32px;color:#1a1410;background:white;}' +
+    'h1{font-size:1.4rem;font-weight:900;margin:0 0 4px;color:#1a1410;}' +
+    '.sub{font-family:monospace;font-size:0.78rem;color:#6b5e50;margin-bottom:6px;}' +
+    '.meta{font-family:monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #c8962e;}' +
+    '.charts{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px;}' +
+    '.chart-box{border:1px solid #e0dbd4;border-radius:6px;padding:14px;break-inside:avoid;}' +
+    '.chart-box h3{font-family:monospace;font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;color:#6b5e50;margin:0 0 10px;}' +
+    '.chart-box img{width:100%;height:auto;display:block;}' +
+    '.stat-cards{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;}' +
+    '.stat-card{border:1px solid #e0dbd4;border-radius:6px;padding:10px 16px;min-width:120px;}' +
+    '.stat-label{font-family:monospace;font-size:0.62rem;letter-spacing:1px;text-transform:uppercase;color:#9e8e7e;}' +
+    '.stat-value{font-size:1.3rem;font-weight:900;color:#1a1410;margin:2px 0;}' +
+    '.footer{margin-top:24px;padding-top:12px;border-top:1px solid #e0dbd4;font-family:monospace;font-size:0.65rem;color:#9e8e7e;text-align:center;}' +
+    '@media print{body{padding:12px;}@page{margin:15mm;}}' +
+    '</style></head><body>';
+
+  // Header
+  html += '<h1>'+title+'</h1>';
+  html += '<div class="sub">'+userName+'</div>';
+  html += '<div class="meta">Printed on '+now+' &nbsp;·&nbsp; My Expense Ledger</div>';
+
+  // Stat cards from DOM
+  var statsRow = document.getElementById(isIncome ? 'inc-stats-row' : 'stats-row');
+  if (statsRow) {
+    html += '<div class="stat-cards">';
+    statsRow.querySelectorAll('.stat-card').forEach(function(card) {
+      html += '<div class="stat-card">';
+      var lbl = card.querySelector('.stat-label'); if(lbl) html += '<div class="stat-label">'+lbl.textContent+'</div>';
+      var val = card.querySelector('.stat-value'); if(val) html += '<div class="stat-value">'+val.textContent+'</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Charts grid
+  html += '<div class="charts">';
+  canvasImages.forEach(function(ci) {
+    // Find chart title from parent h3
+    var canvas = document.getElementById(ci.id);
+    var chartTitle = '';
+    if (canvas) {
+      var card = canvas.closest ? canvas.closest('.chart-card') : null;
+      if (card) { var h3 = card.querySelector('h3'); if(h3) chartTitle = h3.textContent.trim(); }
+    }
+    html += '<div class="chart-box">';
+    if (chartTitle) html += '<h3>'+chartTitle+'</h3>';
+    html += '<img src="'+ci.src+'" alt="'+chartTitle+'">';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="footer">My Expense Ledger &nbsp;·&nbsp; '+userName+' &nbsp;·&nbsp; Confidential</div>';
+  html += '</body></html>';
+
+  printWin.document.write(html);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(function(){ printWin.print(); }, 800);
+}
+
 function renderDashboard(){
   var data = loadData();
   if(!data.length){
@@ -3693,8 +3789,54 @@ function renderDashboard(){
   yrSel.innerHTML = '<option value="all">All Years</option>' +
     years.map(function(y){return '<option value="'+y+'"'+(curYr===y?' selected':'')+'>'+y+'</option>';}).join('');
 
-  var year     = document.getElementById('dash-year').value;
+  // Detect all currencies present in actual data
+  var dataCurrencies = [];
+  data.forEach(function(i){
+    if (i.currency && dataCurrencies.indexOf(i.currency) === -1) dataCurrencies.push(i.currency);
+  });
+  dataCurrencies.sort();
+
+  // Helper — rebuild a currency select from actual data currencies
+  function rebuildCurSel(id, includeAll, defaultFirst) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var cur = el.value;
+    var html = includeAll ? '<option value="all">All Currencies</option>' : '';
+    dataCurrencies.forEach(function(c){
+      html += '<option value="'+c+'">'+ c +' '+(SYMS[c]||'')+'</option>';
+    });
+    el.innerHTML = html;
+    // Restore previous selection if still valid, else pick first available
+    if (cur && el.querySelector('option[value="'+cur+'"]')) el.value = cur;
+    else if (defaultFirst && dataCurrencies.length) el.value = dataCurrencies[0];
+    else if (includeAll) el.value = 'all';
+  }
+
+  // Rebuild all dashboard currency dropdowns from actual data
+  rebuildCurSel('dash-currency',    true,  false);
+  rebuildCurSel('monthly-currency', false, true);
+  rebuildCurSel('cat-dash-currency',true,  false);
+  rebuildCurSel('yearly-currency',  false, true);
+  rebuildCurSel('heatmap-currency', false, true);
+
   var currency = document.getElementById('dash-currency').value;
+
+  // Sync all sub-selectors to master currency
+  // If master is a specific currency, set all sub-selectors to match and hide them
+  var subSelIds = ['monthly-currency','cat-dash-currency','yearly-currency','heatmap-currency'];
+  subSelIds.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (currency !== 'all') {
+      // Set to master value if it exists, else first option
+      if (el.querySelector('option[value="'+currency+'"]')) el.value = currency;
+      else if (el.options.length) el.value = el.options[0].value;
+      // Hide individual selector — master controls it
+      el.style.display = 'none';
+    } else {
+      el.style.display = '';
+    }
+  });
 
   var filtered = data.filter(function(i){return i.amount>0;});
   if(year!=='all')     filtered = filtered.filter(function(i){return i.date.indexOf(year)===0;});
@@ -3720,18 +3862,23 @@ function renderDashboard(){
 
 
 function renderStats(data){
-  var byCur={};data.forEach(function(i){byCur[i.currency]=(byCur[i.currency]||0)+i.amount;});
+  var byCur={};
+  data.forEach(function(i){ byCur[i.currency]=(byCur[i.currency]||0)+i.amount; });
   var items=[
-    {label:'Total Entries',value:data.length,sub:'transactions',cls:'total',sym:'',isCur:false},
-    {label:'Euro Spent',value:byCur['EUR']||0,sub:'EUR',cls:'euro',sym:'€',isCur:true},
-    {label:'Naira Spent',value:byCur['NGN']||0,sub:'NGN',cls:'naira',sym:'₦',isCur:true},
-    {label:'Dollar Spent',value:byCur['USD']||0,sub:'USD',cls:'dollar',sym:'$',isCur:true},
-    {label:'Pound Spent',value:byCur['GBP']||0,sub:'GBP',cls:'pound',sym:'£',isCur:true}
+    {label:'Total Entries',value:data.length,sub:'transactions',cls:'total',sym:'',isCur:false}
   ];
-  // Only show currencies that have data (hide zero ones except Total)
-  var visItems = items.filter(function(s){ return !s.isCur || s.value > 0; });
-  document.getElementById('stats-row').innerHTML=visItems.map(function(s){
-    return '<div class="stat-card '+s.cls+'"><div class="stat-label">'+s.label+'</div><div class="stat-value">'+(s.isCur?s.sym+fmtNum(s.value):s.value)+'</div><div class="stat-sub">'+s.sub+'</div></div>';
+  // Add a card for every currency that has data — fully dynamic
+  Object.keys(byCur).sort().forEach(function(c){
+    if (byCur[c] > 0) {
+      items.push({label:'Total '+c,value:byCur[c],sub:c,cls:'stat-cur-'+c.toLowerCase(),sym:SYMS[c]||c,isCur:true});
+    }
+  });
+  document.getElementById('stats-row').innerHTML=items.map(function(s){
+    return '<div class="stat-card '+s.cls+'">'+
+      '<div class="stat-label">'+s.label+'</div>'+
+      '<div class="stat-value">'+(s.isCur ? s.sym+fmtNum(s.value) : s.value)+'</div>'+
+      '<div class="stat-sub">'+s.sub+'</div>'+
+      '</div>';
   }).join('');
 }
 function renderCategoryBars(data){
@@ -4300,11 +4447,12 @@ function removeMismatchedItems() {
     return item.date.substring(0,7) === expectedKey;
   });
   var removed = before - pendingItems.length;
-  // Update counts
+  // Update counts dynamically
+  var psByCur2 = {};
+  pendingItems.forEach(function(i){ psByCur2[i.currency] = (psByCur2[i.currency]||0) + 1; });
   document.getElementById('ps-count').textContent = pendingItems.length;
-  document.getElementById('ps-eur').textContent = pendingItems.filter(function(i){return i.currency==='EUR';}).length;
-  document.getElementById('ps-ngn').textContent = pendingItems.filter(function(i){return i.currency==='NGN';}).length;
-  document.getElementById('ps-usd').textContent = pendingItems.filter(function(i){return i.currency==='USD';}).length;
+  var psByCurEl2 = document.getElementById('ps-by-currency');
+  if (psByCurEl2) psByCurEl2.innerHTML = Object.keys(psByCur2).sort().map(function(c){ return c+': <strong>'+psByCur2[c]+'</strong>'; }).join(' &nbsp; ');
   showToast(removed + ' mismatched item'+(removed===1?'':'s')+' removed');
   validateParsedDates();
 }
@@ -5172,11 +5320,14 @@ function renderManagePanel(){
     });
   }
 
-  // Update currency filter dropdown
+  // Update currency filter dropdown — dynamic from actual data
   var curSel = document.getElementById('manage-cur-filter');
-  if(curSel && curSel.options.length < 5){
-    curSel.innerHTML = '<option value="all">All Currencies</option><option value="EUR">EUR</option><option value="NGN">NGN</option><option value="USD">USD</option><option value="GBP">GBP</option>';
-    curSel.value = curFilter;
+  if (curSel) {
+    var manageDataCurs = [];
+    data.forEach(function(i){ if(i.currency && manageDataCurs.indexOf(i.currency)===-1) manageDataCurs.push(i.currency); });
+    manageDataCurs.sort();
+    curSel.innerHTML = '<option value="all">All Currencies</option>' +
+      manageDataCurs.map(function(c){ return '<option value="'+c+'"'+(curFilter===c?' selected':'')+'>'+c+'</option>'; }).join('');
   }
 
   var countEl = document.getElementById('manage-filter-count');
@@ -5486,8 +5637,9 @@ function switchTab(name,btn){
   document.querySelectorAll('nav.tabs button').forEach(function(b){b.classList.remove('active');});
   document.getElementById('panel-'+name).classList.add('active');
   if(btn)btn.classList.add('active');
+  // Save active tab so refresh restores it
+  localStorage.setItem('expense_active_tab', name);
   if(name==='categorize'){
-    // Only reset desc search; keep period/category filter as user set them
     catDescFilter = '';
     var dsi = document.getElementById('cat-desc-search'); if (dsi) dsi.value = '';
     var dm = document.getElementById('cat-desc-match'); if (dm) dm.textContent = '';
@@ -5498,6 +5650,12 @@ function switchTab(name,btn){
   if(name==='daily'){populateDailyFilters();renderDailyView();}
   if(name==='manage'){renderManagePanel();renderCurrencyManager();}
   if(name==='budget')renderBudget();
+  // Also mark the correct nav button as active (when called with btn=null)
+  if (!btn) {
+    document.querySelectorAll('nav.tabs button').forEach(function(b){
+      if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf("'"+name+"'") !== -1) b.classList.add('active');
+    });
+  }
 }
 
 function updateHeader(){
@@ -5539,6 +5697,15 @@ function populateFilters(){
   });
   document.getElementById('led-cat').innerHTML='<option value="all">All Categories</option>'+cats.map(function(c){return'<option value="'+c+'">'+c+'</option>';}).join('');
   document.getElementById('led-month').innerHTML='<option value="all">All Months</option>'+MONTHS.map(function(m,i){return'<option value="'+pad(i+1)+'">'+m+'</option>';}).join('');
+  // Dynamic currency filter — only show currencies that exist in data
+  var ledCurSel = document.getElementById('led-currency');
+  if (ledCurSel) {
+    var ledCurs = []; data.forEach(function(i){ if(i.currency && ledCurs.indexOf(i.currency)===-1) ledCurs.push(i.currency); }); ledCurs.sort();
+    var savedCur = ledCurSel.value;
+    ledCurSel.innerHTML = '<option value="all">All Currencies</option>' + ledCurs.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+    if (savedCur && ledCurSel.querySelector('option[value="'+savedCur+'"]')) ledCurSel.value = savedCur;
+    else ledCurSel.value = 'all';
+  }
 }
 
 
@@ -7298,11 +7465,19 @@ function switchIncomeTab(name, btn) {
   var panel = document.getElementById('panel-' + name);
   if (panel) panel.classList.add('active');
   if (btn)   btn.classList.add('active');
+  // Save active income tab so refresh restores it
+  localStorage.setItem('expense_active_inc_tab', name);
   if (name === 'inc-categorize')  renderIncomeCatTable();
   if (name === 'inc-monthly')     { incPopulateDailyFilters(); renderIncomeMonthly(); }
   if (name === 'inc-dashboard')   renderIncomeDashboard();
   if (name === 'inc-ledger')      { incPopulateFilters(); renderIncomeLedger(); }
   if (name === 'inc-manage')      { renderIncomeManage(); }
+  // Also mark correct nav button active when called with btn=null
+  if (!btn) {
+    document.querySelectorAll('#income-nav button').forEach(function(b){
+      if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf("'"+name+"'") !== -1) b.classList.add('active');
+    });
+  }
 }
 
 // ── Income month picker ──
@@ -8228,6 +8403,45 @@ function renderIncomeDashboard() {
   var savedYr = yrSel.value;
   yrSel.innerHTML = '<option value="all">All Years</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
   if (savedYr) yrSel.value = savedYr;
+
+  // Detect all currencies in income data
+  var incCurrencies = [];
+  data.forEach(function(i){ if(i.currency && incCurrencies.indexOf(i.currency)===-1) incCurrencies.push(i.currency); });
+  incCurrencies.sort();
+
+  // Rebuild all income dashboard currency selects dynamically
+  function rebuildIncCurSel(id, includeAll, defaultFirst) {
+    var el = document.getElementById(id); if (!el) return;
+    var cur = el.value;
+    var html = includeAll ? '<option value="all">All Currencies</option>' : '';
+    incCurrencies.forEach(function(c){ html += '<option value="'+c+'">'+c+' '+(SYMS[c]||'')+'</option>'; });
+    el.innerHTML = html;
+    if (cur && el.querySelector('option[value="'+cur+'"]')) el.value = cur;
+    else if (defaultFirst && incCurrencies.length) el.value = incCurrencies[0];
+    else if (includeAll) el.value = 'all';
+  }
+  rebuildIncCurSel('inc-dash-currency',      true,  false);
+  rebuildIncCurSel('inc-monthly-currency',   false, true);
+  rebuildIncCurSel('inc-cat-dash-currency',  true,  false);
+  rebuildIncCurSel('inc-yearly-currency',    false, true);
+  rebuildIncCurSel('inc-heatmap-currency',   false, true);
+  rebuildIncCurSel('inc-led-currency',       true,  false);
+
+  var incCur = document.getElementById('inc-dash-currency').value;
+
+  // Sync all income sub-selectors to master and hide when specific currency selected
+  var incSubSelIds = ['inc-monthly-currency','inc-cat-dash-currency','inc-yearly-currency','inc-heatmap-currency'];
+  incSubSelIds.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (incCur !== 'all') {
+      if (el.querySelector('option[value="'+incCur+'"]')) el.value = incCur;
+      else if (el.options.length) el.value = el.options[0].value;
+      el.style.display = 'none';
+    } else {
+      el.style.display = '';
+    }
+  });
 
   var year = yrSel.value;
   var cur  = document.getElementById('inc-dash-currency').value;
@@ -9391,6 +9605,16 @@ function _resumeSession(uid, name, phone) {
   _appMode = savedMode;
   applyMode();
   adjustMainPadding();
+  // Restore the tab the user was on before refresh
+  setTimeout(function() {
+    if (_appMode === 'income') {
+      var savedIncTab = localStorage.getItem('expense_active_inc_tab');
+      if (savedIncTab) switchIncomeTab(savedIncTab, null);
+    } else {
+      var savedTab = localStorage.getItem('expense_active_tab');
+      if (savedTab) switchTab(savedTab, null);
+    }
+  }, 50);
   setTimeout(resetInactivityTimer, 500);
   setTimeout(checkBackupReminder, 3000);
   // Do NOT call showModeOverlay here — keep the user on whatever tab they were on
@@ -10100,6 +10324,8 @@ function logOut() {
   localStorage.removeItem('last_active');
   localStorage.removeItem('keep_login_pref');
   localStorage.removeItem('expense_pin_hash_local');
+  localStorage.removeItem('expense_active_tab');
+  localStorage.removeItem('expense_active_inc_tab');
   sessionStorage.removeItem('app_session');
   // Clear full verify fields so previous user's data is never visible
   var fvU = document.getElementById('fv-username'); if(fvU) fvU.value = '';
