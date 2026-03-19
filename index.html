@@ -3881,23 +3881,36 @@ function printDashboard(mode) {
     } catch(e){}
   }
 
-  // 4. Heatmap (DOM — re-rendered with table layout and inlined colors)
+  // 4+5. Heatmap + YoY — one section per currency
   var hmPal = isIncome ? ['#eafaf1','#a9dfbf','#52be80','#1e8449','#0b5329']
                        : ['#fdf6e3','#f5d98b','#e8a825','#c8962e','#7a5a10'];
-  html += '<div class="chart-box"><h3>'+(isIncome?'Income Heatmap':'Spending Heatmap')+' ('+hmCur+')</h3>';
-  html += buildHeatmapHtml(rawData, hmCur, hmPal);
-  html += '</div>';
 
-  // 5. Year-over-Year Growth
-  if (effCur !== 'all' || hmCur) {
-    var yoyCur = effCur !== 'all' ? effCur : hmCur;
-    var yoyHtml = buildYoYHtml(rawData, yoyCur);
+  // Determine which currencies to render
+  var printCurs = [];
+  if (effCur !== 'all') {
+    printCurs = [effCur];
+  } else {
+    // All currencies that have data
+    rawData.forEach(function(i){
+      if (i.currency && printCurs.indexOf(i.currency) === -1) printCurs.push(i.currency);
+    });
+    printCurs.sort();
+  }
+
+  printCurs.forEach(function(c) {
+    var cData = rawData.filter(function(i){ return i.amount > 0 && i.currency === c; });
+    if (!cData.length) return;
+    var sym = SYMS[c] || c;
+    html += '<div class="chart-box"><h3>'+(isIncome?'Income Heatmap':'Spending Heatmap')+' — '+c+' '+sym+'</h3>';
+    html += buildHeatmapHtml(rawData, c, hmPal);
+    html += '</div>';
+    var yoyHtml = buildYoYHtml(rawData, c);
     if (yoyHtml) {
-      html += '<div class="chart-box"><h3>Year-over-Year Growth ('+yoyCur+')</h3>';
+      html += '<div class="chart-box"><h3>Year-over-Year Growth — '+c+' '+sym+'</h3>';
       html += yoyHtml;
       html += '</div>';
     }
-  }
+  });
 
   html += '<div class="footer">My Expense Ledger &nbsp;·&nbsp; '+userName+' &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; '+now+'</div>';
   html += '</body></html>';
@@ -3987,11 +4000,38 @@ function renderDashboard(){
   var yearlyCur = currency !== 'all' ? currency : (dataCurs[0] || 'NGN');
   renderYearlyChart(yearlyBase.filter(function(i){return i.currency===yearlyCur;}), yearlyCur);
 
-  // Heatmap — use full unfiltered data (heatmap always shows full year grid)
+  // Heatmap + YoY — when 'all', show one block per currency stacked
   var hmBase = allPositive.slice();
-  if(currency !== 'all') hmBase = hmBase.filter(function(i){return i.currency===currency;});
-  var hmCur = currency !== 'all' ? currency : (dataCurs[0] || 'NGN');
-  renderHeatmap(hmBase, hmCur);
+  var yoyContainer = document.getElementById('yoy-growth-container');
+  if (yoyContainer) yoyContainer.innerHTML = '';
+
+  if (currency === 'all' && dataCurs.length) {
+    // Show heatmap + YoY for every currency
+    var hContainer = document.getElementById('heatmap-container');
+    if (hContainer) hContainer.innerHTML = '';
+    dataCurs.forEach(function(c) {
+      var cData = hmBase.filter(function(i){return i.currency===c;});
+      if (!cData.length) return;
+      // Section header per currency
+      var hdr = document.createElement('div');
+      hdr.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;';
+      hdr.textContent = c + ' ' + (SYMS[c]||'');
+      if (hContainer) hContainer.appendChild(hdr);
+      renderHeatmap(cData, c);
+      // YoY per currency
+      var cByYM = {};
+      cData.forEach(function(i){
+        var y=i.date.substring(0,4); var m=parseInt(i.date.substring(5,7))-1;
+        if(!cByYM[y]) cByYM[y]=new Array(12).fill(0);
+        cByYM[y][m]+=i.amount;
+      });
+      var cYears = Object.keys(cByYM).sort();
+      if (yoyContainer) renderYoYStrip(yoyContainer, cByYM, cYears, SYMS[c]||c, c);
+    });
+  } else {
+    var hmCur = currency !== 'all' ? currency : (dataCurs[0] || 'NGN');
+    renderHeatmap(hmBase.filter(function(i){return i.currency===hmCur;}), hmCur);
+  }
 }
 
 
@@ -4354,23 +4394,26 @@ function renderHeatmap(data, cur){
   hContainer.appendChild(legend);
 
   // ── YoY % Growth cards ──
+  yoyContainer.innerHTML = '';
   renderYoYStrip(yoyContainer, byYM, years, sym, cur);
 }
 
 // ── Shared YoY strip renderer (used by both expenses and income heatmaps) ──
 function renderYoYStrip(container, byYM, years, sym, cur) {
   if (!container) return;
-  container.innerHTML = '';
   if (!years.length) return;
 
   // Calculate year totals
   var yearTotals = {};
   years.forEach(function(y){ yearTotals[y] = byYM[y].reduce(function(s,v){return s+v;},0); });
 
+  var section = document.createElement('div');
+  section.style.cssText = 'margin-bottom:16px;';
+
   var growthTitle = document.createElement('div');
-  growthTitle.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;';
-  growthTitle.textContent = 'Year-over-year growth · '+cur;
-  container.appendChild(growthTitle);
+  growthTitle.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;';
+  growthTitle.textContent = 'Year-over-year growth · '+(sym||cur);
+  section.appendChild(growthTitle);
 
   var strip = document.createElement('div');
   strip.className = 'yoy-strip';
@@ -4395,7 +4438,8 @@ function renderYoYStrip(container, byYM, years, sym, cur) {
     block.innerHTML = '<div class="yoy-year-lbl">'+y+'</div><div class="yoy-total">'+sym+fmtNum(total)+'</div>'+pctHtml;
     strip.appendChild(block);
   });
-  container.appendChild(strip);
+  section.appendChild(strip);
+  container.appendChild(section); // append — never clears, so multiple currencies stack
 }
 
 
@@ -8585,12 +8629,37 @@ function renderIncomeDashboard() {
   if(incCharts["inc-chart-yearly"]) incCharts["inc-chart-yearly"].destroy();
   if(yKeys.length){ var ctx2=document.getElementById("inc-chart-yearly").getContext("2d"); incCharts["inc-chart-yearly"]=new Chart(ctx2,{type:"line",data:{labels:yKeys,datasets:[{label:yCur,data:yVals,borderColor:"#4a7c59",backgroundColor:"rgba(74,124,89,0.08)",tension:0.4,fill:true,pointBackgroundColor:"#4a7c59",pointRadius:5,pointHoverRadius:7}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return(SYMS[yCur]||"")+fmtCompact(v);}},grid:{color:"rgba(0,0,0,0.04)"}},x:{grid:{display:false}}}}}); }
 
-  // Heatmap — always uses full data
-  var hmCur = cur !== "all" ? cur : (incCurs[0]||"NGN");
-  renderIncomeHeatmap(allPositive, hmCur);
+  // Heatmap + YoY — when 'all', show one block per currency stacked
+  var incYoyContainer = document.getElementById("inc-yoy-growth-container");
+  if (incYoyContainer) incYoyContainer.innerHTML = "";
+  var incHContainer = document.getElementById("inc-heatmap-container");
+
+  if (cur === "all" && incCurs.length) {
+    if (incHContainer) incHContainer.innerHTML = "";
+    incCurs.forEach(function(c) {
+      var cData = allPositive.filter(function(i){return i.currency===c;});
+      if (!cData.length) return;
+      var hdr = document.createElement("div");
+      hdr.style.cssText = "font-family:DM Mono,monospace;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;";
+      hdr.textContent = c + " " + (SYMS[c]||"");
+      if (incHContainer) incHContainer.appendChild(hdr);
+      renderIncomeHeatmap(cData, c, true); // true = skip internal YoY
+      var cByYM = {};
+      cData.forEach(function(i){
+        var y=i.date.substring(0,4); var m=parseInt(i.date.substring(5,7))-1;
+        if(!cByYM[y]) cByYM[y]=new Array(12).fill(0);
+        cByYM[y][m]+=i.amount;
+      });
+      var cYears = Object.keys(cByYM).sort();
+      if (incYoyContainer) renderYoYStrip(incYoyContainer, cByYM, cYears, SYMS[c]||c, c);
+    });
+  } else {
+    var hmCur = cur !== "all" ? cur : (incCurs[0]||"NGN");
+    renderIncomeHeatmap(allPositive, hmCur, false);
+  }
 }
 
-function renderIncomeHeatmap(data, cur) {
+function renderIncomeHeatmap(data, cur, skipYoY) {
   var sym = SYMS[cur]||'';
   var filtered = data.filter(function(i){ return i.currency===cur; });
   var byYM = {};
@@ -8708,9 +8777,14 @@ function renderIncomeHeatmap(data, cur) {
   leg.innerHTML='<span>Low</span>'; pal.forEach(function(c){ leg.innerHTML+='<span style="display:inline-block;width:20px;height:10px;border-radius:2px;background:'+c+';"></span>'; }); leg.innerHTML+='<span>High</span>';
   hc.appendChild(leg);
 
-  // ── YoY growth for income ──
-  var incYoyContainer = document.getElementById('inc-yoy-growth-container');
-  if (incYoyContainer) renderYoYStrip(incYoyContainer, byYM, years, sym, cur);
+  // ── YoY growth for income (skipped when called from multi-currency loop) ──
+  if (!skipYoY) {
+    var incYoyContainer = document.getElementById('inc-yoy-growth-container');
+    if (incYoyContainer) {
+      incYoyContainer.innerHTML = '';
+      renderYoYStrip(incYoyContainer, byYM, years, sym, cur);
+    }
+  }
 }
 
 
