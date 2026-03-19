@@ -928,7 +928,9 @@ nav.tabs.header-hidden button {
     padding: 1px 4px !important;
   }
 }
-
+/* Suppress browser native password reveal icon — we have our own eye button */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear { display:none !important; }
 </style>
 </head>
 <body>
@@ -1387,27 +1389,8 @@ nav.tabs.header-hidden button {
   <!-- ── 3a. EDIT FULL NAME ── -->
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold);">
     <label>&#9999; Your Full Name (used in PDF reports)</label>
-    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">This name appears at the top of your printed reports. Your title is optional and is only for reports — it is not part of your login credentials.</p>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">This name appears at the top of your printed reports.</p>
     <div id="current-fullname-display" style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--gold);margin-bottom:10px;padding:8px 12px;background:#fffbf0;border:1px solid var(--gold);border-radius:3px;"></div>
-    <!-- Title selector -->
-    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-      <select id="title-select" onchange="onTitleSelectChange()" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.85rem;background:white;color:var(--ink);outline:none;min-width:130px;">
-        <option value="">No title</option>
-        <option value="Mr">Mr</option>
-        <option value="Mrs">Mrs</option>
-        <option value="Miss">Miss</option>
-        <option value="Ms">Ms</option>
-        <option value="Dr">Dr</option>
-        <option value="Prof">Prof</option>
-        <option value="Eng">Eng</option>
-        <option value="Barr">Barr</option>
-        <option value="Chief">Chief</option>
-        <option value="Pastor">Pastor</option>
-        <option value="Rev">Rev</option>
-        <option value="__custom__">Other (type below)...</option>
-      </select>
-      <input id="title-custom" type="text" placeholder="Type custom title..." style="display:none;flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.85rem;background:white;color:var(--ink);outline:none;">
-    </div>
     <div style="display:flex;gap:8px;">
       <input id="change-fullname-input" type="text" placeholder="e.g. John David Adewumi..." autocomplete="name" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-family:'DM Sans',sans-serif;font-size:0.9rem;background:white;color:var(--ink);outline:none;">
       <button class="btn btn-primary" style="padding:10px 18px;font-size:0.8rem;" onclick="saveFullName()">Save</button>
@@ -2055,7 +2038,7 @@ nav.tabs.header-hidden button {
 <div id="privacy-overlay" style="display:none;position:fixed;inset:0;z-index:99997;background:#1a1410;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
   <div style="max-width:500px;width:100%;background:var(--paper);border:2px solid var(--gold);border-radius:8px;padding:28px;">
     <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--ink);margin-bottom:4px;">Privacy Policy &amp; Terms</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:16px;">MY EXPENSE LEDGER &middot; SEPTEMBER 2026 — Updated</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:16px;">MY EXPENSE LEDGER &middot; MARCH 2026 — Updated v1.5</div>
     <div style="background:#fffbf0;border:1px solid var(--gold);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.7;">
       &#9888; This policy has been updated. Please read and re-agree to continue.
     </div>
@@ -2066,8 +2049,8 @@ nav.tabs.header-hidden button {
       <p style="margin-bottom:12px;">Your data is stored in Google Firebase Firestore, protected by security rules ensuring only you can read or write your data. We do not sell, share, or transfer your data to any third party. Data is separated by expenses and income modules and stored per monthly period.</p>
       <p style="font-weight:700;margin-bottom:6px;">3. Authentication &amp; PIN Security</p>
       <p style="margin-bottom:12px;">You are identified by your phone number hash and PIN. Your PIN is hashed before storage using a one-way algorithm and is never stored in plain text — not even the app developer can read it. The app uses a PIN pad for daily login. For added security, a periodic full identity check (username/phone + PIN) is triggered randomly every 1 to 2 weeks.</p>
-      <p style="font-weight:700;margin-bottom:6px;">4. Session Security &amp; Inactivity Lock</p>
-      <p style="margin-bottom:12px;">The app automatically locks to the PIN screen after 10 minutes of inactivity. If you return within 10 minutes the app resumes without requiring a PIN. Logging out clears all local session data immediately. The app never stores your PIN in a readable form on your device.</p>
+      <p style="font-weight:700;margin-bottom:6px;">4. Session Security &amp; Auto-Lock</p>
+      <p style="margin-bottom:12px;">The app automatically locks to the PIN screen after 10 minutes of inactivity — no clicking, tapping, or typing for 10 minutes. Moving the mouse does not count as activity. The lock also triggers when you minimize the browser, switch to another tab, or your phone screen turns off — when you return after 10+ minutes the PIN screen is shown. Logging out clears all local session data immediately. A page refresh while the app is locked shows the PIN screen, not the app content.</p>
       <p style="font-weight:700;margin-bottom:6px;">5. Usage Analytics</p>
       <p style="margin-bottom:12px;">This app uses Google Analytics to collect anonymous usage statistics such as how many people open the app, which country they are in, and what device they use. No personal financial data is ever sent to Google Analytics. No names, phone numbers, or transaction details are tracked. Analytics data is used only by the app developer to understand app usage and improve the experience.</p>
       <p style="font-weight:700;margin-bottom:6px;">6. No Advertising</p>
@@ -3238,15 +3221,33 @@ function updateMonthFilterPill() {
   // Save current user selection before rebuild
   var savedYrVal = yrSel.value;
   var savedMoVal = moSel.value;
+
+  // Build year list: from earliest year with data to current year + 2
+  // This ensures selected future years don't disappear from the dropdown
+  var minDataYear = years2.length ? parseInt(years2[years2.length - 1]) : curYear2; // years2 is sorted desc
+  var maxYear = Math.max(curYear2 + 2, savedYrVal ? parseInt(savedYrVal) : curYear2);
+  var minYear = years2.length ? parseInt(years2[years2.length - 1]) : curYear2;
+  // years2 sorted descending, so last = oldest
+  var allYears = [];
+  for (var y = maxYear; y >= minYear; y--) allYears.push(String(y));
+
   // Rebuild year options
-  yrSel.innerHTML = years2.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  yrSel.innerHTML = allYears.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
   // Rebuild month if empty
   if (moSel.options.length < 2) {
     moSel.innerHTML = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m+'</option>'; }).join('');
   }
-  // Restore saved selection only - no auto-default
-  if (savedYrVal && years2.indexOf(savedYrVal) !== -1) yrSel.value = savedYrVal;
-  if (savedMoVal) moSel.value = savedMoVal;
+  // Restore saved selection — fall back to current month/year if nothing saved
+  if (savedYrVal) {
+    yrSel.value = savedYrVal;
+  } else {
+    yrSel.value = String(curYear2);
+  }
+  if (savedMoVal) {
+    moSel.value = savedMoVal;
+  } else {
+    moSel.value = pad(curMonth2);
+  }
 
   var selYear  = yrSel.value;
   var selMonth = moSel.value;
@@ -6156,7 +6157,7 @@ function checkInactivity() {
   if (Date.now() - lastActive >= INACTIVE_MS) lockApp();
 }
 
-// Record user activity
+// Record user activity — only real interactions reset the clock
 ['click','keydown','touchstart','touchend','pointerdown'].forEach(function(evt) {
   document.addEventListener(evt, function() {
     if (_userId && localStorage.getItem('last_active')) {
@@ -6165,32 +6166,13 @@ function checkInactivity() {
   }, { passive: true });
 });
 
-// ── Web Worker ticker — cannot be throttled by browser, even when page is idle ──
-// The worker sends a tick every 15 seconds; the main thread checks inactivity on each tick.
-(function startInactivityWorker() {
-  var workerCode = [
-    'var _tick = setInterval(function() { postMessage("tick"); }, 15000);',
-    'self.onmessage = function(e) { if (e.data === "stop") { clearInterval(_tick); self.close(); } };'
-  ].join('\n');
-  try {
-    var blob = new Blob([workerCode], { type: 'application/javascript' });
-    var worker = new Worker(URL.createObjectURL(blob));
-    worker.onmessage = function() {
-      if (_userId && localStorage.getItem('last_active')) checkInactivity();
-    };
-    worker.onerror = function() {
-      // Web Worker failed — fall back to plain interval
-      setInterval(function() {
-        if (_userId && localStorage.getItem('last_active')) checkInactivity();
-      }, 15000);
-    };
-  } catch(e) {
-    // Fallback for browsers that block blob workers
-    setInterval(function() {
-      if (_userId && localStorage.getItem('last_active')) checkInactivity();
-    }, 15000);
-  }
-})();
+// ── 1-second ticker — this is what reliably drives the lock ──
+// Runs every second so it fires promptly at exactly 10 minutes.
+// Browser throttling only affects tabs in background — but visibilitychange
+// handles that case by checking elapsed time on return.
+setInterval(function() {
+  if (_userId && localStorage.getItem('last_active')) checkInactivity();
+}, 1000);
 
 
 // ════════════════════════════════
@@ -7302,59 +7284,20 @@ function saveFullName() {
   var incInp = document.getElementById('inc-change-fullname-input');
   var newName = (expInp && expInp.value.trim()) || (incInp && incInp.value.trim());
   if (!newName) { showToast('Please enter your full name'); return; }
-  // Get selected title
-  var titleSel = document.getElementById('title-select');
-  var titleCustom = document.getElementById('title-custom');
-  var title = '';
-  if (titleSel) {
-    if (titleSel.value === '__custom__') {
-      title = titleCustom ? titleCustom.value.trim() : '';
-    } else {
-      title = titleSel.value;
-    }
-  }
   localStorage.setItem(FULL_NAME_KEY, newName);
-  localStorage.setItem('expense_user_title', title);
-  // Save to Firebase
+  localStorage.removeItem('expense_user_title'); // clear any old title
   if (_db && _userPhone) {
-    _db.collection('user_registry').doc(_userPhone).update({ full_name: newName, title: title })
+    _db.collection('user_registry').doc(_userPhone).update({ full_name: newName, title: '' })
       .catch(function(){});
   }
   if (expInp) expInp.value = '';
   if (incInp) incInp.value = '';
   updateFullNameDisplay();
-  var displayName = title ? title + ' ' + newName : newName;
-  showToast('Full name saved: "' + displayName + '" — will appear on reports');
+  showToast('Full name saved: "' + newName + '"');
 }
 
-function onTitleSelectChange() {
-  var sel = document.getElementById('title-select');
-  var customInp = document.getElementById('title-custom');
-  if (!sel || !customInp) return;
-  if (sel.value === '__custom__') {
-    customInp.style.display = 'block';
-    customInp.focus();
-  } else {
-    customInp.style.display = 'none';
-    customInp.value = '';
-  }
-}
-
-function populateTitleSelector() {
-  var saved = localStorage.getItem('expense_user_title') || '';
-  var sel = document.getElementById('title-select');
-  var customInp = document.getElementById('title-custom');
-  if (!sel) return;
-  var opts = ['','Mr','Mrs','Miss','Ms','Dr','Prof','Eng','Barr','Chief','Pastor','Rev'];
-  if (saved && opts.indexOf(saved) === -1) {
-    // It's a custom title
-    sel.value = '__custom__';
-    if (customInp) { customInp.style.display = 'block'; customInp.value = saved; }
-  } else {
-    sel.value = saved;
-    if (customInp) customInp.style.display = 'none';
-  }
-}
+function onTitleSelectChange() {} // no-op — title removed
+function populateTitleSelector() {} // no-op — title removed
 
 // ════════════════════════════════
 //  CURRENCY MANAGER
@@ -7447,18 +7390,13 @@ function removeCurrency(code) {
 
 function updateFullNameDisplay() {
   var name = localStorage.getItem(FULL_NAME_KEY) || '';
-  var title = localStorage.getItem('expense_user_title') || '';
   var expEl = document.getElementById('current-fullname-display');
   var incEl = document.getElementById('inc-current-fullname-display');
-  var displayName = title ? title + ' ' + name : name;
-  var display = name ? ('Current: ' + displayName) : 'Not set — enter your full name above';
+  var display = name ? ('Current: ' + name) : 'Not set — enter your full name above';
   if (expEl) expEl.textContent = display;
   if (incEl) incEl.textContent = display;
-  // Also update username display
   var unEl = document.getElementById('current-username-display');
   if (unEl) unEl.textContent = _userName ? 'Current username: ' + _userName : 'No username set';
-  // Pre-fill title selector with saved value
-  populateTitleSelector();
 }
 
 function changeUsername() {
@@ -9691,20 +9629,15 @@ function showUpdateBanner() {
 document.addEventListener('visibilitychange', function() {
   if (!_userId) return;
   if (document.visibilityState === 'visible') {
+    // Returned to app — check if 10 minutes have passed since last interaction
     checkInactivity();
     if (_db && !window._trashDeletePending) fetchTrashFromFirebase();
-  } else {
-    // Tab hidden — snapshot last_active so elapsed is accurate on return
-    if (localStorage.getItem('last_active')) {
-      localStorage.setItem('last_active', String(Date.now()));
-    }
   }
+  // When hiding: do NOT update last_active — we want to measure from last real interaction
 });
 
 window.addEventListener('blur', function() {
-  if (_userId && localStorage.getItem('last_active')) {
-    localStorage.setItem('last_active', String(Date.now()));
-  }
+  // Do NOT update last_active on blur — same reason as above
 });
 
 window.addEventListener('focus', function() {
@@ -9737,9 +9670,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 // ── Get full name for reports ──
 function getReportName() {
-  var name  = localStorage.getItem(FULL_NAME_KEY) || _userName || 'Account Holder';
-  var title = localStorage.getItem('expense_user_title') || '';
-  return title ? title + ' ' + name : name;
+  return localStorage.getItem(FULL_NAME_KEY) || _userName || 'Account Holder';
 }
 
 
@@ -9967,7 +9898,7 @@ function submitFullVerify() {
     localStorage.setItem(PHONE_KEY, phone);
     localStorage.setItem('expense_pin_hash_local', pinHash);
     if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
-    if (data.title !== undefined) localStorage.setItem('expense_user_title', data.title || '');
+    localStorage.removeItem('expense_user_title'); // title removed — no longer used
     // Save last 2 digits of raw phone if user logged in with phone number
     if (looksLikePhone) {
       var rawTail = identifier.replace(/[^0-9]/g,'').slice(-2);
@@ -10553,8 +10484,10 @@ function confirmCode() {
   hidePinScreen();
   updateUserDisplay();
   startSync();
-  // Show onboarding for brand new users after a short delay
-  setTimeout(function(){ startOnboarding('expenses', false); }, 1200);
+  // Onboarding will fire from acceptPrivacy() after user agrees to privacy policy
+  // This ensures privacy is always accepted before the tour starts
+  // Mark as new version so acceptPrivacy triggers the tour
+  sessionStorage.setItem('new_app_version', '1');
 }
 
 // ── Wrong attempt tracker & password reset ──
@@ -10728,7 +10661,7 @@ function submitLogin() {
     localStorage.setItem(PHONE_KEY, _userPhone);
     // Load full name from registry if available
     if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
-    if (data.title !== undefined) localStorage.setItem('expense_user_title', data.title || '');
+    localStorage.removeItem('expense_user_title'); // title removed — no longer used
     if(errEl) errEl.textContent = '';
     localStorage.setItem('last_active', String(Date.now()));
     // Save PIN hash locally for future instant PIN-only logins
@@ -10871,7 +10804,11 @@ function logOut() {
   var dotsEl = document.getElementById('fv-pin-dots');
   if (dotsEl) dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
   showPinScreen();
-  showLoginStep();
+  // Show PIN pad only — hide all other steps to prevent cascade
+  ['pin-step-register','pin-step-code','pin-step-full-verify'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.style.display = 'none';
+  });
+  showPinPadStep();
   syncSetStatus('off');
   updateHeaderContext();
   updateUserDisplay();
@@ -10983,17 +10920,10 @@ function changePin() {
 }
 
 // ════════════════════════
-//  KEEP-ALIVE (refresh fix)
-// ════════════════════════
-setInterval(function() {
-  if (_userId) localStorage.setItem('last_active', String(Date.now()));
-}, 15000);
-
-// ════════════════════════
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-09';
-var APP_VERSION = '1.4.0'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '1.5.0'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
@@ -11180,9 +11110,17 @@ var HELP_DATA = {
   },
   'login': {
     title: '🔓 Login & Registration',
-    steps: ['First time: enter your full name and phone number.','Choose or create a username (4–10 characters).','Your access code is generated — screenshot it or write it down!','Returning user: just tap your PIN on the number pad — no username needed.','Once every 1–2 weeks a security check will ask for your username AND PIN.','Change your PIN anytime in the Manage tab → Change Access Code.'],
-    example: 'New user mk0374 registered with phone 08012345678.\nUsername suggestions: mk0374, mi0392, mk9283.\nShe chose mk0374. Access code: 847291 — she screenshotted it.',
-    tip: 'Your phone number is scrambled before storage. Nobody can read it. If you forget your code contact support.'
+    steps: [
+      'Every time you open the app you see the PIN pad — just tap your digits.',
+      'New user? Tap the SIGN UP button below the PIN pad to create your account.',
+      'Registration: enter your full name and phone number, choose a username (4–10 characters), and your access code is generated — screenshot it or write it down!',
+      'Returning user: tap your PIN digits and press ENTER, or wait for auto-submit after 6 digits.',
+      'On a laptop or tablet with a keyboard, just type your PIN digits directly — no need to click the number buttons.',
+      'Once every 1–2 weeks a Security Check will ask for your username AND PIN.',
+      'Change your PIN anytime in Manage → Change Access Code.'
+    ],
+    example: 'New user mk0374 tapped SIGN UP.\nShe entered her name and phone number.\nUsername suggestions appeared — she chose mk0374.\nAccess code: 847291 — she screenshotted it.\n\nNext day she opened the app, typed 847291 on her keyboard, pressed Enter — in instantly.',
+    tip: 'Your phone number is stored as a one-way hash — nobody can read it, not even the developer. Keep your access code safe.'
   },
   'pdf': {
     title: '📄 PDF Reports — Print & Save',
@@ -11228,16 +11166,16 @@ var HELP_DATA = {
   'biometric': {
     title: '👍 PIN Login — Fast & Secure',
     steps: [
-      'When you open the app you see a PIN pad — just tap your digits, no username needed.',
-      'Your PIN is 4 to 8 digits. The app auto-submits after 6 digits, or you can tap more.',
-      'Once in a while (every 1 to 2 weeks, randomly) the app will ask for your username AND PIN — this is a security check to make sure you still remember your credentials.',
+      'When you open the app you see a PIN pad — tap your digits or type them on a keyboard.',
+      'Your PIN is 4 to 8 digits. The app auto-submits after 6 digits, or tap the ENTER button to submit manually.',
+      'On a laptop or tablet with a keyboard: type your digits directly, press Backspace to delete, Escape to clear, Enter to submit.',
+      'Once in a while (every 1 to 2 weeks, randomly) the app will show a Security Check screen — enter your username AND PIN.',
       'If you enter the wrong PIN 3 times the app offers a reset option.',
-      'To change your PIN go to Manage → Change Access Code and enter a new number.',
-      'After changing your PIN the new one works on the PIN pad immediately.',
-      'If you forget your PIN use the Forgot your PIN? link on the login screen.'
+      'To change your PIN go to Manage → Change Access Code.',
+      'If you forget your PIN tap the Forgot your PIN? link on the login screen.'
     ],
-    example: 'User jd0292 opens the app.\nThe PIN pad appears instantly — he taps 8 4 7 2 9 1.\nThe app opens in under a second.\n\nTwo weeks later the app shows the Security Check screen.\nHe types his username jd0292 and his PIN.\nThe check passes and the normal PIN pad resumes next time.',
-    tip: 'Your PIN is stored securely as a one-way hash — nobody can read it, not even us. Write it down somewhere safe in case you forget.'
+    example: 'User jd0292 opens the app on his phone.\nThe PIN pad appears — he taps 8 4 7 2 9 1.\nThe app opens automatically.\n\nLater on his laptop he types 847291 on the keyboard and presses Enter.\nSame result — in under a second.',
+    tip: 'Your PIN is stored as a one-way hash — nobody can read it, not even us. Write it down somewhere safe.'
   },
   'scroll': {
     title: '⇧ Scroll Buttons — Quick Navigation',
@@ -11246,19 +11184,20 @@ var HELP_DATA = {
     tip: 'These buttons work on all tabs — Import, Ledger, Dashboard, Budget, and Income.'
   },
   'security': {
-    title: '🔒 Security Check — Periodic Full Verification',
+    title: '🔒 Security — Auto-Lock & Verification',
     steps: [
       'Most of the time, you log in using only your PIN on the PIN pad — fast and simple.',
+      'The app automatically locks to the PIN screen after 10 minutes of inactivity — no clicking or typing.',
+      'Moving the mouse does NOT reset the timer. Only actual clicks, taps, or key presses count as activity.',
+      'If you minimize the browser, switch tabs, or your phone screen turns off, the timer keeps running. When you return after 10+ minutes the app shows the PIN pad.',
       'Every 1 to 2 weeks (randomly), the app shows a Security Check screen instead of the PIN pad.',
-      'On the Security Check screen you must enter your username OR phone number AND your PIN.',
-      'This confirms that you still remember your credentials and that the device has not been taken by someone else.',
+      'On the Security Check screen enter your username OR phone number AND your PIN.',
       'After passing the check the app returns to normal PIN-only login until the next random check.',
-      'The Security Check also runs automatically the first time you log in on a new device.',
-      'If you fail 3 times you will see a Reset PIN option — use that if you have forgotten your PIN.',
-      'The PIN dot area lights up with a gold border when it is focused and ready to receive your input.'
+      'If you fail 3 times you will see a Reset PIN option.',
+      'The Security Check also runs automatically the first time you log in on a new device.'
     ],
-    example: 'User jd0292 opened the app on a Monday morning.\nInstead of the PIN pad he saw the Security Check screen.\nHe typed his username jd0292, tapped the PIN box, typed his PIN.\nThe app confirmed his identity and he was in.\nThe next random check will appear 8–12 days later.',
-    tip: 'Your username and PIN are cleared from the screen immediately after you log in successfully — they are never left visible for the next person who opens the app.'
+    example: 'User jd0292 was reading his ledger and got distracted.\n10 minutes passed with no clicks.\nHe came back to find the PIN pad — the app had locked itself.\nHe typed his PIN and was back in instantly.\n\nSeparately, on a Monday he saw the Security Check.\nHe entered his username jd0292 and PIN, passed, and resumed normal use.',
+    tip: 'The 10-minute auto-lock also works when the tab is in the background or your phone is locked. Your data is always protected.'
   },
   'resetpin': {
     title: '🔑 Forgot PIN — How to Reset',
@@ -11281,8 +11220,8 @@ var HELP_DATA = {
   'currencies': {
     title: '💱 Multi-Currency — Tracking in Different Currencies',
     steps: [
-      'The app supports any world currency. Four defaults are always present: ₦ NGN, € EUR, $ USD, £ GBP.',
-      'Add more currencies in Manage → Currency Manager. Pick from 30 world currencies or type a custom code and symbol.',
+      'The app supports 30+ world currencies. Four defaults are always present: ₦ NGN, € EUR, $ USD, £ GBP.',
+      'Add more in Manage → Currency Manager. Pick from 30+ world currencies or type a custom code and symbol.',
       'Each transaction stores its own currency — you never need to convert anything.',
       'When importing, use the correct symbol: ₦ or # for Naira, € for Euro, $ for Dollar, £ for Pound, ₵ for Ghana Cedi, etc.',
       'Totals in the header are shown separately per currency with colour-coded pills — each currency has its own colour.',
