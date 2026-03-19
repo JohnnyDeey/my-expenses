@@ -132,6 +132,7 @@ var UID_KEY   = 'expense_user_uid';    // random UUID, not related to PIN
 var NAME_KEY       = 'expense_user_name';
 var FULL_NAME_KEY  = 'expense_user_fullname'; // stores real full name
 var PHONE_KEY = 'expense_user_phone';  // hashed phone stored locally
+var PHONE_TAIL_KEY = 'expense_phone_tail'; // last 2 digits of raw phone
 
 var FIREBASE_CONFIG = {
   apiKey:            "AIzaSyA4kytE62CJ_RujEZonMqa4BqxZNNEtMzU",
@@ -6139,6 +6140,8 @@ function lockApp() {
   if (!_userId) return;
   clearTimeout(_inactivityTimer);
   clearInterval(_countdownTimer);
+  _inactivityTimer = null;
+  _countdownTimer  = null;
   hideInactivityWarning();
   // Stop Firebase listeners to save battery while locked
   if (_syncUnsubscribe)   { _syncUnsubscribe();   _syncUnsubscribe   = null; }
@@ -6152,9 +6155,12 @@ function resetInactivityTimer() {
   if (!_userId) return;
   clearTimeout(_inactivityTimer);
   clearInterval(_countdownTimer);
+  _inactivityTimer = null;
+  _countdownTimer  = null;
   hideInactivityWarning();
   localStorage.setItem('last_active', String(Date.now()));
   _inactivityTimer = setTimeout(function() {
+    _inactivityTimer = null; // timer has fired — mark as null
     startInactivityCountdown();
   }, INACTIVE_MS - COUNTDOWN_SECONDS * 1000);
 }
@@ -6167,6 +6173,7 @@ function startInactivityCountdown() {
     updateInactivityWarning(_countdownSeconds);
     if (_countdownSeconds <= 0) {
       clearInterval(_countdownTimer);
+      _countdownTimer = null;
       hideInactivityWarning();
       lockApp();
     }
@@ -6175,6 +6182,7 @@ function startInactivityCountdown() {
 
 function stayLoggedIn() {
   clearInterval(_countdownTimer);
+  _countdownTimer = null;
   hideInactivityWarning();
   resetInactivityTimer();
 }
@@ -6197,14 +6205,19 @@ function hideInactivityWarning() {
 }
 
 // Track user activity — reset timer on meaningful interactions only
+// mousemove/scroll excluded — they fire too frequently
 ['click','keydown','touchstart','touchend','pointerdown'].forEach(function(evt) {
   document.addEventListener(evt, function() {
     if (!_userId) return;
     localStorage.setItem('last_active', String(Date.now()));
-    // If countdown is running, user activity cancels it
-    if (_countdownTimer) { stayLoggedIn(); return; }
-    if (!_inactivityTimer) return; // already locked, ignore
-    resetInactivityTimer();
+    if (_countdownTimer) {
+      // Countdown is running — user is active, cancel and restart
+      stayLoggedIn();
+    } else if (_inactivityTimer) {
+      // Normal state — restart the timer
+      resetInactivityTimer();
+    }
+    // If both are null the app is locked — ignore until PIN is entered
   }, { passive: true });
 });
 
@@ -9978,6 +9991,11 @@ function submitFullVerify() {
     localStorage.setItem('expense_pin_hash_local', pinHash);
     if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
     if (data.title !== undefined) localStorage.setItem('expense_user_title', data.title || '');
+    // Save last 2 digits of raw phone if user logged in with phone number
+    if (looksLikePhone) {
+      var rawTail = identifier.replace(/[^0-9]/g,'').slice(-2);
+      localStorage.setItem(PHONE_TAIL_KEY, rawTail);
+    }
     recordFullVerify();
     // Clear fields immediately for security — don't leave username/PIN on screen
     var fvU = document.getElementById('fv-username'); if(fvU) fvU.value = '';
@@ -10446,6 +10464,9 @@ function generateCode() {
   _pendingName  = _selectedUsername; // use chosen username as display name
   _pendingFullName = name; // store real full name
   _pendingPhone = hashPhone(phone);
+  // Save last 2 digits of raw phone for display initials
+  var rawDigits = phone.replace(/[^0-9]/g,'');
+  localStorage.setItem(PHONE_TAIL_KEY, rawDigits.slice(-2));
   _generatedCode = String(Math.floor(100000 + Math.random() * 900000));
 
   getDB(function(db) {
@@ -10739,10 +10760,17 @@ function submitLogin() {
 }
 
 function getInitials(name) {
-  if (!name) return '??';
-  var parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.substring(0,2).toUpperCase();
+  // Use full name from localStorage if available, fallback to passed name
+  var fullName = localStorage.getItem(FULL_NAME_KEY) || name || '';
+  var parts = fullName.trim().split(/\s+/).filter(function(p){ return p.length > 0; });
+  var initials = '';
+  // Up to 3 name initials
+  var count = Math.min(parts.length, 3);
+  for (var i = 0; i < count; i++) initials += parts[i][0].toUpperCase();
+  if (!initials) initials = (name || '??').substring(0, 2).toUpperCase();
+  // Append last 2 digits of phone
+  var tail = localStorage.getItem(PHONE_TAIL_KEY) || '';
+  return initials + tail;
 }
 
 function updateUserDisplay() {
@@ -10798,6 +10826,7 @@ function logOut() {
   localStorage.removeItem('keep_login_pref');
   localStorage.removeItem('expense_pin_hash_local');
   localStorage.removeItem('expense_active_tab');
+  localStorage.removeItem(PHONE_TAIL_KEY);
   localStorage.removeItem('expense_active_inc_tab');
   sessionStorage.removeItem('app_session');
   // Clear full verify fields so previous user's data is never visible
@@ -10929,6 +10958,21 @@ setInterval(function() {
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-09';
+var APP_VERSION = '1.4.0'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION_KEY = 'expense_app_version';
+
+// ── On every page load: check if this is a new version install ──
+(function checkAppVersion() {
+  var stored = localStorage.getItem(APP_VERSION_KEY);
+  if (stored !== APP_VERSION) {
+    // New version or fresh install — clear privacy acceptance and onboarding flags
+    // so the user sees the privacy policy and tour again
+    localStorage.removeItem('privacy_ok');
+    localStorage.removeItem('expense_onboard_expenses_done');
+    localStorage.removeItem('expense_onboard_income_done');
+    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
+  }
+})();
 
 // Called after login — checks Firebase first, then localStorage as fallback
 function checkPrivacy() {
