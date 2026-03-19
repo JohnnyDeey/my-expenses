@@ -1875,7 +1875,6 @@ nav.tabs.header-hidden button {
     <!-- Step 1: Register -->
     <div id="pin-step-register" style="display:none;">
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:left;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">First time? Create your account</div>
         <div id="reg-step-name">
           <div style="margin-bottom:14px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Full name</label>
@@ -1887,6 +1886,7 @@ nav.tabs.header-hidden button {
           </div>
           <div id="reg-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
           <button onclick="showUsernameStep()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Next →</button>
+          <button onclick="showPinPadStep()" style="width:100%;padding:10px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;margin-top:8px;">← Back to Sign In</button>
         </div>
         <div id="reg-step-username" style="display:none;">
           <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:16px;">Choose a username (4–10 characters, letters + numbers):</div>
@@ -1902,10 +1902,6 @@ nav.tabs.header-hidden button {
           <div id="reg-selected-username" style="display:none;padding:10px 14px;background:rgba(200,150,46,0.1);border:1px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--gold2);letter-spacing:2px;text-align:center;margin-bottom:14px;"></div>
           <button onclick="generateCode()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Generate my access code</button>
           <button onclick="document.getElementById('reg-step-name').style.display='block';document.getElementById('reg-step-username').style.display='none';" style="width:100%;padding:10px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;margin-top:8px;">← Back</button>
-        </div>
-        <div style="text-align:center;margin-top:16px;">
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;">Already have a code? </span>
-          <button onclick="showLoginStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--gold);cursor:pointer;text-decoration:underline;">Sign in</button>
         </div>
       </div>
     </div>
@@ -1945,8 +1941,9 @@ nav.tabs.header-hidden button {
         </div>
         <div id="login-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:18px;text-align:center;"></div>
         <div id="reset-attempt-hint" style="display:none;background:rgba(181,69,27,0.12);border:1px solid rgba(181,69,27,0.4);border-radius:4px;padding:10px 12px;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#e07040;line-height:1.7;">&#128274; Having trouble? <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold2);cursor:pointer;text-decoration:underline;padding:0;">Reset your access code</button></div>
-        <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
-          <button onclick="showRegisterStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">New user? Create account</button>
+        <!-- SIGN UP — prominent button for new users -->
+        <button onclick="showRegisterStep()" style="width:100%;padding:13px;background:none;border:2px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.88rem;font-weight:900;letter-spacing:3px;color:var(--gold);cursor:pointer;margin-bottom:10px;text-transform:uppercase;">&#10133; SIGN UP</button>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center;">
           <button onclick="switchUser()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Switch user</button>
           <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a3e30;cursor:pointer;text-decoration:underline;">Forgot your PIN?</button>
         </div>
@@ -10065,10 +10062,9 @@ function showLoginStep() {
   var uid = localStorage.getItem(UID_KEY);
   if (uid && needsFullVerify()) {
     showFullVerifyStep();
-  } else if (uid) {
-    showPinPadStep();
   } else {
-    showRegisterStep();
+    // Always show PIN pad — new users tap SIGN UP button
+    showPinPadStep();
   }
 }
 
@@ -10154,12 +10150,10 @@ function syncInit() {
     return;
   }
 
-  // Show login screen immediately
+  // Show login screen — always show PIN pad first
+  // New users tap the SIGN UP button on the PIN pad
   showPinScreen();
-  if (!uid || !pinHash) {
-    // New device or never logged in
-    showRegisterStep();
-  } else if (needsFullVerify()) {
+  if (uid && needsFullVerify()) {
     showFullVerifyStep();
   } else {
     showPinPadStep();
