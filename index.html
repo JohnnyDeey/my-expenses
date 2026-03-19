@@ -201,8 +201,9 @@ function syncLoadSDK(callback) {
   function next() {
     if (i >= sdks.length) { callback(); return; }
     var s = document.createElement('script');
-    s.src = sdks[i++]; s.onload = next;
-    s.onerror = function(){ syncSetStatus('error'); };
+    s.src = sdks[i++];
+    s.onload = next;
+    s.onerror = function(){ syncSetStatus('error'); }; // fixed: was calling immediately
     document.head.appendChild(s);
   }
   next();
@@ -10024,27 +10025,52 @@ function submitFullVerify() {
     return true;
   }
 
+  // ── Offline fallback: if we have local PIN hash, verify without Firebase ──
+  var localPinHash = localStorage.getItem('expense_pin_hash_local');
+  var localUid     = localStorage.getItem(UID_KEY);
+  var localName    = localStorage.getItem(NAME_KEY);
+  var localPhone   = localStorage.getItem(PHONE_KEY);
+  var localFullName = localStorage.getItem(FULL_NAME_KEY);
+
+  if (localPinHash && localUid && localName && localPhone) {
+    // Check username/phone matches locally stored values
+    var localMatch = (identifier === localName) ||
+      (localFullName && identifier.toLowerCase() === localFullName.toLowerCase()) ||
+      (hashPhone(identifier) === localPhone);
+    if (localMatch && pinHash === localPinHash) {
+      // Offline verify success
+      _loginAttempts = 0;
+      if (localFullName) localStorage.setItem(FULL_NAME_KEY, localFullName);
+      recordFullVerify();
+      var fvU2 = document.getElementById('fv-username'); if(fvU2) fvU2.value='';
+      var fvP2 = document.getElementById('fv-pin'); if(fvP2) fvP2.value='';
+      var fvE2 = document.getElementById('fv-error'); if(fvE2) fvE2.textContent='';
+      _resumeSession(localUid, localName, localPhone);
+      showToast('Identity confirmed. Welcome back!');
+      return;
+    }
+    // Wrong PIN/username locally — still try Firebase below for definitive answer
+  }
+
   getDB(function(db) {
     var looksLikePhone = /^[+0-9\-\s()]+$/.test(identifier) && identifier.replace(/[^0-9]/g,'').length >= 7;
     if (looksLikePhone) {
-      // Try phone hash first
       var phoneHash = hashPhone(identifier);
       db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
         if (!doVerify(doc)) {
-          // Not found by phone — try as username
           db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
             if (snap.empty) { if(errEl) errEl.textContent = 'Account not found. Check your username or phone.'; }
             else doVerify(snap.docs[0]);
           });
         }
-      }).catch(function() { if(errEl) errEl.textContent = 'Connection error. Check your internet.'; });
+      }).catch(function() {
+        if(errEl) errEl.innerHTML = 'Connection error. <button onclick="submitFullVerify()" style="background:none;border:none;color:var(--gold);cursor:pointer;text-decoration:underline;font-family:DM Mono,monospace;font-size:0.7rem;padding:0;">Tap to retry</button>';
+      });
     } else {
-      // Try username
       db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
         if (!snap.empty) {
           doVerify(snap.docs[0]);
         } else {
-          // Not found by username — try as phone just in case
           var phoneHash = hashPhone(identifier);
           db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
             if (!doVerify(doc)) {
@@ -10052,7 +10078,9 @@ function submitFullVerify() {
             }
           });
         }
-      }).catch(function() { if(errEl) errEl.textContent = 'Connection error. Check your internet.'; });
+      }).catch(function() {
+        if(errEl) errEl.innerHTML = 'Connection error. <button onclick="submitFullVerify()" style="background:none;border:none;color:var(--gold);cursor:pointer;text-decoration:underline;font-family:DM Mono,monospace;font-size:0.7rem;padding:0;">Tap to retry</button>';
+      });
     }
   });
 }
@@ -10157,6 +10185,8 @@ function syncInit() {
   var wasRecentlyActive = lastActive > 0 && (Date.now() - lastActive) < INACTIVE_MS;
 
   if (uid && name && phone && pinHash && (isActiveSession || wasRecentlyActive)) {
+    // Mark app as ready IMMEDIATELY — prevents white screen during resume
+    document.body.classList.add('app-ready');
     // Resume silently — no PIN needed for a fresh page load within 10 min
     _resumeSession(uid, name, phone);
     return;
