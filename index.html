@@ -10764,12 +10764,20 @@ function getInitials(name) {
   var fullName = localStorage.getItem(FULL_NAME_KEY) || name || '';
   var parts = fullName.trim().split(/\s+/).filter(function(p){ return p.length > 0; });
   var initials = '';
-  // Up to 3 name initials
   var count = Math.min(parts.length, 3);
   for (var i = 0; i < count; i++) initials += parts[i][0].toUpperCase();
   if (!initials) initials = (name || '??').substring(0, 2).toUpperCase();
-  // Append last 2 digits of phone
+
+  // Phone tail: use stored value, or fallback to last 2 digits from username
   var tail = localStorage.getItem(PHONE_TAIL_KEY) || '';
+  if (!tail && _userName) {
+    // Extract digits from username (e.g. 'jd0292' → '92')
+    var digits = _userName.replace(/[^0-9]/g, '');
+    if (digits.length >= 2) {
+      tail = digits.slice(-2);
+      localStorage.setItem(PHONE_TAIL_KEY, tail); // cache it
+    }
+  }
   return initials + tail;
 }
 
@@ -10961,13 +10969,13 @@ var PRIVACY_VER = '2026-09';
 var APP_VERSION = '1.4.0'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
-// ── On every page load: check if this is a new version install ──
+// ── On every page load: detect new version ──
 (function checkAppVersion() {
   var stored = localStorage.getItem(APP_VERSION_KEY);
   if (stored !== APP_VERSION) {
-    // New version or fresh install — clear privacy acceptance and onboarding flags
-    // so the user sees the privacy policy and tour again
-    localStorage.removeItem('privacy_ok');
+    // New version or fresh install — flag in sessionStorage
+    // (can't clear Firebase here, but checkPrivacy will handle it)
+    sessionStorage.setItem('new_app_version', '1');
     localStorage.removeItem('expense_onboard_expenses_done');
     localStorage.removeItem('expense_onboard_income_done');
     localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
@@ -10976,24 +10984,25 @@ var APP_VERSION_KEY = 'expense_app_version';
 
 // Called after login — checks Firebase first, then localStorage as fallback
 function checkPrivacy() {
-  // If we have a DB connection, check Firebase for this user's acceptance record
+  // New app version always forces re-acceptance, even if Firebase has old record
+  var isNewVersion = sessionStorage.getItem('new_app_version') === '1';
+
   if (_db && _userId) {
     userCol('settings').doc('privacy').get().then(function(doc) {
       var data = doc.exists ? doc.data() : {};
-      if (data.version === PRIVACY_VER) {
-        // Already accepted — make sure localStorage is in sync
+      if (!isNewVersion && data.version === PRIVACY_VER) {
         localStorage.setItem('privacy_ok', PRIVACY_VER);
         return;
       }
-      // Not accepted yet — show the policy
+      // Show policy — either new version or not yet accepted
       _showPrivacyOverlay();
     }).catch(function() {
-      // Firebase read failed — fall back to localStorage
-      if (localStorage.getItem('privacy_ok') !== PRIVACY_VER) _showPrivacyOverlay();
+      if (!isNewVersion && localStorage.getItem('privacy_ok') === PRIVACY_VER) return;
+      _showPrivacyOverlay();
     });
   } else {
-    // No DB yet — use localStorage as fallback
-    if (localStorage.getItem('privacy_ok') !== PRIVACY_VER) _showPrivacyOverlay();
+    if (!isNewVersion && localStorage.getItem('privacy_ok') === PRIVACY_VER) return;
+    _showPrivacyOverlay();
   }
 }
 
@@ -11006,8 +11015,13 @@ function acceptPrivacy() {
   var cb = document.getElementById('privacy-cb');
   if (!cb || !cb.checked) { showToast('Please tick the checkbox to agree'); return; }
 
+  var wasNewVersion = sessionStorage.getItem('new_app_version') === '1';
+
   // Save to localStorage immediately
   localStorage.setItem('privacy_ok', PRIVACY_VER);
+
+  // Clear the new version flag — won't trigger again this session
+  sessionStorage.removeItem('new_app_version');
 
   // Save to Firebase so it persists across devices and browsers
   if (_db && _userId) {
@@ -11023,6 +11037,11 @@ function acceptPrivacy() {
 
   var o = document.getElementById('privacy-overlay');
   if (o) o.style.display = 'none';
+
+  // On new version install: show the onboarding tour after accepting
+  if (wasNewVersion && _appMode) {
+    setTimeout(function(){ startOnboarding(_appMode, true); }, 600);
+  }
 }
 
 // ════════════════════════
