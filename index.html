@@ -3801,8 +3801,8 @@ function printDashboard(mode) {
         var bg = getHmColor(v);
         var textColor = v > maxVal*0.55 ? '#fff' : '#555';
         var tip = v>0 ? sym+fmtNum(v) : '';
-        out += '<td class="hm-cell" style="background:'+bg+';color:'+textColor+';" title="'+MONTHS[mi]+' '+y+': '+tip+'">'+
-          (v>0 ? '<span style="font-size:0.5rem;opacity:0.7;">'+Math.round(v/1000>1?(v/1000).toFixed(1)+'k':v)+'</span>' : '') +
+        out += '<td class="hm-cell" style="background:'+bg+';color:'+textColor+';" title="'+MONTHS[mi]+' '+y+': '+tip+'">' +
+          (v>0 ? '<span style="font-size:0.5rem;opacity:0.8;">'+(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v))+'</span>' : '') +
           '</td>';
       });
       out += '</tr>';
@@ -8517,19 +8517,60 @@ function renderIncomeDashboard() {
   if(incCharts["inc-chart-monthly"]) incCharts["inc-chart-monthly"].destroy();
   if(mKeys.length){ var ctx=document.getElementById("inc-chart-monthly").getContext("2d"); incCharts["inc-chart-monthly"]=new Chart(ctx,{type:"line",data:{labels:mLabels,datasets:[{label:mCur,data:mVals,borderColor:"#4a7c59",backgroundColor:"rgba(74,124,89,0.08)",tension:0.4,fill:true,pointBackgroundColor:"#4a7c59",pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},states:{x:{grid:{display:false}},y:{ticks:{callback:function(v){return(SYMS[mCur]||"")+fmtCompact(v);}},grid:{color:"rgba(0,0,0,0.04)"}}},scales:{y:{ticks:{callback:function(v){return(SYMS[mCur]||"")+fmtCompact(v);}},grid:{color:"rgba(0,0,0,0.04)"}},x:{grid:{display:false}}}}}); }
 
-  // Income category bars — no collapse, directly rendered
+  // Income category bars — per-currency breakdown, same style as expenses
   var catCont = document.getElementById("inc-cat-bars-container");
   catCont.innerHTML = "";
-  var byCat = {}; filtered.forEach(function(i){ byCat[i.category]=(byCat[i.category]||0)+i.amount; });
-  var cats = Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a];});
-  var maxVal = cats.length ? Math.max.apply(null,cats.map(function(c){return byCat[c];})) : 1;
-  var sym = cur !== "all" ? (SYMS[cur]||cur) : "";
-  cats.forEach(function(cat) {
+  var byCatCur = {};
+  filtered.forEach(function(i){
+    var k = i.category+":::"+i.currency;
+    if(!byCatCur[k]) byCatCur[k] = {cat:i.category, cur:i.currency, total:0};
+    byCatCur[k].total += i.amount;
+  });
+  var byCat = {};
+  Object.keys(byCatCur).forEach(function(k){
+    var e = byCatCur[k];
+    if(!byCat[e.cat]) byCat[e.cat] = {totals:{}, grand:0};
+    byCat[e.cat].totals[e.cur] = (byCat[e.cat].totals[e.cur]||0) + e.total;
+    byCat[e.cat].grand += e.total;
+  });
+  var incCatsSorted = Object.keys(byCat).sort(function(a,b){return byCat[b].grand-byCat[a].grand;});
+  var maxByCurInc = {};
+  incCatsSorted.forEach(function(cat){
+    Object.keys(byCat[cat].totals).forEach(function(c){
+      var v = byCat[cat].totals[c];
+      if(!maxByCurInc[c] || v > maxByCurInc[c]) maxByCurInc[c] = v;
+    });
+  });
+  incCatsSorted.forEach(function(cat){
     var color = getIncCatColor(cat);
-    var pct = (byCat[cat]/maxVal*100).toFixed(1);
-    var row = document.createElement("div"); row.style.cssText = "margin-bottom:10px;";
-    row.innerHTML = "<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;\"><span style=\"display:flex;align-items:center;gap:6px;font-size:0.82rem;\"><span style=\"width:9px;height:9px;border-radius:50%;background:"+color+";display:inline-block;\"></span>"+cat+"</span><span style=\"font-family:DM Mono,monospace;font-size:0.72rem;font-weight:600;\">"+sym+fmtCompact(byCat[cat])+"</span></div><div style=\"height:7px;background:#ede7d9;border-radius:4px;overflow:hidden;\"><div style=\"width:"+pct+"%;height:100%;background:"+color+";border-radius:4px;transition:width 0.5s;\"></div></div>";
-    catCont.appendChild(row);
+    var curTotals = byCat[cat].totals;
+    var curs = Object.keys(curTotals);
+    var catRow = document.createElement("div");
+    catRow.style.cssText = "margin-bottom:14px;";
+    var amtSpans = curs.map(function(c){
+      return "<span style=\"font-family:DM Mono,monospace;font-size:0.75rem;font-weight:600;\">"+(SYMS[c]||"")+fmtNum(curTotals[c])+"<span style=\"font-size:0.62rem;opacity:0.7;margin-left:2px;\">"+c+"</span></span>";
+    }).join(" <span style=\"opacity:0.3;\">·</span> ");
+    var labelRow = document.createElement("div");
+    labelRow.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;";
+    labelRow.innerHTML =
+      "<div style=\"display:flex;align-items:center;gap:8px;font-size:0.85rem;font-weight:500;\">"+
+        "<span style=\"display:inline-block;width:11px;height:11px;border-radius:50%;background:"+color+";flex-shrink:0;\"></span>"+cat+
+      "</div>"+
+      "<div style=\"display:flex;gap:8px;align-items:center;\">"+amtSpans+"</div>";
+    catRow.appendChild(labelRow);
+    curs.forEach(function(c){
+      var val = curTotals[c];
+      var pct = maxByCurInc[c]>0 ? (val/maxByCurInc[c]*100) : 0;
+      var trackRow = document.createElement("div");
+      trackRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:3px;";
+      trackRow.innerHTML =
+        "<span style=\"font-family:DM Mono,monospace;font-size:0.6rem;color:var(--muted);width:28px;text-align:right;flex-shrink:0;\">"+c+"</span>"+
+        "<div style=\"flex:1;height:8px;background:#ede7d9;border-radius:4px;overflow:hidden;\">"+
+          "<div style=\"width:"+pct.toFixed(1)+"%;height:100%;background:"+color+";border-radius:4px;transition:width 0.5s ease;\"></div>"+
+        "</div>";
+      catRow.appendChild(trackRow);
+    });
+    catCont.appendChild(catRow);
   });
 
   // Yearly chart — use full data (not month-filtered)
