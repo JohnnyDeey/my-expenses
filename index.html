@@ -1137,81 +1137,45 @@ nav.tabs.header-hidden button {
 <div class="panel" id="panel-dashboard">
   <div id="dash-empty" class="empty-state"><div class="big">&#9670;</div><p>No saved data yet.<br>Import, categorize and save your expenses first.</p></div>
   <div id="dash-content" style="display:none;">
+    <!-- Single master filter — controls ALL charts -->
     <div class="filter-bar">
       <span class="filter-label">Filter:</span>
       <select id="dash-year" onchange="renderDashboard()"><option value="all">All Years</option></select>
-      <select id="dash-currency" onchange="dashMasterCurrencyChange()">
-        <option value="all">All Currencies</option>
-      </select>
+      <select id="dash-month" onchange="renderDashboard()"><option value="all">All Months</option></select>
+      <select id="dash-currency" onchange="renderDashboard()"><option value="all">All Currencies</option></select>
       <button onclick="printDashboard('expenses')" style="margin-left:auto;padding:6px 14px;background:var(--ink);border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
     </div>
+    <!-- Hidden selectors kept for JS compatibility — always synced to master -->
+    <select id="monthly-currency"    style="display:none;"></select>
+    <select id="cat-dash-year"       style="display:none;"></select>
+    <select id="cat-dash-month"      style="display:none;"></select>
+    <select id="cat-dash-currency"   style="display:none;"></select>
+    <select id="yearly-currency"     style="display:none;"></select>
+    <select id="heatmap-currency"    style="display:none;"></select>
     <div class="stats-row" id="stats-row"></div>
     <div class="charts-grid">
-      <!-- Monthly Spending Trend (unchanged) -->
       <div class="chart-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <h3>Monthly Spending Trend</h3>
-          <select id="monthly-currency" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-            <option value="EUR">EUR</option><option value="NGN">NGN</option>
-            <option value="USD">USD</option><option value="GBP">GBP</option>
-          </select>
-        </div>
+        <h3>Monthly Spending Trend</h3>
         <div class="chart-sub" id="monthly-sub"></div>
         <div class="chart-wrap"><canvas id="chart-monthly"></canvas></div>
       </div>
-      <!-- Category Breakdown — accordion -->
       <div class="chart-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-          <h3>Category Breakdown</h3>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <select id="cat-dash-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-              <option value="all">All Years</option>
-            </select>
-            <select id="cat-dash-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-              <option value="all">All Months</option>
-            </select>
-            <select id="cat-dash-currency" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-              <option value="all">All Currencies</option>
-              <option value="EUR">EUR</option><option value="NGN">NGN</option>
-              <option value="USD">USD</option><option value="GBP">GBP</option>
-            </select>
-          </div>
-        </div>
+        <h3>Category Breakdown</h3>
         <div id="cat-bars-container"></div>
       </div>
     </div>
-    <!-- Yearly Totals Bar Chart -->
     <div class="charts-grid wide" style="margin-bottom:20px;">
       <div class="chart-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <h3>Yearly Total Spending</h3>
-          <select id="yearly-currency" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-            <option value="EUR">EUR €</option>
-            <option value="NGN">NGN ₦</option>
-            <option value="USD">USD $</option>
-            <option value="GBP">GBP £</option>
-          </select>
-        </div>
+        <h3>Yearly Total Spending</h3>
         <div class="chart-sub" id="yearly-sub"></div>
         <div class="chart-wrap"><canvas id="chart-yearly"></canvas></div>
       </div>
     </div>
-
-    <!-- Spending Heatmap -->
     <div class="charts-grid wide">
       <div class="chart-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
-          <div>
-            <h3>Spending Heatmap</h3>
-            <div class="chart-sub">Annual &times; monthly intensity &mdash; darker = higher spend &mdash; hover for details</div>
-          </div>
-          <select id="heatmap-currency" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-            <option value="EUR">EUR</option><option value="NGN">NGN</option>
-            <option value="USD">USD</option><option value="GBP">GBP</option>
-          </select>
-        </div>
+        <h3>Spending Heatmap</h3>
+        <div class="chart-sub">Annual &times; monthly intensity &mdash; darker = higher spend &mdash; hover for details</div>
         <div id="heatmap-container"></div>
-        <!-- YoY % growth row -->
         <div id="yoy-growth-container" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);"></div>
       </div>
     </div>
@@ -1632,58 +1596,44 @@ nav.tabs.header-hidden button {
 <div class="panel" id="panel-inc-dashboard">
   <div id="inc-dash-empty" class="empty-state"><div class="big">&#128200;</div><p>No income data yet.</p></div>
   <div id="inc-dash-content" style="display:none;">
+    <!-- Single master filter — controls ALL charts -->
     <div class="filter-bar">
       <span class="filter-label">Filter:</span>
-      <select id="inc-dash-year" onchange="renderIncomeDashboard()"><option value="all">All Years</option></select>
-      <select id="inc-dash-currency" onchange="incDashMasterCurrencyChange()">
-        <option value="all">All Currencies</option>
-      </select>
+      <select id="inc-dash-year"     onchange="renderIncomeDashboard()"><option value="all">All Years</option></select>
+      <select id="inc-dash-month"    onchange="renderIncomeDashboard()"><option value="all">All Months</option></select>
+      <select id="inc-dash-currency" onchange="renderIncomeDashboard()"><option value="all">All Currencies</option></select>
       <button onclick="printDashboard('income')" style="margin-left:auto;padding:6px 14px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
     </div>
+    <!-- Hidden selectors kept for JS compatibility -->
+    <select id="inc-monthly-currency"  style="display:none;"></select>
+    <select id="inc-cat-dash-currency" style="display:none;"></select>
+    <select id="inc-yearly-currency"   style="display:none;"></select>
+    <select id="inc-heatmap-currency"  style="display:none;"></select>
     <div class="stats-row" id="inc-stats-row"></div>
     <div class="charts-grid">
       <div class="chart-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <h3>Monthly Income Trend</h3>
-          <select id="inc-monthly-currency" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-            <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
-          </select>
-        </div>
+        <h3>Monthly Income Trend</h3>
         <div class="chart-sub" id="inc-monthly-sub"></div>
         <div class="chart-wrap"><canvas id="inc-chart-monthly"></canvas></div>
       </div>
       <div class="chart-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <h3>Income by Category</h3>
-          <select id="inc-cat-dash-currency" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-            <option value="all">All</option><option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option>
-          </select>
-        </div>
+        <h3>Income by Category</h3>
         <div id="inc-cat-bars-container"></div>
       </div>
     </div>
     <div class="charts-grid wide" style="margin-bottom:20px;">
       <div class="chart-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <h3>Yearly Income</h3>
-          <select id="inc-yearly-currency" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-            <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
-          </select>
-        </div>
+        <h3>Yearly Income</h3>
         <div class="chart-sub" id="inc-yearly-sub"></div>
         <div class="chart-wrap"><canvas id="inc-chart-yearly"></canvas></div>
       </div>
     </div>
-    <!-- Income Heatmap -->
     <div class="charts-grid wide">
       <div class="chart-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
-          <div><h3>Income Heatmap</h3><div class="chart-sub">Annual &times; monthly intensity</div></div>
-          <select id="inc-heatmap-currency" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-            <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
-          </select>
-        </div>
+        <h3>Income Heatmap</h3>
+        <div class="chart-sub">Annual &times; monthly intensity</div>
         <div id="inc-heatmap-container"></div>
+        <div id="inc-yoy-growth-container" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);"></div>
       </div>
     </div>
   </div>
@@ -3725,23 +3675,27 @@ function printDashboard(mode) {
   var contentEl = document.getElementById(contentId);
   if (!contentEl) return;
 
-  var userName  = getReportName();
-  var yearSel   = document.getElementById(isIncome ? 'inc-dash-year'      : 'dash-year');
-  var curSel    = document.getElementById(isIncome ? 'inc-dash-currency'   : 'dash-currency');
-  var yearLabel = yearSel ? (yearSel.value === 'all' ? 'All Years' : yearSel.value) : '';
-  var curLabel  = curSel  ? (curSel.value  === 'all' ? 'All Currencies' : curSel.value) : '';
-  var title     = (isIncome ? 'Income Dashboard' : 'Expense Dashboard') + ' — ' + yearLabel + ' · ' + curLabel;
-  var now       = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+  var userName   = getReportName();
+  var yearSel    = document.getElementById(isIncome ? 'inc-dash-year'     : 'dash-year');
+  var monthSel   = document.getElementById(isIncome ? 'inc-dash-month'    : 'dash-month');
+  var curSel     = document.getElementById(isIncome ? 'inc-dash-currency' : 'dash-currency');
+  var yearLabel  = yearSel  ? (yearSel.value  === 'all' ? 'All Years'      : yearSel.value)  : '';
+  var monthLabel = monthSel ? (monthSel.value === 'all' ? '' : ' · ' + MONTHS[parseInt(monthSel.value,10)-1]) : '';
+  var curLabel   = curSel   ? (curSel.value   === 'all' ? 'All Currencies' : curSel.value)   : '';
+  var title      = (isIncome ? 'Income Dashboard' : 'Expense Dashboard') + ' — ' + yearLabel + monthLabel + ' · ' + curLabel;
+  var now        = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
 
-  // Determine effective currency and year for re-rendering DOM charts
-  var effCur  = curSel  ? curSel.value  : 'all';
-  var effYear = yearSel ? yearSel.value : 'all';
+  // Effective filters for re-rendering DOM charts
+  var effYear  = yearSel  ? yearSel.value  : 'all';
+  var effMonth = monthSel ? monthSel.value : 'all';
+  var effCur   = curSel   ? curSel.value   : 'all';
 
   var printWin = window.open('', '_blank', 'width=860,height=900');
   if (!printWin) { showToast('Please allow popups to print'); return; }
 
   // ── Build CSS ──
   var css =
+    '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
     'body{font-family:Georgia,serif;margin:0;padding:20px 28px;color:#1a1410;background:#fff;}' +
     'h1{font-size:1.35rem;font-weight:900;margin:0 0 3px;}' +
     '.sub{font-family:monospace;font-size:0.76rem;color:#6b5e50;margin-bottom:3px;}' +
@@ -3754,15 +3708,28 @@ function printDashboard(mode) {
     '.chart-box h3{font-family:monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:#6b5e50;margin:0 0 10px;}' +
     '.chart-box img{width:100%;height:auto;display:block;}' +
     '.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}' +
-    '.bar-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}' +
+    '.bar-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}' +
     '.bar-lbl{width:150px;font-family:monospace;font-size:0.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5a4e3e;}' +
-    '.bar-track{flex:1;background:#f0ede8;border-radius:3px;height:12px;}' +
+    '.bar-track{flex:1;background:#f0ede8;border-radius:3px;height:13px;}' +
     '.bar-fill{height:100%;border-radius:3px;}' +
     '.bar-val{width:100px;text-align:right;font-family:monospace;font-size:0.72rem;font-weight:700;color:#1a1410;}' +
-    '.hm-grid{display:grid;grid-template-columns:40px repeat(12,1fr);gap:2px;margin-bottom:6px;font-family:monospace;font-size:0.6rem;}' +
-    '.hm-cell{text-align:center;padding:3px 2px;border-radius:2px;}' +
-    '.hm-yr{font-weight:700;display:flex;align-items:center;color:#5a4e3e;}' +
-    '.hm-hdr{color:#9e8e7e;text-align:center;}' +
+    '.hm-wrap{overflow-x:auto;}' +
+    '.hm-table{border-collapse:collapse;width:100%;font-family:monospace;font-size:0.58rem;table-layout:fixed;}' +
+    '.hm-table td,.hm-table th{padding:3px 2px;text-align:center;}' +
+    '.hm-yr{font-weight:700;text-align:left!important;color:#5a4e3e;white-space:nowrap;width:36px;}' +
+    '.hm-hdr{color:#9e8e7e;font-weight:700;font-size:0.55rem;}' +
+    '.hm-cell{border-radius:2px;}' +
+    '.hm-leg{display:flex;align-items:center;gap:4px;margin-top:6px;font-family:monospace;font-size:0.6rem;color:#9e8e7e;}' +
+    '.hm-swatch{display:inline-block;width:18px;height:9px;border-radius:2px;}' +
+    '.yoy-strip{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}' +
+    '.yoy-block{border-radius:4px;padding:8px 12px;min-width:80px;border:1px solid #e0dbd4;border-top-width:3px;}' +
+    '.yoy-yr{font-family:monospace;font-size:0.58rem;letter-spacing:1px;color:#9e8e7e;margin-bottom:2px;}' +
+    '.yoy-tot{font-size:0.95rem;font-weight:900;color:#1a1410;margin-bottom:3px;}' +
+    '.yoy-pct{font-family:monospace;font-size:0.7rem;font-weight:700;padding:2px 6px;border-radius:10px;display:inline-block;}' +
+    '.yoy-up{background:#fee2e2;color:#b91c1c;}' +
+    '.yoy-dn{background:#dcfce7;color:#166534;}' +
+    '.yoy-fl{background:#f3f4f6;color:#6b7280;}' +
+    '.yoy-bs{color:#9e8e7e;font-size:0.65rem;}' +
     '.footer{margin-top:16px;padding-top:10px;border-top:1px solid #e0dbd4;font-family:monospace;font-size:0.6rem;color:#9e8e7e;text-align:center;}' +
     '@page{margin:10mm;size:A4 portrait;}' +
     '@media print{body{padding:0;}}';
@@ -3787,10 +3754,11 @@ function printDashboard(mode) {
   }
 
   // ── Helper: build category bars section as print HTML ──
-  function buildCatBarsHtml(data, curFilter, yearFilter, colorFn) {
+  function buildCatBarsHtml(data, curFilter, yearFilter, monthFilter, colorFn) {
     var filtered = data.filter(function(i){return i.amount>0;});
-    if (yearFilter !== 'all') filtered = filtered.filter(function(i){return i.date.indexOf(yearFilter)===0;});
-    if (curFilter  !== 'all') filtered = filtered.filter(function(i){return i.currency===curFilter;});
+    if (yearFilter  !== 'all') filtered = filtered.filter(function(i){return i.date.substring(0,4)===yearFilter;});
+    if (monthFilter !== 'all') filtered = filtered.filter(function(i){return i.date.substring(5,7)===monthFilter;});
+    if (curFilter   !== 'all') filtered = filtered.filter(function(i){return i.currency===curFilter;});
     var byCat = {};
     filtered.forEach(function(i){ byCat[i.category]=(byCat[i.category]||0)+i.amount; });
     var cats = Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a];}).slice(0,15);
@@ -3809,7 +3777,7 @@ function printDashboard(mode) {
     }).join('');
   }
 
-  // ── Helper: build heatmap as print HTML ──
+  // ── Helper: build heatmap as print HTML (table layout, colors inlined) ──
   function buildHeatmapHtml(data, cur, colorPal) {
     var filtered = data.filter(function(i){return i.amount>0 && i.currency===cur;});
     var byYM = {};
@@ -3824,22 +3792,57 @@ function printDashboard(mode) {
     var maxVal = allVals.length ? Math.max.apply(null,allVals) : 1;
     function getHmColor(v){ if(!v) return '#f5f5f0'; var r=Math.pow(v/maxVal,0.5); return colorPal[Math.min(Math.floor(r*(colorPal.length-1)),colorPal.length-1)]; }
     var sym = SYMS[cur]||cur;
-    var out = '<div class="hm-grid">';
-    // Header row
-    out += '<div class="hm-yr"></div>';
-    MONTHS.forEach(function(m){ out += '<div class="hm-hdr">'+m.substring(0,1)+'</div>'; });
-    out += '</div>';
+    var out = '<div class="hm-wrap"><table class="hm-table"><thead><tr><th class="hm-yr"></th>';
+    MONTHS.forEach(function(m){ out += '<th class="hm-hdr">'+m.substring(0,3)+'</th>'; });
+    out += '</tr></thead><tbody>';
     years.forEach(function(y){
-      out += '<div class="hm-grid">';
-      out += '<div class="hm-yr">'+y+'</div>';
+      out += '<tr><td class="hm-yr">'+y+'</td>';
       byYM[y].forEach(function(v,mi){
         var bg = getHmColor(v);
+        var textColor = v > maxVal*0.55 ? '#fff' : '#555';
         var tip = v>0 ? sym+fmtNum(v) : '';
-        out += '<div class="hm-cell" style="background:'+bg+';color:'+(v>maxVal*0.6?'#fff':'#333')+'" title="'+MONTHS[mi]+' '+y+': '+tip+'">'+
-          (v>0?'':'')+'</div>';
+        out += '<td class="hm-cell" style="background:'+bg+';color:'+textColor+';" title="'+MONTHS[mi]+' '+y+': '+tip+'">'+
+          (v>0 ? '<span style="font-size:0.5rem;opacity:0.7;">'+Math.round(v/1000>1?(v/1000).toFixed(1)+'k':v)+'</span>' : '') +
+          '</td>';
       });
-      out += '</div>';
+      out += '</tr>';
     });
+    out += '</tbody></table>';
+    out += '<div class="hm-leg"><span>Low</span>';
+    colorPal.forEach(function(c){ out += '<span class="hm-swatch" style="background:'+c+';"></span>'; });
+    out += '<span>High</span></div></div>';
+    return out;
+  }
+
+  // ── Helper: build YoY strip as print HTML ──
+  function buildYoYHtml(data, cur) {
+    var filtered = data.filter(function(i){return i.amount>0 && i.currency===cur;});
+    var byY = {};
+    filtered.forEach(function(i){ var y=i.date.substring(0,4); byY[y]=(byY[y]||0)+i.amount; });
+    var years = Object.keys(byY).sort();
+    if (!years.length) return '';
+    var sym = SYMS[cur]||cur;
+    var yearColors = ['#3d5a73','#c8962e','#4a7c59','#b5451b','#6b3d8c','#2e7d8a','#8b5e3c','#7c4a4a'];
+    var out = '<div class="yoy-strip">';
+    years.forEach(function(y, i){
+      var total = byY[y];
+      var prevTotal = i>0 ? byY[years[i-1]] : null;
+      var pctHtml = '';
+      if(prevTotal === null){
+        pctHtml = '<span class="yoy-pct yoy-bs">Baseline</span>';
+      } else if(prevTotal === 0){
+        pctHtml = '<span class="yoy-pct yoy-dn">New</span>';
+      } else {
+        var pct = ((total - prevTotal) / prevTotal * 100);
+        var cls = Math.abs(pct)<2 ? 'yoy-fl' : pct>0 ? 'yoy-up' : 'yoy-dn';
+        pctHtml = '<span class="yoy-pct '+cls+'">'+(pct>0?'+':'')+pct.toFixed(1)+'%</span>';
+      }
+      out += '<div class="yoy-block" style="border-top-color:'+yearColors[i%yearColors.length]+';">'+
+        '<div class="yoy-yr">'+y+'</div>'+
+        '<div class="yoy-tot">'+sym+fmtNum(total)+'</div>'+
+        pctHtml+'</div>';
+    });
+    out += '</div>';
     return out;
   }
 
@@ -3866,7 +3869,7 @@ function printDashboard(mode) {
     ? function(cat){ return INC_CAT_COLORS[cat] || '#6b5e50'; }
     : function(cat, idx){ return CAT_COLORS[cat] || CAT_COLORS_FB[idx % CAT_COLORS_FB.length]; };
   html += '<div class="chart-box"><h3>'+catTitle+' ('+(catCur==='all'?'All Currencies':catCur)+')</h3>';
-  html += buildCatBarsHtml(rawData, catCur, effYear, colorFn);
+  html += buildCatBarsHtml(rawData, catCur, effYear, effMonth, colorFn);
   html += '</div>';
 
   // 3. Yearly Totals (canvas)
@@ -3878,12 +3881,23 @@ function printDashboard(mode) {
     } catch(e){}
   }
 
-  // 4. Heatmap (DOM — re-rendered)
+  // 4. Heatmap (DOM — re-rendered with table layout and inlined colors)
   var hmPal = isIncome ? ['#eafaf1','#a9dfbf','#52be80','#1e8449','#0b5329']
                        : ['#fdf6e3','#f5d98b','#e8a825','#c8962e','#7a5a10'];
   html += '<div class="chart-box"><h3>'+(isIncome?'Income Heatmap':'Spending Heatmap')+' ('+hmCur+')</h3>';
   html += buildHeatmapHtml(rawData, hmCur, hmPal);
   html += '</div>';
+
+  // 5. Year-over-Year Growth
+  if (effCur !== 'all' || hmCur) {
+    var yoyCur = effCur !== 'all' ? effCur : hmCur;
+    var yoyHtml = buildYoYHtml(rawData, yoyCur);
+    if (yoyHtml) {
+      html += '<div class="chart-box"><h3>Year-over-Year Growth ('+yoyCur+')</h3>';
+      html += yoyHtml;
+      html += '</div>';
+    }
+  }
 
   html += '<div class="footer">My Expense Ledger &nbsp;·&nbsp; '+userName+' &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; '+now+'</div>';
   html += '</body></html>';
@@ -3904,89 +3918,80 @@ function renderDashboard(){
   document.getElementById('dash-empty').style.display='none';
   document.getElementById('dash-content').style.display='block';
 
-  // Populate main year dropdown
+  // Populate year dropdown
   var yrSel = document.getElementById('dash-year');
-  var curYr = yrSel.value;
+  var savedYr = yrSel ? yrSel.value : 'all';
   var years = [];
   data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); });
   years.sort().reverse();
-  yrSel.innerHTML = '<option value="all">All Years</option>' +
-    years.map(function(y){return '<option value="'+y+'"'+(curYr===y?' selected':'')+'>'+y+'</option>';}).join('');
-
-  // Detect all currencies present in actual data
-  var dataCurrencies = [];
-  data.forEach(function(i){
-    if (i.currency && dataCurrencies.indexOf(i.currency) === -1) dataCurrencies.push(i.currency);
-  });
-  dataCurrencies.sort();
-
-  // Helper — rebuild a currency select from actual data currencies
-  function rebuildCurSel(id, includeAll, defaultFirst) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    var cur = el.value;
-    var html = includeAll ? '<option value="all">All Currencies</option>' : '';
-    dataCurrencies.forEach(function(c){
-      html += '<option value="'+c+'">'+ c +' '+(SYMS[c]||'')+'</option>';
-    });
-    el.innerHTML = html;
-    // Restore previous selection if still valid, else pick first available
-    if (cur && el.querySelector('option[value="'+cur+'"]')) el.value = cur;
-    else if (defaultFirst && dataCurrencies.length) el.value = dataCurrencies[0];
-    else if (includeAll) el.value = 'all';
+  if(yrSel) {
+    yrSel.innerHTML = '<option value="all">All Years</option>' +
+      years.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');
+    if(years.indexOf(savedYr)!==-1) yrSel.value = savedYr;
   }
 
-  // Rebuild all dashboard currency dropdowns from actual data
-  rebuildCurSel('dash-currency',    true,  false);
-  rebuildCurSel('monthly-currency', false, true);
-  rebuildCurSel('cat-dash-currency',true,  false);
-  rebuildCurSel('yearly-currency',  false, true);
-  rebuildCurSel('heatmap-currency', false, true);
+  // Populate month dropdown
+  var moSel = document.getElementById('dash-month');
+  if(moSel && moSel.options.length < 13) {
+    var savedMo = moSel.value;
+    moSel.innerHTML = '<option value="all">All Months</option>' +
+      MONTHS.map(function(m,i){return '<option value="'+pad(i+1)+'">'+m+'</option>';}).join('');
+    if(savedMo) moSel.value = savedMo;
+  }
 
-  var currency = document.getElementById('dash-currency').value;
+  // Populate currency dropdown from actual data
+  var curSel = document.getElementById('dash-currency');
+  var savedCur = curSel ? curSel.value : 'all';
+  var dataCurs = [];
+  data.forEach(function(i){ if(i.currency && dataCurs.indexOf(i.currency)===-1) dataCurs.push(i.currency); });
+  dataCurs.sort();
+  if(curSel) {
+    curSel.innerHTML = '<option value="all">All Currencies</option>' +
+      dataCurs.map(function(c){return '<option value="'+c+'">'+c+' '+(SYMS[c]||'')+'</option>';}).join('');
+    if(dataCurs.indexOf(savedCur)!==-1) curSel.value = savedCur;
+    else curSel.value = 'all';
+  }
 
-  // Sync all sub-selectors to master currency
-  // If master is a specific currency, set all sub-selectors to match and hide them
-  var subSelIds = ['monthly-currency','cat-dash-currency','yearly-currency','heatmap-currency'];
-  subSelIds.forEach(function(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    if (currency !== 'all') {
-      // Set to master value if it exists, else first option
-      if (el.querySelector('option[value="'+currency+'"]')) el.value = currency;
-      else if (el.options.length) el.value = el.options[0].value;
-      // Hide individual selector — master controls it
-      el.style.display = 'none';
-    } else {
-      el.style.display = '';
-    }
-  });
+  // Read master filter values
+  var year     = yrSel  ? yrSel.value  : 'all';
+  var month    = moSel  ? moSel.value  : 'all';
+  var currency = curSel ? curSel.value : 'all';
 
-  var year     = document.getElementById('dash-year').value;
-  var allData  = data.filter(function(i){return i.amount>0;});
-  var filtered = allData.slice();
-  if(year !== 'all')     filtered = filtered.filter(function(i){return i.date.indexOf(year)===0;});
+  // Apply master filter to get the base filtered dataset
+  var allPositive = data.filter(function(i){return i.amount>0;});
+  var filtered = allPositive.slice();
+  if(year     !== 'all') filtered = filtered.filter(function(i){return i.date.substring(0,4)===year;});
+  if(month    !== 'all') filtered = filtered.filter(function(i){return i.date.substring(5,7)===month;});
   if(currency !== 'all') filtered = filtered.filter(function(i){return i.currency===currency;});
+
+  // Sync hidden sub-selectors (legacy JS compatibility)
+  ['monthly-currency','cat-dash-currency','yearly-currency','heatmap-currency'].forEach(function(id){
+    var el = document.getElementById(id); if(!el) return;
+    if(currency !== 'all') { el.innerHTML='<option value="'+currency+'">'+currency+'</option>'; el.value=currency; }
+    else if(dataCurs.length) { el.innerHTML=dataCurs.map(function(c){return'<option value="'+c+'">'+c+'</option>';}).join(''); el.value=dataCurs[0]; }
+  });
 
   renderStats(filtered);
 
-  // Monthly trend — use master currency if set, else use own selector
-  var monthlyCur = (currency !== 'all') ? currency : document.getElementById('monthly-currency').value;
-  var monthlyData = year !== 'all'
-    ? allData.filter(function(i){return i.date.indexOf(year)===0 && i.currency===monthlyCur;})
-    : allData.filter(function(i){return i.currency===monthlyCur;});
+  // Monthly trend — use first currency in filtered if 'all'
+  var monthlyCur = currency !== 'all' ? currency : (dataCurs[0] || 'NGN');
+  var monthlyData = filtered.filter(function(i){return i.currency===monthlyCur;});
   renderMonthlyChart(monthlyData, monthlyCur);
 
-  // Category breakdown — has its own internal year/month/currency filters, pass full data
-  renderCategoryBars(allData);
+  // Category bars — use master filtered data
+  renderCategoryBars(filtered);
 
-  // Yearly totals chart — use master currency if set, else own selector
-  var yearlyCur = (currency !== 'all') ? currency : document.getElementById('yearly-currency').value;
-  renderYearlyChart(allData.filter(function(i){return i.currency===yearlyCur;}), yearlyCur);
+  // Yearly chart — use full unfiltered data for all years (month filter makes no sense for yearly)
+  var yearlyBase = allPositive.slice();
+  if(currency !== 'all') yearlyBase = yearlyBase.filter(function(i){return i.currency===currency;});
+  var yearlyCur = currency !== 'all' ? currency : (dataCurs[0] || 'NGN');
+  renderYearlyChart(yearlyBase.filter(function(i){return i.currency===yearlyCur;}), yearlyCur);
 
-  // Heatmap — use master currency if set, else own selector
-  var hmCur = (currency !== 'all') ? currency : document.getElementById('heatmap-currency').value;
-  renderHeatmap(allData.filter(function(i){return i.currency===hmCur;}), hmCur);
+  // Heatmap — use full unfiltered data (heatmap always shows full year grid)
+  var hmBase = allPositive.slice();
+  if(currency !== 'all') hmBase = hmBase.filter(function(i){return i.currency===currency;});
+  var hmCur = currency !== 'all' ? currency : (dataCurs[0] || 'NGN');
+  renderHeatmap(hmBase, hmCur);
 }
 
 
@@ -4014,44 +4019,15 @@ function renderCategoryBars(data){
   var container = document.getElementById('cat-bars-container');
   container.innerHTML = '';
 
-  // Read own filters
-  var yrSel  = document.getElementById('cat-dash-year');
-  var moSel  = document.getElementById('cat-dash-month');
-  var curSel = document.getElementById('cat-dash-currency');
-
-  // Populate year options (preserve selection)
-  var savedYr = yrSel ? yrSel.value : 'all';
-  var savedMo = moSel ? moSel.value : 'all';
-  var allYears = [];
-  data.forEach(function(i){ var y=i.date.substring(0,4); if(allYears.indexOf(y)===-1) allYears.push(y); });
-  allYears.sort().reverse();
-  if(yrSel){
-    yrSel.innerHTML = '<option value="all">All Years</option>' +
-      allYears.map(function(y){return '<option value="'+y+'"'+(savedYr===y?' selected':'')+'>'+y+'</option>';}).join('');
-  }
-  if(moSel && moSel.options.length < 13){
-    moSel.innerHTML = '<option value="all">All Months</option>' +
-      MONTHS.map(function(m,i){return '<option value="'+pad(i+1)+'">'+m+'</option>';}).join('');
-    moSel.value = savedMo;
-  }
-
-  var selYr  = yrSel  ? yrSel.value  : 'all';
-  var selMo  = moSel  ? moSel.value  : 'all';
-  var selCur = curSel ? curSel.value : 'all';
-
-  // Filter data
+  // data is already filtered by master — just use it directly
   var filtered = data.filter(function(i){return i.amount>0;});
-  if(selYr  !== 'all') filtered = filtered.filter(function(i){return i.date.substring(0,4)===selYr;});
-  if(selMo  !== 'all') filtered = filtered.filter(function(i){return i.date.substring(5,7)===selMo;});
-  if(selCur !== 'all') filtered = filtered.filter(function(i){return i.currency===selCur;});
 
   if(!filtered.length){
     container.innerHTML = '<p style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);padding:12px 0;">No data for selected filters</p>';
     return;
   }
 
-  // Group by category — sum amounts (cross-currency totals are display-only per currency)
-  // Build one entry per category per currency combination
+  // Group by category and currency
   var byCatCur = {};
   filtered.forEach(function(i){
     var k = i.category+':::'+i.currency;
@@ -4059,19 +4035,17 @@ function renderCategoryBars(data){
     byCatCur[k].total += i.amount;
   });
 
-  // Group by category, collecting per-currency totals
   var byCat = {};
-  Object.values(byCatCur).forEach(function(e){
+  Object.keys(byCatCur).forEach(function(k){
+    var e = byCatCur[k];
     if(!byCat[e.cat]) byCat[e.cat] = {totals:{}, grand:0};
     byCat[e.cat].totals[e.cur] = (byCat[e.cat].totals[e.cur]||0) + e.total;
-    byCat[e.cat].grand += e.total; // only meaningful if single currency, used for sorting
+    byCat[e.cat].grand += e.total;
   });
 
-  // Sort by total descending (use first currency's value for sort if mixed)
-  var cats = Object.keys(byCat).sort(function(a,b){ return b.grand - a.grand; });
+  var cats = Object.keys(byCat).sort(function(a,b){ return byCat[b].grand - byCat[a].grand; });
   if(!cats.length){ container.innerHTML='<p style="color:var(--muted);">No data</p>'; return; }
 
-  // Find max for bar widths — per currency
   var maxByCur = {};
   cats.forEach(function(cat){
     Object.keys(byCat[cat].totals).forEach(function(cur){
@@ -4080,40 +4054,8 @@ function renderCategoryBars(data){
     });
   });
 
-  // Build accordion block — single collapsed unit like Daily View
-  var PREVIEW = 5;
-  var isExpanded = false;
-
-  // Header bar (always visible — shows total entries + toggle)
-  var totalAmt = {};
-  filtered.forEach(function(i){
-    totalAmt[i.currency] = (totalAmt[i.currency]||0)+i.amount;
-  });
-  var totalStr = Object.keys(totalAmt).map(function(c){
-    return '<span class="currency-badge currency-'+c+'" style="font-size:0.72rem;">'+( SYMS[c]||'')+fmtNum(totalAmt[c])+' '+c+'</span>';
-  }).join(' ');
-
-  var accordion = document.createElement('div');
-  accordion.className = 'day-block';
-
-  var accHeader = document.createElement('div');
-  accHeader.className = 'day-header';
-  accHeader.style.cssText = 'padding:12px 18px;';
-  accHeader.innerHTML =
-    '<div class="day-header-left" style="flex-wrap:wrap;gap:8px;">' +
-      '<div class="day-number" style="font-size:1.2rem;min-width:auto;">'+cats.length+'</div>' +
-      '<div><div style="font-family:\'DM Mono\',monospace;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">categories</div>' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">'+totalStr+'</div></div>' +
-    '</div>' +
-    '<div class="day-arrow">&#9660;</div>';
-
-  // Body (the bars)
-  var accBody = document.createElement('div');
-  accBody.className = 'day-body';
-  accBody.style.padding = '16px 18px';
-
-  // Build all bars
-  cats.forEach(function(cat, ci){
+  // Render all bars — no accordion, no collapse
+  cats.forEach(function(cat){
     var color = getCatColor(cat, 0);
     var curTotals = byCat[cat].totals;
     var curs = Object.keys(curTotals);
@@ -4121,20 +4063,18 @@ function renderCategoryBars(data){
     var catRow = document.createElement('div');
     catRow.style.cssText = 'margin-bottom:14px;';
 
-    // Category label row
     var labelRow = document.createElement('div');
     labelRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;';
     var amtSpans = curs.map(function(c){
-      return '<span style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:600;">'+( SYMS[c]||'')+fmtNum(curTotals[c])+'<span style="font-size:0.62rem;opacity:0.7;margin-left:2px;">'+c+'</span></span>';
+      return '<span style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:600;">'+(SYMS[c]||'')+fmtNum(curTotals[c])+'<span style="font-size:0.62rem;opacity:0.7;margin-left:2px;">'+c+'</span></span>';
     }).join(' <span style="opacity:0.3;">·</span> ');
     labelRow.innerHTML =
-      '<div style="display:flex;align-items:center;gap:8px;font-size:0.85rem;font-weight:500;">' +
+      '<div style="display:flex;align-items:center;gap:8px;font-size:0.85rem;font-weight:500;">'+
         '<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+color+';flex-shrink:0;"></span>'+cat+
-      '</div>' +
+      '</div>'+
       '<div style="display:flex;gap:8px;align-items:center;">'+amtSpans+'</div>';
     catRow.appendChild(labelRow);
 
-    // One bar per currency
     curs.forEach(function(c){
       var val = curTotals[c];
       var pct = maxByCur[c]>0 ? (val/maxByCur[c]*100) : 0;
@@ -4148,24 +4088,8 @@ function renderCategoryBars(data){
       catRow.appendChild(trackRow);
     });
 
-    accBody.appendChild(catRow);
+    container.appendChild(catRow);
   });
-
-  // Toggle open/close on header click
-  accHeader.addEventListener('click', function(){
-    isExpanded = !isExpanded;
-    if(isExpanded){
-      accBody.classList.add('open');
-      accHeader.classList.add('open');
-    } else {
-      accBody.classList.remove('open');
-      accHeader.classList.remove('open');
-    }
-  });
-
-  accordion.appendChild(accHeader);
-  accordion.appendChild(accBody);
-  container.appendChild(accordion);
 }
 
 
@@ -4430,21 +4354,32 @@ function renderHeatmap(data, cur){
   hContainer.appendChild(legend);
 
   // ── YoY % Growth cards ──
+  renderYoYStrip(yoyContainer, byYM, years, sym, cur);
+}
+
+// ── Shared YoY strip renderer (used by both expenses and income heatmaps) ──
+function renderYoYStrip(container, byYM, years, sym, cur) {
+  if (!container) return;
+  container.innerHTML = '';
+  if (!years.length) return;
+
+  // Calculate year totals
+  var yearTotals = {};
+  years.forEach(function(y){ yearTotals[y] = byYM[y].reduce(function(s,v){return s+v;},0); });
+
   var growthTitle = document.createElement('div');
   growthTitle.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;';
   growthTitle.textContent = 'Year-over-year growth · '+cur;
-  yoyContainer.appendChild(growthTitle);
+  container.appendChild(growthTitle);
 
   var strip = document.createElement('div');
   strip.className = 'yoy-strip';
-
   var yearColors = ['#3d5a73','#c8962e','#4a7c59','#b5451b','#6b3d8c','#2e7d8a','#8b5e3c','#7c4a4a'];
 
   years.forEach(function(y, i){
     var block = document.createElement('div');
     block.className = 'yoy-year-block';
     block.style.borderTop = '3px solid '+yearColors[i % yearColors.length];
-
     var total = yearTotals[y];
     var prevTotal = i>0 ? yearTotals[years[i-1]] : null;
     var pctHtml = '';
@@ -4455,17 +4390,12 @@ function renderHeatmap(data, cur){
     } else {
       var pct = ((total - prevTotal) / prevTotal * 100);
       var cls = Math.abs(pct)<2 ? 'flat' : pct>0 ? 'up' : 'down';
-      var sign = pct>0?'+':'';
-      pctHtml = '<span class="yoy-pct '+cls+'">'+sign+pct.toFixed(1)+'%</span>';
+      pctHtml = '<span class="yoy-pct '+cls+'">'+(pct>0?'+':'')+pct.toFixed(1)+'%</span>';
     }
-
-    block.innerHTML =
-      '<div class="yoy-year-lbl">'+y+'</div>'+
-      '<div class="yoy-total">'+sym+fmtNum(total)+'</div>'+
-      pctHtml;
+    block.innerHTML = '<div class="yoy-year-lbl">'+y+'</div><div class="yoy-total">'+sym+fmtNum(total)+'</div>'+pctHtml;
     strip.appendChild(block);
   });
-  yoyContainer.appendChild(strip);
+  container.appendChild(strip);
 }
 
 
@@ -8522,135 +8452,101 @@ var incCharts = {};
 function renderIncomeDashboard() {
   var data = loadIncomeData();
   if (!data.length) {
-    document.getElementById('inc-dash-empty').style.display = 'block';
-    document.getElementById('inc-dash-content').style.display = 'none';
+    document.getElementById("inc-dash-empty").style.display = "block";
+    document.getElementById("inc-dash-content").style.display = "none";
     return;
   }
-  document.getElementById('inc-dash-empty').style.display = 'none';
-  document.getElementById('inc-dash-content').style.display = 'block';
+  document.getElementById("inc-dash-empty").style.display = "none";
+  document.getElementById("inc-dash-content").style.display = "block";
 
-  var yrSel = document.getElementById('inc-dash-year');
+  // Populate year dropdown
+  var yrSel = document.getElementById("inc-dash-year");
+  var savedYr = yrSel ? yrSel.value : "all";
   var years = []; data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }); years.sort().reverse();
-  var savedYr = yrSel.value;
-  yrSel.innerHTML = '<option value="all">All Years</option>' + years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
-  if (savedYr) yrSel.value = savedYr;
+  if(yrSel){ yrSel.innerHTML = "<option value=\"all\">All Years</option>" + years.map(function(y){return "<option value=\""+y+"\">"+y+"</option>";}).join(""); if(years.indexOf(savedYr)!==-1) yrSel.value=savedYr; }
 
-  // Detect all currencies in income data
-  var incCurrencies = [];
-  data.forEach(function(i){ if(i.currency && incCurrencies.indexOf(i.currency)===-1) incCurrencies.push(i.currency); });
-  incCurrencies.sort();
+  // Populate month dropdown
+  var moSel = document.getElementById("inc-dash-month");
+  if(moSel && moSel.options.length < 13) { var savedMo=moSel.value; moSel.innerHTML="<option value=\"all\">All Months</option>"+MONTHS.map(function(m,i){return"<option value=\""+pad(i+1)+"\">"+m+"</option>";}).join(""); if(savedMo) moSel.value=savedMo; }
 
-  // Rebuild all income dashboard currency selects dynamically
-  function rebuildIncCurSel(id, includeAll, defaultFirst) {
-    var el = document.getElementById(id); if (!el) return;
-    var cur = el.value;
-    var html = includeAll ? '<option value="all">All Currencies</option>' : '';
-    incCurrencies.forEach(function(c){ html += '<option value="'+c+'">'+c+' '+(SYMS[c]||'')+'</option>'; });
-    el.innerHTML = html;
-    if (cur && el.querySelector('option[value="'+cur+'"]')) el.value = cur;
-    else if (defaultFirst && incCurrencies.length) el.value = incCurrencies[0];
-    else if (includeAll) el.value = 'all';
-  }
-  rebuildIncCurSel('inc-dash-currency',      true,  false);
-  rebuildIncCurSel('inc-monthly-currency',   false, true);
-  rebuildIncCurSel('inc-cat-dash-currency',  true,  false);
-  rebuildIncCurSel('inc-yearly-currency',    false, true);
-  rebuildIncCurSel('inc-heatmap-currency',   false, true);
-  rebuildIncCurSel('inc-led-currency',       true,  false);
-
-  var incCur = document.getElementById('inc-dash-currency').value;
-
-  // Sync all income sub-selectors to master and hide when specific currency selected
-  var incSubSelIds = ['inc-monthly-currency','inc-cat-dash-currency','inc-yearly-currency','inc-heatmap-currency'];
-  incSubSelIds.forEach(function(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    if (incCur !== 'all') {
-      if (el.querySelector('option[value="'+incCur+'"]')) el.value = incCur;
-      else if (el.options.length) el.value = el.options[0].value;
-      el.style.display = 'none';
-    } else {
-      el.style.display = '';
-    }
+  // Populate currency dropdown
+  var curSel = document.getElementById("inc-dash-currency");
+  var savedCur = curSel ? curSel.value : "all";
+  var incCurs = []; data.forEach(function(i){ if(i.currency && incCurs.indexOf(i.currency)===-1) incCurs.push(i.currency); }); incCurs.sort();
+  if(curSel){ curSel.innerHTML="<option value=\"all\">All Currencies</option>"+incCurs.map(function(c){return"<option value=\""+c+"\">"+c+" "+(SYMS[c]||"")+"</option>";}).join(""); if(incCurs.indexOf(savedCur)!==-1) curSel.value=savedCur; else curSel.value="all"; }
+  // Sync hidden sub-selectors
+  var incCur = curSel ? curSel.value : "all";
+  ["inc-monthly-currency","inc-cat-dash-currency","inc-yearly-currency","inc-heatmap-currency"].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    if(incCur !== "all"){ el.innerHTML="<option value=\""+incCur+"\">"+incCur+"</option>"; el.value=incCur; }
+    else if(incCurs.length){ el.innerHTML=incCurs.map(function(c){return"<option value=\""+c+"\">"+c+"</option>";}).join(""); el.value=incCurs[0]; }
   });
+  // Also update ledger currency filter
+  var ledCurSel = document.getElementById("inc-led-currency");
+  if(ledCurSel){ var lc=ledCurSel.value; ledCurSel.innerHTML="<option value=\"all\">All Currencies</option>"+incCurs.map(function(c){return"<option value=\""+c+"\">"+c+"</option>";}).join(""); if(lc&&ledCurSel.querySelector("option[value=\""+lc+"\"]")) ledCurSel.value=lc; }
 
-  var year = yrSel.value;
-  var cur  = document.getElementById('inc-dash-currency').value;
-  var filtered = data.filter(function(i){ return i.amount > 0; });
-  if (year !== 'all') filtered = filtered.filter(function(i){ return i.date.indexOf(year)===0; });
-  if (cur  !== 'all') filtered = filtered.filter(function(i){ return i.currency===cur; });
+  // Read master filters
+  var year  = yrSel  ? yrSel.value  : "all";
+  var month = moSel  ? moSel.value  : "all";
+  var cur   = curSel ? curSel.value : "all";
+
+  // Apply master filter
+  var allPositive = data.filter(function(i){return i.amount>0;});
+  var filtered = allPositive.slice();
+  if(year  !== "all") filtered = filtered.filter(function(i){return i.date.substring(0,4)===year;});
+  if(month !== "all") filtered = filtered.filter(function(i){return i.date.substring(5,7)===month;});
+  if(cur   !== "all") filtered = filtered.filter(function(i){return i.currency===cur;});
 
   // Stats
   var byCur = {};
   filtered.forEach(function(i){ byCur[i.currency]=(byCur[i.currency]||0)+i.amount; });
-  var statsRow = document.getElementById('inc-stats-row');
-  var statItems = [{label:'Total Entries',value:filtered.length,sym:'',isCur:false,cls:'total'}];
-  Object.keys(byCur).forEach(function(c){
-    statItems.push({label:'Total '+c,value:byCur[c],sym:SYMS[c]||'',isCur:true,cls:'naira'});
-  });
-  statsRow.innerHTML = statItems.map(function(s){
-    return '<div class="stat-card '+s.cls+'"><div class="stat-label">'+s.label+'</div><div class="stat-value" style="color:var(--sage);">'+(s.isCur?s.sym+fmtNum(s.value):s.value)+'</div></div>';
-  }).join('');
+  var statsRow = document.getElementById("inc-stats-row");
+  var statItems = [{label:"Total Entries",value:filtered.length,sym:"",isCur:false,cls:"total"}];
+  Object.keys(byCur).sort().forEach(function(c){ statItems.push({label:"Total "+c,value:byCur[c],sym:SYMS[c]||"",isCur:true,cls:"naira"}); });
+  statsRow.innerHTML = statItems.map(function(s){ return "<div class=\"stat-card "+s.cls+"\"><div class=\"stat-label\">"+s.label+"</div><div class=\"stat-value\" style=\"color:var(--sage);\">"+( s.isCur?s.sym+fmtNum(s.value):s.value)+"</div></div>"; }).join("");
 
-  // Monthly trend chart
-  var mCur = document.getElementById('inc-monthly-currency').value;
+  // Monthly trend
+  var mCur = cur !== "all" ? cur : (incCurs[0]||"NGN");
   var mData = filtered.filter(function(i){ return i.currency===mCur; });
-  var byMonth = {};
-  mData.forEach(function(i){ var k=i.date.substring(0,7); byMonth[k]=(byMonth[k]||0)+i.amount; });
+  var byMonth = {}; mData.forEach(function(i){ var k=i.date.substring(0,7); byMonth[k]=(byMonth[k]||0)+i.amount; });
   var mKeys = Object.keys(byMonth).sort();
-  var mLabels = mKeys.map(function(k){ var p=k.split('-'); return MONTHS[parseInt(p[1])-1]+' '+p[0].slice(2); });
-  var mVals   = mKeys.map(function(k){ return +byMonth[k].toFixed(2); });
-  var subEl = document.getElementById('inc-monthly-sub');
-  if (subEl) subEl.textContent = mLabels.length + ' months in ' + mCur;
-  if (incCharts['inc-chart-monthly']) { incCharts['inc-chart-monthly'].destroy(); }
-  if (mKeys.length) {
-    var ctx = document.getElementById('inc-chart-monthly').getContext('2d');
-    incCharts['inc-chart-monthly'] = new Chart(ctx, {type:'line', data:{labels:mLabels,datasets:[{label:mCur,data:mVals,borderColor:'#4a7c59',backgroundColor:'rgba(74,124,89,0.08)',tension:0.4,fill:true,pointBackgroundColor:'#4a7c59',pointRadius:3}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return (SYMS[mCur]||'')+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
-  }
+  var mLabels = mKeys.map(function(k){ var p=k.split("-"); return MONTHS[parseInt(p[1])-1]+" "+p[0].slice(2); });
+  var mVals = mKeys.map(function(k){ return +byMonth[k].toFixed(2); });
+  var subEl = document.getElementById("inc-monthly-sub");
+  if(subEl) subEl.textContent = mLabels.length+" months in "+mCur;
+  if(incCharts["inc-chart-monthly"]) incCharts["inc-chart-monthly"].destroy();
+  if(mKeys.length){ var ctx=document.getElementById("inc-chart-monthly").getContext("2d"); incCharts["inc-chart-monthly"]=new Chart(ctx,{type:"line",data:{labels:mLabels,datasets:[{label:mCur,data:mVals,borderColor:"#4a7c59",backgroundColor:"rgba(74,124,89,0.08)",tension:0.4,fill:true,pointBackgroundColor:"#4a7c59",pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},states:{x:{grid:{display:false}},y:{ticks:{callback:function(v){return(SYMS[mCur]||"")+fmtCompact(v);}},grid:{color:"rgba(0,0,0,0.04)"}}},scales:{y:{ticks:{callback:function(v){return(SYMS[mCur]||"")+fmtCompact(v);}},grid:{color:"rgba(0,0,0,0.04)"}},x:{grid:{display:false}}}}}); }
 
-  // Yearly chart
-  var yCur = document.getElementById('inc-yearly-currency').value;
-  var yData = data.filter(function(i){ return i.amount>0 && i.currency===yCur; });
-  var byYear = {};
-  yData.forEach(function(i){ var y=i.date.substring(0,4); byYear[y]=(byYear[y]||0)+i.amount; });
-  var yKeys = Object.keys(byYear).sort();
-  var yVals = yKeys.map(function(y){ return +byYear[y].toFixed(2); });
-  var ySubEl = document.getElementById('inc-yearly-sub');
-  if (ySubEl) ySubEl.textContent = yKeys.length + ' years in ' + yCur;
-  if (incCharts['inc-chart-yearly']) { incCharts['inc-chart-yearly'].destroy(); }
-  if (yKeys.length) {
-    var ctx2 = document.getElementById('inc-chart-yearly').getContext('2d');
-    incCharts['inc-chart-yearly'] = new Chart(ctx2, {type:'line', data:{labels:yKeys,datasets:[{label:yCur,data:yVals,borderColor:'#4a7c59',backgroundColor:'rgba(74,124,89,0.08)',tension:0.4,fill:true,pointBackgroundColor:'#4a7c59',pointRadius:5,pointHoverRadius:7}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return (SYMS[yCur]||'')+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
-  }
-
-  // Category bars
-  var catCur = document.getElementById('inc-cat-dash-currency').value;
-  var catData = filtered.filter(function(i){ return catCur==='all' || i.currency===catCur; });
-  var byCat = {};
-  catData.forEach(function(i){ byCat[i.category]=(byCat[i.category]||0)+i.amount; });
-  var cats = Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; });
-  var maxVal = cats.length ? Math.max.apply(null, cats.map(function(c){ return byCat[c]; })) : 1;
-  var catCont = document.getElementById('inc-cat-bars-container');
-  catCont.innerHTML = '';
+  // Income category bars — no collapse, directly rendered
+  var catCont = document.getElementById("inc-cat-bars-container");
+  catCont.innerHTML = "";
+  var byCat = {}; filtered.forEach(function(i){ byCat[i.category]=(byCat[i.category]||0)+i.amount; });
+  var cats = Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a];});
+  var maxVal = cats.length ? Math.max.apply(null,cats.map(function(c){return byCat[c];})) : 1;
+  var sym = cur !== "all" ? (SYMS[cur]||cur) : "";
   cats.forEach(function(cat) {
     var color = getIncCatColor(cat);
-    var pct   = (byCat[cat]/maxVal*100).toFixed(1);
-    var row   = document.createElement('div');
-    row.style.cssText = 'margin-bottom:10px;';
-    row.innerHTML =
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'+
-        '<span style="display:flex;align-items:center;gap:6px;font-size:0.82rem;"><span style="width:9px;height:9px;border-radius:50%;background:'+color+';display:inline-block;"></span>'+cat+'</span>'+
-        '<span style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:600;">'+fmtCompact(byCat[cat])+'</span>'+
-      '</div>'+
-      '<div style="height:7px;background:#ede7d9;border-radius:4px;overflow:hidden;">'+
-        '<div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:4px;transition:width 0.5s;"></div>'+
-      '</div>';
+    var pct = (byCat[cat]/maxVal*100).toFixed(1);
+    var row = document.createElement("div"); row.style.cssText = "margin-bottom:10px;";
+    row.innerHTML = "<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;\"><span style=\"display:flex;align-items:center;gap:6px;font-size:0.82rem;\"><span style=\"width:9px;height:9px;border-radius:50%;background:"+color+";display:inline-block;\"></span>"+cat+"</span><span style=\"font-family:DM Mono,monospace;font-size:0.72rem;font-weight:600;\">"+sym+fmtCompact(byCat[cat])+"</span></div><div style=\"height:7px;background:#ede7d9;border-radius:4px;overflow:hidden;\"><div style=\"width:"+pct+"%;height:100%;background:"+color+";border-radius:4px;transition:width 0.5s;\"></div></div>";
     catCont.appendChild(row);
   });
 
-  // Heatmap
-  var hmCur = document.getElementById('inc-heatmap-currency').value;
-  renderIncomeHeatmap(data.filter(function(i){ return i.amount>0; }), hmCur);
+  // Yearly chart — use full data (not month-filtered)
+  var yCur = cur !== "all" ? cur : (incCurs[0]||"NGN");
+  var yData = allPositive.filter(function(i){return i.currency===yCur;});
+  if(year !== "all") yData = allPositive.filter(function(i){return i.currency===yCur;}); // yearly always shows all years
+  var byYear = {}; yData.forEach(function(i){ var y=i.date.substring(0,4); byYear[y]=(byYear[y]||0)+i.amount; });
+  var yKeys = Object.keys(byYear).sort();
+  var yVals = yKeys.map(function(y){return +byYear[y].toFixed(2);});
+  var ySubEl = document.getElementById("inc-yearly-sub");
+  if(ySubEl) ySubEl.textContent = yKeys.length+" years in "+yCur;
+  if(incCharts["inc-chart-yearly"]) incCharts["inc-chart-yearly"].destroy();
+  if(yKeys.length){ var ctx2=document.getElementById("inc-chart-yearly").getContext("2d"); incCharts["inc-chart-yearly"]=new Chart(ctx2,{type:"line",data:{labels:yKeys,datasets:[{label:yCur,data:yVals,borderColor:"#4a7c59",backgroundColor:"rgba(74,124,89,0.08)",tension:0.4,fill:true,pointBackgroundColor:"#4a7c59",pointRadius:5,pointHoverRadius:7}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return(SYMS[yCur]||"")+fmtCompact(v);}},grid:{color:"rgba(0,0,0,0.04)"}},x:{grid:{display:false}}}}}); }
+
+  // Heatmap — always uses full data
+  var hmCur = cur !== "all" ? cur : (incCurs[0]||"NGN");
+  renderIncomeHeatmap(allPositive, hmCur);
 }
 
 function renderIncomeHeatmap(data, cur) {
@@ -8661,8 +8557,7 @@ function renderIncomeHeatmap(data, cur) {
     var y=i.date.substring(0,4); var m=parseInt(i.date.substring(5,7))-1;
     if(!byYM[y]) byYM[y]=new Array(12).fill(0);
     byYM[y][m]+=i.amount;
-  });
-  var years = Object.keys(byYM).sort();
+  });  var years = Object.keys(byYM).sort();
   var hc = document.getElementById('inc-heatmap-container');
   if (!hc) return;
   hc.innerHTML='';
@@ -8771,6 +8666,10 @@ function renderIncomeHeatmap(data, cur) {
   var leg=document.createElement('div'); leg.style.cssText='display:flex;align-items:center;gap:6px;margin-top:10px;font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);';
   leg.innerHTML='<span>Low</span>'; pal.forEach(function(c){ leg.innerHTML+='<span style="display:inline-block;width:20px;height:10px;border-radius:2px;background:'+c+';"></span>'; }); leg.innerHTML+='<span>High</span>';
   hc.appendChild(leg);
+
+  // ── YoY growth for income ──
+  var incYoyContainer = document.getElementById('inc-yoy-growth-container');
+  if (incYoyContainer) renderYoYStrip(incYoyContainer, byYM, years, sym, cur);
 }
 
 
