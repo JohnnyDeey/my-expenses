@@ -135,6 +135,95 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // ── App shortcut keys ──
+  // S = mode switcher, E = expenses, I = income, H = toggle header
+  // L = log out, F1 = help, F2 = date lookup
+  document.addEventListener('keydown', function(e) {
+    // Never fire when typing in a field
+    var tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+
+    var key = e.key;
+
+    // Escape — ALWAYS check for mode switcher first, before any other guards
+    if (key === 'Escape') {
+      var modeO = document.getElementById('mode-overlay');
+      var modeP = document.getElementById('mode-switch-prompt');
+      if (modeO && modeO.style.display === 'flex') { e.preventDefault(); if (typeof hideModeOverlay === 'function') hideModeOverlay(); return; }
+      if (modeP) { e.preventDefault(); if (typeof hideSwitchPrompt === 'function') hideSwitchPrompt(); return; }
+    }
+
+    // Never fire when PIN overlay is showing (not logged in)
+    var pinO = document.getElementById('pin-overlay');
+    if (pinO && pinO.style.display !== 'none' && pinO.style.display !== '') return;
+    // Never fire when any modal overlay is open
+    var overlayIds = ['privacy-overlay','onboard-overlay','print-picker-overlay','reset-overlay','contact-overlay'];
+    for (var oi = 0; oi < overlayIds.length; oi++) {
+      var oel = document.getElementById(overlayIds[oi]);
+      if (oel && oel.style.display !== 'none' && oel.style.display !== '') return;
+    }
+
+    // F1 — Help
+    if (key === 'F1') {
+      e.preventDefault();
+      if (typeof openHelp === 'function') openHelp();
+      return;
+    }
+
+    // F2 — Date Lookup / Calendar
+    if (key === 'F2') {
+      e.preventDefault();
+      var dlO = document.getElementById('date-lookup-overlay');
+      if (dlO && dlO.style.display === 'flex') {
+        if (typeof closeDateLookup === 'function') closeDateLookup();
+      } else {
+        if (typeof openDateLookup === 'function') openDateLookup();
+      }
+      return;
+    }
+
+    // Letter keys — only when no help/date overlay is open
+    var helpO = document.getElementById('help-overlay');
+    var dlO2  = document.getElementById('date-lookup-overlay');
+    if ((helpO && helpO.style.display === 'flex') ||
+        (dlO2  && dlO2.style.display  === 'flex')) return;
+
+    // S — open mode switcher
+    if (key === 's' || key === 'S') {
+      e.preventDefault();
+      if (typeof showModeSwitchPrompt === 'function') showModeSwitchPrompt();
+      return;
+    }
+
+    // E — go to Expenses module
+    if (key === 'e' || key === 'E') {
+      e.preventDefault();
+      if (typeof selectMode === 'function' && _appMode !== 'expenses') selectMode('expenses');
+      return;
+    }
+
+    // I — go to Income module
+    if (key === 'i' || key === 'I') {
+      e.preventDefault();
+      if (typeof selectMode === 'function' && _appMode !== 'income') selectMode('income');
+      return;
+    }
+
+    // H — toggle header show/hide
+    if (key === 'h' || key === 'H') {
+      e.preventDefault();
+      if (typeof toggleHeaderCollapse === 'function') toggleHeaderCollapse();
+      return;
+    }
+
+    // L — log out
+    if (key === 'l' || key === 'L') {
+      e.preventDefault();
+      if (typeof logOut === 'function') logOut();
+      return;
+    }
+  });
+
 });
 
 
@@ -421,6 +510,18 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'ArrowLeft')  { e.preventDefault(); shiftLookupDate(-1); }
   if (e.key === 'ArrowRight') { e.preventDefault(); shiftLookupDate(1);  }
   if (e.key === 'Escape')     { e.preventDefault(); closeDateLookup();   }
+});
+
+// Escape for mode switcher prompt — same pattern as Date Lookup, no guards
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  var p = document.getElementById('mode-switch-prompt');
+  if (p) { e.preventDefault(); p.remove(); var eb = document.getElementById('mode-switch-backdrop'); if(eb) eb.remove(); return; }
+  var modeO = document.getElementById('mode-overlay');
+  if (modeO && modeO.style.display === 'flex') { e.preventDefault(); modeO.style.display = 'none'; return; }
+  // Close Help panel
+  var ho = document.getElementById('help-overlay');
+  if (ho && ho.style.display === 'flex') { e.preventDefault(); ho.style.display = 'none'; }
 });
 
 </script>
@@ -7960,7 +8061,26 @@ function showModeSwitchPrompt() {
   closeBtn.addEventListener('click', hideSwitchPrompt);
   prompt.appendChild(closeBtn);
 
+  // Direct keydown on the prompt element itself
+  prompt.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); hideSwitchPrompt(); }
+  });
+
+  // ── Dedicated Escape listener — capture phase on document ──
+  function onEscape(ev) {
+    if (ev.key === 'Escape') {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      hideSwitchPrompt();
+      document.removeEventListener('keydown', onEscape, true);
+    }
+  }
+  document.addEventListener('keydown', onEscape, true);
+
   document.body.insertBefore(prompt, document.body.firstChild);
+  // Focus the prompt so keyboard events target it directly
+  prompt.setAttribute('tabindex', '-1');
+  setTimeout(function(){ prompt.focus(); }, 10);
 }
 
 function hideSwitchPrompt() {
@@ -11179,7 +11299,7 @@ function updateUserDisplay() {
       btns.innerHTML =
         '<button id="mode-switch-btn" onclick="showModeSwitchPrompt()" title="Switch module" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.6);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128260;</button>' +
         '<span id="hdr-mode-label" style="font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;padding:5px 12px;border-radius:4px;background:'+mlBg+';color:'+mlClr+';white-space:nowrap;flex:1;text-align:center;">'+mlTxt+'</span>' +
-        '<button onclick="logOut()" title="Log out" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128275;</button>';
+        '<button onclick="logOut()" title="Log out  [L]" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128275;</button>';
     } else {
       btns.innerHTML =
         '<button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;" title="Sign in">&#128275;</button>';
@@ -11598,18 +11718,21 @@ var HELP_DATA = {
   'keyboard': {
     title: '⌨️ Keyboard Shortcuts — Laptop & Desktop',
     steps: [
-      'TAB → move to the next tab. Expenses: Import → Categorize → Daily → Dashboard → Ledger → Budget → Manage → (loops back).',
-      'CTRL + TAB → move to the previous tab (same order, backwards).',
-      'Tab only works when you are logged in and not typing in any input field or when an overlay is open.',
-      '↑ UP ARROW → jump to the very top of the current page instantly.',
-      '↓ DOWN ARROW → jump to the very bottom of the current page instantly.',
-      'Arrow keys only work when you are not typing in a text field.',
-      'DATE LOOKUP — ← LEFT ARROW: previous day | → RIGHT ARROW: next day | ESCAPE: close.',
-      'PIN PAD — type digits 0–9 directly | BACKSPACE: delete last digit | ESCAPE: clear all | ENTER: submit.',
-      'All shortcuts are disabled automatically when any overlay is open.'
+      'TAB → next tab | CTRL+TAB → previous tab (works when logged in and not typing).',
+      '↑ UP ARROW → jump to top of page | ↓ DOWN ARROW → jump to bottom.',
+      'DATE LOOKUP — ← previous day | → next day | ESCAPE or F2 → close.',
+      'PIN PAD — type digits 0–9 | BACKSPACE → delete | ESCAPE → clear | ENTER → submit.',
+      'S → open the module switcher (choose Expenses or Income).',
+      'E → switch directly to Expenses module.',
+      'I → switch directly to Income module.',
+      'H → toggle the header bar show/hide (same as the eye button).',
+      'L → log out immediately. Warning: pressing L anywhere outside a text field will log you out.',
+      'F1 → open Help panel.',
+      'F2 → open Date Lookup / Calendar. Press F2 or Escape to close.',
+      'All shortcuts are blocked when typing in any input field or when a modal is open.'
     ],
-    example: 'User jd0292 on his laptop — no mouse needed:\n1. Typed PIN digits, pressed Enter → logged in.\n2. Pressed Tab twice → jumped from Import to Daily tab.\n3. Pressed ↓ Down arrow → jumped to bottom of the page.\n4. Pressed ↑ Up arrow → back to the top.\n5. Pressed Ctrl+Tab → went back to Categorize.\n6. Opened Date Lookup, pressed ← five times → browsed 5 days back.\n7. Pressed Escape → closed Date Lookup.',
-    tip: 'Tab for tabs, ↑ ↓ for scrolling, ← → for dates, Enter for login — navigate the whole app without touching the mouse.'
+    example: 'User jd0292 on his laptop:\n1. Typed PIN → Enter → logged in.\n2. Pressed F2 → Date Lookup opened → browsed with ← → → Escape closed it.\n3. Pressed Tab twice → jumped to Daily tab.\n4. Pressed I → switched to Income module.\n5. Pressed E → switched back to Expenses.\n6. Pressed H → header collapsed for more screen space.\n7. Pressed F1 → Help opened.\n8. Pressed L → logged out.',
+    tip: 'S/E/I for switching modules, H to hide the header, L to log out, F1 for help, F2 for calendar — full app control without touching the mouse.'
   },
   'help': {
     title: '❓ Help & Support',
@@ -11789,7 +11912,7 @@ var ONBOARD_EXPENSES_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → previous tab<br><br><strong>↑ Up arrow</strong> → top of page &nbsp;|&nbsp; <strong>↓ Down arrow</strong> → bottom of page<br><br>In Date Lookup: <strong>←</strong> previous day &nbsp;|&nbsp; <strong>→</strong> next day &nbsp;|&nbsp; <strong>Escape</strong> = close<br><br>PIN pad: type digits, press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
   {
@@ -11847,7 +11970,7 @@ var ONBOARD_INCOME_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → previous tab<br><br><strong>↑ Up arrow</strong> → top of page &nbsp;|&nbsp; <strong>↓ Down arrow</strong> → bottom of page<br><br>In Date Lookup: <strong>←</strong> previous day &nbsp;|&nbsp; <strong>→</strong> next day &nbsp;|&nbsp; <strong>Escape</strong> = close<br><br>PIN pad: type digits, press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
   {
@@ -11992,7 +12115,7 @@ function runHelpSearch(q) {
     header:['header','hide','collapse','eye','show header','screen space'],
     biometric:['pin','pin pad','pin login','security check','weekly check','login','fast login','access code'],
     scroll:['scroll','top','bottom','navigate','jump','floating button'],
-    keyboard:['keyboard','shortcut','tab key','arrow key','ctrl','laptop','desktop','navigate tabs','keyboard navigation','scroll','pin pad'],
+    keyboard:['keyboard','shortcut','tab key','arrow key','ctrl','laptop','desktop','navigate tabs','keyboard navigation','scroll','pin pad','f1','f2','log out','switch','header','hide','calendar','help key'],
     multisearch:['multi','multiple','search','comma','rice','water','fleet','several','words','terms','bulk search','multi-word','multisearch','exclude','exclusion','minus','remove','filter out','-rice','hide results'],
     security:['security','check','verify','verification','weekly','periodic','random','full check','identity'],
     resetpin:['reset','forgot','pin','password','lost','code','temporary','one-time'],
