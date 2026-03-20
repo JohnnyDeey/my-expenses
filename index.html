@@ -1311,9 +1311,13 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- Ledger bulk assign bar -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
     <span class="filter-label">Search desc:</span>
-    <input type="text" id="led-bulk-search" placeholder="Filter by description... (commas for multiple: rice, water)" oninput="debouncedLedgerSearch()"
+    <input type="text" id="led-bulk-search" placeholder="Filter by description... (commas=multiple, -minus=exclude)" oninput="debouncedLedgerSearch()"
       style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
     <span id="led-bulk-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
+    <span class="filter-label" style="margin-left:4px;">Filter by category:</span>
+    <select id="led-bulk-cat-filter" onchange="renderLedger()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;max-width:160px;">
+      <option value="all">All Categories</option>
+    </select>
     <span class="filter-label" style="margin-left:4px;">Assign all filtered to:</span>
     <div class="cat-wrapper" id="led-bulk-cat-wrap" style="width:210px;">
       <input type="text" class="cat-input" id="led-bulk-cat-input" placeholder="Pick or type..." autocomplete="off"
@@ -1323,7 +1327,6 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
     <button class="btn btn-success" style="padding:8px 16px;font-size:0.8rem;white-space:nowrap;" onclick="ledgerBulkAssign()">&#10003; Assign</button>
     <button class="btn btn-ghost" style="padding:8px 10px;font-size:0.8rem;" onclick="clearLedgerBulkSearch()">&#10005;</button>
-
   </div>
 
   <div id="ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No saved entries yet.</p></div>
@@ -1750,9 +1753,13 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- Bulk assign bar -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
     <span class="filter-label">Search desc:</span>
-    <input type="text" id="inc-bulk-search" placeholder="Filter by description... (commas: salary, bonus, gift)" oninput="renderIncomeLedger()"
+    <input type="text" id="inc-bulk-search" placeholder="Filter by description... (commas=multiple, -minus=exclude)" oninput="renderIncomeLedger()"
       style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
     <span id="inc-bulk-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
+    <span class="filter-label" style="margin-left:4px;">Filter by category:</span>
+    <select id="inc-bulk-cat-filter" onchange="renderIncomeLedger()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;max-width:160px;">
+      <option value="all">All Categories</option>
+    </select>
     <span class="filter-label" style="margin-left:4px;">Assign all to:</span>
     <select id="inc-bulk-cat-sel" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;min-width:160px;">
       <option value="">Pick category...</option>
@@ -5094,6 +5101,7 @@ function clearLedgerBulkSearch() {
   ledgerBulkFilter = '';
   _ledExcludedIds = {};
   var el = document.getElementById('led-bulk-search'); if (el) el.value = '';
+  var bf = document.getElementById('led-bulk-cat-filter'); if (bf) bf.value = 'all';
   renderLedger();
 }
 
@@ -5187,6 +5195,12 @@ function ledgerBulkAssign() {
   }
   // Apply bulk filter — respects exclusion syntax (e.g. ice cream -rice)
   filtered = applySearchFilter(filtered, ledgerBulkFilter);
+  // Apply bulk category filter
+  var bulkCatFilterEl = document.getElementById('led-bulk-cat-filter');
+  var bulkCatFilterVal = bulkCatFilterEl ? bulkCatFilterEl.value : 'all';
+  if (bulkCatFilterVal !== 'all') {
+    filtered = filtered.filter(function(i){ return i.category === bulkCatFilterVal; });
+  }
   // IMPORTANT: exclude items the user has hidden with the − button
   if (Object.keys(_ledExcludedIds).length) {
     filtered = filtered.filter(function(i){ return !_ledExcludedIds[String(i.id)]; });
@@ -5434,6 +5448,11 @@ function renderLedger(){
   }
   if(ledgerBulkFilter) {
     data = applySearchFilter(data, ledgerBulkFilter);
+  }
+  // Apply bulk category filter to display
+  var bCatF = document.getElementById('led-bulk-cat-filter');
+  if (bCatF && bCatF.value !== 'all') {
+    data = data.filter(function(i){ return i.category === bCatF.value; });
   }
   // Filter out manually excluded items
   if(Object.keys(_ledExcludedIds).length) data=data.filter(function(i){return !_ledExcludedIds[String(i.id)];});
@@ -6168,6 +6187,13 @@ function populateFilters(){
   });
   document.getElementById('led-cat').innerHTML='<option value="all">All Categories</option>'+cats.map(function(c){return'<option value="'+c+'">'+c+'</option>';}).join('');
   document.getElementById('led-month').innerHTML='<option value="all">All Months</option>'+MONTHS.map(function(m,i){return'<option value="'+pad(i+1)+'">'+m+'</option>';}).join('');
+  // Populate bulk-assign category filter too
+  var bulkCatFilter = document.getElementById('led-bulk-cat-filter');
+  if (bulkCatFilter) {
+    var savedBulkCat = bulkCatFilter.value;
+    bulkCatFilter.innerHTML = '<option value="all">All Categories</option>' + cats.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+    if (savedBulkCat && bulkCatFilter.querySelector('option[value="'+savedBulkCat+'"]')) bulkCatFilter.value = savedBulkCat;
+  }
   // Dynamic currency filter — only show currencies that exist in data
   var ledCurSel = document.getElementById('led-currency');
   if (ledCurSel) {
@@ -9141,6 +9167,11 @@ function renderIncomeLedger() {
   if (incBulkSrch) {
     data = applySearchFilter(data, incBulkSrch);
   }
+  // Apply income bulk category filter
+  var incBCatF = document.getElementById('inc-bulk-cat-filter');
+  if (incBCatF && incBCatF.value !== 'all') {
+    data = data.filter(function(i){ return i.category === incBCatF.value; });
+  }
   // Filter out items hidden with − button
   var incExcludedCount = Object.keys(_incExcludedIds).length;
   if (incExcludedCount) data = data.filter(function(i){ return !_incExcludedIds[String(i.id)]; });
@@ -9285,10 +9316,16 @@ function incomeBulkAssign() {
   if (!newCat)   { showToast('Select a category first'); return; }
   if (!search)   { showToast('Enter a keyword to filter first'); return; }
   var data = loadIncomeData();
-  // Apply exclusion-aware filter — respects -minus syntax
+  // Apply exclusion-aware filter
   var matching = applySearchFilter(data, search).filter(function(i){
-    return !_incExcludedIds[String(i.id)]; // skip hidden items
+    return !_incExcludedIds[String(i.id)];
   });
+  // Apply bulk category filter
+  var incBCatF = document.getElementById('inc-bulk-cat-filter');
+  if (incBCatF && incBCatF.value !== 'all') {
+    var filterCat = incBCatF.value;
+    matching = matching.filter(function(i){ return i.category === filterCat; });
+  }
   var matchingIds = {};
   matching.forEach(function(i){ matchingIds[i.id] = true; });
   var count = 0;
@@ -9309,6 +9346,14 @@ function populateIncBulkCatSel() {
   sel.innerHTML = '<option value="">Pick category...</option>';
   getAllIncomeCats().forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
   if (cur) sel.value=cur;
+  // Also populate the inc-bulk-cat-filter dropdown
+  var filterSel = document.getElementById('inc-bulk-cat-filter');
+  if (filterSel) {
+    var curFilter = filterSel.value;
+    filterSel.innerHTML = '<option value="all">All Categories</option>';
+    getAllIncomeCats().forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; filterSel.appendChild(o); });
+    if (curFilter && filterSel.querySelector('option[value="'+curFilter+'"]')) filterSel.value = curFilter;
+  }
 }
 
 function clearIncomeLedgerFilters() {
@@ -10087,6 +10132,8 @@ function showFullVerifyStep() {
 // ── _resumeSession: enter app immediately, fire Firebase sync in background ──
 function _resumeSession(uid, name, phone) {
   _userId = uid; _userName = name; _userPhone = phone;
+  // Clear cached tail so getInitials recalculates with correct first-2-digits logic
+  localStorage.removeItem(PHONE_TAIL_KEY);
   localStorage.setItem('last_active', String(Date.now()));
   sessionStorage.setItem('app_session', '1');
   // Show app immediately — hide PIN overlay, reveal content
@@ -10773,14 +10820,15 @@ function getInitials(name) {
   for (var i = 0; i < count; i++) initials += parts[i][0].toUpperCase();
   if (!initials) initials = (name || '??').substring(0, 2).toUpperCase();
 
-  // Phone tail: use stored value, or fallback to last 2 digits from username
+  // Suffix: use stored phone tail (from full verify) if available,
+  // otherwise use first 2 digits found in username (always predictable)
   var tail = localStorage.getItem(PHONE_TAIL_KEY) || '';
   if (!tail && _userName) {
-    // Extract digits from username (e.g. 'jd0292' → '92')
+    // Extract digits from username and take the FIRST 2
     var digits = _userName.replace(/[^0-9]/g, '');
     if (digits.length >= 2) {
-      tail = digits.slice(-2);
-      localStorage.setItem(PHONE_TAIL_KEY, tail); // cache it
+      tail = digits.substring(0, 2);
+      localStorage.setItem(PHONE_TAIL_KEY, tail);
     }
   }
   return initials + tail;
