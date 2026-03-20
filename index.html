@@ -2132,6 +2132,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
     <button onclick="acceptPrivacy()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.85rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;">&#10003; I Agree &mdash; Continue</button>
   </div>
+</div>
 
 <!-- HELP OVERLAY -->
 <div id="help-overlay" style="display:none;position:fixed;inset:0;z-index:99991;background:rgba(26,20,16,0.85);align-items:flex-start;justify-content:center;padding:16px;padding-top:70px;overflow-y:auto;">
@@ -11147,10 +11148,10 @@ var APP_VERSION_KEY = 'expense_app_version';
 (function checkAppVersion() {
   var stored = localStorage.getItem(APP_VERSION_KEY);
   if (stored !== APP_VERSION) {
-    // New version or fresh install — flag in sessionStorage
-    // (can't clear Firebase here, but checkPrivacy will handle it)
+    // New version or fresh install — force T&C re-sign and onboarding re-run
     sessionStorage.setItem('new_app_version', '1');
-    localStorage.removeItem('expense_onboard_expenses_done');
+    localStorage.removeItem('privacy_ok');                        // force T&C re-sign
+    localStorage.removeItem('expense_onboard_expenses_done');     // force onboarding
     localStorage.removeItem('expense_onboard_income_done');
     localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
   }
