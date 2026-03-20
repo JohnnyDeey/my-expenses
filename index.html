@@ -127,9 +127,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
     var dlOverlay = document.getElementById('date-lookup-overlay');
     if (dlOverlay && dlOverlay.style.display === 'flex') return;
-    // Block page scroll when Help overlay is open — arrows are hijacked by help nav
+    // Block page scroll when Help overlay is open
     var helpOverlay = document.getElementById('help-overlay');
     if (helpOverlay && helpOverlay.style.display === 'flex') return;
+    // Block page scroll when Alt is held (month grid navigation mode)
+    if (e.altKey) return;
     e.preventDefault();
     if (e.key === 'ArrowUp') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -669,12 +671,22 @@ var _notePadActive = false; // global — shared with Ctrl+Enter handlers
   }
 
   function freezeCard(grid) {
-    var card = grid.closest('.card') || grid.closest('.month-picker-card') || grid.parentElement;
-    if (card) {
-      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      _frozenCard = card;
-    }
+    _frozenCard = grid;
+    // Lock the entire page scroll while Alt is held
+    // Store current scroll position and prevent any movement
+    _lockedScrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
   }
+
+  function unfreezeCard() {
+    // Restore scrolling
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+    _frozenCard = null;
+  }
+
+  var _lockedScrollY = 0;
 
   // Alt keydown — freeze the picker card
   document.addEventListener('keydown', function(e) {
@@ -684,14 +696,17 @@ var _notePadActive = false; // global — shared with Ctrl+Enter handlers
     var ov = document.getElementById('onboard-overlay');
     if (ov && ov.style.display === 'flex') return;
     _altHeld = true;
+    // Scroll the month grid into view first, then lock the page
+    var card = active.grid.closest('.card') || active.grid.closest('.month-picker-card') || active.grid.parentElement;
+    if (card) card.scrollIntoView({ behavior: 'instant', block: 'nearest' });
     freezeCard(active.grid);
   });
 
-  // Alt keyup — release freeze
+  // Alt keyup — release freeze and restore card position
   document.addEventListener('keyup', function(e) {
     if (e.key !== 'Alt') return;
     _altHeld = false;
-    _frozenCard = null;
+    unfreezeCard();
   });
 
   // ── Notepad active state ──
@@ -778,7 +793,7 @@ var _notePadActive = false; // global — shared with Ctrl+Enter handlers
         if (typeof updateIncomeHeaderContext === 'function') updateIncomeHeaderContext(incPickerYear, nextI);
       }
     }
-    if (_frozenCard) _frozenCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Card is already frozen via freezeCard — no need to scroll
   });
 
   // N/B — year navigation (no Alt needed, no conflict with page)
@@ -12079,9 +12094,10 @@ var HELP_DATA = {
       'F1 → open/close Help panel. Arrow keys navigate icons. Enter opens article. ↑ ↓ scroll article. G → back to icon grid.',
       'F2 → open/close Date Lookup.',
       'N → next onboarding slide. B → previous slide. (Only when onboarding is open.)',
-      'IMPORT TAB — Hold Alt + ← → ↑ ↓ → navigate months (picker stays frozen in view). N = next year. B = previous year. Y = toggle Year/Month mode (income only).',
-      'IMPORT TAB — Alt+Enter → jump INTO the notepad (cursor placed at next available line). Type your entries.',
-      'IMPORT TAB — Alt+Enter again (while inside notepad) → EXIT the notepad back to the page.',
+      'IMPORT TAB (Expenses & Income) — Hold Alt → the entire page freezes (nothing moves). Use ← → ↑ ↓ to navigate months. The highlighted month changes but the page stays completely still. Release Alt → page scrolls normally again.',
+      'IMPORT TAB — While Alt is held: N = next year, B = previous year, Y = toggle Year/Month mode (income only).',
+      'IMPORT TAB — Alt+Enter → activate notepad (cursor jumps to next available line, toast confirms). Type your entries.',
+      'IMPORT TAB — Alt+Enter again → deactivate notepad (toast confirms). Now use Alt+arrows to navigate, or Ctrl+Enter to parse.',
       'IMPORT TAB — Ctrl+Enter → Parse expenses or income. Works for both modules.',
       'IMPORT TAB — After parsing with all dates matching, Ctrl+Enter again → Go to Categorize automatically.',
       'CATEGORIZE TAB — ⇅ Sort button toggles Newest first / Oldest first. Newest first puts your latest entries at the top. Works on both Expenses and Income.',
