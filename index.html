@@ -539,6 +539,83 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'b' || e.key === 'B') { e.preventDefault(); if (typeof onboardNav === 'function') onboardNav(-1); }
 });
 
+// Y key — toggle income import mode between Year and Month
+// Only fires when income import panel (inc-months-grid) is visible AND onboarding is closed
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'y' && e.key !== 'Y') return;
+  var tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  var ov = document.getElementById('onboard-overlay');
+  if (ov && ov.style.display === 'flex') return; // onboarding open — ignore
+  var incGrid = document.getElementById('inc-months-grid');
+  if (!incGrid || incGrid.offsetParent === null) return;
+  e.preventDefault();
+  if (typeof setIncomeImportMode === 'function') {
+    setIncomeImportMode(typeof _incomeImportMode !== 'undefined' && _incomeImportMode === 'year' ? 'month' : 'year');
+  }
+});
+
+// Month grid keyboard navigation — Arrow keys move month, N/B change year
+// Works in both Expenses Import tab and Income Import tab
+document.addEventListener('keydown', function(e) {
+  var tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  // Block when onboarding is open — prevents year changing in background
+  var ov = document.getElementById('onboard-overlay');
+  if (ov && ov.style.display === 'flex') return;
+  // Only fire when import/monthly panel is visible
+  var expGrid = document.getElementById('months-grid');
+  var incGrid = document.getElementById('inc-months-grid');
+  var expVisible = expGrid && expGrid.offsetParent !== null;
+  var incVisible = incGrid && incGrid.offsetParent !== null;
+  if (!expVisible && !incVisible) return;
+
+  var key = e.key;
+  var isExp = expVisible;
+
+  // N — next year, B — previous year
+  if (key === 'n' || key === 'N') {
+    e.preventDefault();
+    if (isExp) { if (typeof changeYear === 'function') changeYear(1); }
+    else       { if (typeof incChangeYear === 'function') incChangeYear(1); }
+    return;
+  }
+  if (key === 'b' || key === 'B') {
+    e.preventDefault();
+    if (isExp) { if (typeof changeYear === 'function') changeYear(-1); }
+    else       { if (typeof incChangeYear === 'function') incChangeYear(-1); }
+    return;
+  }
+
+  // Arrow keys — navigate months (grid is 3 columns)
+  var arrows = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+  if (arrows.indexOf(key) === -1) return;
+  e.preventDefault();
+
+  if (isExp) {
+    var cur = (typeof pickerMonth !== 'undefined' ? pickerMonth : 1);
+    var next = cur;
+    if (key === 'ArrowRight') next = cur < 12 ? cur + 1 : 12;
+    if (key === 'ArrowLeft')  next = cur > 1  ? cur - 1 : 1;
+    if (key === 'ArrowDown')  next = cur + 3 <= 12 ? cur + 3 : cur;
+    if (key === 'ArrowUp')    next = cur - 3 >= 1  ? cur - 3 : cur;
+    if (next !== cur && typeof selectMonth === 'function') selectMonth(next);
+  } else {
+    var curI = (typeof incPickerMonth !== 'undefined' ? incPickerMonth : 1);
+    var nextI = curI;
+    if (key === 'ArrowRight') nextI = curI < 12 ? curI + 1 : 12;
+    if (key === 'ArrowLeft')  nextI = curI > 1  ? curI - 1 : 1;
+    if (key === 'ArrowDown')  nextI = curI + 3 <= 12 ? curI + 3 : curI;
+    if (key === 'ArrowUp')    nextI = curI - 3 >= 1  ? curI - 3 : curI;
+    if (nextI !== curI) {
+      incPickerMonth = nextI;
+      if (typeof renderIncomeMonthPicker === 'function') renderIncomeMonthPicker();
+      if (typeof loadIncomeMonthIntoTextarea === 'function') loadIncomeMonthIntoTextarea();
+      if (typeof updateIncomeHeaderContext === 'function') updateIncomeHeaderContext(incPickerYear, nextI);
+    }
+  }
+});
+
 </script>
 <style>
 :root {
@@ -1203,6 +1280,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <button onclick="changeYear(1)">&#8594;</button>
       </div>
       <div class="months-grid" id="months-grid"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#a09070;letter-spacing:1px;text-align:center;margin-top:8px;">⌨️ &nbsp;← → ↑ ↓ = month &nbsp;·&nbsp; N / B = year</div>
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
         <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);margin-bottom:8px;letter-spacing:1px;text-transform:uppercase;">Legend</div>
         <div style="display:flex;flex-direction:column;gap:5px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">
@@ -1716,6 +1794,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <button onclick="incChangeYear(1)">&#8594;</button>
       </div>
       <div id="inc-months-grid" class="months-grid"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#a09070;letter-spacing:1px;text-align:center;margin-top:8px;">⌨️ &nbsp;← → ↑ ↓ = month &nbsp;·&nbsp; N / B = year &nbsp;·&nbsp; Y = toggle Year/Month</div>
     </div>
     <div class="import-right">
       <div class="import-header-bar">
@@ -11497,7 +11576,7 @@ function changePin() {
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-03';
-var APP_VERSION = '2.0.3'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '2.0.5'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
@@ -11755,6 +11834,7 @@ var HELP_DATA = {
     title: '⌨️ Keyboard Shortcuts — Laptop & Desktop',
     steps: [
       'TAB → next tab | CTRL+TAB → previous tab (works when logged in and not typing).',
+      'CTRL+1 to CTRL+7 → jump directly to any tab. Expenses: 1=Import 2=Categorize 3=Daily 4=Dashboard 5=Ledger 6=Budget 7=Manage. Income: 1=Import 2=Categorize 3=Monthly 4=Dashboard 5=Ledger 6=Manage.',
       '↑ UP ARROW → jump to top of page | ↓ DOWN ARROW → jump to bottom.',
       'DATE LOOKUP — ← previous day | → next day | ESCAPE or F2 → close.',
       'PIN PAD — type digits 0–9 | BACKSPACE → delete | ESCAPE → clear | ENTER → submit.',
@@ -12260,6 +12340,36 @@ try {
         switchTab(tabs[nextIdx], null);
       }
     } catch(err) { /* fail silently — never crash the app */ }
+  });
+} catch(err) { /* fail silently */ }
+
+// ── Ctrl+1–7 direct tab jump ──
+// Expenses: Ctrl+1=Import, 2=Categorize, 3=Daily, 4=Dashboard, 5=Ledger, 6=Budget, 7=Manage
+// Income:   Ctrl+1=Import, 2=Categorize, 3=Monthly, 4=Dashboard, 5=Ledger, 6=Manage
+try {
+  document.addEventListener('keydown', function(e) {
+    try {
+      if (!e.ctrlKey) return;
+      var num = parseInt(e.key, 10);
+      if (isNaN(num) || num < 1 || num > 7) return;
+      var tag = document.activeElement ? document.activeElement.tagName : '';
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (!_userId) return;
+      var overlayIds = ['pin-overlay','privacy-overlay','help-overlay','date-lookup-overlay','reset-overlay','print-picker-overlay','onboard-overlay'];
+      for (var oi = 0; oi < overlayIds.length; oi++) {
+        var oel = document.getElementById(overlayIds[oi]);
+        if (oel && oel.style.display !== '' && oel.style.display !== 'none') return;
+      }
+      var tabs = (_appMode === 'income') ? INC_TABS : EXP_TABS;
+      var idx = num - 1; // Ctrl+1 = index 0
+      if (idx >= tabs.length) return; // e.g. Ctrl+7 ignored in income (only 6 tabs)
+      e.preventDefault();
+      if (_appMode === 'income') {
+        switchIncomeTab(tabs[idx], null);
+      } else {
+        switchTab(tabs[idx], null);
+      }
+    } catch(err) { /* fail silently */ }
   });
 } catch(err) { /* fail silently */ }
 
