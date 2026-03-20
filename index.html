@@ -1960,6 +1960,13 @@ input[type="password"]::-ms-clear { display:none !important; }
     <label>&#128465; Income Recycle Bin <span id="inc-trash-count-badge" style="font-family:'DM Mono',monospace;font-size:0.7rem;background:var(--rust);color:white;padding:2px 7px;border-radius:10px;margin-left:6px;"></span></label>
     <div id="inc-trash-content"></div>
   </div>
+
+  <!-- ── Privacy Policy ── -->
+  <div class="card" style="border-color:var(--slate);">
+    <label style="display:flex;align-items:center;gap:8px;">&#128220; Privacy Policy &amp; Terms</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Read the full Terms &amp; Conditions and Privacy Policy for My Expense Ledger.</p>
+    <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="_showPrivacyOverlay()">&#128220; View Terms &amp; Conditions</button>
+  </div>
 </div>
 
 </div><!-- end income-main -->
@@ -2031,14 +2038,6 @@ input[type="password"]::-ms-clear { display:none !important; }
       </button>
     </div>
   </div>
-
-  <!-- ── Privacy Policy ── -->
-  <div class="card" style="border-color:var(--slate);">
-    <label style="display:flex;align-items:center;gap:8px;">&#128220; Privacy Policy &amp; Terms</label>
-    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Read the full Terms &amp; Conditions and Privacy Policy for My Expense Ledger.</p>
-    <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="_showPrivacyOverlay()">&#128220; View Terms &amp; Conditions</button>
-  </div>
-
 </div>
 
 <div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:flex-start;justify-content:center;flex-direction:column;padding:20px;overflow-y:auto;">
@@ -10154,7 +10153,16 @@ function getNextFullVerifyInterval() {
 
 function needsFullVerify() {
   var stored = localStorage.getItem(FULL_VERIFY_KEY);
-  if (!stored) return true; // never done full verify → require it
+  // Never done full verify on this device — only require it if it has NEVER been done
+  // (i.e. brand new device/browser). After a normal logout, FULL_VERIFY_KEY persists.
+  if (!stored) {
+    // Check if this looks like a fresh device (no pin hash either = truly new)
+    // If pin hash exists, user has logged in before — don't force security check
+    var hasPinHash = !!localStorage.getItem('expense_pin_hash_local');
+    var hasName    = !!localStorage.getItem(NAME_KEY);
+    if (hasPinHash || hasName) return false; // returning user on this device — don't force
+    return true; // truly first time on this device
+  }
   var last = parseInt(stored, 10);
   var interval = localStorage.getItem('expense_fv_interval');
   if (!interval) {
@@ -10247,7 +10255,7 @@ function submitPinLogin() {
   var phone = localStorage.getItem(PHONE_KEY);
   var savedHash = localStorage.getItem('expense_pin_hash_local');
   if (!uid || !name || !phone || !savedHash) {
-    // No local session — fall back to full login
+    // No local session at all — need full verify to set up this device
     showFullVerifyStep();
     return;
   }
@@ -11328,7 +11336,8 @@ function logOut() {
   localStorage.removeItem(UID_KEY);
   localStorage.removeItem('last_active');
   localStorage.removeItem('keep_login_pref');
-  localStorage.removeItem('expense_pin_hash_local');
+  // NOTE: expense_pin_hash_local is intentionally kept so user can log back in
+  // with their PIN without triggering a security check on every logout
   localStorage.removeItem('expense_active_tab');
   localStorage.removeItem(PHONE_TAIL_KEY);
   localStorage.removeItem('expense_active_inc_tab');
@@ -11467,7 +11476,7 @@ function changePin() {
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-03';
-var APP_VERSION = '2.0.0'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '2.0.2'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
