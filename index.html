@@ -4165,11 +4165,10 @@ function printDashboard(mode, selectedCurrencies) {
     var labels=keys.map(function(k){var p=k.split('-');return MONTHS[parseInt(p[1])-1]+' '+p[0];});
     var vals=keys.map(function(k){return +byM[k].toFixed(2);});
     var sym=SYMS[cur]||'';
-    var oc=document.createElement('canvas'); oc.width=800; oc.height=260;
+    var oc=document.createElement('canvas'); oc.width=800; oc.height=280;
     var borderC = getCurBorder(cur, printCurs.indexOf(cur));
     var bgC     = getCurBg(cur, printCurs.indexOf(cur));
-    var step=keys.length<=24?1:keys.length<=72?6:keys.length<=144?12:24;
-    var ch=new Chart(oc.getContext('2d'),{type:'line',data:{labels:labels,datasets:[{label:cur,data:vals,borderColor:borderC,backgroundColor:bgC,tension:0.4,fill:true,pointBackgroundColor:borderC,pointRadius:keys.length<=36?3:0,pointHitRadius:8}]},options:{responsive:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){return it[0].label;},label:function(c){return' '+sym+c.parsed.y.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}}}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10},callback:function(val,idx){return idx%step===0?this.getLabelForValue(val).replace(/^(\w{3})\w+ /,'$1 '):'';}}}}}}); 
+    var ch=new Chart(oc.getContext('2d'),{type:'line',data:{labels:labels,datasets:[{label:cur,data:vals,borderColor:borderC,backgroundColor:bgC,tension:0.4,fill:true,pointBackgroundColor:borderC,pointRadius:keys.length<=24?3:0,pointHitRadius:8}]},options:{responsive:false,animation:false,layout:{padding:{bottom:10}},plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){return it[0].label;},label:function(c){return' '+sym+c.parsed.y.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}}}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false},ticks:monthlyTickConfig(keys.length)}}}}); 
     var src=oc.toDataURL('image/png');
     ch.destroy();
     return '<img src="'+src+'" style="width:100%;height:auto;">';
@@ -11348,7 +11347,7 @@ function changePin() {
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-03';
-var APP_VERSION = '1.8.0'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '1.9.0'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
