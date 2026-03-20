@@ -2018,7 +2018,7 @@ input[type="password"]::-ms-clear { display:none !important; }
               onmouseleave="fvPinReveal(false)"
               ontouchstart="fvPinReveal(true);event.preventDefault();"
               ontouchend="fvPinReveal(false);event.preventDefault();"
-              style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:#6b5e50;font-size:1.1rem;line-height:1;-webkit-tap-highlight-color:transparent;" title="Hold to reveal">&#128065;</button>
+              style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:#aaa;font-size:0.75rem;font-family:'DM Mono',monospace;letter-spacing:0;-webkit-tap-highlight-color:transparent;user-select:none;" title="Hold to reveal">&#9679;&#9679;&#9679;</button>
           </div>
         </div>
         <div id="fv-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
@@ -9988,7 +9988,7 @@ function fvPinReveal(show) {
   var btn = document.getElementById('fv-pin-eye');
   if (!inp) return;
   inp.type = show ? 'text' : 'password';
-  if (btn) btn.style.color = show ? 'var(--gold)' : '#6b5e50';
+  if (btn) btn.style.color = show ? 'var(--gold)' : '#aaa';
 }
 
 function submitFullVerify() {
@@ -10153,6 +10153,8 @@ function _showTcBox(boxId, labelId) {
       ? 'I agree to the <strong>updated</strong> '
       : 'I agree to the ')
       + '<a href="#" onclick="openPrivacyFromPin(event)" style="color:var(--gold);text-decoration:underline;">Terms &amp; Conditions</a>';
+    // Mark as new version so onboarding fires after login
+    sessionStorage.setItem('new_app_version', '1');
   } else {
     box.style.display = 'none';
   }
