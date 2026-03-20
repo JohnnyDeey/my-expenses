@@ -127,6 +127,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
     var dlOverlay = document.getElementById('date-lookup-overlay');
     if (dlOverlay && dlOverlay.style.display === 'flex') return;
+    // Block page scroll when Help overlay is open — arrows are hijacked by help nav
+    var helpOverlay = document.getElementById('help-overlay');
+    if (helpOverlay && helpOverlay.style.display === 'flex') return;
     e.preventDefault();
     if (e.key === 'ArrowUp') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -529,7 +532,102 @@ document.addEventListener('keydown', function(e) {
   if (ho && ho.style.display === 'flex') { e.preventDefault(); ho.style.display = 'none'; }
 });
 
-// N = next slide, B = back slide — only when onboarding overlay is open
+// ── Help overlay keyboard navigation ──
+// Arrow keys navigate icons, Enter opens article, arrows scroll article, Escape/F1 close
+var _helpFocusIdx = -1;
+var _helpArticleOpen = false;
+
+function _helpClearFocus() {
+  var list = document.getElementById('help-icon-list');
+  if (!list) return;
+  var btns = list.querySelectorAll('button');
+  btns.forEach(function(b) {
+    b.style.borderColor = '';
+    b.style.background = '';
+    b.style.transform = '';
+  });
+}
+
+function _helpSetFocus(idx) {
+  var list = document.getElementById('help-icon-list');
+  if (!list) return;
+  var btns = list.querySelectorAll('button');
+  if (!btns.length) return;
+  _helpClearFocus();
+  if (idx < 0) idx = 0;
+  if (idx >= btns.length) idx = btns.length - 1;
+  _helpFocusIdx = idx;
+  var btn = btns[idx];
+  btn.style.borderColor = 'var(--gold)';
+  btn.style.background = 'rgba(200,150,46,0.12)';
+  btn.style.transform = 'scale(1.08)';
+  btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+document.addEventListener('keydown', function(e) {
+  var ho = document.getElementById('help-overlay');
+  if (!ho || ho.style.display !== 'flex') return;
+  // Don't intercept if typing in search box
+  if (document.activeElement && document.activeElement.id === 'help-search') return;
+
+  var key = e.key;
+
+  // Article is open — ↑↓ scroll the overlay, G or Backspace goes back to grid
+  if (_helpArticleOpen) {
+    if (key === 'ArrowDown') { e.preventDefault(); ho.scrollBy({ top: 80, behavior: 'smooth' }); return; }
+    if (key === 'ArrowUp')   { e.preventDefault(); ho.scrollBy({ top: -80, behavior: 'smooth' }); return; }
+    if (key === 'g' || key === 'G' || key === 'Backspace') {
+      e.preventDefault();
+      _helpArticleOpen = false;
+      ho.scrollTo({ top: 0, behavior: 'smooth' });
+      _helpSetFocus(_helpFocusIdx >= 0 ? _helpFocusIdx : 0);
+      return;
+    }
+    return; // block all other keys while article open
+  }
+
+  // Grid navigation mode
+  var list = document.getElementById('help-icon-list');
+  if (!list) return;
+  var btns = list.querySelectorAll('button');
+  var total = btns.length;
+  if (!total) return;
+
+  // Work out columns count from rendered layout
+  var cols = 1;
+  if (btns.length >= 2) {
+    var top0 = btns[0].getBoundingClientRect().top;
+    for (var ci = 1; ci < btns.length; ci++) {
+      if (btns[ci].getBoundingClientRect().top > top0 + 5) { cols = ci; break; }
+      if (ci === btns.length - 1) cols = btns.length;
+    }
+  }
+
+  if (key === 'ArrowRight') {
+    e.preventDefault();
+    var next = (_helpFocusIdx < 0 ? 0 : Math.min(_helpFocusIdx + 1, total - 1));
+    _helpSetFocus(next);
+  } else if (key === 'ArrowLeft') {
+    e.preventDefault();
+    var prev = (_helpFocusIdx <= 0 ? 0 : _helpFocusIdx - 1);
+    _helpSetFocus(prev);
+  } else if (key === 'ArrowDown') {
+    e.preventDefault();
+    var dn = (_helpFocusIdx < 0 ? 0 : Math.min(_helpFocusIdx + cols, total - 1));
+    _helpSetFocus(dn);
+  } else if (key === 'ArrowUp') {
+    e.preventDefault();
+    var up = (_helpFocusIdx < 0 ? 0 : Math.max(_helpFocusIdx - cols, 0));
+    _helpSetFocus(up);
+  } else if (key === 'Enter') {
+    e.preventDefault();
+    if (_helpFocusIdx >= 0 && _helpFocusIdx < total) {
+      btns[_helpFocusIdx].click();
+      _helpArticleOpen = true;
+      setTimeout(function(){ ho.scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
+    }
+  }
+});
 document.addEventListener('keydown', function(e) {
   var ov = document.getElementById('onboard-overlay');
   if (!ov || ov.style.display === 'none' || ov.style.display === '') return;
@@ -555,66 +653,154 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// Month grid keyboard navigation — Arrow keys move month, N/B change year
-// Works in both Expenses Import tab and Income Import tab
-document.addEventListener('keydown', function(e) {
-  var tag = document.activeElement ? document.activeElement.tagName : '';
-  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-  // Block when onboarding is open — prevents year changing in background
-  var ov = document.getElementById('onboard-overlay');
-  if (ov && ov.style.display === 'flex') return;
-  // Only fire when import/monthly panel is visible
-  var expGrid = document.getElementById('months-grid');
-  var incGrid = document.getElementById('inc-months-grid');
-  var expVisible = expGrid && expGrid.offsetParent !== null;
-  var incVisible = incGrid && incGrid.offsetParent !== null;
-  if (!expVisible && !incVisible) return;
+// Month grid keyboard navigation — Alt held freezes picker, arrows navigate months
+// When Alt is released, arrows go back to scrolling the page normally
+var _notePadActive = false; // global — shared with Ctrl+Enter handlers
+(function() {
+  var _altHeld = false;
+  var _frozenCard = null;
 
-  var key = e.key;
-  var isExp = expVisible;
-
-  // N — next year, B — previous year
-  if (key === 'n' || key === 'N') {
-    e.preventDefault();
-    if (isExp) { if (typeof changeYear === 'function') changeYear(1); }
-    else       { if (typeof incChangeYear === 'function') incChangeYear(1); }
-    return;
-  }
-  if (key === 'b' || key === 'B') {
-    e.preventDefault();
-    if (isExp) { if (typeof changeYear === 'function') changeYear(-1); }
-    else       { if (typeof incChangeYear === 'function') incChangeYear(-1); }
-    return;
+  function getActiveGrid() {
+    var expGrid = document.getElementById('months-grid');
+    var incGrid = document.getElementById('inc-months-grid');
+    if (expGrid && expGrid.offsetParent !== null) return { grid: expGrid, isExp: true };
+    if (incGrid && incGrid.offsetParent !== null) return { grid: incGrid, isExp: false };
+    return null;
   }
 
-  // Arrow keys — navigate months (grid is 3 columns)
-  var arrows = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
-  if (arrows.indexOf(key) === -1) return;
-  e.preventDefault();
-
-  if (isExp) {
-    var cur = (typeof pickerMonth !== 'undefined' ? pickerMonth : 1);
-    var next = cur;
-    if (key === 'ArrowRight') next = cur < 12 ? cur + 1 : 12;
-    if (key === 'ArrowLeft')  next = cur > 1  ? cur - 1 : 1;
-    if (key === 'ArrowDown')  next = cur + 3 <= 12 ? cur + 3 : cur;
-    if (key === 'ArrowUp')    next = cur - 3 >= 1  ? cur - 3 : cur;
-    if (next !== cur && typeof selectMonth === 'function') selectMonth(next);
-  } else {
-    var curI = (typeof incPickerMonth !== 'undefined' ? incPickerMonth : 1);
-    var nextI = curI;
-    if (key === 'ArrowRight') nextI = curI < 12 ? curI + 1 : 12;
-    if (key === 'ArrowLeft')  nextI = curI > 1  ? curI - 1 : 1;
-    if (key === 'ArrowDown')  nextI = curI + 3 <= 12 ? curI + 3 : curI;
-    if (key === 'ArrowUp')    nextI = curI - 3 >= 1  ? curI - 3 : curI;
-    if (nextI !== curI) {
-      incPickerMonth = nextI;
-      if (typeof renderIncomeMonthPicker === 'function') renderIncomeMonthPicker();
-      if (typeof loadIncomeMonthIntoTextarea === 'function') loadIncomeMonthIntoTextarea();
-      if (typeof updateIncomeHeaderContext === 'function') updateIncomeHeaderContext(incPickerYear, nextI);
+  function freezeCard(grid) {
+    var card = grid.closest('.card') || grid.closest('.month-picker-card') || grid.parentElement;
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      _frozenCard = card;
     }
   }
-});
+
+  // Alt keydown — freeze the picker card
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Alt') return;
+    var active = getActiveGrid();
+    if (!active) return;
+    var ov = document.getElementById('onboard-overlay');
+    if (ov && ov.style.display === 'flex') return;
+    _altHeld = true;
+    freezeCard(active.grid);
+  });
+
+  // Alt keyup — release freeze
+  document.addEventListener('keyup', function(e) {
+    if (e.key !== 'Alt') return;
+    _altHeld = false;
+    _frozenCard = null;
+  });
+
+  // ── Notepad active state ──
+  // Alt+Enter toggles notepad on/off. When ON — cursor in textarea, all keys go to it.
+  // When OFF — Alt+arrows navigate calendar, page arrows scroll normally.
+
+  function _getNotepadTextarea() {
+    var expGrid = document.getElementById('months-grid');
+    var incGrid = document.getElementById('inc-months-grid');
+    if (expGrid && expGrid.offsetParent !== null) return document.getElementById('raw-input');
+    if (incGrid && incGrid.offsetParent !== null) return document.getElementById('inc-raw-input');
+    return null;
+  }
+
+  function _activateNotepad() {
+    var ta = _getNotepadTextarea();
+    if (!ta) return;
+    _notePadActive = true;
+    ta.focus();
+    var val = ta.value;
+    if (val.length > 0 && val[val.length - 1] !== '\n') ta.value = val + '\n';
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+    ta.scrollTop = ta.scrollHeight;
+    if (typeof showToast === 'function') showToast('📝 Notepad activated — type your entries');
+  }
+
+  function _deactivateNotepad() {
+    _notePadActive = false;
+    var ta = _getNotepadTextarea();
+    if (ta) {
+      ta.blur();
+      // Remove focus visually by moving focus to body
+      document.body.focus();
+    }
+    if (typeof showToast === 'function') showToast('📝 Notepad deactivated — Alt+arrows = select month');
+  }
+
+  // Alt+Enter — toggle notepad active/inactive
+  document.addEventListener('keydown', function(e) {
+    if (!e.altKey || e.key !== 'Enter') return;
+    var ta = _getNotepadTextarea();
+    if (!ta) return; // not on import tab
+    e.preventDefault();
+    if (_notePadActive) {
+      _deactivateNotepad();
+    } else {
+      _activateNotepad();
+    }
+  });
+
+  // Arrow keys — only navigate months when Alt held AND notepad is NOT active
+  document.addEventListener('keydown', function(e) {
+    if (!_altHeld) return;
+    if (_notePadActive) return; // notepad is active — don't touch calendar
+    var tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    var active = getActiveGrid();
+    if (!active) return;
+
+    var arrows = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+    if (arrows.indexOf(e.key) === -1) return;
+    e.preventDefault();
+
+    var key = e.key;
+    if (active.isExp) {
+      var cur  = (typeof pickerMonth !== 'undefined' ? pickerMonth : 1);
+      var next = cur;
+      if (key === 'ArrowRight') next = cur < 12 ? cur + 1 : 12;
+      if (key === 'ArrowLeft')  next = cur > 1  ? cur - 1 : 1;
+      if (key === 'ArrowDown')  next = cur + 3 <= 12 ? cur + 3 : cur;
+      if (key === 'ArrowUp')    next = cur - 3 >= 1  ? cur - 3 : cur;
+      if (next !== cur && typeof selectMonth === 'function') selectMonth(next);
+    } else {
+      var curI  = (typeof incPickerMonth !== 'undefined' ? incPickerMonth : 1);
+      var nextI = curI;
+      if (key === 'ArrowRight') nextI = curI < 12 ? curI + 1 : 12;
+      if (key === 'ArrowLeft')  nextI = curI > 1  ? curI - 1 : 1;
+      if (key === 'ArrowDown')  nextI = curI + 3 <= 12 ? curI + 3 : curI;
+      if (key === 'ArrowUp')    nextI = curI - 3 >= 1  ? curI - 3 : curI;
+      if (nextI !== curI) {
+        incPickerMonth = nextI;
+        if (typeof renderIncomeMonthPicker === 'function') renderIncomeMonthPicker();
+        if (typeof loadIncomeMonthIntoTextarea === 'function') loadIncomeMonthIntoTextarea();
+        if (typeof updateIncomeHeaderContext === 'function') updateIncomeHeaderContext(incPickerYear, nextI);
+      }
+    }
+    if (_frozenCard) _frozenCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  // N/B — year navigation (no Alt needed, no conflict with page)
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'n' && e.key !== 'N' && e.key !== 'b' && e.key !== 'B') return;
+    var tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    var ov = document.getElementById('onboard-overlay');
+    if (ov && ov.style.display === 'flex') return;
+    var active = getActiveGrid();
+    if (!active) return;
+    e.preventDefault();
+    if (e.key === 'n' || e.key === 'N') {
+      if (active.isExp) { if (typeof changeYear === 'function') changeYear(1); }
+      else              { if (typeof incChangeYear === 'function') incChangeYear(1); }
+    } else {
+      if (active.isExp) { if (typeof changeYear === 'function') changeYear(-1); }
+      else              { if (typeof incChangeYear === 'function') incChangeYear(-1); }
+    }
+    freezeCard(active.grid);
+  });
+})();
 
 </script>
 <style>
@@ -1280,7 +1466,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <button onclick="changeYear(1)">&#8594;</button>
       </div>
       <div class="months-grid" id="months-grid"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#a09070;letter-spacing:1px;text-align:center;margin-top:8px;">⌨️ &nbsp;← → ↑ ↓ = month &nbsp;·&nbsp; N / B = year</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#a09070;letter-spacing:1px;text-align:center;margin-top:8px;">⌨️ &nbsp;<strong>Hold Alt</strong> + ← → ↑ ↓ = navigate &nbsp;·&nbsp; Alt+Enter = enter/exit notepad &nbsp;·&nbsp; N / B = year</div>
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
         <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);margin-bottom:8px;letter-spacing:1px;text-transform:uppercase;">Legend</div>
         <div style="display:flex;flex-direction:column;gap:5px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">
@@ -1307,7 +1493,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
       <!-- Find & Replace toolbar -->
 
-      <textarea id="raw-input" rows="18" placeholder="Select a year and month on the left, then paste your Google Keep expense text here...&#10;&#10;Format example:&#10;01-02-2026&#10;&#9;Monthly rent&#9;&#8364;350.00&#10;&#9;Groceries&#9;&#8358;15,000.00" onkeydown="fnrKeyShortcut(event)"></textarea>
+      <textarea id="raw-input" rows="18" placeholder="Select a year and month on the left, then paste your Google Keep expense text here...&#10;&#10;Format example:&#10;01-02-2026&#10;&#9;Monthly rent&#9;&#8364;350.00&#10;&#9;Groceries&#9;&#8358;15,000.00&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="fnrKeyShortcut(event);if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();expCtrlEnterAction();}"></textarea>
 
       <div class="import-tip">
         Supported: <strong>&#8364; Euro</strong> &nbsp;&#8226;&nbsp; <strong>&#8358; Naira</strong> &nbsp;&#8226;&nbsp; <strong>$ Dollar</strong> &nbsp;&#8226;&nbsp; <strong>&#163; Pound</strong>
@@ -1376,6 +1562,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <option value="Other">Other only</option>
     </select>
     <span id="cat-filter-count" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-left:auto;"></span>
+    <button id="cat-sort-btn" onclick="toggleCatSort()" class="btn btn-ghost" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;display:flex;align-items:center;gap:5px;white-space:nowrap;">&#8645; Newest first</button>
   </div>
 
     <div id="categorize-empty" class="empty-state">
@@ -1794,7 +1981,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <button onclick="incChangeYear(1)">&#8594;</button>
       </div>
       <div id="inc-months-grid" class="months-grid"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#a09070;letter-spacing:1px;text-align:center;margin-top:8px;">⌨️ &nbsp;← → ↑ ↓ = month &nbsp;·&nbsp; N / B = year &nbsp;·&nbsp; Y = toggle Year/Month</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#a09070;letter-spacing:1px;text-align:center;margin-top:8px;">⌨️ &nbsp;<strong>Hold Alt</strong> + ← → ↑ ↓ = navigate &nbsp;·&nbsp; Alt+Enter = enter/exit notepad &nbsp;·&nbsp; N / B = year &nbsp;·&nbsp; Y = toggle Year/Month</div>
     </div>
     <div class="import-right">
       <div class="import-header-bar">
@@ -1808,7 +1995,7 @@ input[type="password"]::-ms-clear { display:none !important; }
           <button class="btn btn-ghost" onclick="loadIncomeSample()">Sample</button>
         </div>
       </div>
-      <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150"></textarea>
+      <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();incCtrlEnterAction();}"></textarea>
       <div class="import-tip">
         Supported: <strong>&#8358; / # Naira</strong> &nbsp;&bull;&nbsp; <strong>$ Dollar</strong> &nbsp;&bull;&nbsp; <strong>&#8364; Euro</strong> &nbsp;&bull;&nbsp; <strong>&#163; Pound</strong>
         &nbsp;&nbsp;|&nbsp;&nbsp; Colon or tab before amount &nbsp;&nbsp;|&nbsp;&nbsp; No currency symbol = skipped to recycle bin
@@ -1857,6 +2044,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <option value="Other">Other only</option>
     </select>
     <span id="inc-cat-filter-count" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-left:auto;"></span>
+    <button id="inc-cat-sort-btn" onclick="toggleIncCatSort()" class="btn btn-ghost" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;display:flex;align-items:center;gap:5px;white-space:nowrap;">&#8645; Newest first</button>
   </div>
   <!-- Bulk assign bar -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:12px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
@@ -2408,7 +2596,8 @@ input[type="password"]::-ms-clear { display:none !important; }
         style="width:100%;padding:10px 14px;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.88rem;background:white;color:var(--ink);outline:none;box-sizing:border-box;">
     </div>
     <div id="help-icons" style="padding:14px 20px;border-bottom:1px solid var(--border);">
-      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;">Tap an icon to learn what it does</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:2px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Tap an icon to learn what it does</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#a09070;margin-bottom:10px;">⌨️ Arrow keys = navigate &nbsp;·&nbsp; Enter = open article &nbsp;·&nbsp; G = back to grid</div>
       <div id="help-icon-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
     </div>
     <div id="help-body" style="padding:16px 20px;min-height:80px;">
@@ -3691,6 +3880,11 @@ function renderCategorizeTable() {
   document.getElementById('categorize-empty').style.display = 'none';
   document.getElementById('categorize-content').style.display = 'block';
   document.getElementById('cat-count').textContent = filteredItems.length;
+
+  // Apply sort order
+  filteredItems = filteredItems.slice().sort(function(a,b){
+    return _catSortNewest ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date);
+  });
 
   var tbody = document.getElementById('categorize-tbody');
   tbody.innerHTML = '';
@@ -5285,6 +5479,44 @@ function expSendSkippedToTrashAndGo() {
     showToast(skippedLines.length + ' skipped lines moved to recycle bin');
   }
   switchTab('categorize', null);
+}
+
+// ── Ctrl+Enter actions for Import textareas ──
+function expCtrlEnterAction() {
+  _notePadActive = false; // ensure notepad state is reset
+  var okRow = document.getElementById('ps-ok-row');
+  if (okRow && okRow.style.display !== 'none') {
+    expSendSkippedToTrashAndGo();
+  } else {
+    parseInput();
+  }
+}
+function incCtrlEnterAction() {
+  _notePadActive = false; // ensure notepad state is reset
+  var okRow = document.getElementById('inc-ps-ok-row');
+  if (okRow && okRow.style.display !== 'none') {
+    switchIncomeTab('inc-categorize', null);
+  } else {
+    parseIncomeInput();
+  }
+}
+
+// ── Sort toggle for Expenses Categorize ──
+var _catSortNewest = true; // default: newest first
+function toggleCatSort() {
+  _catSortNewest = !_catSortNewest;
+  var btn = document.getElementById('cat-sort-btn');
+  if (btn) btn.innerHTML = '&#8645; ' + (_catSortNewest ? 'Newest first' : 'Oldest first');
+  renderCategorizeTable();
+}
+
+// ── Sort toggle for Income Categorize ──
+var _incCatSortNewest = true; // default: newest first
+function toggleIncCatSort() {
+  _incCatSortNewest = !_incCatSortNewest;
+  var btn = document.getElementById('inc-cat-sort-btn');
+  if (btn) btn.innerHTML = '&#8645; ' + (_incCatSortNewest ? 'Newest first' : 'Oldest first');
+  renderIncomeCatTable();
 }
 
 function validateParsedDates() {
@@ -8934,6 +9166,11 @@ function renderIncomeCatTable() {
   document.getElementById('inc-categorize-content').style.display = 'block';
   document.getElementById('inc-cat-count').textContent = filteredItems.length;
 
+  // Apply sort order
+  filteredItems = filteredItems.slice().sort(function(a,b){
+    return _incCatSortNewest ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date);
+  });
+
   var tbody = document.getElementById('inc-categorize-tbody');
   tbody.innerHTML = '';
   var allCats = getAllIncomeCats();
@@ -11576,7 +11813,7 @@ function changePin() {
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-03';
-var APP_VERSION = '2.0.5'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '2.0.6'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
@@ -11704,15 +11941,15 @@ var HELP_ITEMS = [
 var HELP_DATA = {
   'import': {
     title: '📝 Import — Adding Expenses',
-    steps: ['Select a year and month from the left panel.','Paste your expense text into the large text area.','Each day starts with the date e.g. 01-01-2024.','Each item: tab + description + tab + amount with currency symbol e.g. ₦2,500 or €15.00.','Click Parse Expenses to extract items.','Review any skipped lines shown in red.','Click Go to Categorize when ready.'],
+    steps: ['Select a year and month from the left panel.','Paste your expense text into the large text area.','Each day starts with the date e.g. 01-01-2024.','Each item: tab + description + tab + amount with currency symbol e.g. ₦2,500 or €15.00.','Click Parse Expenses — or press Ctrl+Enter — to extract items.','Review any skipped lines shown in red.','When all dates match, click Go to Categorize — or press Ctrl+Enter again — to proceed.','Laptop tip: Hold Alt + arrow keys to navigate months. Press Enter on a month to jump cursor to notepad.'],
     example: 'User jd0292 — January 2024:\n01-01-2024\n\tBread\t₦500\n\tTransport\t₦200\n\n02-01-2024\n\tLunch\t₦1,200',
-    tip: 'Use Find & Replace (Ctrl+H) to fix formatting issues before parsing.'
+    tip: 'Ctrl+Enter is your shortcut throughout — paste text, press Ctrl+Enter to parse, press Ctrl+Enter again to go to Categorize.'
   },
   'categorize': {
     title: '🏷️ Categorize — Assigning Categories',
-    steps: ['After parsing click Go to Categorize.','Each item shows description, date, amount and suggested category.','Tap any category dropdown to change it.','Use Search to filter items by keyword.','Use Assign All to bulk-assign a category to all matching items.','Click Auto-Assign All for smart suggestions based on your history.','Click Save to Ledger when done.'],
-    example: 'User sa0819 had 45 items parsed. She searched bread and assigned all 12 matches to Food & Groceries in one click.',
-    tip: 'The app learns from your choices. The more you use it the smarter auto-assign becomes.'
+    steps: ['After parsing click Go to Categorize.','Each item shows description, date, amount and suggested category.','Tap any category dropdown to change it.','Use the ⇅ sort button to switch between Newest first and Oldest first — your latest entries will be at the top.','Use Search to filter items by keyword.','Use Assign All to bulk-assign a category to all matching items.','Click Auto-Assign All for smart suggestions based on your history.','Click Save to Ledger when done.'],
+    example: 'User sa0819 had 45 items parsed. She switched sort to Newest first to find her latest entries quickly, then searched bread and assigned all 12 matches to Food & Groceries in one click.',
+    tip: 'Sort Newest first to find the entries you just typed. Sort Oldest first to review from the beginning of the month.'
   },
   'daily': {
     title: '📅 Daily — Day by Day Breakdown',
@@ -11835,21 +12072,23 @@ var HELP_DATA = {
     steps: [
       'TAB → next tab | CTRL+TAB → previous tab (works when logged in and not typing).',
       'CTRL+1 to CTRL+7 → jump directly to any tab. Expenses: 1=Import 2=Categorize 3=Daily 4=Dashboard 5=Ledger 6=Budget 7=Manage. Income: 1=Import 2=Categorize 3=Monthly 4=Dashboard 5=Ledger 6=Manage.',
-      '↑ UP ARROW → jump to top of page | ↓ DOWN ARROW → jump to bottom.',
-      'DATE LOOKUP — ← previous day | → next day | ESCAPE or F2 → close.',
+      '↑ UP ARROW → jump to top of page | ↓ DOWN ARROW → jump to bottom. (Disabled when Help is open.)',
+      'DATE LOOKUP — F2 to open/close | ← previous day | → next day.',
       'PIN PAD — type digits 0–9 | BACKSPACE → delete | ESCAPE → clear | ENTER → submit.',
-      'S → open the module switcher (choose Expenses or Income).',
-      'E → switch directly to Expenses module.',
-      'I → switch directly to Income module.',
-      'H → toggle the header bar show/hide (same as the eye button).',
-      'L → log out immediately. Warning: pressing L anywhere outside a text field will log you out.',
-      'F1 → open Help panel.',
-      'F2 → open Date Lookup / Calendar. Press F2 or Escape to close.',
-      'N → next slide during onboarding tour. B → go back to previous slide.',
-      'All shortcuts are blocked when typing in any input field or when a modal is open.'
+      'S → open the module switcher. E → Expenses. I → Income. H → toggle header. L → log out.',
+      'F1 → open/close Help panel. Arrow keys navigate icons. Enter opens article. ↑ ↓ scroll article. G → back to icon grid.',
+      'F2 → open/close Date Lookup.',
+      'N → next onboarding slide. B → previous slide. (Only when onboarding is open.)',
+      'IMPORT TAB — Hold Alt + ← → ↑ ↓ → navigate months (picker stays frozen in view). N = next year. B = previous year. Y = toggle Year/Month mode (income only).',
+      'IMPORT TAB — Alt+Enter → jump INTO the notepad (cursor placed at next available line). Type your entries.',
+      'IMPORT TAB — Alt+Enter again (while inside notepad) → EXIT the notepad back to the page.',
+      'IMPORT TAB — Ctrl+Enter → Parse expenses or income. Works for both modules.',
+      'IMPORT TAB — After parsing with all dates matching, Ctrl+Enter again → Go to Categorize automatically.',
+      'CATEGORIZE TAB — ⇅ Sort button toggles Newest first / Oldest first. Newest first puts your latest entries at the top. Works on both Expenses and Income.',
+      'All letter shortcuts (S E I H L N B G Y) are blocked when typing in any input field.'
     ],
-    example: 'User jd0292 on his laptop:\n1. Typed PIN → Enter → logged in.\n2. Pressed F2 → Date Lookup opened → browsed with ← → → Escape closed it.\n3. Pressed Tab twice → jumped to Daily tab.\n4. Pressed I → switched to Income module.\n5. Pressed E → switched back to Expenses.\n6. Pressed H → header collapsed for more screen space.\n7. Pressed F1 → Help opened.\n8. Pressed L → logged out.',
-    tip: 'S/E/I for switching modules, H to hide the header, L to log out, F1 for help, F2 for calendar — full app control without touching the mouse.'
+    example: 'Full Import workflow — no mouse needed:\n1. Ctrl+1 → jump to Import tab.\n2. Hold Alt + arrow keys → navigate to March 2026.\n3. Alt+Enter → cursor jumps into notepad.\n4. Type entries line by line.\n5. Alt+Enter → exit notepad.\n6. Ctrl+Enter → Parse.\n7. Ctrl+Enter → Go to Categorize.\n8. ⇅ Sort → Newest first to see latest entries.\n9. Assign categories.\n10. Save to Ledger.',
+    tip: 'The full Import-to-Categorize flow uses only Alt+Enter and Ctrl+Enter — no mouse needed. Alt+Enter gets you in and out of the notepad. Ctrl+Enter does the rest.'
   },
   'help': {
     title: '❓ Help & Support',
@@ -11969,13 +12208,13 @@ var ONBOARD_EXPENSES_SLIDES = [
   {
     icon: '📥',
     title: 'Import Tab — Add Your Expenses',
-    body: 'Paste your expense text or import a CSV file. Select the month, paste your data, and click <strong>Parse</strong>. The app reads each line and extracts the date, description, and amount automatically.',
+    body: 'Navigate to your month using <strong>Hold Alt + arrows</strong>. Press <strong>Alt+Enter</strong> to jump into the notepad. Type your entries. Press <strong>Alt+Enter</strong> again to exit. Then <strong>Ctrl+Enter</strong> to parse, and <strong>Ctrl+Enter</strong> again to go to Categorize.',
     color: '#3d5a73'
   },
   {
     icon: '🏷️',
     title: 'Categorize — Sort Your Spending',
-    body: 'After parsing, review each entry and assign a category — Food, Transport, Rent, etc. The app learns your patterns and suggests categories automatically over time.',
+    body: 'After parsing, review each entry and assign a category. Use the <strong>⇅ sort button</strong> to show Newest first — so your latest entries are at the top. The app learns your patterns over time.',
     color: '#4a7c59'
   },
   {
@@ -12029,7 +12268,7 @@ var ONBOARD_EXPENSES_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Onboarding slides: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
   {
@@ -12051,13 +12290,13 @@ var ONBOARD_INCOME_SLIDES = [
   {
     icon: '📥',
     title: 'Import Income Data',
-    body: 'Paste your income text or import a CSV file. Select the month, paste your data (one entry per line with date, description, and amount), and click <strong>Parse Income</strong>.',
+    body: 'Navigate to your month using <strong>Hold Alt + arrows</strong>. Press <strong>Alt+Enter</strong> to jump into the notepad. Type your income entries. Press <strong>Alt+Enter</strong> again to exit. Then <strong>Ctrl+Enter</strong> to parse, and <strong>Ctrl+Enter</strong> again to go to Categorize.',
     color: '#3d5a73'
   },
   {
     icon: '🏷️',
     title: 'Categorize Your Income',
-    body: 'Assign categories like Salary, Freelance, Commission, Gift, or Refund. You can create custom categories for your specific income sources.',
+    body: 'Assign categories like Salary, Freelance, Commission, Gift, or Refund. Use the <strong>⇅ sort button</strong> to show Newest first. You can create custom categories for your specific income sources.',
     color: '#2e7d8a'
   },
   {
@@ -12087,7 +12326,7 @@ var ONBOARD_INCOME_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Onboarding slides: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
   {
@@ -12187,11 +12426,16 @@ function openHelp() {
   buildHelpIcons();
   var hb = document.getElementById('help-body');
   if (hb) hb.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Tap an icon above or type to search</div>';
+  _helpFocusIdx = -1; // reset focus index
+  _helpArticleOpen = false;
 }
 
 function closeHelp() {
   var o = document.getElementById('help-overlay');
   if (o) o.style.display = 'none';
+  _helpFocusIdx = -1;
+  _helpArticleOpen = false;
+  _helpClearFocus();
 }
 
 function buildHelpIcons() {
