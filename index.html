@@ -166,7 +166,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // F1 — Help
     if (key === 'F1') {
       e.preventDefault();
-      if (typeof openHelp === 'function') openHelp();
+      var helpO2 = document.getElementById('help-overlay');
+      if (helpO2 && helpO2.style.display === 'flex') {
+        helpO2.style.display = 'none';
+      } else {
+        if (typeof openHelp === 'function') openHelp();
+      }
       return;
     }
 
