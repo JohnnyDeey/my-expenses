@@ -529,6 +529,16 @@ document.addEventListener('keydown', function(e) {
   if (ho && ho.style.display === 'flex') { e.preventDefault(); ho.style.display = 'none'; }
 });
 
+// N = next slide, B = back slide — only when onboarding overlay is open
+document.addEventListener('keydown', function(e) {
+  var ov = document.getElementById('onboard-overlay');
+  if (!ov || ov.style.display === 'none' || ov.style.display === '') return;
+  var tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); if (typeof onboardNav === 'function') onboardNav(1); }
+  if (e.key === 'b' || e.key === 'B') { e.preventDefault(); if (typeof onboardNav === 'function') onboardNav(-1); }
+});
+
 </script>
 <style>
 :root {
@@ -904,6 +914,17 @@ nav.tabs{position:relative;}
   nav.tabs button{padding:13px 14px;}
   .tab-icon{font-size:1.1rem;}
 }
+
+/* ── Onboarding slide animations ── */
+@keyframes ob-fade-in    { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+@keyframes ob-slide-down { from { opacity:0; transform:translateY(-40px); } to { opacity:1; transform:translateY(0); } }
+@keyframes ob-slide-up   { from { opacity:0; transform:translateY(40px); } to { opacity:1; transform:translateY(0); } }
+@keyframes ob-slide-left { from { opacity:0; transform:translateX(60px); } to { opacity:1; transform:translateX(0); } }
+@keyframes ob-slide-right{ from { opacity:0; transform:translateX(-60px); } to { opacity:1; transform:translateX(0); } }
+@keyframes ob-zoom-in    { from { opacity:0; transform:scale(0.5) rotate(-4deg); } to { opacity:1; transform:scale(1) rotate(0); } }
+@keyframes ob-flip       { from { opacity:0; transform:perspective(400px) rotateY(60deg); } to { opacity:1; transform:perspective(400px) rotateY(0); } }
+@keyframes ob-bounce-in  { 0% { opacity:0; transform:scale(0.3); } 60% { opacity:1; transform:scale(1.08); } 80% { transform:scale(0.96); } 100% { transform:scale(1); } }
+.ob-anim { animation-duration:0.42s; animation-timing-function:cubic-bezier(0.34,1.36,0.64,1); animation-fill-mode:both; }
 
 @keyframes pin-shake {
   0%,100% { transform: translateX(0); }
@@ -11476,7 +11497,7 @@ function changePin() {
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-03';
-var APP_VERSION = '2.0.2'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '2.0.3'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
@@ -11545,20 +11566,17 @@ function _showPrivacyOverlay() {
 }
 
 function acceptPrivacy() {
-  // Save acceptance to localStorage and sessionStorage
   localStorage.setItem('privacy_ok', PRIVACY_VER);
   sessionStorage.setItem('tc_signed_this_session', '1');
-  sessionStorage.removeItem('new_app_version');
+  // Keep new_app_version flag — login will use it to trigger onboarding
   if (_db && _userId) {
     userCol('settings').doc('privacy').set({
       version: PRIVACY_VER, accepted: true,
       timestamp: Date.now(), date: new Date().toISOString()
     }).catch(function(){});
   }
-  // Close overlay
   var o = document.getElementById('privacy-overlay');
   if (o) o.style.display = 'none';
-  // Update the T&C buttons to show accepted state
   var pinTcBtn = document.getElementById('pin-tc-label');
   if (pinTcBtn) {
     pinTcBtn.innerHTML = '&#10003; Terms &amp; Conditions Accepted';
@@ -11567,9 +11585,13 @@ function acceptPrivacy() {
     pinTcBtn.style.color = '#8dd4a8';
     pinTcBtn.onclick = null;
   }
-  // Hide T&C box after acceptance
   var ptc = document.getElementById('pin-tc-box');
   if (ptc) setTimeout(function(){ ptc.style.display = 'none'; }, 1200);
+  // If already logged in AND new_app_version flag set → fire onboarding now
+  if (_userId && sessionStorage.getItem('new_app_version') === '1') {
+    sessionStorage.removeItem('new_app_version');
+    setTimeout(function(){ startOnboarding(_appMode, true); }, 600);
+  }
 }
 
 // ════════════════════════
@@ -11743,6 +11765,7 @@ var HELP_DATA = {
       'L → log out immediately. Warning: pressing L anywhere outside a text field will log you out.',
       'F1 → open Help panel.',
       'F2 → open Date Lookup / Calendar. Press F2 or Escape to close.',
+      'N → next slide during onboarding tour. B → go back to previous slide.',
       'All shortcuts are blocked when typing in any input field or when a modal is open.'
     ],
     example: 'User jd0292 on his laptop:\n1. Typed PIN → Enter → logged in.\n2. Pressed F2 → Date Lookup opened → browsed with ← → → Escape closed it.\n3. Pressed Tab twice → jumped to Daily tab.\n4. Pressed I → switched to Income module.\n5. Pressed E → switched back to Expenses.\n6. Pressed H → header collapsed for more screen space.\n7. Pressed F1 → Help opened.\n8. Pressed L → logged out.',
@@ -11926,7 +11949,7 @@ var ONBOARD_EXPENSES_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Onboarding slides: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
   {
@@ -11984,7 +12007,7 @@ var ONBOARD_INCOME_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Onboarding slides: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
   {
@@ -12037,10 +12060,19 @@ function renderOnboardSlide() {
   // Slide content
   var slideEl = document.getElementById('onboard-slide');
   if (slideEl) {
+    // Pick animation based on slide index — cycles through variety
+    var anims = ['ob-zoom-in','ob-slide-down','ob-slide-left','ob-flip','ob-slide-up','ob-slide-right','ob-bounce-in','ob-fade-in'];
+    var animName = anims[_onboardIndex % anims.length];
+    var kbHint = _onboardIndex === 0
+      ? '<div style="margin-top:16px;font-family:\'DM Mono\',monospace;font-size:0.6rem;color:#a09070;letter-spacing:1px;border-top:1px solid #e0dbd4;padding-top:10px;">⌨️ LAPTOP: &nbsp;<strong>N</strong> = next &nbsp;·&nbsp; <strong>B</strong> = back</div>'
+      : '';
+    slideEl.className = 'ob-anim';
+    slideEl.style.animationName = animName;
     slideEl.innerHTML =
       '<div style="font-size:3.5rem;margin-bottom:16px;line-height:1;">' + slide.icon + '</div>' +
       '<div style="font-family:\'Playfair Display\',serif;font-size:1.25rem;font-weight:900;color:#1a1410;margin-bottom:12px;line-height:1.3;">' + slide.title + '</div>' +
-      '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#5a4e3e;line-height:1.75;max-width:320px;">' + slide.body + '</div>';
+      '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#5a4e3e;line-height:1.75;max-width:320px;">' + slide.body + '</div>' +
+      kbHint;
   }
 }
 
