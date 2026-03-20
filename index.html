@@ -1261,12 +1261,28 @@ input[type="password"]::-ms-clear { display:none !important; }
       </div>
       <div class="chart-card">
         <h3>Category Breakdown</h3>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">
+          <span>From</span>
+          <select id="cat-from-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="cat-from-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <span>To</span>
+          <select id="cat-to-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="cat-to-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <button onclick="resetChartRange('cat')" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:3px 8px;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;" title="Reset to full range">&#8635; All</button>
+        </div>
         <div id="cat-bars-container"></div>
       </div>
     </div>
     <div class="charts-grid wide" style="margin-bottom:20px;">
       <div class="chart-card">
         <h3>Yearly Total Spending</h3>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">
+          <span>From</span>
+          <select id="yearly-from-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <span>To</span>
+          <select id="yearly-to-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <button onclick="resetChartRange('yearly')" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:3px 8px;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;" title="Reset to full range">&#8635; All</button>
+        </div>
         <div class="chart-sub" id="yearly-sub"></div>
         <div class="chart-wrap"><canvas id="chart-yearly"></canvas></div>
       </div>
@@ -1711,12 +1727,28 @@ input[type="password"]::-ms-clear { display:none !important; }
       </div>
       <div class="chart-card">
         <h3>Income by Category</h3>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">
+          <span>From</span>
+          <select id="inc-cat-from-year" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="inc-cat-from-month" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <span>To</span>
+          <select id="inc-cat-to-year" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="inc-cat-to-month" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <button onclick="resetChartRange('inc-cat')" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:3px 8px;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;" title="Reset to full range">&#8635; All</button>
+        </div>
         <div id="inc-cat-bars-container"></div>
       </div>
     </div>
     <div class="charts-grid wide" style="margin-bottom:20px;">
       <div class="chart-card">
         <h3>Yearly Income</h3>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">
+          <span>From</span>
+          <select id="inc-yearly-from-year" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <span>To</span>
+          <select id="inc-yearly-to-year" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <button onclick="resetChartRange('inc-yearly')" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:3px 8px;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;" title="Reset to full range">&#8635; All</button>
+        </div>
         <div class="chart-sub" id="inc-yearly-sub"></div>
         <div class="chart-wrap"><canvas id="inc-chart-yearly"></canvas></div>
       </div>
@@ -3947,6 +3979,33 @@ function printDashboard(mode, selectedCurrencies) {
     : ['#fdf6e3','#f5d98b','#e8a825','#c8962e','#7a5a10'];
   var isGold = !isIncome;
 
+  // ── Currency colors — match the dashboard pill palette exactly ──
+  var CUR_BORDER_COLORS = {
+    EUR: '#4a7ca8',  // blue
+    NGN: '#4a7c59',  // green
+    USD: '#c8962e',  // gold/orange
+    GBP: '#7b4dad',  // purple
+    GHS: '#c8850a',  // amber
+  };
+  var CUR_BG_COLORS = {
+    EUR: 'rgba(61,90,115,0.08)',
+    NGN: 'rgba(74,124,89,0.08)',
+    USD: 'rgba(200,150,46,0.08)',
+    GBP: 'rgba(107,61,140,0.08)',
+    GHS: 'rgba(184,108,30,0.08)',
+  };
+  var CUR_FALLBACK_BORDERS = ['#3d8a8a','#b5451b','#5a6b3d','#7c4a4a','#6b3d5a'];
+  function getCurBorder(cur, idx) {
+    return CUR_BORDER_COLORS[cur] || CUR_FALLBACK_BORDERS[idx % CUR_FALLBACK_BORDERS.length];
+  }
+  function getCurBg(cur, idx) {
+    if (CUR_BG_COLORS[cur]) return CUR_BG_COLORS[cur];
+    var b = CUR_FALLBACK_BORDERS[idx % CUR_FALLBACK_BORDERS.length];
+    return b.replace('#','rgba(').replace(/([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i, function(m,r,g,b2){
+      return parseInt(r,16)+','+parseInt(g,16)+','+parseInt(b2,16)+',0.08)';
+    });
+  }
+
   // ── CSS ──
   var css =
     '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
@@ -4004,10 +4063,14 @@ function printDashboard(mode, selectedCurrencies) {
   }
 
   // ── Helper: category bars ──
-  function buildCatBarsHtml(data, cur, yr, mo, colorFn) {
+  function buildCatBarsHtml(data, cur, yr, mo, colorFn, fromKey, toKey) {
     var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
-    if(yr!=='all') d=d.filter(function(i){return i.date.substring(0,4)===yr;});
-    if(mo!=='all') d=d.filter(function(i){return i.date.substring(5,7)===mo;});
+    if(fromKey && toKey) {
+      d=d.filter(function(i){var k=i.date.substring(0,7);return k>=fromKey&&k<=toKey;});
+    } else {
+      if(yr!=='all') d=d.filter(function(i){return i.date.substring(0,4)===yr;});
+      if(mo!=='all') d=d.filter(function(i){return i.date.substring(5,7)===mo;});
+    }
     var byCat={};
     d.forEach(function(i){byCat[i.category]=(byCat[i.category]||0)+i.amount;});
     var cats=Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a];}).slice(0,15);
@@ -4103,8 +4166,8 @@ function printDashboard(mode, selectedCurrencies) {
     var vals=keys.map(function(k){return +byM[k].toFixed(2);});
     var sym=SYMS[cur]||'';
     var oc=document.createElement('canvas'); oc.width=800; oc.height=260;
-    var borderC=isGold?'#c8962e':'#4a7c59';
-    var bgC=isGold?'rgba(200,150,46,0.08)':'rgba(74,124,89,0.08)';
+    var borderC = getCurBorder(cur, printCurs.indexOf(cur));
+    var bgC     = getCurBg(cur, printCurs.indexOf(cur));
     var step=keys.length<=24?1:keys.length<=72?6:keys.length<=144?12:24;
     var ch=new Chart(oc.getContext('2d'),{type:'line',data:{labels:labels,datasets:[{label:cur,data:vals,borderColor:borderC,backgroundColor:bgC,tension:0.4,fill:true,pointBackgroundColor:borderC,pointRadius:keys.length<=36?3:0,pointHitRadius:8}]},options:{responsive:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){return it[0].label;},label:function(c){return' '+sym+c.parsed.y.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}}}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10},callback:function(val,idx){return idx%step===0?this.getLabelForValue(val).replace(/^(\w{3})\w+ /,'$1 '):'';}}}}}}); 
     var src=oc.toDataURL('image/png');
@@ -4113,16 +4176,18 @@ function printDashboard(mode, selectedCurrencies) {
   }
 
   // ── Helper: yearly chart as canvas image ──
-  function buildYearlyChartImg(data, cur) {
+  function buildYearlyChartImg(data, cur, fromYear, toYear) {
     var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
+    if(fromYear) d=d.filter(function(i){return i.date.substring(0,4)>=fromYear;});
+    if(toYear)   d=d.filter(function(i){return i.date.substring(0,4)<=toYear;});
     var byY={}; d.forEach(function(i){var y=i.date.substring(0,4);byY[y]=(byY[y]||0)+i.amount;});
     var yrs=Object.keys(byY).sort();
     if(!yrs.length) return '';
     var vals=yrs.map(function(y){return +byY[y].toFixed(2);});
     var sym=SYMS[cur]||'';
     var oc=document.createElement('canvas'); oc.width=800; oc.height=240;
-    var borderC=isIncome?'#4a7c59':'#c8962e';
-    var bgC=isIncome?'rgba(74,124,89,0.08)':'rgba(200,150,46,0.08)';
+    var borderC = getCurBorder(cur, printCurs.indexOf(cur));
+    var bgC     = getCurBg(cur, printCurs.indexOf(cur));
     var ch=new Chart(oc.getContext('2d'),{type:'line',data:{labels:yrs,datasets:[{label:cur,data:vals,borderColor:borderC,backgroundColor:bgC,tension:0.4,fill:true,pointBackgroundColor:borderC,pointRadius:5,pointHoverRadius:7}]},options:{responsive:false,animation:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
     var src=oc.toDataURL('image/png');
     ch.destroy();
@@ -4150,7 +4215,11 @@ function printDashboard(mode, selectedCurrencies) {
     html += '<div class="cur-section">';
 
     // Currency header
-    html += '<div class="cur-header"><span class="cur-sym">'+sym+'</span><span class="cur-name">'+c+'</span></div>';
+    var curBorderColor = getCurBorder(c, ci);
+    var curBgColor     = getCurBg(c, ci);
+    html += '<div class="cur-header" style="border-left-color:'+curBorderColor+';background:'+curBgColor+';">';
+    html += '<span class="cur-sym">'+sym+'</span>';
+    html += '<span class="cur-name" style="color:'+curBorderColor+';">'+c+'</span></div>';
 
     // Stat cards
     html += buildStatCards(rawData, c, effYear, effMonth);
@@ -4161,15 +4230,36 @@ function printDashboard(mode, selectedCurrencies) {
       html += '<div class="chart-box"><h3>Monthly '+(isIncome?'Income':'Spending')+' Trend</h3>'+mImg+'</div>';
     }
 
-    // Category breakdown
+    // Category breakdown — read range picker and apply filter
+    var catPrefix  = isIncome ? 'inc-cat' : 'cat';
+    var catFromY   = document.getElementById(catPrefix+'-from-year');
+    var catFromM   = document.getElementById(catPrefix+'-from-month');
+    var catToY     = document.getElementById(catPrefix+'-to-year');
+    var catToM     = document.getElementById(catPrefix+'-to-month');
+    var catFromKey = (catFromY && catFromM) ? catFromY.value+'-'+catFromM.value : null;
+    var catToKey   = (catToY   && catToM)   ? catToY.value+'-'+catToM.value     : null;
+    var catRangeLabel = (catFromKey && catToKey && catFromY.value)
+      ? (MONTHS[parseInt(catFromM.value)-1]+' '+catFromY.value+' → '+MONTHS[parseInt(catToM.value)-1]+' '+catToY.value)
+      : (effYear === 'all' ? 'All Time' : effYear + (effMonth !== 'all' ? ' · '+MONTHS[parseInt(effMonth)-1] : ''));
     html += '<div class="chart-box"><h3>'+(isIncome?'Income by Category':'Category Breakdown')+'</h3>';
-    html += buildCatBarsHtml(rawData, c, effYear, effMonth, colorFn);
+    html += '<div style="font-family:DM Mono,monospace;font-size:0.72rem;color:#888;margin-bottom:8px;">Period: '+catRangeLabel+'</div>';
+    html += buildCatBarsHtml(rawData, c, effYear, effMonth, colorFn, catFromKey, catToKey);
     html += '</div>';
 
-    // Yearly totals
-    var yImg = buildYearlyChartImg(rawData, c);
+    // Yearly totals — read range picker and apply filter
+    var yrPrefix   = isIncome ? 'inc-yearly' : 'yearly';
+    var yrFromEl   = document.getElementById(yrPrefix+'-from-year');
+    var yrToEl     = document.getElementById(yrPrefix+'-to-year');
+    var yrFromVal  = yrFromEl ? yrFromEl.value : null;
+    var yrToVal    = yrToEl   ? yrToEl.value   : null;
+    var yrRangeLabel = (yrFromVal && yrToVal)
+      ? (yrFromVal === yrToVal ? yrFromVal : yrFromVal+' → '+yrToVal)
+      : 'All Years';
+    var yImg = buildYearlyChartImg(rawData, c, yrFromVal, yrToVal);
     if (yImg) {
-      html += '<div class="chart-box"><h3>Yearly '+(isIncome?'Income':'Spending')+'</h3>'+yImg+'</div>';
+      html += '<div class="chart-box"><h3>Yearly '+(isIncome?'Income':'Spending')+'</h3>';
+      html += '<div style="font-family:DM Mono,monospace;font-size:0.72rem;color:#888;margin-bottom:8px;">Period: '+yrRangeLabel+'</div>';
+      html += yImg+'</div>';
     }
 
     // Heatmap
@@ -4265,14 +4355,24 @@ function renderDashboard(){
   var monthlyData = filtered.filter(function(i){return i.currency===monthlyCur;});
   renderMonthlyChart(monthlyData, monthlyCur);
 
-  // Category bars — use master filtered data
-  renderCategoryBars(filtered);
+  // Category bars — populate picker and apply range filter
+  var catKeys = [];
+  filtered.forEach(function(i){ var k=i.date.substring(0,7); if(catKeys.indexOf(k)===-1) catKeys.push(k); });
+  catKeys.sort();
+  _populateCatRangePicker(catKeys, 'cat');
+  var catFiltered = _applyChartRangeFilter(filtered, 'cat-from-year', 'cat-from-month', 'cat-to-year', 'cat-to-month');
+  renderCategoryBars(catFiltered);
 
-  // Yearly chart — use full unfiltered data for all years (month filter makes no sense for yearly)
+  // Yearly chart — populate year picker and apply range filter
   var yearlyBase = allPositive.slice();
   if(currency !== 'all') yearlyBase = yearlyBase.filter(function(i){return i.currency===currency;});
+  var allDataYears = [];
+  yearlyBase.forEach(function(i){ var y=i.date.substring(0,4); if(allDataYears.indexOf(y)===-1) allDataYears.push(y); });
+  allDataYears.sort();
+  _populateYearRangePicker(allDataYears, 'yearly-from-year', 'yearly-to-year');
+  var yearlyFiltered = _applyYearRangeFilter(yearlyBase, 'yearly-from-year', 'yearly-to-year');
   var yearlyCur = currency !== 'all' ? currency : (dataCurs[0] || 'NGN');
-  renderYearlyChart(yearlyBase.filter(function(i){return i.currency===yearlyCur;}), yearlyCur);
+  renderYearlyChart(yearlyFiltered.filter(function(i){return i.currency===yearlyCur;}), yearlyCur);
 
   // Heatmap + YoY — when 'all', show one block per currency stacked
   var hmBase = allPositive.slice();
@@ -4497,6 +4597,86 @@ function monthlyTickConfig(count) {
       return mon + ' ' + yr;
     }
   };
+}
+
+// ── Chart Range Pickers for Category Breakdown & Yearly Total ──
+function _populateYearRangePicker(years, fromId, toId) {
+  var fromEl = document.getElementById(fromId);
+  var toEl   = document.getElementById(toId);
+  if (!fromEl || !toEl) return;
+  var savedFrom = fromEl.value;
+  var savedTo   = toEl.value;
+  var opts = years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  fromEl.innerHTML = opts;
+  toEl.innerHTML   = opts;
+  // Restore or default: from = earliest, to = latest
+  fromEl.value = (savedFrom && years.indexOf(savedFrom) !== -1) ? savedFrom : years[0];
+  toEl.value   = (savedTo   && years.indexOf(savedTo)   !== -1) ? savedTo   : years[years.length-1];
+  if (fromEl.value > toEl.value) { fromEl.value = years[0]; toEl.value = years[years.length-1]; }
+}
+
+function _populateCatRangePicker(keys, prefix) {
+  // keys: sorted 'YYYY-MM' strings
+  if (!keys.length) return;
+  var years = [];
+  keys.forEach(function(k){ var y=k.substring(0,4); if(years.indexOf(y)===-1) years.push(y); });
+  var fromYEl = document.getElementById(prefix+'-from-year');
+  var fromMEl = document.getElementById(prefix+'-from-month');
+  var toYEl   = document.getElementById(prefix+'-to-year');
+  var toMEl   = document.getElementById(prefix+'-to-month');
+  if (!fromYEl) return;
+  var savedFromY = fromYEl.value, savedFromM = fromMEl ? fromMEl.value : '';
+  var savedToY   = toYEl.value,   savedToM   = toMEl   ? toMEl.value   : '';
+  var yearOpts  = years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  var monthOpts = MONTHS.map(function(m,i){ return '<option value="'+pad(i+1)+'">'+m.substring(0,3)+'</option>'; }).join('');
+  fromYEl.innerHTML = yearOpts; if(fromMEl) fromMEl.innerHTML = monthOpts;
+  toYEl.innerHTML   = yearOpts; if(toMEl)   toMEl.innerHTML   = monthOpts;
+  var firstKey = keys[0], lastKey = keys[keys.length-1];
+  fromYEl.value = (savedFromY && years.indexOf(savedFromY)!==-1) ? savedFromY : firstKey.substring(0,4);
+  if(fromMEl) fromMEl.value = savedFromM || firstKey.substring(5,7);
+  toYEl.value   = (savedToY   && years.indexOf(savedToY)  !==-1) ? savedToY   : lastKey.substring(0,4);
+  if(toMEl)   toMEl.value   = savedToM   || lastKey.substring(5,7);
+}
+
+function _applyChartRangeFilter(data, fromYId, fromMId, toYId, toMId) {
+  var fromY = document.getElementById(fromYId); if(!fromY) return data;
+  var fromM = document.getElementById(fromMId);
+  var toY   = document.getElementById(toYId);
+  var toM   = document.getElementById(toMId);
+  var fromKey = fromY.value + (fromM ? '-'+fromM.value : '-01');
+  var toKey   = toY.value   + (toM   ? '-'+toM.value   : '-12');
+  return data.filter(function(i){
+    var k = i.date.substring(0, fromM ? 7 : 4);
+    return k >= fromKey && k <= toKey;
+  });
+}
+
+function _applyYearRangeFilter(data, fromId, toId) {
+  var fromEl = document.getElementById(fromId); if(!fromEl) return data;
+  var toEl   = document.getElementById(toId);
+  var fromY  = fromEl.value;
+  var toY    = toEl ? toEl.value : fromY;
+  return data.filter(function(i){ var y = i.date.substring(0,4); return y >= fromY && y <= toY; });
+}
+
+function resetChartRange(prefix) {
+  var isInc = prefix.indexOf('inc') === 0;
+  if (prefix === 'cat' || prefix === 'inc-cat') {
+    var fy = document.getElementById(prefix+'-from-year');
+    var fm = document.getElementById(prefix+'-from-month');
+    var ty = document.getElementById(prefix+'-to-year');
+    var tm = document.getElementById(prefix+'-to-month');
+    if(fy) fy.selectedIndex = 0;
+    if(fm) fm.selectedIndex = 0;
+    if(ty && ty.options.length) ty.selectedIndex = ty.options.length - 1;
+    if(tm && tm.options.length) tm.selectedIndex = tm.options.length - 1;
+  } else {
+    var fy2 = document.getElementById(prefix+'-from-year');
+    var ty2 = document.getElementById(prefix+'-to-year');
+    if(fy2) fy2.selectedIndex = 0;
+    if(ty2 && ty2.options.length) ty2.selectedIndex = ty2.options.length - 1;
+  }
+  if (isInc) renderIncomeDashboard(); else renderDashboard();
 }
 
 function resetMonthlyRange(mode) {
@@ -8921,11 +9101,17 @@ function renderIncomeDashboard() {
     incCharts["inc-chart-monthly"]=new Chart(ctx,{type:"line",data:{labels:mLabels,datasets:[{label:mCur,data:mVals,borderColor:"#4a7c59",backgroundColor:"rgba(74,124,89,0.08)",tension:0.4,fill:true,pointBackgroundColor:"#4a7c59",pointRadius:mPtRadius,pointHoverRadius:mPtHover,pointHitRadius:12}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(items){return items[0].label;},label:function(c){return" "+(SYMS[mCur]||"")+c.parsed.y.toLocaleString("en",{minimumFractionDigits:2,maximumFractionDigits:2});}}}},scales:{y:{ticks:{callback:function(v){return(SYMS[mCur]||"")+fmtCompact(v);}},grid:{color:"rgba(0,0,0,0.04)"}},x:{grid:{display:false},ticks:monthlyTickConfig(mKeys.length)}}}});
   }
 
-  // Income category bars — per-currency breakdown, same style as expenses
+  // Income category bars — populate picker and apply range filter
+  var incCatKeys = [];
+  filtered.forEach(function(i){ var k=i.date.substring(0,7); if(incCatKeys.indexOf(k)===-1) incCatKeys.push(k); });
+  incCatKeys.sort();
+  _populateCatRangePicker(incCatKeys, 'inc-cat');
+  var incCatFiltered = _applyChartRangeFilter(filtered, 'inc-cat-from-year', 'inc-cat-from-month', 'inc-cat-to-year', 'inc-cat-to-month');
+
   var catCont = document.getElementById("inc-cat-bars-container");
   catCont.innerHTML = "";
   var byCatCur = {};
-  filtered.forEach(function(i){
+  incCatFiltered.forEach(function(i){
     var k = i.category+":::"+i.currency;
     if(!byCatCur[k]) byCatCur[k] = {cat:i.category, cur:i.currency, total:0};
     byCatCur[k].total += i.amount;
@@ -8978,10 +9164,13 @@ function renderIncomeDashboard() {
     catCont.appendChild(catRow);
   });
 
-  // Yearly chart — use full data (not month-filtered)
+  // Yearly chart — populate year picker and apply range filter
   var yCur = cur !== "all" ? cur : (incCurs[0]||"NGN");
-  var yData = allPositive.filter(function(i){return i.currency===yCur;});
-  if(year !== "all") yData = allPositive.filter(function(i){return i.currency===yCur;}); // yearly always shows all years
+  var incAllYears = [];
+  allPositive.forEach(function(i){ var y=i.date.substring(0,4); if(incAllYears.indexOf(y)===-1) incAllYears.push(y); });
+  incAllYears.sort();
+  _populateYearRangePicker(incAllYears, 'inc-yearly-from-year', 'inc-yearly-to-year');
+  var yData = _applyYearRangeFilter(allPositive, 'inc-yearly-from-year', 'inc-yearly-to-year').filter(function(i){return i.currency===yCur;});
   var byYear = {}; yData.forEach(function(i){ var y=i.date.substring(0,4); byYear[y]=(byYear[y]||0)+i.amount; });
   var yKeys = Object.keys(byYear).sort();
   var yVals = yKeys.map(function(y){return +byYear[y].toFixed(2);});
@@ -9935,6 +10124,7 @@ function submitPinLogin() {
   var pinTcCb = document.getElementById('pin-tc-check');
   if (pinTcCb && pinTcCb.checked) {
     localStorage.setItem('privacy_ok', PRIVACY_VER);
+    sessionStorage.setItem('tc_signed_this_session', '1');
   }
   // Set globals from localStorage
   _userId    = uid;
@@ -10159,8 +10349,10 @@ function _showTcBox(boxId, labelId) {
       ? 'I agree to the <strong>updated</strong> '
       : 'I agree to the ')
       + '<a href="#" onclick="openPrivacyFromPin(event)" style="color:var(--gold);text-decoration:underline;">Terms &amp; Conditions</a>';
-    // Mark as new version so onboarding fires after login
-    sessionStorage.setItem('new_app_version', '1');
+    // Mark for onboarding — only if not already set
+    if (!sessionStorage.getItem('tc_signed_this_session')) {
+      sessionStorage.setItem('new_app_version', '1');
+    }
   } else {
     box.style.display = 'none';
   }
@@ -10311,8 +10503,9 @@ function syncInit() {
   var wasRecentlyActive = lastActive > 0 && (Date.now() - lastActive) < INACTIVE_MS;
 
   if (uid && name && phone && pinHash && (isActiveSession || wasRecentlyActive)) {
-    // If new version detected — don't skip PIN, force login so T&C shows
-    if (sessionStorage.getItem('new_app_version') === '1') {
+    // If new version AND T&C not yet signed — force PIN so T&C shows
+    var tcNotSigned = localStorage.getItem('privacy_ok') !== PRIVACY_VER;
+    if (sessionStorage.getItem('new_app_version') === '1' && tcNotSigned) {
       showPinScreen();
       showPinPadStep();
       return;
@@ -11050,8 +11243,16 @@ function switchUser() {
   localStorage.removeItem(UID_KEY);
   localStorage.removeItem(NAME_KEY);
   localStorage.removeItem(PHONE_KEY);
+  localStorage.removeItem(PHONE_TAIL_KEY);
+  localStorage.removeItem(FULL_NAME_KEY);
+  // Force next user to see T&C and onboarding
+  localStorage.removeItem('privacy_ok');
+  localStorage.removeItem('expense_onboard_expenses_done');
+  localStorage.removeItem('expense_onboard_income_done');
+  sessionStorage.setItem('new_app_version', '1');
+  sessionStorage.removeItem('app_session');
   showPinScreen();
-  showRegisterStep();
+  showPinPadStep();
   syncSetStatus('off');
   updateHeaderContext();
 }
