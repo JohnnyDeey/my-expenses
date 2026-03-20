@@ -1951,13 +1951,9 @@ input[type="password"]::-ms-clear { display:none !important; }
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:center;">
         <div id="pin-login-username-display" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--gold2);letter-spacing:2px;margin-bottom:6px;min-height:20px;"></div>
         <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Enter your PIN</div>
-        <!-- PIN dot display with eye reveal -->
-        <div style="position:relative;display:flex;justify-content:center;align-items:center;margin-bottom:20px;min-height:28px;">
+        <!-- PIN dot display -->
+        <div style="display:flex;justify-content:center;align-items:center;margin-bottom:20px;min-height:28px;">
           <div id="pin-dots" style="display:flex;justify-content:center;gap:10px;min-height:18px;"></div>
-          <button type="button"
-            onmousedown="pinPadReveal(true)" onmouseup="pinPadReveal(false)" onmouseleave="pinPadReveal(false)"
-            ontouchstart="pinPadReveal(true);event.preventDefault();" ontouchend="pinPadReveal(false);event.preventDefault();"
-            style="position:absolute;right:0;background:none;border:none;cursor:pointer;padding:4px;color:#4a3e30;font-size:1rem;line-height:1;-webkit-tap-highlight-color:transparent;" title="Hold to reveal">&#128065;</button>
         </div>
         <!-- PIN pad -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 10px;">
@@ -9895,16 +9891,6 @@ function updatePinDots() {
   }
 }
 
-function pinPadReveal(show) {
-  var container = document.getElementById('pin-dots');
-  if (!container) return;
-  if (show && _pinBuffer.length > 0) {
-    container.innerHTML = '<span style="font-family:\'DM Mono\',monospace;font-size:1.4rem;font-weight:700;color:var(--gold);letter-spacing:8px;">' + _pinBuffer + '</span>';
-  } else {
-    updatePinDots();
-  }
-}
-
 // ── PIN-only login (local hash check — instant) ──
 function submitPinLogin() {
   if (!_checkTc('pin-tc-check')) return;
@@ -10150,10 +10136,10 @@ function showLoginStep() {
 }
 
 function _tcRequired() {
-  // Not required if already signed this version
+  // Required if this exact version has NOT been signed yet
+  // This catches both: brand new users AND existing users on a new app version
   if (localStorage.getItem('privacy_ok') === PRIVACY_VER) return false;
-  // Required only if new version flag is set
-  return sessionStorage.getItem('new_app_version') === '1';
+  return true; // always require until this version is signed
 }
 
 function _showTcBox(boxId, labelId) {
@@ -10273,6 +10259,11 @@ function _resumeSession(uid, name, phone) {
   }, 50);
   setTimeout(function() { checkInactivity(); }, 500);
   setTimeout(checkBackupReminder, 3000);
+  // Fire onboarding IMMEDIATELY on new version — before any async sync
+  if (sessionStorage.getItem('new_app_version') === '1') {
+    sessionStorage.removeItem('new_app_version');
+    setTimeout(function(){ startOnboarding(_appMode, true); }, 1000);
+  }
   // Fire sync in background — app is already usable
   loadIncomeFromFirebase(function(){});
   getDB(function() {
@@ -10282,11 +10273,6 @@ function _resumeSession(uid, name, phone) {
     updateHeaderContext();
     renderMonthPicker();
     populateFilters();
-    // Show onboarding tour on new version — no privacy overlay anymore
-    if (sessionStorage.getItem('new_app_version') === '1') {
-      sessionStorage.removeItem('new_app_version');
-      setTimeout(function(){ startOnboarding(_appMode, true); }, 800);
-    }
   });
 }
 
@@ -10325,11 +10311,6 @@ function syncInit() {
 function startSync() {
   syncSetStatus('connecting');
   getDB(function() {
-    // Show onboarding tour on new version — T&C already signed at PIN pad
-    if (sessionStorage.getItem('new_app_version') === '1') {
-      sessionStorage.removeItem('new_app_version');
-      setTimeout(function(){ startOnboarding(_appMode, true); }, 800);
-    }
     if (_userPhone && _userId) {
       // Load data and start listeners — skip re-validation to prevent showPinScreen() race
       syncLoadFromFirebase(function() {
