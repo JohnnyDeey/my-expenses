@@ -118,20 +118,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 // ── Arrow key scroll — Up/Down arrows control the floating scroll buttons ──
-// Only fires when NOT typing in an input, and NOT inside date lookup (which has its own left/right)
-document.addEventListener('keydown', function(e) {
-  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
-  var tag = document.activeElement ? document.activeElement.tagName : '';
-  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-  // Don't intercept if date lookup is open (it uses left/right, but avoid confusion)
-  var dlOverlay = document.getElementById('date-lookup-overlay');
-  if (dlOverlay && dlOverlay.style.display === 'flex') return;
-  e.preventDefault();
-  if (e.key === 'ArrowUp') {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } else {
-    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
-  }
+// Registered after DOM is ready so all elements and functions exist
+document.addEventListener('DOMContentLoaded', function() {
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    var tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    var dlOverlay = document.getElementById('date-lookup-overlay');
+    if (dlOverlay && dlOverlay.style.display === 'flex') return;
+    e.preventDefault();
+    if (e.key === 'ArrowUp') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+    }
+  });
+
 });
 
 
@@ -1301,7 +1304,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <option value="USD">USD</option><option value="GBP">GBP</option>
     </select>
     <select id="led-cat" onchange="renderLedger()"><option value="all">All Categories</option></select>
-    <input type="text" id="led-search" placeholder="Search... (use commas for multiple: rice, water, fleet)" oninput="debouncedLedgerSearch()">
+    <input type="text" id="led-search" placeholder="Search... commas=multiple: rice, water | minus=exclude: ice cream -rice -beatrice" oninput="debouncedLedgerSearch()">
     <button class="btn btn-danger" onclick="clearLedgerFilters()">Clear All</button>
   </div>
 
@@ -1741,7 +1744,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
     </select>
     <select id="inc-led-cat" onchange="renderIncomeLedger()"><option value="all">All Categories</option></select>
-    <input type="text" id="inc-led-search" placeholder="Search... (use commas for multiple: salary, bonus)" oninput="renderIncomeLedger()">
+    <input type="text" id="inc-led-search" placeholder="Search... commas=multiple: salary, bonus | minus=exclude: salary -bonus" oninput="renderIncomeLedger()">
     <button class="btn btn-danger" onclick="clearIncomeLedgerFilters()">Clear All</button>
   </div>
   <!-- Bulk assign bar -->
@@ -1878,7 +1881,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<div id="pin-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:flex-start;justify-content:center;flex-direction:column;padding:20px;overflow-y:auto;">
+<div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:flex-start;justify-content:center;flex-direction:column;padding:20px;overflow-y:auto;">
   <div style="text-align:center;max-width:400px;width:100%;margin:auto;padding:20px 0;">
     <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My <span style="color:var(--gold);">Expense</span> Ledger</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;letter-spacing:2px;margin-bottom:28px;">PERSONAL FINANCE TRACKER</div>
@@ -2515,6 +2518,40 @@ function saveData(data) {
 
 function loadData() {
   try { return JSON.parse(localStorage.getItem('expense_ledger') || '[]'); } catch(e) { return []; }
+}
+
+// ── Search filter helper — supports exclusions with minus prefix ──
+// e.g. "ice cream -rice -beatrice" → include "ice cream", exclude anything with "rice" or "beatrice"
+// Commas also work: "ice, cream, -rice, -beatrice"
+function applySearchFilter(data, query) {
+  if (!query) return data;
+  // Split by comma OR space-before-minus to get terms
+  var raw = query.split(',').map(function(t){ return t.trim(); }).filter(Boolean);
+  var include = [], exclude = [];
+  raw.forEach(function(t) {
+    if (t.charAt(0) === '-' && t.length > 1) {
+      exclude.push(t.substring(1).trim());
+    } else {
+      include.push(t);
+    }
+  });
+  // Must match at least one include term (if any include terms given)
+  if (include.length) {
+    data = data.filter(function(i) {
+      var d = i.desc.toLowerCase();
+      var c = (i.category || '').toLowerCase();
+      return include.some(function(t){ return d.indexOf(t) !== -1 || c.indexOf(t) !== -1; });
+    });
+  }
+  // Must NOT match any exclude term
+  if (exclude.length) {
+    data = data.filter(function(i) {
+      var d = i.desc.toLowerCase();
+      var c = (i.category || '').toLowerCase();
+      return !exclude.some(function(t){ return d.indexOf(t) !== -1 || c.indexOf(t) !== -1; });
+    });
+  }
+  return data;
 }
 function getAllCategories() {
   var saved = JSON.parse(localStorage.getItem('custom_categories') || '[]');
@@ -5073,7 +5110,7 @@ function updateLedgerBulkMatch() {
   if (month !== 'all') data = data.filter(function(i){ return i.date.substring(5,7) === month; });
   if (currency !== 'all') data = data.filter(function(i){ return i.currency === currency; });
   if (cat !== 'all') data = data.filter(function(i){ return i.category === cat; });
-  if (search) data = data.filter(function(i){ return i.desc.toLowerCase().indexOf(search) !== -1 || i.category.toLowerCase().indexOf(search) !== -1; });
+  if (search) data = applySearchFilter(data, search);
   var matches = data.filter(function(i){ return i.desc.toLowerCase().indexOf(ledgerBulkFilter) !== -1; });
   var ml = document.getElementById('led-bulk-match');
   if (ml) ml.textContent = matches.length + ' match' + (matches.length === 1 ? '' : 'es');
@@ -5146,11 +5183,10 @@ function ledgerBulkAssign() {
   if (currency !== 'all') filtered = filtered.filter(function(i){ return i.currency === currency; });
   if (cat !== 'all') filtered = filtered.filter(function(i){ return i.category === cat; });
   if (search) {
-    var sTerms = search.split(',').map(function(t){return t.trim();}).filter(Boolean);
-    filtered = filtered.filter(function(i){ var d=i.desc.toLowerCase(); var c=i.category.toLowerCase(); return sTerms.some(function(t){ return d.indexOf(t)!==-1||c.indexOf(t)!==-1; }); });
+    filtered = applySearchFilter(filtered, search);
   }
-  var bTerms = ledgerBulkFilter.split(',').map(function(t){return t.trim();}).filter(Boolean);
-  filtered = filtered.filter(function(i){ var d=i.desc.toLowerCase(); return bTerms.some(function(t){ return d.indexOf(t)!==-1; }); });
+  // Apply bulk filter — respects exclusion syntax (e.g. ice cream -rice)
+  filtered = applySearchFilter(filtered, ledgerBulkFilter);
   // IMPORTANT: exclude items the user has hidden with the − button
   if (Object.keys(_ledExcludedIds).length) {
     filtered = filtered.filter(function(i){ return !_ledExcludedIds[String(i.id)]; });
@@ -5394,18 +5430,10 @@ function renderLedger(){
   if(currency!=='all') data=data.filter(function(i){return i.currency===currency;});
   if(cat!=='all')      data=data.filter(function(i){return i.category===cat;});
   if(search) {
-    var searchTerms = search.split(',').map(function(t){ return t.trim(); }).filter(function(t){ return t.length > 0; });
-    data = data.filter(function(i){
-      var d = i.desc.toLowerCase(); var c = i.category.toLowerCase();
-      return searchTerms.some(function(t){ return d.indexOf(t) !== -1 || c.indexOf(t) !== -1; });
-    });
+    data = applySearchFilter(data, search);
   }
   if(ledgerBulkFilter) {
-    var bulkTerms = ledgerBulkFilter.split(',').map(function(t){ return t.trim(); }).filter(function(t){ return t.length > 0; });
-    data = data.filter(function(i){
-      var d = i.desc.toLowerCase();
-      return bulkTerms.some(function(t){ return d.indexOf(t) !== -1; });
-    });
+    data = applySearchFilter(data, ledgerBulkFilter);
   }
   // Filter out manually excluded items
   if(Object.keys(_ledExcludedIds).length) data=data.filter(function(i){return !_ledExcludedIds[String(i.id)];});
@@ -9108,18 +9136,10 @@ function renderIncomeLedger() {
   if (cur   !== 'all') data = data.filter(function(i){ return i.currency===cur; });
   if (cat   !== 'all') data = data.filter(function(i){ return i.category===cat; });
   if (srch) {
-    var srchTerms = srch.split(',').map(function(t){ return t.trim(); }).filter(function(t){ return t.length > 0; });
-    data = data.filter(function(i){
-      var d = i.desc.toLowerCase();
-      return srchTerms.some(function(t){ return d.indexOf(t) !== -1; });
-    });
+    data = applySearchFilter(data, srch);
   }
   if (incBulkSrch) {
-    var incBulkTerms = incBulkSrch.split(',').map(function(t){ return t.trim(); }).filter(function(t){ return t.length > 0; });
-    data = data.filter(function(i){
-      var d = i.desc.toLowerCase();
-      return incBulkTerms.some(function(t){ return d.indexOf(t) !== -1; });
-    });
+    data = applySearchFilter(data, incBulkSrch);
   }
   // Filter out items hidden with − button
   var incExcludedCount = Object.keys(_incExcludedIds).length;
@@ -9264,14 +9284,16 @@ function incomeBulkAssign() {
   var newCat  = document.getElementById('inc-bulk-cat-sel').value;
   if (!newCat)   { showToast('Select a category first'); return; }
   if (!search)   { showToast('Enter a keyword to filter first'); return; }
-  var terms = search.split(',').map(function(t){ return t.trim(); }).filter(Boolean);
   var data = loadIncomeData();
+  // Apply exclusion-aware filter — respects -minus syntax
+  var matching = applySearchFilter(data, search).filter(function(i){
+    return !_incExcludedIds[String(i.id)]; // skip hidden items
+  });
+  var matchingIds = {};
+  matching.forEach(function(i){ matchingIds[i.id] = true; });
   var count = 0;
   data.forEach(function(i){
-    var d = i.desc.toLowerCase();
-    // Skip items hidden with − button
-    if (_incExcludedIds[String(i.id)]) return;
-    if (terms.some(function(t){ return d.indexOf(t) !== -1; })) { i.category = newCat; count++; }
+    if (matchingIds[i.id]) { i.category = newCat; count++; }
   });
   if (!count) { showToast('No matching entries'); return; }
   saveIncomeData(data);
@@ -10116,13 +10138,9 @@ function syncInit() {
   var wasRecentlyActive = lastActive > 0 && (Date.now() - lastActive) < INACTIVE_MS;
 
   if (uid && name && phone && pinHash && (isActiveSession || wasRecentlyActive)) {
-    // Mark app as ready IMMEDIATELY — prevents white screen during resume
-    document.body.classList.add('app-ready');
-    // Force repaint on mobile browsers that defer visibility changes
-    document.body.style.display = 'none';
-    // eslint-disable-next-line no-unused-expressions
-    document.body.offsetHeight; // trigger reflow
-    document.body.style.display = '';
+    // Hide pin-overlay IMMEDIATELY — session is valid, no need to show lock screen
+    var pinOv = document.getElementById('pin-overlay');
+    if (pinOv) pinOv.style.display = 'none';
     // Resume silently — no PIN needed for a fresh page load within 10 min
     _resumeSession(uid, name, phone);
     return;
@@ -11047,12 +11065,13 @@ var HELP_ITEMS = [
   {icon:'&#128065;', label:'Header',     tag:'header'},
   {icon:'&#128077;', label:'PIN Login',  tag:'biometric'},
   {icon:'&#8679;',   label:'Scroll',      tag:'scroll'},
-  {icon:'&#128269;', label:'Multi-Search', tag:'multisearch'},
+  {icon:'&#128269;', label:'Search & Exclude', tag:'multisearch'},
   {icon:'&#128274;', label:'Security',    tag:'security'},
   {icon:'&#128477;', label:'Reset PIN',   tag:'resetpin'},
   {icon:'&#128176;', label:'Currencies',  tag:'currencies'},
   {icon:'&#128438;', label:'Print Report', tag:'print'},
-  {icon:'&#10067;',  label:'Help',        tag:'help'}
+  {icon:'&#9000;',   label:'Keyboard',     tag:'keyboard'},
+  {icon:'&#10067;',  label:'Help',         tag:'help'}
 ];
 
 var HELP_DATA = {
@@ -11097,19 +11116,21 @@ var HELP_DATA = {
     tip: 'Multi-word search works in both the top Search bar and the Search Desc bulk-assign bar. Use it in Expenses Ledger and Income Ledger.'
   },
   'multisearch': {
-    title: '🔍 Multi-Word Search — Find Multiple Items at Once',
+    title: '🔍 Search — Multi-Word & Exclusion Search',
     steps: [
-      'Go to the Ledger tab (Expenses or Income).',
-      'In the Search bar or the Search Desc bar, type your words separated by commas.',
-      'Example: rice, water, fleet — this will show every entry whose description contains rice OR water OR fleet.',
-      'Spaces around the commas do not matter — rice,water,fleet and rice, water, fleet both work.',
-      'The match counter shows how many results were found and how many terms were used e.g. "12 matches (3 terms)".',
-      'You can then bulk-assign a category to ALL matching entries at once — useful for grouping similar household items.',
-      'Works the same way in both Expenses Ledger and Income Ledger.',
-      'To clear the search, tap the × button next to the search bar.'
+      'Go to the Ledger tab (Expenses or Income) and use the Search bar at the top.',
+      'MULTI-WORD: type words separated by commas to find entries matching ANY of them.',
+      'Example: rice, water, fleet — shows every entry containing rice OR water OR fleet.',
+      'EXCLUSION: type a minus sign before a word to remove entries containing that word.',
+      'Example: ice cream -rice — shows entries with "ice cream" but removes any that also contain "rice".',
+      'Example: ice cream -rice -beatrice — excludes both "rice" and "beatrice" from results.',
+      'Combine both: bread, butter -margarine — shows entries with bread OR butter, but not margarine.',
+      'Works in both the top Search bar and the Search Desc bulk-assign bar.',
+      'Works in both Expenses Ledger and Income Ledger.',
+      'To clear the search, delete the text or tap × next to the search bar.'
     ],
-    example: 'User jd0292 wanted to assign all household consumables to one category.\nHe typed: rice, water, fleet, soap, biscuit in the Search Desc bar.\nThe ledger showed 47 matching entries across 6 months.\nHe selected "Household" from the category picker and clicked Assign.\nAll 47 entries were updated in one click.',
-    tip: 'Single-word search still works exactly as before — just type one word and no comma. Multi-word only activates when you include a comma.'
+    example: 'User jd0292 searched for ice cream.\nBut results included Beatrice\'s lunch, rice pudding, and other "ice" items.\nHe refined: ice cream -rice -beatrice\nOnly true ice cream entries remained.\n\nSeparately, he typed: rice, water, fleet, soap, biscuit\nThe ledger showed 47 matching entries.\nHe bulk-assigned all to "Household" in one click.',
+    tip: 'The minus sign (-) is your filter. Use it to remove noise from search results. You can exclude as many words as you like — just put a minus before each one.'
   },
   'budget': {
     title: '🎯 Budget — Monthly Spending Targets',
@@ -11182,6 +11203,22 @@ var HELP_DATA = {
     example: 'User jd0292 wanted to print his 2024 annual report for both NGN and EUR.\nHe set Year = 2024, Month = All, Currency = All.\nHe clicked Print Report and ticked NGN and EUR.\nHe got a 2-section report — NGN first, EUR second, each with all 6 charts.',
     tip: 'Always enable "Background graphics" or "Print backgrounds" in your browser print dialog. Without it the heatmap and category bar colours will not show in the printed copy.'
   },
+  'keyboard': {
+    title: '⌨️ Keyboard Shortcuts — Laptop & Desktop',
+    steps: [
+      'TAB → move to the next tab. Expenses: Import → Categorize → Daily → Dashboard → Ledger → Budget → Manage → (loops back).',
+      'CTRL + TAB → move to the previous tab (same order, backwards).',
+      'Tab only works when you are logged in and not typing in any input field or when an overlay is open.',
+      '↑ UP ARROW → jump to the very top of the current page instantly.',
+      '↓ DOWN ARROW → jump to the very bottom of the current page instantly.',
+      'Arrow keys only work when you are not typing in a text field.',
+      'DATE LOOKUP — ← LEFT ARROW: previous day | → RIGHT ARROW: next day | ESCAPE: close.',
+      'PIN PAD — type digits 0–9 directly | BACKSPACE: delete last digit | ESCAPE: clear all | ENTER: submit.',
+      'All shortcuts are disabled automatically when any overlay is open.'
+    ],
+    example: 'User jd0292 on his laptop — no mouse needed:\n1. Typed PIN digits, pressed Enter → logged in.\n2. Pressed Tab twice → jumped from Import to Daily tab.\n3. Pressed ↓ Down arrow → jumped to bottom of the page.\n4. Pressed ↑ Up arrow → back to the top.\n5. Pressed Ctrl+Tab → went back to Categorize.\n6. Opened Date Lookup, pressed ← five times → browsed 5 days back.\n7. Pressed Escape → closed Date Lookup.',
+    tip: 'Tab for tabs, ↑ ↓ for scrolling, ← → for dates, Enter for login — navigate the whole app without touching the mouse.'
+  },
   'help': {
     title: '❓ Help & Support',
     steps: ['Tap any icon in the grid to read a guide for that feature.','Type a question in plain language in the search box.','Tap a suggested topic to read the full guide.','If you still need help tap Contact Support at the bottom.','Tap Open Email App to send us a message directly.','Your name is pulled from your account automatically.'],
@@ -11220,13 +11257,14 @@ var HELP_DATA = {
       'Two floating buttons appear on the right side of the screen when the page is scrollable.',
       'The up arrow ⇧ jumps back to the very top of the page instantly.',
       'The down arrow ⇩ jumps to the very bottom of the page.',
-      'The buttons appear automatically when you scroll down and fade when not needed.',
-      'On a laptop or desktop keyboard: press the ↑ Up arrow key to jump to the top, and ↓ Down arrow key to jump to the bottom.',
-      'Keyboard arrows only work when you are not typing in a text field.',
-      'Useful for long ledger lists or the dashboard with many charts.'
+      'On a laptop keyboard: press ↑ Up arrow to jump to the top, ↓ Down arrow to jump to the bottom.',
+      
+      
+      
+      'Tab navigation also works in the Income module (Import → Categorize → Monthly → Dashboard → Ledger → Manage).'
     ],
-    example: 'User jd0292 was reviewing a 300-entry ledger on his laptop.\nHe pressed the ↓ Down arrow key to jump to the latest entries.\nThen pressed ↑ Up arrow to return to the filters at the top.\nNo mouse movement needed.',
-    tip: 'On mobile use the floating buttons. On laptop use the keyboard arrow keys — faster than scrolling with a mouse.'
+    example: 'User jd0292 was in the Import tab on his laptop.\nHe pressed Tab twice to jump straight to the Daily tab.\nThen pressed ↓ Down arrow to jump to the bottom of a long ledger.\nPressed ↑ Up arrow to return to the top.\nPressed Ctrl+Tab to go back to Categorize.',
+    tip: 'On mobile use the floating buttons. On a laptop, keyboard ↑ ↓ arrows are faster than scrolling with the mouse.'
   },
   'security': {
     title: '🔒 Security — Auto-Lock & Verification',
@@ -11359,12 +11397,9 @@ var ONBOARD_EXPENSES_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: 'On a laptop or desktop: <strong>↑ Up arrow</strong> jumps to the top of the page, <strong>↓ Down arrow</strong> jumps to the bottom — same as the floating scroll buttons. In Date Lookup, <strong>← Left arrow</strong> goes to the previous day, <strong>→ Right arrow</strong> goes to the next day, and <strong>Escape</strong> closes it. On the PIN pad, just type your digits directly and press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → previous tab<br><br><strong>↑ Up arrow</strong> → top of page &nbsp;|&nbsp; <strong>↓ Down arrow</strong> → bottom of page<br><br>In Date Lookup: <strong>←</strong> previous day &nbsp;|&nbsp; <strong>→</strong> next day &nbsp;|&nbsp; <strong>Escape</strong> = close<br><br>PIN pad: type digits, press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
-  {
-    icon: '🚀',
-    title: 'You Are Ready!',
     body: 'Start by going to <strong>Import</strong> and adding your first expenses. Everything is saved to the cloud automatically — you can switch devices anytime.',
     color: '#c8962e',
     last: true
@@ -11417,12 +11452,9 @@ var ONBOARD_INCOME_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: 'On a laptop or desktop: <strong>↑ Up arrow</strong> jumps to the top of the page, <strong>↓ Down arrow</strong> jumps to the bottom — same as the floating scroll buttons. In Date Lookup, <strong>← Left arrow</strong> goes to the previous day, <strong>→ Right arrow</strong> goes to the next day, and <strong>Escape</strong> closes it. On the PIN pad, just type your digits and press <strong>Enter</strong>.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → previous tab<br><br><strong>↑ Up arrow</strong> → top of page &nbsp;|&nbsp; <strong>↓ Down arrow</strong> → bottom of page<br><br>In Date Lookup: <strong>←</strong> previous day &nbsp;|&nbsp; <strong>→</strong> next day &nbsp;|&nbsp; <strong>Escape</strong> = close<br><br>PIN pad: type digits, press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
-  {
-    icon: '🚀',
-    title: 'Start Tracking Income!',
     body: 'Go to <strong>Import</strong> and add your first income entries. Switch back to Expenses anytime using the 🔁 button in the header.',
     color: '#4a7c59',
     last: true
@@ -11562,7 +11594,8 @@ function runHelpSearch(q) {
     header:['header','hide','collapse','eye','show header','screen space'],
     biometric:['pin','pin pad','pin login','security check','weekly check','login','fast login','access code'],
     scroll:['scroll','top','bottom','navigate','jump','floating button'],
-    multisearch:['multi','multiple','search','comma','rice','water','fleet','several','words','terms','bulk search','multi-word','multisearch'],
+    keyboard:['keyboard','shortcut','tab key','arrow key','ctrl','laptop','desktop','navigate tabs','keyboard navigation','scroll','pin pad'],
+    multisearch:['multi','multiple','search','comma','rice','water','fleet','several','words','terms','bulk search','multi-word','multisearch','exclude','exclusion','minus','remove','filter out','-rice','hide results'],
     security:['security','check','verify','verification','weekly','periodic','random','full check','identity'],
     resetpin:['reset','forgot','pin','password','lost','code','temporary','one-time'],
     currencies:['currency','currencies','naira','euro','dollar','pound','ngn','eur','usd','gbp','multi-currency','symbol'],
@@ -11628,6 +11661,40 @@ document.addEventListener('click', function(e) {
 renderMonthPicker();
 updateHeader();
 populateFilters();
+
+// ── Tab key navigation ──
+var EXP_TABS = ['import','categorize','daily','dashboard','ledger','budget','manage'];
+var INC_TABS = ['inc-import','inc-categorize','inc-monthly','inc-dashboard','inc-ledger','inc-manage'];
+
+try {
+  document.addEventListener('keydown', function(e) {
+    try {
+      if (e.key !== 'Tab') return;
+      var tag = document.activeElement ? document.activeElement.tagName : '';
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (!_userId) return;
+      var overlayIds = ['pin-overlay','privacy-overlay','help-overlay','date-lookup-overlay','reset-overlay','print-picker-overlay'];
+      for (var oi = 0; oi < overlayIds.length; oi++) {
+        var oel = document.getElementById(overlayIds[oi]);
+        if (oel && oel.style.display !== '' && oel.style.display !== 'none') return;
+      }
+      e.preventDefault();
+      var tabs = (_appMode === 'income') ? INC_TABS : EXP_TABS;
+      var storageKey = (_appMode === 'income') ? 'expense_active_inc_tab' : 'expense_active_tab';
+      var currentTab = localStorage.getItem(storageKey) || tabs[0];
+      var idx = tabs.indexOf(currentTab);
+      if (idx === -1) idx = 0;
+      var nextIdx = e.ctrlKey
+        ? (idx - 1 + tabs.length) % tabs.length
+        : (idx + 1) % tabs.length;
+      if (_appMode === 'income') {
+        switchIncomeTab(tabs[nextIdx], null);
+      } else {
+        switchTab(tabs[nextIdx], null);
+      }
+    } catch(err) { /* fail silently — never crash the app */ }
+  });
+} catch(err) { /* fail silently */ }
 
 syncInit();
 </script>
