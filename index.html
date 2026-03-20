@@ -10311,6 +10311,12 @@ function syncInit() {
   var wasRecentlyActive = lastActive > 0 && (Date.now() - lastActive) < INACTIVE_MS;
 
   if (uid && name && phone && pinHash && (isActiveSession || wasRecentlyActive)) {
+    // If new version detected — don't skip PIN, force login so T&C shows
+    if (sessionStorage.getItem('new_app_version') === '1') {
+      showPinScreen();
+      showPinPadStep();
+      return;
+    }
     // Hide pin-overlay IMMEDIATELY — session is valid, no need to show lock screen
     var pinOv = document.getElementById('pin-overlay');
     if (pinOv) pinOv.style.display = 'none';
@@ -11141,7 +11147,7 @@ function changePin() {
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-03';
-var APP_VERSION = '1.7.0'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '1.8.0'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
