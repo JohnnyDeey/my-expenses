@@ -1891,7 +1891,8 @@ input[type="password"]::-ms-clear { display:none !important; }
 <div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:flex-start;justify-content:center;flex-direction:column;padding:20px;overflow-y:auto;">
   <div style="text-align:center;max-width:400px;width:100%;margin:auto;padding:20px 0;">
     <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My <span style="color:var(--gold);">Expense</span> Ledger</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;letter-spacing:2px;margin-bottom:28px;">PERSONAL FINANCE TRACKER</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;letter-spacing:2px;margin-bottom:6px;">PERSONAL FINANCE TRACKER</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a3e30;letter-spacing:1px;margin-bottom:24px;">Built by <span style="color:var(--gold);font-style:italic;">John-de-Scholar</span> &copy; 2026</div>
 
     <!-- Step 1: Register -->
     <div id="pin-step-register" style="display:none;">
@@ -2133,6 +2134,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <button onclick="startOnboarding(_appMode, true)" style="width:100%;padding:10px;background:none;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;color:var(--gold);cursor:pointer;margin-bottom:8px;">&#127916; Replay App Tour</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:8px;">Still need help? Send us a message.</div>
       <button onclick="openContact()" style="width:100%;padding:11px;background:var(--ink);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;">&#9993; Contact Support</button>
+      <div style="margin-top:14px;text-align:center;font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a3e30;letter-spacing:1px;">My Expense Ledger &mdash; Built by <span style="color:var(--gold);font-style:italic;">John-de-Scholar</span> &copy; 2026</div>
     </div>
   </div>
 </div>
@@ -7102,7 +7104,7 @@ function generateIncomePDFReport() {
   });
   win.document.write('</tbody></table>');
 
-  win.document.write('<div class="footer">My Expense Ledger · Income Report · Confidential</div>');
+  win.document.write('<div class="footer">My Expense Ledger · Income Report · Built by John-de-Scholar © 2026</div>');
   win.document.write('<style>@media print { .no-print { display:none!important; } } .no-print{position:fixed;top:16px;right:16px;z-index:9999;}</style>');
   win.document.write('<div class="no-print"><button onclick="window.print()" style="padding:10px 20px;background:#1a4128;color:#8dd4a8;border:2px solid #4a7c59;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT / SAVE PDF</button></div>');
   win.document.write('</body></html>');
@@ -7230,7 +7232,7 @@ function generatePDFReport() {
   });
   win.document.write('</tbody></table>');
 
-  win.document.write('<div class="footer">My Expense Ledger · Personal Finance Tracker · Confidential</div>');
+  win.document.write('<div class="footer">My Expense Ledger · Personal Finance Tracker · Built by John-de-Scholar © 2026</div>');
   win.document.write('</body></html>');
   // Add save-as-PDF button instead of auto-printing
   win.document.write('<style>@media print { .no-print { display:none!important; } } .no-print{position:fixed;top:16px;right:16px;z-index:9999;}</style>');
