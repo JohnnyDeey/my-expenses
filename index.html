@@ -1636,6 +1636,13 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div id="trash-content"></div>
   </div>
 
+  <!-- ── Privacy Policy ── -->
+  <div class="card" style="border-color:var(--slate);">
+    <label style="display:flex;align-items:center;gap:8px;">&#128220; Privacy Policy &amp; Terms</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Read the full Terms &amp; Conditions and Privacy Policy for My Expense Ledger.</p>
+    <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="_showPrivacyOverlay()">&#128220; View Terms &amp; Conditions</button>
+  </div>
+
 </div>
 
 <!-- ══ BUDGET ══ -->
@@ -2024,6 +2031,14 @@ input[type="password"]::-ms-clear { display:none !important; }
       </button>
     </div>
   </div>
+
+  <!-- ── Privacy Policy ── -->
+  <div class="card" style="border-color:var(--slate);">
+    <label style="display:flex;align-items:center;gap:8px;">&#128220; Privacy Policy &amp; Terms</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Read the full Terms &amp; Conditions and Privacy Policy for My Expense Ledger.</p>
+    <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="_showPrivacyOverlay()">&#128220; View Terms &amp; Conditions</button>
+  </div>
+
 </div>
 
 <div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:flex-start;justify-content:center;flex-direction:column;padding:20px;overflow-y:auto;">
@@ -2045,12 +2060,9 @@ input[type="password"]::-ms-clear { display:none !important; }
             <input id="reg-phone" type="tel" placeholder="e.g. 07012345678" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')showUsernameStep()">
           </div>
           <div id="reg-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
-          <!-- T&C checkbox — required before Next -->
-          <div style="margin-bottom:14px;padding:10px 14px;background:rgba(200,150,46,0.08);border:1px solid rgba(200,150,46,0.3);border-radius:4px;">
-            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-              <input type="checkbox" id="reg-tc-check" style="width:16px;height:16px;margin-top:3px;flex-shrink:0;accent-color:var(--gold);cursor:pointer;">
-              <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#a09070;line-height:1.6;">I agree to the <a href="#" onclick="openPrivacyFromPin(event)" style="color:var(--gold);text-decoration:underline;">Terms &amp; Conditions</a> of My Expense Ledger</span>
-            </label>
+          <!-- T&C — must read and accept before Next -->
+          <div style="margin-bottom:14px;">
+            <button onclick="openPrivacyFromPin(event)" style="width:100%;padding:10px 14px;background:rgba(200,150,46,0.1);border:1.5px solid rgba(200,150,46,0.4);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--gold);cursor:pointer;text-align:center;letter-spacing:1px;">&#128220; READ &amp; ACCEPT TERMS &amp; CONDITIONS</button>
           </div>
           <button onclick="showUsernameStep()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Next →</button>
           <button onclick="showPinPadStep()" style="width:100%;padding:10px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;margin-top:8px;">← Back to Sign In</button>
@@ -2122,12 +2134,9 @@ input[type="password"]::-ms-clear { display:none !important; }
           <button onclick="switchUser()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Switch user</button>
           <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a3e30;cursor:pointer;text-decoration:underline;">Forgot your PIN?</button>
         </div>
-        <!-- T&C checkbox — must be ticked before PIN is accepted -->
-        <div id="pin-tc-box" style="display:none;margin-top:14px;padding:10px 14px;background:rgba(200,150,46,0.08);border:1px solid rgba(200,150,46,0.3);border-radius:4px;max-width:280px;margin-left:auto;margin-right:auto;">
-          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="pin-tc-check" style="width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--gold);cursor:pointer;">
-            <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#a09070;line-height:1.6;" id="pin-tc-label">I agree to the <a href="#" onclick="openPrivacyFromPin(event)" style="color:var(--gold);text-decoration:underline;">Terms &amp; Conditions</a></span>
-          </label>
+        <!-- T&C — must read and accept before login -->
+        <div id="pin-tc-box" style="display:none;margin-top:14px;max-width:240px;margin-left:auto;margin-right:auto;">
+          <button onclick="openPrivacyFromPin(event)" id="pin-tc-label" style="width:100%;padding:13px;background:rgba(200,150,46,0.1);border:1.5px solid rgba(200,150,46,0.4);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--gold);cursor:pointer;text-align:center;letter-spacing:1px;">&#128220; READ &amp; ACCEPT TERMS &amp; CONDITIONS</button>
         </div>
       </div>
     </div>
@@ -2227,48 +2236,64 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 
 <!-- PRIVACY POLICY OVERLAY -->
-<div id="privacy-overlay" style="display:none;position:fixed;inset:0;z-index:99997;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
-  <div style="max-width:480px;width:100%;background:var(--paper);border:2px solid var(--gold);border-radius:8px;padding:28px;">
-    <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--ink);margin-bottom:4px;">My <span style="color:var(--gold);">Expense</span> Ledger</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;margin-bottom:20px;">PERSONAL FINANCE TRACKER &middot; Built by John-de-Scholar</div>
-
-    <!-- Checkbox agreement — compact, always visible -->
-    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;padding:14px;background:#fffbf0;border:1px solid var(--gold);border-radius:4px;">
-      <input type="checkbox" id="privacy-cb" style="width:20px;height:20px;margin-top:2px;flex-shrink:0;accent-color:var(--gold);cursor:pointer;">
-      <label for="privacy-cb" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);cursor:pointer;line-height:1.7;">
-        <span id="privacy-label-text">I agree to the <a href="#" onclick="togglePrivacyText(event)" style="color:var(--gold);text-decoration:underline;">Terms &amp; Conditions</a> of My Expense Ledger.</span>
-      </label>
+<div id="privacy-overlay" style="display:none;position:fixed;inset:0;z-index:999998;background:#1a1410;flex-direction:column;align-items:center;justify-content:flex-start;padding:0;">
+  <!-- Header -->
+  <div style="width:100%;background:#1a1410;border-bottom:2px solid var(--gold);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-sizing:border-box;">
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:var(--gold2);">My <span style="color:var(--gold);">Expense</span> Ledger</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#6b5e50;letter-spacing:1px;margin-top:2px;">TERMS &amp; CONDITIONS &mdash; Please read before continuing</div>
     </div>
+    <!-- Skip to bottom arrow -->
+    <button onclick="privacyScrollBottom()" title="Jump to bottom" style="background:rgba(200,150,46,0.15);border:1.5px solid var(--gold);border-radius:50%;width:40px;height:40px;color:var(--gold);font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&#8595;</button>
+  </div>
 
-    <!-- Expandable full terms — hidden by default -->
-    <div id="privacy-full-text" style="display:none;max-height:260px;overflow-y:auto;font-family:'DM Sans',sans-serif;font-size:0.8rem;color:var(--ink);line-height:1.8;margin-bottom:16px;padding:14px;border:1px solid var(--border);border-radius:4px;background:white;">
+  <!-- Scrollable T&C text -->
+  <div id="privacy-scroll-body" style="width:100%;max-width:600px;flex:1;overflow-y:auto;padding:20px;box-sizing:border-box;-webkit-overflow-scrolling:touch;">
+    <div style="background:white;border-radius:8px;padding:20px;font-family:'DM Sans',sans-serif;font-size:0.85rem;color:#1a1410;line-height:1.9;">
       <p style="font-weight:700;margin-bottom:6px;">1. Your Data &amp; Privacy</p>
-      <p style="margin-bottom:12px;">All financial data you enter is stored in your personal Firebase account under a unique private ID. It is completely private. No other user can access your data. Your phone number is stored as a one-way hash that cannot be reversed or read by anyone.</p>
+      <p style="margin-bottom:14px;">All financial data you enter is stored in your personal Firebase account under a unique private ID. It is completely private. No other user can access your data. Your phone number is stored as a one-way hash that cannot be reversed or read by anyone.</p>
       <p style="font-weight:700;margin-bottom:6px;">2. Data Storage</p>
-      <p style="margin-bottom:12px;">Your data is stored in Google Firebase Firestore, protected by security rules ensuring only you can read or write your data. We do not sell, share, or transfer your data to any third party.</p>
+      <p style="margin-bottom:14px;">Your data is stored in Google Firebase Firestore, protected by security rules ensuring only you can read or write your data. We do not sell, share, or transfer your data to any third party.</p>
       <p style="font-weight:700;margin-bottom:6px;">3. Authentication &amp; PIN Security</p>
-      <p style="margin-bottom:12px;">Your PIN is hashed before storage using a one-way algorithm and is never stored in plain text. The app uses a PIN pad for daily login. A periodic full identity check is triggered randomly every 1 to 2 weeks.</p>
+      <p style="margin-bottom:14px;">Your PIN is hashed before storage using a one-way algorithm and is never stored in plain text. The app uses a PIN pad for daily login. A periodic full identity check is triggered randomly every 1 to 2 weeks.</p>
       <p style="font-weight:700;margin-bottom:6px;">4. Session Security &amp; Auto-Lock</p>
-      <p style="margin-bottom:12px;">The app automatically locks after 10 minutes of inactivity. The lock also triggers when you minimize the browser, switch tabs, or your phone screen turns off.</p>
+      <p style="margin-bottom:14px;">The app automatically locks after 10 minutes of inactivity. The lock also triggers when you minimize the browser, switch tabs, or your phone screen turns off.</p>
       <p style="font-weight:700;margin-bottom:6px;">5. Usage Analytics</p>
-      <p style="margin-bottom:12px;">This app uses Google Analytics to collect anonymous usage statistics. No personal financial data is ever sent to Google Analytics.</p>
+      <p style="margin-bottom:14px;">This app uses Google Analytics to collect anonymous usage statistics. No personal financial data is ever sent to Google Analytics.</p>
       <p style="font-weight:700;margin-bottom:6px;">6. No Advertising</p>
-      <p style="margin-bottom:12px;">This app contains no advertisements. We do not use your financial data for advertising or marketing purposes of any kind.</p>
+      <p style="margin-bottom:14px;">This app contains no advertisements. We do not use your financial data for advertising or marketing purposes.</p>
       <p style="font-weight:700;margin-bottom:6px;">7. Recycle Bin &amp; Data Deletion</p>
-      <p style="margin-bottom:12px;">Deleted entries are moved to a Recycle Bin before permanent deletion. Your cloud data is never deleted without your explicit action.</p>
+      <p style="margin-bottom:14px;">Deleted entries are moved to a Recycle Bin before permanent deletion. Your cloud data is never deleted without your explicit action.</p>
       <p style="font-weight:700;margin-bottom:6px;">8. Multi-Currency Data</p>
-      <p style="margin-bottom:12px;">The app supports multiple world currencies. No currency conversion is performed — amounts are saved exactly as entered.</p>
+      <p style="margin-bottom:14px;">The app supports multiple world currencies. No currency conversion is performed — amounts are saved exactly as entered.</p>
       <p style="font-weight:700;margin-bottom:6px;">9. Print Reports</p>
-      <p style="margin-bottom:12px;">Reports are generated entirely on your device. No data is sent to any external server during printing.</p>
+      <p style="margin-bottom:14px;">Reports are generated entirely on your device. No data is sent to any external server during printing.</p>
       <p style="font-weight:700;margin-bottom:6px;">10. Tab &amp; Session Continuity</p>
-      <p style="margin-bottom:12px;">The app remembers your last active tab. This preference is stored locally and cleared on logout.</p>
+      <p style="margin-bottom:14px;">The app remembers your last active tab. This preference is stored locally and cleared on logout.</p>
       <p style="font-weight:700;margin-bottom:6px;">11. Developer &amp; Branding</p>
-      <p style="margin-bottom:12px;">My Expense Ledger was designed and built by <strong>John-de-Scholar</strong> (John Damilola Sunday). The developer name appears on the login screen, Help panel, and printed reports. By using this app you accept that the developer name appears on your reports.</p>
+      <p style="margin-bottom:14px;">My Expense Ledger was designed and built by <strong>John-de-Scholar</strong> (John Damilola Sunday). The developer name appears on the login screen, Help panel, and printed reports. By using this app you accept that the developer name appears on your reports.</p>
       <p style="font-weight:700;margin-bottom:6px;">12. Contact</p>
-      <p>Questions? Contact support at myfinanceledgerapp@gmail.com.</p>
+      <p style="margin-bottom:0;">Questions? Contact support at myfinanceledgerapp@gmail.com.</p>
     </div>
 
-    <button onclick="acceptPrivacy()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.85rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;">&#10003; I Agree &mdash; Continue</button>
+    <!-- Accept button at the very bottom of the scroll area -->
+    <div id="privacy-accept-wrap" style="padding:20px 0 8px;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; MARCH 2026 &mdash; v1.9</div>
+      <button onclick="acceptPrivacy()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.88rem;letter-spacing:2px;font-weight:900;color:var(--ink);cursor:pointer;">&#10003; I ACCEPT &mdash; CONTINUE</button>
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#4a3e30;text-align:center;margin-top:8px;">By tapping Accept you confirm you have read and agree to the above terms.</div>
+    </div>
+  </div>
+
+  <!-- Hidden element kept for tc-modal reference -->
+  <div id="privacy-full-text" style="display:none;">
+    <p style="font-weight:700;margin-bottom:6px;">1. Your Data &amp; Privacy</p><p style="margin-bottom:12px;">All financial data you enter is stored in your personal Firebase account under a unique private ID. It is completely private. No other user can access your data.</p>
+    <p style="font-weight:700;margin-bottom:6px;">2. Data Storage</p><p style="margin-bottom:12px;">Your data is stored in Google Firebase Firestore. We do not sell, share, or transfer your data to any third party.</p>
+    <p style="font-weight:700;margin-bottom:6px;">3. Authentication &amp; PIN Security</p><p style="margin-bottom:12px;">Your PIN is hashed and never stored in plain text. A periodic full identity check is triggered every 1–2 weeks.</p>
+    <p style="font-weight:700;margin-bottom:6px;">4. Session Security &amp; Auto-Lock</p><p style="margin-bottom:12px;">The app locks after 10 minutes of inactivity.</p>
+    <p style="font-weight:700;margin-bottom:6px;">5. Usage Analytics</p><p style="margin-bottom:12px;">Anonymous usage statistics via Google Analytics. No financial data is shared.</p>
+    <p style="font-weight:700;margin-bottom:6px;">6. No Advertising</p><p style="margin-bottom:12px;">No advertisements. Your data is never used for marketing.</p>
+    <p style="font-weight:700;margin-bottom:6px;">7. Developer &amp; Branding</p><p style="margin-bottom:12px;">Built by John-de-Scholar (John Damilola Sunday). Developer name appears on login screen, Help, and reports.</p>
+    <p style="font-weight:700;margin-bottom:6px;">8. Contact</p><p>myfinanceledgerapp@gmail.com</p>
   </div>
 </div>
 
@@ -7601,10 +7626,14 @@ function showUsernameStep() {
   if (!phone || phone.replace(/\D/g,'').length < 7) {
     if(errEl) errEl.textContent='Please enter a valid phone number'; return;
   }
-  // T&C must be agreed before proceeding
+  // T&C must be accepted before proceeding
   var regTc = document.getElementById('reg-tc-check');
-  if (regTc && !regTc.checked) {
-    if(errEl) errEl.textContent='Please agree to the Terms & Conditions first';
+  var tcAccepted = localStorage.getItem('privacy_ok') === PRIVACY_VER
+    || sessionStorage.getItem('tc_signed_this_session') === '1'
+    || (regTc && regTc.checked);
+  if (_tcRequired() && !tcAccepted) {
+    if(errEl) errEl.textContent='Please read and accept the Terms & Conditions first';
+    _showPrivacyOverlay();
     return;
   }
   if(errEl) errEl.textContent = '';
@@ -10244,12 +10273,7 @@ function submitPinLogin() {
   _loginAttempts = 0;
   _pinBuffer = '';
   updatePinDots();
-  // Save T&C acceptance if checkbox was shown and ticked
-  var pinTcCb = document.getElementById('pin-tc-check');
-  if (pinTcCb && pinTcCb.checked) {
-    localStorage.setItem('privacy_ok', PRIVACY_VER);
-    sessionStorage.setItem('tc_signed_this_session', '1');
-  }
+  // T&C already saved via acceptPrivacy() — nothing extra needed here
   // Set globals from localStorage
   _userId    = uid;
   _userName  = name;
@@ -10464,15 +10488,17 @@ function _tcRequired() {
 
 function _showTcBox(boxId, labelId) {
   var box = document.getElementById(boxId);
-  var lbl = document.getElementById(labelId);
-  if (!box || !lbl) return;
+  if (!box) return;
   if (_tcRequired()) {
     box.style.display = 'block';
-    var isExisting = !!localStorage.getItem(UID_KEY);
-    lbl.innerHTML = (isExisting
-      ? 'I agree to the <strong>updated</strong> '
-      : 'I agree to the ')
-      + '<a href="#" onclick="openPrivacyFromPin(event)" style="color:var(--gold);text-decoration:underline;">Terms &amp; Conditions</a>';
+    // Update button text — always READ & ACCEPT, never "I agree"
+    var btn = document.getElementById(labelId);
+    if (btn) {
+      btn.innerHTML = '&#128220; READ &amp; ACCEPT TERMS &amp; CONDITIONS';
+      btn.style.background = 'rgba(200,150,46,0.1)';
+      btn.style.borderColor = 'rgba(200,150,46,0.4)';
+      btn.style.color = 'var(--gold)';
+    }
     // Mark for onboarding — only if not already set
     if (!sessionStorage.getItem('tc_signed_this_session')) {
       sessionStorage.setItem('new_app_version', '1');
@@ -10484,59 +10510,28 @@ function _showTcBox(boxId, labelId) {
 
 function openPrivacyFromPin(e) {
   if (e) e.preventDefault();
-  var existing = document.getElementById('tc-modal');
-  if (existing) existing.parentNode.removeChild(existing);
-  var full = document.getElementById('privacy-full-text');
-  var content = full ? full.innerHTML : '<p>Terms & Conditions not available.</p>';
-  var modal = document.createElement('div');
-  modal.id = 'tc-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(26,20,16,0.98);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;';
-  var box = document.createElement('div');
-  box.style.cssText = 'max-width:480px;width:100%;background:white;border:2px solid var(--gold);border-radius:8px;padding:24px;margin:auto;';
-  var title = document.createElement('div');
-  title.style.cssText = "font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:#1a1410;margin-bottom:16px;";
-  title.textContent = 'Terms & Conditions';
-  var body = document.createElement('div');
-  body.style.cssText = "max-height:60vh;overflow-y:auto;font-family:'DM Sans',sans-serif;font-size:0.82rem;color:#1a1410;line-height:1.8;margin-bottom:16px;";
-  body.innerHTML = content;
-  var closeBtn = document.createElement('button');
-  closeBtn.style.cssText = "width:100%;padding:13px;background:#c8962e;border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:700;letter-spacing:2px;color:#1a1410;cursor:pointer;";
-  closeBtn.textContent = 'Close';
-  closeBtn.onclick = function() {
-    var m = document.getElementById('tc-modal');
-    if (m) m.parentNode.removeChild(m);
-  };
-  box.appendChild(title);
-  box.appendChild(body);
-  box.appendChild(closeBtn);
-  modal.appendChild(box);
-  document.body.appendChild(modal);
+  _showPrivacyOverlay();
 }
 
 function _checkTc(checkboxId) {
   if (!_tcRequired()) return true; // not required — pass
-  var cb = document.getElementById(checkboxId);
-  if (!cb || !cb.checked) {
-    // Show red inline error near the checkbox
-    var errId = checkboxId === 'pin-tc-check' ? 'login-error'
-              : checkboxId === 'reg-tc-check'  ? 'reg-error'
-              : null;
-    if (errId) {
-      var errEl = document.getElementById(errId);
-      if (errEl) {
-        errEl.textContent = '⚠ Please tick the Terms & Conditions checkbox below';
-        errEl.style.color = '#b5451b';
-        // Highlight the checkbox box
-        var box = cb ? cb.closest('div') : null;
-        if (box) {
-          box.style.border = '1.5px solid #b5451b';
-          setTimeout(function(){ if(box) box.style.border = ''; }, 3000);
-        }
-      }
+  // Check if accepted via the full overlay (no more checkbox)
+  if (localStorage.getItem('privacy_ok') === PRIVACY_VER) return true;
+  if (sessionStorage.getItem('tc_signed_this_session') === '1') return true;
+  // Not yet accepted — show error and open the T&C overlay
+  var errId = checkboxId === 'pin-tc-check' ? 'login-error'
+            : checkboxId === 'reg-tc-check'  ? 'reg-error'
+            : null;
+  if (errId) {
+    var errEl = document.getElementById(errId);
+    if (errEl) {
+      errEl.textContent = '⚠ Please read and accept the Terms & Conditions first';
+      errEl.style.color = '#b5451b';
     }
-    return false;
   }
-  return true;
+  // Auto-open the T&C overlay
+  _showPrivacyOverlay();
+  return false;
 }
 
 function showPinPadStep() {
@@ -11472,7 +11467,7 @@ function changePin() {
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-03';
-var APP_VERSION = '1.9.0'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '2.0.0'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
@@ -11512,37 +11507,38 @@ function checkPrivacy() {
   }
 }
 
+function privacyScrollBottom() {
+  var body = document.getElementById('privacy-scroll-body');
+  if (body) body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
+}
+
 function togglePrivacyText(e) {
-  e.preventDefault();
-  var full = document.getElementById('privacy-full-text');
-  if (!full) return;
-  full.style.display = full.style.display === 'none' ? 'block' : 'none';
+  if (e) e.preventDefault();
+  // Now just opens the full privacy overlay
+  _showPrivacyOverlay();
 }
 
 function _showPrivacyOverlay() {
   var o = document.getElementById('privacy-overlay');
   if (!o) return;
-  // Determine new user vs existing user wording
-  var isExisting = !!localStorage.getItem(UID_KEY); // has account = existing user
-  var labelEl = document.getElementById('privacy-label-text');
-  if (labelEl) {
-    if (isExisting) {
-      labelEl.innerHTML = 'I agree to the <strong>updated</strong> <a href="#" onclick="togglePrivacyText(event)" style="color:var(--gold);text-decoration:underline;">Terms &amp; Conditions</a> of My Expense Ledger.';
-    } else {
-      labelEl.innerHTML = 'I agree to the <a href="#" onclick="togglePrivacyText(event)" style="color:var(--gold);text-decoration:underline;">Terms &amp; Conditions</a> of My Expense Ledger.';
-    }
+  // Reset scroll to top
+  var body = document.getElementById('privacy-scroll-body');
+  if (body) body.scrollTop = 0;
+  // Update version label for new vs existing user
+  var lbl = document.getElementById('privacy-version-label');
+  if (lbl) {
+    var isExisting = !!localStorage.getItem(UID_KEY);
+    lbl.textContent = isExisting
+      ? 'UPDATED TERMS — MARCH 2026 — v1.9 — Please review changes'
+      : 'MY EXPENSE LEDGER — MARCH 2026 — v1.9';
   }
-  // Reset state — hide full text, uncheck box
-  var fullText = document.getElementById('privacy-full-text');
-  if (fullText) fullText.style.display = 'none';
-  var cb = document.getElementById('privacy-cb');
-  if (cb) cb.checked = false;
   o.style.display = 'flex';
 }
 
 function acceptPrivacy() {
-  // Save acceptance
+  // Save acceptance to localStorage and sessionStorage
   localStorage.setItem('privacy_ok', PRIVACY_VER);
+  sessionStorage.setItem('tc_signed_this_session', '1');
   sessionStorage.removeItem('new_app_version');
   if (_db && _userId) {
     userCol('settings').doc('privacy').set({
@@ -11553,14 +11549,18 @@ function acceptPrivacy() {
   // Close overlay
   var o = document.getElementById('privacy-overlay');
   if (o) o.style.display = 'none';
-  // Auto-tick all T&C checkboxes so user doesn't have to tick again
-  var pinCb = document.getElementById('pin-tc-check');
-  if (pinCb) pinCb.checked = true;
-  var regCb = document.getElementById('reg-tc-check');
-  if (regCb) regCb.checked = true;
-  // Hide T&C boxes since now agreed
+  // Update the T&C buttons to show accepted state
+  var pinTcBtn = document.getElementById('pin-tc-label');
+  if (pinTcBtn) {
+    pinTcBtn.innerHTML = '&#10003; Terms &amp; Conditions Accepted';
+    pinTcBtn.style.background = 'rgba(74,124,89,0.2)';
+    pinTcBtn.style.borderColor = 'var(--sage)';
+    pinTcBtn.style.color = '#8dd4a8';
+    pinTcBtn.onclick = null;
+  }
+  // Hide T&C box after acceptance
   var ptc = document.getElementById('pin-tc-box');
-  if (ptc) ptc.style.display = 'none';
+  if (ptc) setTimeout(function(){ ptc.style.display = 'none'; }, 1200);
 }
 
 // ════════════════════════
