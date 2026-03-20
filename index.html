@@ -9963,6 +9963,11 @@ function submitPinLogin() {
     });
   }
   showToast('Welcome back, ' + name + '!');
+  // Fire onboarding if new version
+  if (sessionStorage.getItem('new_app_version') === '1') {
+    sessionStorage.removeItem('new_app_version');
+    setTimeout(function(){ startOnboarding(_appMode, true); }, 1200);
+  }
 }
 
 // ── Full verify (username OR phone + PIN, against Firebase) ──
@@ -10161,20 +10166,33 @@ function _showTcBox(boxId, labelId) {
 }
 
 function openPrivacyFromPin(e) {
-  e.preventDefault();
-  // Show terms in a modal that sits above the PIN overlay (z-index 999999)
+  if (e) e.preventDefault();
   var existing = document.getElementById('tc-modal');
-  if (existing) { existing.style.display = 'flex'; return; }
+  if (existing) existing.parentNode.removeChild(existing);
+  var full = document.getElementById('privacy-full-text');
+  var content = full ? full.innerHTML : '<p>Terms & Conditions not available.</p>';
   var modal = document.createElement('div');
   modal.id = 'tc-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(26,20,16,0.98);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
-  var full = document.getElementById('privacy-full-text');
-  var content = full ? full.innerHTML : '';
-  modal.innerHTML = '<div style="max-width:480px;width:100%;background:white;border:2px solid var(--gold);border-radius:8px;padding:24px;">'
-    + '<div style="font-family:\'Playfair Display\',serif;font-size:1.1rem;font-weight:900;color:var(--ink);margin-bottom:16px;">Terms &amp; Conditions</div>'
-    + '<div style="max-height:60vh;overflow-y:auto;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:var(--ink);line-height:1.8;margin-bottom:16px;">' + content + '</div>'
-    + '<button onclick="document.getElementById(\'tc-modal\').style.display=\'none\';" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:\'DM Mono\',monospace;font-size:0.82rem;font-weight:700;letter-spacing:2px;color:var(--ink);cursor:pointer;">&#10003; Close</button>'
-    + '</div>';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(26,20,16,0.98);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;';
+  var box = document.createElement('div');
+  box.style.cssText = 'max-width:480px;width:100%;background:white;border:2px solid var(--gold);border-radius:8px;padding:24px;margin:auto;';
+  var title = document.createElement('div');
+  title.style.cssText = "font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:#1a1410;margin-bottom:16px;";
+  title.textContent = 'Terms & Conditions';
+  var body = document.createElement('div');
+  body.style.cssText = "max-height:60vh;overflow-y:auto;font-family:'DM Sans',sans-serif;font-size:0.82rem;color:#1a1410;line-height:1.8;margin-bottom:16px;";
+  body.innerHTML = content;
+  var closeBtn = document.createElement('button');
+  closeBtn.style.cssText = "width:100%;padding:13px;background:#c8962e;border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:700;letter-spacing:2px;color:#1a1410;cursor:pointer;";
+  closeBtn.textContent = 'Close';
+  closeBtn.onclick = function() {
+    var m = document.getElementById('tc-modal');
+    if (m) m.parentNode.removeChild(m);
+  };
+  box.appendChild(title);
+  box.appendChild(body);
+  box.appendChild(closeBtn);
+  modal.appendChild(box);
   document.body.appendChild(modal);
 }
 
