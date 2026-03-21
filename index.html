@@ -44,8 +44,8 @@
     name: 'My Expense Ledger',
     short_name: 'Expense Ledger',
     description: 'Personal finance tracker — expenses, income, budgets and reports.',
-    start_url: './',
-    scope: './',
+    start_url: 'https://johnnydeey.github.io/my-expenses/',
+    scope: 'https://johnnydeey.github.io/my-expenses/',
     display: 'standalone',
     orientation: 'portrait-primary',
     background_color: '#1a1410',
@@ -57,9 +57,11 @@
       { src: iconB64, sizes: '192x192', type: 'image/svg+xml', purpose: 'maskable' }
     ]
   };
-  var mb = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  // Manifest — use data URI instead of blob URL for reliable Android app drawer install
+  var manifestJson = JSON.stringify(manifest);
+  var manifestB64 = btoa(unescape(encodeURIComponent(manifestJson)));
   var ml = document.createElement('link');
-  ml.rel = 'manifest'; ml.href = URL.createObjectURL(mb);
+  ml.rel = 'manifest'; ml.href = 'data:application/manifest+json;base64,' + manifestB64;
   document.head.appendChild(ml);
 })();
 </script>
@@ -11882,7 +11884,7 @@ function changePin() {
 //  PRIVACY POLICY
 // ════════════════════════
 var PRIVACY_VER = '2026-04';
-var APP_VERSION = '2.1.0'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '2.1.1'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
@@ -11895,6 +11897,14 @@ var APP_VERSION_KEY = 'expense_app_version';
     localStorage.removeItem('expense_onboard_expenses_done');     // force onboarding
     localStorage.removeItem('expense_onboard_income_done');
     localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
+    // Auto-open T&C immediately — user must read and accept before anything else
+    // Small delay so DOM is ready
+    setTimeout(function() {
+      if (localStorage.getItem('privacy_ok') !== PRIVACY_VER
+        && !sessionStorage.getItem('tc_signed_this_session')) {
+        if (typeof _showPrivacyOverlay === 'function') _showPrivacyOverlay();
+      }
+    }, 800);
   }
 })();
 
