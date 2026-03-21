@@ -2638,7 +2638,7 @@ input[type="password"]::-ms-clear { display:none !important; }
             <input id="fv-pin" type="password" inputmode="numeric" maxlength="8"
               autocomplete="new-password" autocorrect="off" autocapitalize="off"
               placeholder="&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;"
-              style="width:100%;padding:14px 44px 14px 16px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:1.4rem;letter-spacing:8px;color:var(--gold);outline:none;box-sizing:border-box;-webkit-text-security:disc;"
+              style="width:100%;padding:14px 44px 14px 16px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:1.4rem;letter-spacing:8px;color:var(--gold);outline:none;box-sizing:border-box;"
               onfocus="this.style.borderColor='var(--gold)';this.style.boxShadow='0 0 0 2px rgba(200,150,46,0.25)'"
               onblur="this.style.borderColor='#3a3020';this.style.boxShadow='none'"
               onkeydown="if(event.key==='Enter')submitFullVerify()">
@@ -6503,7 +6503,7 @@ function renderLedger(){
       prev.className = 'btn btn-ghost';
       prev.style.cssText = 'padding:6px 14px;font-size:0.75rem;';
       prev.textContent = '← Prev';
-      prev.addEventListener('click', function(){ acc._page = page-1; renderLedger(); window.scrollTo(0,0); });
+      prev.addEventListener('click', function(){ acc._page = page-1; renderLedger(); document.getElementById('panel-ledger').scrollIntoView({behavior:'smooth',block:'start'}); });
       pagBar.appendChild(prev);
     }
 
@@ -6519,7 +6519,7 @@ function renderLedger(){
       nxt.className = 'btn btn-ghost';
       nxt.style.cssText = 'padding:6px 14px;font-size:0.75rem;';
       nxt.textContent = 'Next →';
-      nxt.addEventListener('click', function(){ acc._page = page+1; renderLedger(); window.scrollTo(0,0); });
+      nxt.addEventListener('click', function(){ acc._page = page+1; renderLedger(); document.getElementById('panel-ledger').scrollIntoView({behavior:'smooth',block:'start'}); });
       pagBar.appendChild(nxt);
     }
     acc.appendChild(pagBar);
@@ -10249,6 +10249,34 @@ function renderIncomeLedger() {
   });
   tbl.appendChild(tbody);
   acc.appendChild(tbl);
+
+  // Pagination buttons for income ledger
+  var totalIncPages = Math.ceil(data.length / PAGE);
+  if (totalIncPages > 1) {
+    var incPagBar = document.createElement('div');
+    incPagBar.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 0;';
+    if (page > 0) {
+      var incPrev = document.createElement('button');
+      incPrev.className = 'btn btn-ghost';
+      incPrev.style.cssText = 'padding:6px 14px;font-size:0.75rem;';
+      incPrev.textContent = '← Prev';
+      incPrev.addEventListener('click', function(){ acc._page = page-1; renderIncomeLedger(); document.getElementById('panel-inc-ledger').scrollIntoView({behavior:'smooth',block:'start'}); });
+      incPagBar.appendChild(incPrev);
+    }
+    var incPageInfo = document.createElement('span');
+    incPageInfo.style.cssText = 'font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);padding:0 8px;';
+    incPageInfo.textContent = 'Page '+(page+1)+' of '+totalIncPages;
+    incPagBar.appendChild(incPageInfo);
+    if ((page+1)*PAGE < data.length) {
+      var incNxt = document.createElement('button');
+      incNxt.className = 'btn btn-ghost';
+      incNxt.style.cssText = 'padding:6px 14px;font-size:0.75rem;';
+      incNxt.textContent = 'Next →';
+      incNxt.addEventListener('click', function(){ acc._page = page+1; renderIncomeLedger(); document.getElementById('panel-inc-ledger').scrollIntoView({behavior:'smooth',block:'start'}); });
+      incPagBar.appendChild(incNxt);
+    }
+    acc.appendChild(incPagBar);
+  }
 }
 
 function incomeBulkAssign() {
