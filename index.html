@@ -1894,6 +1894,11 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No saved entries yet.</p></div>
   <div id="ledger-wrap" style="display:none;">
     <div id="ledger-accordion"></div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;padding:8px 0;">
+      <button onclick="var a=document.getElementById('ledger-accordion');a.scrollLeft-=300;" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 22px;font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8592;</button>
+      <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">SCROLL TABLE</span>
+      <button onclick="var a=document.getElementById('ledger-accordion');a.scrollLeft+=300;" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 22px;font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8594;</button>
+    </div>
   </div>
 </div>
 
@@ -2358,6 +2363,11 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="inc-ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No income entries yet.</p></div>
   <div id="inc-ledger-wrap" style="display:none;">
     <div id="inc-ledger-accordion"></div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;padding:8px 0;">
+      <button onclick="var a=document.getElementById('inc-ledger-accordion');a.scrollLeft-=300;" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 22px;font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8592;</button>
+      <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">SCROLL TABLE</span>
+      <button onclick="var a=document.getElementById('inc-ledger-accordion');a.scrollLeft+=300;" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 22px;font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8594;</button>
+    </div>
   </div>
 </div>
 
@@ -6503,7 +6513,11 @@ function renderLedger(){
       prev.className = 'btn btn-ghost';
       prev.style.cssText = 'padding:6px 14px;font-size:0.75rem;';
       prev.textContent = '← Prev';
-      prev.addEventListener('click', function(){ acc._page = page-1; renderLedger(); document.getElementById('panel-ledger').scrollIntoView({behavior:'smooth',block:'start'}); });
+      prev.addEventListener('click', function(){
+        acc._page = page-1;
+        renderLedger();
+        setTimeout(function(){ acc.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+      });
       pagBar.appendChild(prev);
     }
 
@@ -6519,7 +6533,11 @@ function renderLedger(){
       nxt.className = 'btn btn-ghost';
       nxt.style.cssText = 'padding:6px 14px;font-size:0.75rem;';
       nxt.textContent = 'Next →';
-      nxt.addEventListener('click', function(){ acc._page = page+1; renderLedger(); document.getElementById('panel-ledger').scrollIntoView({behavior:'smooth',block:'start'}); });
+      nxt.addEventListener('click', function(){
+        acc._page = page+1;
+        renderLedger();
+        setTimeout(function(){ acc.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+      });
       pagBar.appendChild(nxt);
     }
     acc.appendChild(pagBar);
@@ -10260,7 +10278,11 @@ function renderIncomeLedger() {
       incPrev.className = 'btn btn-ghost';
       incPrev.style.cssText = 'padding:6px 14px;font-size:0.75rem;';
       incPrev.textContent = '← Prev';
-      incPrev.addEventListener('click', function(){ acc._page = page-1; renderIncomeLedger(); document.getElementById('panel-inc-ledger').scrollIntoView({behavior:'smooth',block:'start'}); });
+      incPrev.addEventListener('click', function(){
+        acc._page = page-1;
+        renderIncomeLedger();
+        setTimeout(function(){ acc.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+      });
       incPagBar.appendChild(incPrev);
     }
     var incPageInfo = document.createElement('span');
@@ -10272,7 +10294,11 @@ function renderIncomeLedger() {
       incNxt.className = 'btn btn-ghost';
       incNxt.style.cssText = 'padding:6px 14px;font-size:0.75rem;';
       incNxt.textContent = 'Next →';
-      incNxt.addEventListener('click', function(){ acc._page = page+1; renderIncomeLedger(); document.getElementById('panel-inc-ledger').scrollIntoView({behavior:'smooth',block:'start'}); });
+      incNxt.addEventListener('click', function(){
+        acc._page = page+1;
+        renderIncomeLedger();
+        setTimeout(function(){ acc.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+      });
       incPagBar.appendChild(incNxt);
     }
     acc.appendChild(incPagBar);
