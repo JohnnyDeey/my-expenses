@@ -13,9 +13,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
   // ── EmailJS config — replace with your keys from emailjs.com ──
-  var EMAILJS_PUBLIC_KEY   = 'owbOhn03Jox8EHZ_y';  // EmailJS public key
-  var EMAILJS_SERVICE_ID   = 'service_6a8t7as';     // Gmail service
-  var EMAILJS_TEMPLATE_ID  = 'template_8m1w9rj';    // Contact Us template
+  var EMAILJS_PUBLIC_KEY      = 'owbOhn03Jox8EHZ_y';  // EmailJS public key
+  var EMAILJS_SERVICE_ID      = 'service_6a8t7as';     // Gmail service
+  var EMAILJS_TEMPLATE_ID     = 'template_8m1w9rj';    // Contact Us template (to you)
+  var EMAILJS_AUTOREPLY_ID    = 'template_058e96c';   // Auto-reply template (to user)
   (function() {
     if (typeof emailjs !== 'undefined') {
       emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
@@ -2811,18 +2812,18 @@ input[type="password"]::-ms-clear { display:none !important; }
 </div>
 
 <!-- ══ ONBOARDING TOUR OVERLAY ══ -->
-<div id="onboard-overlay" style="display:none;position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:20px;">
-  <div style="background:white;border-radius:16px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.4);overflow:hidden;position:relative;">
+<div id="onboard-overlay" style="display:none;position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,0.6);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;">
+  <div style="background:white;border-radius:16px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.4);position:relative;margin:auto;display:flex;flex-direction:column;">
     <!-- Progress bar -->
-    <div style="height:4px;background:#f0ede8;">
-      <div id="onboard-progress" style="height:100%;background:var(--gold);transition:width 0.3s;"></div>
+    <div style="height:4px;background:#f0ede8;border-radius:16px 16px 0 0;flex-shrink:0;">
+      <div id="onboard-progress" style="height:100%;background:var(--gold);transition:width 0.3s;border-radius:16px 16px 0 0;"></div>
     </div>
     <!-- Skip button -->
     <button onclick="skipOnboarding()" style="position:absolute;top:14px;right:14px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#aaa;cursor:pointer;z-index:1;letter-spacing:1px;">SKIP</button>
-    <!-- Slide content -->
-    <div id="onboard-slide" style="padding:36px 28px 24px;text-align:center;min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;"></div>
-    <!-- Navigation -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px 24px;border-top:1px solid #f0ede8;">
+    <!-- Slide content — scrollable if tall -->
+    <div id="onboard-slide" style="padding:36px 28px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;"></div>
+    <!-- Navigation — always visible at bottom -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px 24px;border-top:1px solid #f0ede8;flex-shrink:0;background:white;border-radius:0 0 16px 16px;">
       <button id="onboard-back" onclick="onboardNav(-1)" style="background:none;border:1.5px solid #ddd;border-radius:8px;padding:10px 20px;font-family:'DM Mono',monospace;font-size:0.78rem;color:#888;cursor:pointer;">← Back</button>
       <!-- Dot indicators -->
       <div id="onboard-dots" style="display:flex;gap:6px;"></div>
@@ -12633,6 +12634,9 @@ function startOnboarding(mode, force, isReplay) {
 function renderOnboardSlide() {
   var slide = _onboardSlides[_onboardIndex];
   var total = _onboardSlides.length;
+  // Scroll overlay to top so slide starts from the top on small screens
+  var ov = document.getElementById('onboard-overlay');
+  if (ov) ov.scrollTop = 0;
   // Progress bar
   var pb = document.getElementById('onboard-progress');
   if (pb) pb.style.width = ((_onboardIndex + 1) / total * 100) + '%';
@@ -12815,8 +12819,20 @@ function sendSupport() {
   var subject  = document.getElementById('contact-subject') ? document.getElementById('contact-subject').value : 'General Enquiry';
   var message  = document.getElementById('contact-message') ? document.getElementById('contact-message').value.trim() : '';
   var userEmail = document.getElementById('contact-email') ? document.getElementById('contact-email').value.trim() : '';
-  if (!userEmail || userEmail.indexOf('@') === -1) { showToast('Please enter your email address'); return; }
-  if (!message) { showToast('Please describe your issue first'); return; }
+  var emailFldEl = document.getElementById('contact-email');
+  var msgFldEl   = document.getElementById('contact-message');
+  if (!userEmail || userEmail.indexOf('@') === -1) {
+    showToast('Please enter your email address');
+    if (emailFldEl) { emailFldEl.style.borderColor = 'var(--rust)'; emailFldEl.focus(); }
+    return;
+  }
+  if (emailFldEl) emailFldEl.style.borderColor = '';
+  if (!message) {
+    showToast('Please describe your issue — the message cannot be empty');
+    if (msgFldEl) { msgFldEl.style.borderColor = 'var(--rust)'; msgFldEl.focus(); }
+    return;
+  }
+  if (msgFldEl) msgFldEl.style.borderColor = '';
 
   // Generate unique ticket number: TKT-YYYYMMDD-XXXX
   var now = new Date();
@@ -12876,13 +12892,26 @@ function sendSupport() {
       message:     'Ticket: ' + ticketNo + '\nUser: ' + fullName + ' (' + (_userName || 'unknown') + ')\nDate: ' + now.toLocaleString() + '\n\n' + message,
       email:       userEmail
     }).then(function() {
-      // Email sent successfully
+      // Main ticket email sent to you — now send auto-reply to user
       if (_db) _db.collection('support_tickets').doc(ticketNo).update({ emailSent: true }).catch(function(){});
-      if (emailStatus) {
-        emailStatus.innerHTML = '✅ Message sent successfully! We\'ll get back to you soon.';
-        emailStatus.style.color = 'var(--sage)';
-      }
-      // Hide the optional email button — already sent
+      // Send auto-reply
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_AUTOREPLY_ID, {
+        ticket_no: ticketNo,
+        name:      fullName,
+        email:     userEmail,
+        subject:   subject
+      }).then(function() {
+        if (emailStatus) {
+          emailStatus.innerHTML = '✅ Message sent! Auto-reply sent to ' + userEmail + '. We\'ll get back to you soon.';
+          emailStatus.style.color = 'var(--sage)';
+        }
+      }).catch(function() {
+        // Auto-reply failed but main ticket went through
+        if (emailStatus) {
+          emailStatus.innerHTML = '✅ Message sent! We\'ll get back to you soon.';
+          emailStatus.style.color = 'var(--sage)';
+        }
+      });
       var optBtn = document.getElementById('contact-optional-email-btn');
       if (optBtn) optBtn.style.display = 'none';
     }).catch(function(err) {
