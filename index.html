@@ -1894,11 +1894,6 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No saved entries yet.</p></div>
   <div id="ledger-wrap" style="display:none;">
     <div id="ledger-accordion"></div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;padding:8px 0;">
-      <button onclick="var a=document.getElementById('ledger-accordion');a.scrollLeft-=300;" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 22px;font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8592;</button>
-      <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">SCROLL TABLE</span>
-      <button onclick="var a=document.getElementById('ledger-accordion');a.scrollLeft+=300;" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 22px;font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8594;</button>
-    </div>
   </div>
 </div>
 
@@ -2363,11 +2358,6 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="inc-ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No income entries yet.</p></div>
   <div id="inc-ledger-wrap" style="display:none;">
     <div id="inc-ledger-accordion"></div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;padding:8px 0;">
-      <button onclick="var a=document.getElementById('inc-ledger-accordion');a.scrollLeft-=300;" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 22px;font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8592;</button>
-      <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">SCROLL TABLE</span>
-      <button onclick="var a=document.getElementById('inc-ledger-accordion');a.scrollLeft+=300;" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 22px;font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8594;</button>
-    </div>
   </div>
 </div>
 
@@ -6516,7 +6506,6 @@ function renderLedger(){
       prev.addEventListener('click', function(){
         acc._page = page-1;
         renderLedger();
-        setTimeout(function(){ acc.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
       });
       pagBar.appendChild(prev);
     }
@@ -6536,7 +6525,6 @@ function renderLedger(){
       nxt.addEventListener('click', function(){
         acc._page = page+1;
         renderLedger();
-        setTimeout(function(){ acc.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
       });
       pagBar.appendChild(nxt);
     }
@@ -10281,7 +10269,6 @@ function renderIncomeLedger() {
       incPrev.addEventListener('click', function(){
         acc._page = page-1;
         renderIncomeLedger();
-        setTimeout(function(){ acc.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
       });
       incPagBar.appendChild(incPrev);
     }
@@ -10297,7 +10284,6 @@ function renderIncomeLedger() {
       incNxt.addEventListener('click', function(){
         acc._page = page+1;
         renderIncomeLedger();
-        setTimeout(function(){ acc.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
       });
       incPagBar.appendChild(incNxt);
     }
@@ -13235,7 +13221,42 @@ document.addEventListener('keydown', function(e) {
   if (o && o.style.display === 'flex') { e.preventDefault(); closeReferralPanel(); }
 });
 
-// ── Back button: disabled — pressing back does nothing in the app ──
+// ── Ledger tab: ← → arrow keys navigate pages ──
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  var tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  // Only fire on ledger tabs
+  var expLed = document.getElementById('panel-ledger');
+  var incLed = document.getElementById('panel-inc-ledger');
+  var onExpLed = expLed && expLed.classList.contains('active') && expLed.offsetParent !== null;
+  var onIncLed = incLed && incLed.classList.contains('active') && incLed.offsetParent !== null;
+  if (!onExpLed && !onIncLed) return;
+  // Don't interfere with help overlay
+  var helpOv = document.getElementById('help-overlay');
+  if (helpOv && helpOv.style.display === 'flex') return;
+  e.preventDefault();
+  if (onExpLed) {
+    var acc = document.getElementById('ledger-accordion');
+    if (!acc) return;
+    var page = acc._page || 0;
+    if (e.key === 'ArrowRight') acc._page = page + 1;
+    if (e.key === 'ArrowLeft' && page > 0) acc._page = page - 1;
+    if (acc._page !== page) {
+      renderLedger();
+    }
+  } else {
+    var accI = document.getElementById('inc-ledger-accordion');
+    if (!accI) return;
+    var pageI = accI._page || 0;
+    if (e.key === 'ArrowRight') accI._page = pageI + 1;
+    if (e.key === 'ArrowLeft' && pageI > 0) accI._page = pageI - 1;
+    if (accI._page !== pageI) {
+      renderIncomeLedger();
+    }
+  }
+});
 try {
   history.replaceState({ noback: true }, '', window.location.pathname);
   window.addEventListener('popstate', function() {
