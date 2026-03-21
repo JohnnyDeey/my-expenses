@@ -9,6 +9,24 @@
   gtag('js', new Date());
   gtag('config', 'G-GYDLHGMNGB');
 </script>
+<!-- EmailJS SDK — for sending support emails directly from the app -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  // ── EmailJS config — replace with your keys from emailjs.com ──
+  var EMAILJS_PUBLIC_KEY   = 'owbOhn03Jox8EHZ_y';  // EmailJS public key
+  var EMAILJS_SERVICE_ID   = 'service_6a8t7as';     // Gmail service
+  var EMAILJS_TEMPLATE_ID  = 'template_8m1w9rj';    // Contact Us template
+  (function() {
+    if (typeof emailjs !== 'undefined') {
+      emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+    } else {
+      // SDK may still be loading — init on load
+      window.addEventListener('load', function() {
+        if (typeof emailjs !== 'undefined') emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+      });
+    }
+  })();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
@@ -27,36 +45,24 @@
 <!-- PWA: inline manifest with base64 icon — works on desktop Chrome + Android -->
 <script>
 (function(){
-  var iconB64 = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxOTInIGhlaWdodD0nMTkyJyB2aWV3Qm94PScwIDAgMTkyIDE5Mic+CiAgPHJlY3Qgd2lkdGg9JzE5MicgaGVpZ2h0PScxOTInIHJ4PScyNCcgZmlsbD0nIzFhMTQxMCcvPgogIDxyZWN0IHg9JzYnIHk9JzYnIHdpZHRoPScxODAnIGhlaWdodD0nMTgwJyByeD0nMjAnIGZpbGw9J25vbmUnIHN0cm9rZT0nI2M4OTYyZScgc3Ryb2tlLXdpZHRoPSc1Jy8+CiAgPHRleHQgeD0nMTYnIHk9JzUyJyBmb250LWZhbWlseT0nR2VvcmdpYSxzZXJpZicgZm9udC1zaXplPSczNicgZm9udC13ZWlnaHQ9JzkwMCcgZmlsbD0nI2M4OTYyZScgb3BhY2l0eT0nMC45Jz7igqY8L3RleHQ+CiAgPHRleHQgeD0nMTQwJyB5PSc1MicgZm9udC1mYW1pbHk9J0dlb3JnaWEsc2VyaWYnIGZvbnQtc2l6ZT0nMzYnIGZvbnQtd2VpZ2h0PSc5MDAnIGZpbGw9JyNjODk2MmUnIG9wYWNpdHk9JzAuOSc+4oKsPC90ZXh0PgogIDx0ZXh0IHg9JzE2JyB5PScxNzgnIGZvbnQtZmFtaWx5PSdHZW9yZ2lhLHNlcmlmJyBmb250LXNpemU9JzM2JyBmb250LXdlaWdodD0nOTAwJyBmaWxsPScjYzg5NjJlJyBvcGFjaXR5PScwLjknPiQ8L3RleHQ+CiAgPHRleHQgeD0nMTQwJyB5PScxNzgnIGZvbnQtZmFtaWx5PSdHZW9yZ2lhLHNlcmlmJyBmb250LXNpemU9JzM2JyBmb250LXdlaWdodD0nOTAwJyBmaWxsPScjYzg5NjJlJyBvcGFjaXR5PScwLjknPsKjPC90ZXh0PgogIDx0ZXh0IHg9Jzk2JyB5PScxMjInIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZvbnQtZmFtaWx5PSdHZW9yZ2lhLHNlcmlmJyBmb250LXNpemU9Jzc2JyBmb250LXdlaWdodD0nOTAwJyBmaWxsPScjYzg5NjJlJyBsZXR0ZXItc3BhY2luZz0nLTInPkpEUzwvdGV4dD4KPC9zdmc+';
+  var icon192 = '/my-expenses/icon-192.png';
+  var icon512 = '/my-expenses/icon-512.png';
 
   // Apple touch icon
   var al = document.createElement('link');
-  al.rel = 'apple-touch-icon'; al.href = iconB64;
+  al.rel = 'apple-touch-icon'; al.href = icon192;
   document.head.appendChild(al);
 
-  // Favicon
+  // Favicon — use external PNG, fallback to inline SVG if not found
   var fl = document.createElement('link');
-  fl.rel = 'icon'; fl.type = 'image/svg+xml'; fl.href = iconB64;
+  fl.rel = 'icon'; fl.type = 'image/png'; fl.href = icon192;
+  fl.onerror = function() {
+    // PNG not uploaded yet — use inline SVG fallback
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="8" fill="#1a1410"/><rect x="3" y="3" width="58" height="58" rx="6" fill="none" stroke="#c8962e" stroke-width="2"/><text x="32" y="42" text-anchor="middle" font-family="Georgia,serif" font-size="24" font-weight="900" fill="#c8962e">JDS</text></svg>';
+    fl.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  };
   document.head.appendChild(fl);
 
-  // Manifest — must use purpose 'any' (not 'maskable') for desktop Chrome to accept base64
-  var manifest = {
-    name: 'My Expense Ledger',
-    short_name: 'Expense Ledger',
-    description: 'Personal finance tracker — expenses, income, budgets and reports.',
-    start_url: 'https://johnnydeey.github.io/my-expenses/',
-    scope: 'https://johnnydeey.github.io/my-expenses/',
-    display: 'standalone',
-    orientation: 'portrait-primary',
-    background_color: '#1a1410',
-    theme_color: '#1a1410',
-    splash_screens: [{ src: iconB64, sizes: '512x512' }],
-    icons: [
-      { src: iconB64, sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
-      { src: iconB64, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' },
-      { src: iconB64, sizes: '192x192', type: 'image/svg+xml', purpose: 'maskable' }
-    ]
-  };
   // Manifest — reference external manifest.json for proper Android app drawer install
   var ml = document.createElement('link');
   ml.rel = 'manifest'; ml.href = '/my-expenses/manifest.json';
@@ -198,14 +204,30 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
+    // Alt+R — replay onboarding tour
+    if (e.altKey && (key === 'r' || key === 'R')) {
+      e.preventDefault();
+      if (typeof startOnboarding === 'function') startOnboarding(_appMode, true, true);
+      return;
+    }
+
+    // Alt+C — open contact support
+    if (e.altKey && (key === 'c' || key === 'C')) {
+      e.preventDefault();
+      if (typeof openContact === 'function') openContact();
+      return;
+    }
+
     // Letter keys — only when no help/date overlay is open
     var helpO = document.getElementById('help-overlay');
     var dlO2  = document.getElementById('date-lookup-overlay');
     if ((helpO && helpO.style.display === 'flex') ||
         (dlO2  && dlO2.style.display  === 'flex')) return;
 
-    // S — open mode switcher
+    // S — open mode switcher (blocked during onboarding — S = skip/nothing there)
     if (key === 's' || key === 'S') {
+      var onboardOv = document.getElementById('onboard-overlay');
+      if (onboardOv && onboardOv.style.display === 'flex') return; // onboarding open — do nothing
       e.preventDefault();
       if (typeof showModeSwitchPrompt === 'function') showModeSwitchPrompt();
       return;
@@ -643,6 +665,99 @@ document.addEventListener('keydown', function(e) {
   if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
   if (e.key === 'n' || e.key === 'N') { e.preventDefault(); if (typeof onboardNav === 'function') onboardNav(1); }
   if (e.key === 'b' || e.key === 'B') { e.preventDefault(); if (typeof onboardNav === 'function') onboardNav(-1); }
+  // S = skip ONLY during forced onboarding (new user/version), NOT during replay
+  if (e.key === 's' || e.key === 'S') {
+    if (typeof _onboardIsReplay !== 'undefined' && _onboardIsReplay) return; // replay — do nothing
+    e.preventDefault();
+    if (typeof skipOnboarding === 'function') skipOnboarding();
+  }
+});
+
+// Global Ctrl+Enter — context-aware across all tabs
+document.addEventListener('keydown', function(e) {
+  if (!e.ctrlKey && !e.metaKey) return;
+  if (e.key !== 'Enter') return;
+
+  var activePanel = null;
+  document.querySelectorAll('.panel.active').forEach(function(p) { activePanel = p; });
+  if (!activePanel) return;
+  var pid = activePanel.id;
+
+  // ── IMPORT tabs — Parse → Go to Categorize ──
+  if (pid === 'panel-import') {
+    e.preventDefault();
+    if (typeof expCtrlEnterAction === 'function') expCtrlEnterAction();
+    return;
+  }
+  if (pid === 'panel-inc-import') {
+    e.preventDefault();
+    if (typeof incCtrlEnterAction === 'function') incCtrlEnterAction();
+    return;
+  }
+
+  // ── CATEGORIZE tabs ──
+  // If bulk-cat-input has a value → Assign; else → Save to Ledger
+  if (pid === 'panel-categorize') {
+    e.preventDefault();
+    var bulkInput = document.getElementById('bulk-cat-input');
+    if (bulkInput && bulkInput.value.trim()) {
+      if (typeof bulkAssignFiltered === 'function') bulkAssignFiltered();
+    } else {
+      var saveBtn = document.getElementById('btn-save-pending');
+      if (saveBtn && saveBtn.offsetParent !== null) saveBtn.click();
+    }
+    return;
+  }
+  if (pid === 'panel-inc-categorize') {
+    e.preventDefault();
+    var incBulkSel = document.getElementById('inc-cat-bulk-sel');
+    if (incBulkSel && incBulkSel.value) {
+      if (typeof incBulkAssignCat === 'function') incBulkAssignCat();
+    } else {
+      var incSaveBtn = document.getElementById('inc-btn-save-pending');
+      if (incSaveBtn && incSaveBtn.offsetParent !== null) incSaveBtn.click();
+    }
+    return;
+  }
+
+  // ── LEDGER tabs — Assign (bulk assign) ──
+  if (pid === 'panel-ledger') {
+    e.preventDefault();
+    if (typeof ledgerBulkAssign === 'function') ledgerBulkAssign();
+    return;
+  }
+  if (pid === 'panel-inc-ledger') {
+    e.preventDefault();
+    if (typeof incLedgerBulkAssign === 'function') incLedgerBulkAssign();
+    return;
+  }
+
+  // ── MANAGE tabs — click first visible Save button ──
+  if (pid === 'panel-manage' || pid === 'panel-inc-manage') {
+    e.preventDefault();
+    // Find the focused input's nearest Save button, or first visible Save button
+    var focused = document.activeElement;
+    var saveTarget = null;
+    if (focused && focused.tagName === 'INPUT') {
+      // Walk up to find a nearby save button in the same card
+      var card = focused.closest('.card') || focused.parentElement;
+      if (card) {
+        var btns = card.querySelectorAll('button.btn-primary, button.btn-success');
+        for (var i = 0; i < btns.length; i++) {
+          if (btns[i].offsetParent !== null) { saveTarget = btns[i]; break; }
+        }
+      }
+    }
+    // Fallback — first visible Save button in the panel
+    if (!saveTarget) {
+      var allBtns = activePanel.querySelectorAll('button.btn-primary, button.btn-success');
+      for (var j = 0; j < allBtns.length; j++) {
+        if (allBtns[j].offsetParent !== null) { saveTarget = allBtns[j]; break; }
+      }
+    }
+    if (saveTarget) saveTarget.click();
+    return;
+  }
 });
 
 // Y key — toggle income import mode between Year and Month
@@ -678,21 +793,35 @@ var _notePadActive = false; // global — shared with Ctrl+Enter handlers
 
   function freezeCard(grid) {
     _frozenCard = grid;
-    // Lock the entire page scroll while Alt is held
-    // Store current scroll position and prevent any movement
     _lockedScrollY = window.scrollY;
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
   }
 
   function unfreezeCard() {
-    // Restore scrolling
     document.body.style.overflow = '';
     document.documentElement.style.overflow = '';
     _frozenCard = null;
+    _altHeld = false;
   }
 
   var _lockedScrollY = 0;
+
+  // Safety net — release on Alt keyup
+  document.addEventListener('keyup', function(e) {
+    if (e.key === 'Alt') unfreezeCard();
+  });
+  // Safety net — release on window blur/visibility change
+  document.addEventListener('visibilitychange', function() { if (_altHeld) unfreezeCard(); });
+  window.addEventListener('blur', function() { if (_altHeld) unfreezeCard(); });
+
+  // Nuclear failsafe — if overflow is hidden but Alt is NOT held, fix it immediately
+  setInterval(function() {
+    if (!_altHeld && (document.body.style.overflow === 'hidden' || document.documentElement.style.overflow === 'hidden')) {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+  }, 300);
 
   // Alt keydown — freeze the picker card
   document.addEventListener('keydown', function(e) {
@@ -1226,14 +1355,14 @@ nav.tabs{position:relative;}
   font-weight: 700;
   color: var(--gold2);
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: none;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
 .pin-pad-btn:active {
-  background: rgba(200,150,46,0.25);
-  border-color: var(--gold);
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(200,150,46,0.25);
 }
 .pin-dot {
   width: 12px;
@@ -1641,6 +1770,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 <!-- ══ DASHBOARD ══ -->
 <div class="panel" id="panel-dashboard">
+  <div class="section-title">Expense Dashboard</div>
   <div id="dash-empty" class="empty-state"><div class="big">&#9670;</div><p>No saved data yet.<br>Import, categorize and save your expenses first.</p></div>
   <div id="dash-content" style="display:none;">
     <!-- Single master filter — controls ALL charts -->
@@ -1716,7 +1846,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 <!-- ══ LEDGER ══ -->
 <div class="panel" id="panel-ledger">
   <div class="section-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
-    <span style="display:flex;align-items:center;gap:12px;"><span style="display:inline-block;width:8px;height:28px;background:var(--gold);border-radius:2px;"></span>Full Expense Ledger</span>
+    <span>Full Expense Ledger</span>
     <button class="btn btn-ghost" onclick="openRenameModal()" style="font-size:0.72rem;padding:7px 14px;display:flex;align-items:center;gap:6px;">&#9998; Rename Category</button>
   </div>
   <div style="background:#fffbf0;border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:3px;padding:12px 16px;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.8;">
@@ -2118,6 +2248,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 <!-- INCOME DASHBOARD -->
 <div class="panel" id="panel-inc-dashboard">
+  <div class="section-title">Income Dashboard</div>
   <div id="inc-dash-empty" class="empty-state"><div class="big">&#128200;</div><p>No income data yet.</p></div>
   <div id="inc-dash-content" style="display:none;">
     <!-- Single master filter — controls ALL charts -->
@@ -2622,8 +2753,10 @@ input[type="password"]::-ms-clear { display:none !important; }
       <p style="margin-bottom:14px;">My Expense Ledger was designed and built by <strong>John-de-Scholar</strong> (John Damilola Sunday). The developer name appears on the login screen, Help panel, and printed reports. By using this app you accept that the developer name appears on your reports.</p>
       <p style="font-weight:700;margin-bottom:6px;">12. Referral Programme</p>
       <p style="margin-bottom:14px;">Each user has a unique referral link tied to their username. When someone registers via your link, only the count of referrals is shown to you — no names, phone numbers, or personal details of referred users are ever revealed. Referral records stored in Firebase contain only the referrer's username, the month of signup, and a timestamp. This data is used solely for counting referrals and future reward calculations.</p>
-      <p style="font-weight:700;margin-bottom:6px;">13. Contact</p>
-      <p style="margin-bottom:0;">Questions? Contact support at myfinanceledgerapp@gmail.com.</p>
+      <p style="font-weight:700;margin-bottom:6px;">13. Updates &amp; Version Policy</p>
+      <p style="margin-bottom:14px;">When a new version of the app is deployed, all users are required to re-read and re-accept the Terms &amp; Conditions before continuing. This ensures all users are always aware of the latest terms. Onboarding may also be replayed on major updates.</p>
+      <p style="font-weight:700;margin-bottom:6px;">14. Contact</p>
+      <p style="margin-bottom:0;">Questions? Contact support at myfinanceledgerapp [at] gmail.com.</p>
     </div>
 
     <!-- Accept button at the very bottom of the scroll area -->
@@ -2644,7 +2777,8 @@ input[type="password"]::-ms-clear { display:none !important; }
     <p style="font-weight:700;margin-bottom:6px;">6. No Advertising</p><p style="margin-bottom:12px;">No advertisements. Your data is never used for marketing.</p>
     <p style="font-weight:700;margin-bottom:6px;">7. Developer &amp; Branding</p><p style="margin-bottom:12px;">Built by John-de-Scholar (John Damilola Sunday). Developer name appears on login screen, Help, and reports.</p>
     <p style="font-weight:700;margin-bottom:6px;">8. Referral Programme</p><p style="margin-bottom:12px;">Each user has a unique referral link. Only the count of referrals is shown to you — no names or personal details of referred users are ever revealed.</p>
-    <p style="font-weight:700;margin-bottom:6px;">9. Contact</p><p>myfinanceledgerapp@gmail.com</p>
+    <p style="font-weight:700;margin-bottom:6px;">9. Updates &amp; Version Policy</p><p style="margin-bottom:12px;">On every new version, all users must re-accept these Terms before continuing. This ensures everyone is always aware of the latest terms.</p>
+    <p style="font-weight:700;margin-bottom:6px;">10. Contact</p><p>myfinanceledgerapp [at] gmail.com</p>
   </div>
 </div>
 
@@ -2668,7 +2802,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Select an icon above or type to search</div>
     </div>
     <div style="padding:14px 20px;border-top:1px solid var(--border);background:#fffbf0;">
-      <button onclick="startOnboarding(_appMode, true)" style="width:100%;padding:10px;background:none;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;color:var(--gold);cursor:pointer;margin-bottom:8px;">&#127916; Replay App Tour</button>
+      <button onclick="startOnboarding(_appMode, true, true)" style="width:100%;padding:10px;background:none;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;color:var(--gold);cursor:pointer;margin-bottom:8px;">&#127916; Replay App Tour</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:8px;">Still need help? Send us a message.</div>
       <button onclick="openContact()" style="width:100%;padding:11px;background:var(--ink);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;">&#9993; Contact Support</button>
       <div style="margin-top:14px;text-align:center;font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a3e30;letter-spacing:1px;">My Expense Ledger &mdash; Built by <span style="color:var(--gold);font-style:italic;">John-de-Scholar</span> &copy; 2026</div>
@@ -2704,11 +2838,38 @@ input[type="password"]::-ms-clear { display:none !important; }
       <span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);">&#9993; Contact Support</span>
       <button onclick="closeContact()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;padding:0 4px;">&#10005;</button>
     </div>
-    <div style="padding:24px 20px;">
-      <div id="contact-name-info" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:16px;padding:8px 12px;border-radius:4px;"></div>
-      <p style="font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--ink);line-height:1.7;margin-bottom:20px;">Tap the button below to open your email app. Your account name will be included automatically so we know who you are.</p>
-      <button onclick="sendSupport()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:12px;">&#9993; Open Email App</button>
-      <p style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);text-align:center;line-height:1.6;">This opens your Gmail or mail app with a pre-filled message.<br><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="05687c636c6b646b6660696061626077647575456268646c692b666a68">[email&#160;protected]</a></p>
+    <!-- STEP 1: Form -->
+    <div id="contact-form-step" style="padding:20px;">
+      <div id="contact-name-info" style="font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:14px;padding:8px 12px;border-radius:4px;"></div>
+      <div style="margin-bottom:14px;">
+        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">YOUR EMAIL (so we can reply to you)</label>
+        <input type="email" id="contact-email" placeholder="your@email.com" style="width:100%;padding:10px 12px;font-family:'DM Mono',monospace;font-size:0.78rem;border:1.5px solid var(--border);border-radius:4px;background:white;color:var(--ink);outline:none;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">SUBJECT</label>
+        <select id="contact-subject" style="width:100%;padding:10px 12px;font-family:'DM Mono',monospace;font-size:0.78rem;border:1.5px solid var(--border);border-radius:4px;background:white;color:var(--ink);outline:none;">
+          <option value="Bug Report">🐛 Bug Report</option>
+          <option value="Feature Request">💡 Feature Request</option>
+          <option value="Account Issue">🔐 Account Issue</option>
+          <option value="Data Issue">📊 Data Issue</option>
+          <option value="General Enquiry">💬 General Enquiry</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">DESCRIBE YOUR ISSUE</label>
+        <textarea id="contact-message" rows="4" placeholder="Describe your issue in detail..." style="width:100%;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:0.85rem;border:1.5px solid var(--border);border-radius:4px;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+      <button onclick="sendSupport()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;">&#9993; SUBMIT</button>
+    </div>
+    <!-- STEP 2: Confirmation -->
+    <div id="contact-confirm-step" style="display:none;padding:28px 20px;text-align:center;">
+      <div style="font-size:2.5rem;margin-bottom:12px;">&#9989;</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:8px;">Request Registered!</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:10px;">YOUR TICKET NUMBER</div>
+      <div id="contact-ticket-display" style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:700;color:var(--gold);background:#fffbf0;border:2px solid var(--gold);border-radius:6px;padding:12px 20px;margin-bottom:14px;letter-spacing:2px;"></div>
+      <p id="contact-email-status" style="font-family:'DM Mono',monospace;font-size:0.72rem;line-height:1.6;margin-bottom:16px;"></p>
+      <button id="contact-optional-email-btn" onclick="sendSupportEmail()" style="width:100%;padding:12px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:10px;">&#9993; ALSO SEND VIA EMAIL APP</button>
+      <button onclick="closeContact()" style="width:100%;padding:12px;background:var(--ink);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:2px;color:var(--gold2);cursor:pointer;">DONE — CLOSE</button>
     </div>
   </div>
 </div>
@@ -2789,7 +2950,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // Capture clean source HTML before JS modifies the DOM
 // Capture clean source HTML before JS modifies the DOM
 var _originalHtml = document.documentElement.outerHTML;
@@ -6858,6 +7019,10 @@ function switchTab(name,btn){
   if(btn)btn.classList.add('active');
   // Save active tab so refresh restores it
   localStorage.setItem('expense_active_tab', name);
+  // Scroll to top only on manual tab switch (btn provided) so section title is visible
+  if (btn) window.scrollTo({ top: 0, behavior: 'instant' });
+  // Release any Alt scroll lock when switching tabs
+  if (typeof unfreezeCard === 'function') unfreezeCard();
   if(name==='categorize'){
     catDescFilter = '';
     var dsi = document.getElementById('cat-desc-search'); if (dsi) dsi.value = '';
@@ -8642,6 +8807,10 @@ function switchIncomeTab(name, btn) {
   if (btn)   btn.classList.add('active');
   // Save active income tab so refresh restores it
   localStorage.setItem('expense_active_inc_tab', name);
+  // Scroll to top only on manual tab switch (btn provided) so section title is visible
+  if (btn) window.scrollTo({ top: 0, behavior: 'instant' });
+  // Release any Alt scroll lock when switching tabs
+  if (typeof unfreezeCard === 'function') unfreezeCard();
   if (name === 'inc-categorize')  renderIncomeCatTable();
   if (name === 'inc-monthly')     { incPopulateDailyFilters(); renderIncomeMonthly(); }
   if (name === 'inc-dashboard')   renderIncomeDashboard();
@@ -10955,6 +11124,8 @@ function showPinPadStep() {
   if (nameEl) { var n = localStorage.getItem(NAME_KEY); nameEl.textContent = n ? n.toUpperCase() : ''; }
   document.getElementById('pin-step-login').style.display = 'block';
   _showTcBox('pin-tc-box', 'pin-tc-label');
+  // Scroll to top so title is visible
+  var o = document.getElementById('pin-overlay'); if(o) setTimeout(function(){ o.scrollTop = 0; }, 30);
 }
 
 function showFullVerifyStep() {
@@ -11318,7 +11489,11 @@ var _generatedCode = '';
 
 function showPinScreen() {
   var o = document.getElementById('pin-overlay');
-  if (o) o.style.display = 'flex';
+  if (o) {
+    o.style.display = 'flex';
+    // Scroll to very top so "My Expense Ledger" title is always visible
+    setTimeout(function(){ o.scrollTop = 0; }, 50);
+  }
 }
 function hidePinScreen() {
   // Used by confirmCode and useResetCodeNow after first registration or reset
@@ -11894,9 +12069,9 @@ var APP_VERSION_KEY = 'expense_app_version';
     localStorage.removeItem('privacy_ok');                        // force T&C re-sign
     localStorage.removeItem('expense_onboard_expenses_done');     // force onboarding
     localStorage.removeItem('expense_onboard_income_done');
-    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
+    // NOTE: Do NOT save APP_VERSION yet — save it only after T&C is accepted
+    // This ensures T&C is forced even if user refreshes before accepting
     // Auto-open T&C immediately — user must read and accept before anything else
-    // Small delay so DOM is ready
     setTimeout(function() {
       if (localStorage.getItem('privacy_ok') !== PRIVACY_VER
         && !sessionStorage.getItem('tc_signed_this_session')) {
@@ -11960,6 +12135,7 @@ function _showPrivacyOverlay() {
 
 function acceptPrivacy() {
   localStorage.setItem('privacy_ok', PRIVACY_VER);
+  localStorage.setItem(APP_VERSION_KEY, APP_VERSION); // save version AFTER acceptance
   sessionStorage.setItem('tc_signed_this_session', '1');
   // Keep new_app_version flag — login will use it to trigger onboarding
   if (_db && _userId) {
@@ -12156,7 +12332,12 @@ var HELP_DATA = {
       'S → open the module switcher. E → Expenses. I → Income. H → toggle header. L → log out.',
       'F1 → open/close Help panel. Arrow keys navigate icons. Enter opens article. ↑ ↓ scroll article. G → back to icon grid.',
       'F2 → open/close Date Lookup.',
-      'N → next onboarding slide. B → previous slide. (Only when onboarding is open.)',
+      'N → next onboarding slide. B → previous slide. S → skip tour. (Only when onboarding is open.)',
+      'Ctrl+Enter → on Import tab (Expenses or Income): first press = Parse, second press = Go to Categorize. Works globally — notepad does not need to be focused.',
+      'Ctrl+Enter → on Categorize tab: if bulk-assign category is selected = Assign All filtered items; otherwise = Save to Ledger. Works for both Expenses and Income.',
+      'Ctrl+Enter → on Ledger tab: activates the Assign bulk-assign button.',
+      'Ctrl+Enter → on Manage tab: activates the nearest visible Save button (full name, username, PIN, or any save action). Cursor should be in the relevant input field.',
+      'Ctrl+Enter is your universal action key — it always does the most logical next action on whatever tab you are on.',
       'IMPORT TAB (Expenses & Income) — Hold Alt → the entire page freezes (nothing moves). Use ← → ↑ ↓ to navigate months. The highlighted month changes but the page stays completely still. Release Alt → page scrolls normally again.',
       'IMPORT TAB — While Alt is held: N = next year, B = previous year, Y = toggle Year/Month mode (income only).',
       'IMPORT TAB — Alt+Enter → activate notepad (cursor jumps to next available line, toast confirms). Type your entries.',
@@ -12164,9 +12345,11 @@ var HELP_DATA = {
       'IMPORT TAB — Ctrl+Enter → Parse expenses or income. Works for both modules.',
       'IMPORT TAB — After parsing with all dates matching, Ctrl+Enter again → Go to Categorize automatically.',
       'CATEGORIZE TAB — ⇅ Sort button toggles Newest first / Oldest first. Newest first puts your latest entries at the top. Works on both Expenses and Income.',
+      'Alt+R → replay the onboarding tour at any time from anywhere in the app.',
+      'Alt+C → open Contact Support directly.',
       'All letter shortcuts (S E I H L N B G Y) are blocked when typing in any input field.'
     ],
-    example: 'Full Import workflow — no mouse needed:\n1. Ctrl+1 → jump to Import tab.\n2. Hold Alt + arrow keys → navigate to March 2026.\n3. Alt+Enter → cursor jumps into notepad.\n4. Type entries line by line.\n5. Alt+Enter → exit notepad.\n6. Ctrl+Enter → Parse.\n7. Ctrl+Enter → Go to Categorize.\n8. ⇅ Sort → Newest first to see latest entries.\n9. Assign categories.\n10. Save to Ledger.',
+    example: 'Full workflow — no mouse needed:\n1. Ctrl+1 → Import tab.\n2. Hold Alt + arrows → navigate to month.\n3. Alt+Enter → activate notepad.\n4. Type entries line by line.\n5. Alt+Enter → deactivate notepad.\n6. Ctrl+Enter → Parse.\n7. Ctrl+Enter → Go to Categorize.\n8. ⇅ Sort → Newest first.\n9. Type category in bulk field → Ctrl+Enter → Assign All.\n10. Ctrl+Enter → Save to Ledger.\n11. Ctrl+2 → Categorize. Ctrl+4 → Dashboard.',
     tip: 'The full Import-to-Categorize flow uses only Alt+Enter and Ctrl+Enter — no mouse needed. Alt+Enter gets you in and out of the notepad. Ctrl+Enter does the rest.'
   },
   'referral': {
@@ -12361,7 +12544,7 @@ var ONBOARD_EXPENSES_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back &nbsp;|&nbsp; <strong>S</strong> = skip tour (forced only)<br>Import: <strong>Ctrl+Enter</strong> = Parse → again = Go to Categorize<br>Categorize: <strong>Ctrl+Enter</strong> = Assign All (if category typed) or Save to Ledger<br>Ledger: <strong>Ctrl+Enter</strong> = Assign &nbsp;|&nbsp; Manage: <strong>Ctrl+Enter</strong> = Save<br><strong>Alt+R</strong> = replay tour &nbsp;|&nbsp; <strong>Alt+C</strong> = Contact Support<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
   {
@@ -12419,7 +12602,7 @@ var ONBOARD_INCOME_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back &nbsp;|&nbsp; <strong>S</strong> = skip tour (forced only)<br>Import: <strong>Ctrl+Enter</strong> = Parse → again = Go to Categorize<br>Categorize: <strong>Ctrl+Enter</strong> = Assign All (if category typed) or Save to Ledger<br>Ledger: <strong>Ctrl+Enter</strong> = Assign &nbsp;|&nbsp; Manage: <strong>Ctrl+Enter</strong> = Save<br><strong>Alt+R</strong> = replay tour &nbsp;|&nbsp; <strong>Alt+C</strong> = Contact Support<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
   {
@@ -12431,9 +12614,12 @@ var ONBOARD_INCOME_SLIDES = [
   }
 ];
 
-function startOnboarding(mode, force) {
+var _onboardIsReplay = false; // true = user chose to replay, false = forced on login/version
+
+function startOnboarding(mode, force, isReplay) {
   var key = (mode === 'income') ? ONBOARD_INCOME_KEY : ONBOARD_EXPENSES_KEY;
   if (!force && localStorage.getItem(key) === '1') return; // already seen
+  _onboardIsReplay = !!isReplay; // track if this is a voluntary replay
   _onboardSlides = (mode === 'income') ? ONBOARD_INCOME_SLIDES : ONBOARD_EXPENSES_SLIDES;
   _onboardIndex  = 0;
   // Close help overlay if open
@@ -12476,7 +12662,7 @@ function renderOnboardSlide() {
     var anims = ['ob-zoom-in','ob-slide-down','ob-slide-left','ob-flip','ob-slide-up','ob-slide-right','ob-bounce-in','ob-fade-in'];
     var animName = anims[_onboardIndex % anims.length];
     var kbHint = _onboardIndex === 0
-      ? '<div style="margin-top:16px;font-family:\'DM Mono\',monospace;font-size:0.6rem;color:#a09070;letter-spacing:1px;border-top:1px solid #e0dbd4;padding-top:10px;">⌨️ LAPTOP: &nbsp;<strong>N</strong> = next &nbsp;·&nbsp; <strong>B</strong> = back</div>'
+      ? '<div style="margin-top:16px;font-family:\'DM Mono\',monospace;font-size:0.6rem;color:#a09070;letter-spacing:1px;border-top:1px solid #e0dbd4;padding-top:10px;">⌨️ LAPTOP: &nbsp;<strong>N</strong> = next &nbsp;·&nbsp; <strong>B</strong> = back' + (!_onboardIsReplay ? ' &nbsp;·&nbsp; <strong>S</strong> = skip' : '') + '</div>'
       : '';
     slideEl.className = 'ob-anim';
     slideEl.style.animationName = animName;
@@ -12505,6 +12691,7 @@ function finishOnboarding() {
   localStorage.setItem(key, '1');
   var ov = document.getElementById('onboard-overlay');
   if (ov) ov.style.display = 'none';
+  _onboardIsReplay = false; // reset flag — S goes back to switch module
 }
 
 function skipOnboarding() {
@@ -12622,17 +12809,137 @@ function openContact() {
   if (o) o.style.display = 'flex';
 }
 
+
+function sendSupport() {
+  var fullName = localStorage.getItem(FULL_NAME_KEY) || localStorage.getItem(NAME_KEY) || 'App User';
+  var subject  = document.getElementById('contact-subject') ? document.getElementById('contact-subject').value : 'General Enquiry';
+  var message  = document.getElementById('contact-message') ? document.getElementById('contact-message').value.trim() : '';
+  var userEmail = document.getElementById('contact-email') ? document.getElementById('contact-email').value.trim() : '';
+  if (!userEmail || userEmail.indexOf('@') === -1) { showToast('Please enter your email address'); return; }
+  if (!message) { showToast('Please describe your issue first'); return; }
+
+  // Generate unique ticket number: TKT-YYYYMMDD-XXXX
+  var now = new Date();
+  var datePart = now.getFullYear().toString() +
+    String(now.getMonth()+1).padStart(2,'0') +
+    String(now.getDate()).padStart(2,'0');
+  var randPart = Math.random().toString(36).substring(2,6).toUpperCase();
+  var ticketNo = 'TKT-' + datePart + '-' + randPart;
+
+  // Save ticket to Firebase FIRST — regardless of email success
+  if (_db) {
+    _db.collection('support_tickets').doc(ticketNo).set({
+      ticket:    ticketNo,
+      name:      fullName,
+      email:     userEmail,
+      userId:    _userId || 'unknown',
+      username:  _userName || 'unknown',
+      subject:   subject,
+      message:   message,
+      date:      now.toISOString(),
+      status:    'open',
+      emailSent: false
+    }).catch(function(){});
+  }
+
+  // Show confirmation immediately — ticket is registered no matter what
+  var formStep    = document.getElementById('contact-form-step');
+  var confirmStep = document.getElementById('contact-confirm-step');
+  var ticketDisp  = document.getElementById('contact-ticket-display');
+  var emailStatus = document.getElementById('contact-email-status');
+  if (formStep)    formStep.style.display    = 'none';
+  if (confirmStep) confirmStep.style.display = 'block';
+  if (ticketDisp)  ticketDisp.textContent    = ticketNo;
+
+  // Store for optional fallback
+  if (confirmStep) {
+    confirmStep.setAttribute('data-ticket',  ticketNo);
+    confirmStep.setAttribute('data-subject', subject);
+    confirmStep.setAttribute('data-message', message);
+    confirmStep.setAttribute('data-name',    fullName);
+  }
+
+  // Try EmailJS — send directly without opening email app
+  var emailjsReady = typeof emailjs !== 'undefined' &&
+                     EMAILJS_SERVICE_ID !== 'YOUR_SERVICE_ID';
+
+  if (emailjsReady) {
+    if (emailStatus) {
+      emailStatus.textContent = '📨 Sending your message...';
+      emailStatus.style.color = 'var(--muted)';
+    }
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      ticket_no:   ticketNo,
+      name:        fullName,
+      username:    _userName || 'unknown',
+      subject:     subject,
+      message:     'Ticket: ' + ticketNo + '\nUser: ' + fullName + ' (' + (_userName || 'unknown') + ')\nDate: ' + now.toLocaleString() + '\n\n' + message,
+      email:       userEmail
+    }).then(function() {
+      // Email sent successfully
+      if (_db) _db.collection('support_tickets').doc(ticketNo).update({ emailSent: true }).catch(function(){});
+      if (emailStatus) {
+        emailStatus.innerHTML = '✅ Message sent successfully! We\'ll get back to you soon.';
+        emailStatus.style.color = 'var(--sage)';
+      }
+      // Hide the optional email button — already sent
+      var optBtn = document.getElementById('contact-optional-email-btn');
+      if (optBtn) optBtn.style.display = 'none';
+    }).catch(function(err) {
+      // EmailJS failed — show fallback option
+      if (emailStatus) {
+        emailStatus.innerHTML = '⚠️ Direct send failed. Use the button below to send via your email app.';
+        emailStatus.style.color = 'var(--rust)';
+      }
+    });
+  } else {
+    // EmailJS not configured yet — show fallback
+    if (emailStatus) {
+      emailStatus.innerHTML = '📋 Ticket registered. Tap below to also send via email app.';
+      emailStatus.style.color = 'var(--muted)';
+    }
+  }
+}
+
+function sendSupportEmail() {
+  // Called when user taps "Also Send Email" — optional step after ticket registered
+  var confirmStep = document.getElementById('contact-confirm-step');
+  if (!confirmStep) return;
+  var ticketNo = confirmStep.getAttribute('data-ticket') || '';
+  var subject  = confirmStep.getAttribute('data-subject') || 'General Enquiry';
+  var message  = confirmStep.getAttribute('data-message') || '';
+  var fullName = confirmStep.getAttribute('data-name') || 'App User';
+
+  var addr = 'myfinanceledgerapp' + '\u0040' + 'gmail.com';
+  var subj = encodeURIComponent('[' + ticketNo + '] ' + subject + ' — My Expense Ledger');
+  var body = encodeURIComponent(
+    'Ticket: ' + ticketNo + '\n' +
+    'From: ' + fullName + ' (' + (_userName || 'unknown') + ')\n' +
+    'Subject: ' + subject + '\n\n' +
+    message + '\n\n---\nSent from My Expense Ledger App'
+  );
+  window.location.href = 'mailto:' + addr + '?subject=' + subj + '&body=' + body;
+
+  // Mark ticket as email sent in Firebase
+  if (_db && ticketNo) {
+    _db.collection('support_tickets').doc(ticketNo)
+      .update({ emailSent: true }).catch(function(){});
+  }
+  showToast('📧 Email app opened — ticket #' + ticketNo);
+}
+
 function closeContact() {
   var o = document.getElementById('contact-overlay');
   if (o) o.style.display = 'none';
-}
-
-function sendSupport() {
-  var fullName = localStorage.getItem(FULL_NAME_KEY) || 'App User';
-  var subject  = encodeURIComponent('[App Support] Support Request');
-  var body     = encodeURIComponent('From: ' + fullName + '\n\nDescribe your issue here:\n\n');
-  window.location.href = 'mailto:myfinanceledgerapp@gmail.com?subject=' + subject + '&body=' + body;
-  setTimeout(closeContact, 800);
+  // Reset form for next time
+  var formStep    = document.getElementById('contact-form-step');
+  var confirmStep = document.getElementById('contact-confirm-step');
+  var msg         = document.getElementById('contact-message');
+  var emailFld    = document.getElementById('contact-email');
+  if (formStep)    formStep.style.display    = 'block';
+  if (confirmStep) confirmStep.style.display = 'none';
+  if (msg)         msg.value = '';
+  if (emailFld)    emailFld.value = '';
 }
 
 document.addEventListener('click', function(e) {
@@ -12676,6 +12983,7 @@ try {
       } else {
         switchTab(tabs[nextIdx], null);
       }
+      window.scrollTo({ top: 0, behavior: 'instant' });
     } catch(err) { /* fail silently — never crash the app */ }
   });
 } catch(err) { /* fail silently */ }
@@ -12706,6 +13014,7 @@ try {
       } else {
         switchTab(tabs[idx], null);
       }
+      window.scrollTo({ top: 0, behavior: 'instant' });
     } catch(err) { /* fail silently */ }
   });
 } catch(err) { /* fail silently */ }
