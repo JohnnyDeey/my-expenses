@@ -1894,6 +1894,12 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No saved entries yet.</p></div>
   <div id="ledger-wrap" style="display:none;">
     <div id="ledger-accordion"></div>
+    <!-- Horizontal scroll buttons -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;padding:8px 0;">
+      <button onclick="document.getElementById('ledger-accordion').scrollLeft -= 200" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 20px;font-size:1.1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8592;</button>
+      <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">SCROLL</span>
+      <button onclick="document.getElementById('ledger-accordion').scrollLeft += 200" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 20px;font-size:1.1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8594;</button>
+    </div>
   </div>
 </div>
 
@@ -2356,7 +2362,15 @@ input[type="password"]::-ms-clear { display:none !important; }
     <button class="btn btn-ghost" style="padding:8px 10px;" onclick="_incExcludedIds={};document.getElementById('inc-bulk-search').value='';renderIncomeLedger();">&#10005;</button>
   </div>
   <div id="inc-ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No income entries yet.</p></div>
-  <div id="inc-ledger-wrap" style="display:none;"><div id="inc-ledger-accordion"></div></div>
+  <div id="inc-ledger-wrap" style="display:none;">
+    <div id="inc-ledger-accordion"></div>
+    <!-- Horizontal scroll buttons -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;padding:8px 0;">
+      <button onclick="document.getElementById('inc-ledger-accordion').scrollLeft -= 200" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 20px;font-size:1.1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8592;</button>
+      <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">SCROLL</span>
+      <button onclick="document.getElementById('inc-ledger-accordion').scrollLeft += 200" style="background:var(--ink);border:none;border-radius:6px;color:var(--gold2);padding:10px 20px;font-size:1.1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">&#8594;</button>
+    </div>
+  </div>
 </div>
 
 <!-- INCOME MANAGE -->
@@ -2858,7 +2872,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       </div>
       <div style="margin-bottom:16px;">
         <label style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">DESCRIBE YOUR ISSUE</label>
-        <textarea id="contact-message" rows="4" placeholder="Describe your issue in detail..." style="width:100%;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:0.85rem;border:1.5px solid var(--border);border-radius:4px;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+        <textarea id="contact-message" rows="6" placeholder="Describe your issue in detail...&#10;&#10;Press Enter for new line." style="width:100%;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:0.85rem;border:1.5px solid var(--border);border-radius:4px;outline:none;resize:vertical;box-sizing:border-box;" onkeydown="event.stopPropagation();"></textarea>
       </div>
       <button onclick="sendSupport()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;">&#9993; SUBMIT</button>
     </div>
@@ -12337,6 +12351,7 @@ var HELP_DATA = {
       'Ctrl+Enter → on Import tab (Expenses or Income): first press = Parse, second press = Go to Categorize. Works globally — notepad does not need to be focused.',
       'Ctrl+Enter → on Categorize tab: if bulk-assign category is selected = Assign All filtered items; otherwise = Save to Ledger. Works for both Expenses and Income.',
       'Ctrl+Enter → on Ledger tab: activates the Assign bulk-assign button.',
+      'LEDGER TAB — ← → scroll buttons at the bottom of the table scroll left and right through all columns. Works on both Expenses and Income ledger. Tap repeatedly to navigate wide tables.',
       'Ctrl+Enter → on Manage tab: activates the nearest visible Save button (full name, username, PIN, or any save action). Cursor should be in the relevant input field.',
       'Ctrl+Enter is your universal action key — it always does the most logical next action on whatever tab you are on.',
       'IMPORT TAB (Expenses & Income) — Hold Alt → the entire page freezes (nothing moves). Use ← → ↑ ↓ to navigate months. The highlighted month changes but the page stays completely still. Release Alt → page scrolls normally again.',
@@ -12545,7 +12560,7 @@ var ONBOARD_EXPENSES_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back &nbsp;|&nbsp; <strong>S</strong> = skip tour (forced only)<br>Import: <strong>Ctrl+Enter</strong> = Parse → again = Go to Categorize<br>Categorize: <strong>Ctrl+Enter</strong> = Assign All (if category typed) or Save to Ledger<br>Ledger: <strong>Ctrl+Enter</strong> = Assign &nbsp;|&nbsp; Manage: <strong>Ctrl+Enter</strong> = Save<br><strong>Alt+R</strong> = replay tour &nbsp;|&nbsp; <strong>Alt+C</strong> = Contact Support<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back &nbsp;|&nbsp; <strong>S</strong> = skip tour (forced only)<br>Import: <strong>Ctrl+Enter</strong> = Parse → again = Go to Categorize<br>Categorize: <strong>Ctrl+Enter</strong> = Assign All (if category typed) or Save to Ledger<br>Ledger: <strong>Ctrl+Enter</strong> = Assign &nbsp;|&nbsp; Manage: <strong>Ctrl+Enter</strong> = Save<br>Ledger: <strong>← →</strong> buttons at bottom = scroll table left/right<br><strong>Alt+R</strong> = replay tour &nbsp;|&nbsp; <strong>Alt+C</strong> = Contact Support<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
   {
@@ -12603,7 +12618,7 @@ var ONBOARD_INCOME_SLIDES = [
   {
     icon: '⌨️',
     title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back &nbsp;|&nbsp; <strong>S</strong> = skip tour (forced only)<br>Import: <strong>Ctrl+Enter</strong> = Parse → again = Go to Categorize<br>Categorize: <strong>Ctrl+Enter</strong> = Assign All (if category typed) or Save to Ledger<br>Ledger: <strong>Ctrl+Enter</strong> = Assign &nbsp;|&nbsp; Manage: <strong>Ctrl+Enter</strong> = Save<br><strong>Alt+R</strong> = replay tour &nbsp;|&nbsp; <strong>Alt+C</strong> = Contact Support<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
+    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back &nbsp;|&nbsp; <strong>S</strong> = skip tour (forced only)<br>Import: <strong>Ctrl+Enter</strong> = Parse → again = Go to Categorize<br>Categorize: <strong>Ctrl+Enter</strong> = Assign All (if category typed) or Save to Ledger<br>Ledger: <strong>Ctrl+Enter</strong> = Assign &nbsp;|&nbsp; Manage: <strong>Ctrl+Enter</strong> = Save<br>Ledger: <strong>← →</strong> buttons at bottom = scroll table left/right<br><strong>Alt+R</strong> = replay tour &nbsp;|&nbsp; <strong>Alt+C</strong> = Contact Support<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
     color: '#3d5a73'
   },
   {
