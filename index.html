@@ -20,8 +20,8 @@
 <meta name="theme-color" content="#1a1410">
 <meta name="msapplication-navbutton-color" content="#1a1410">
 <meta name="msapplication-starturl" content="./">
-<!-- Prevent address bar flash — set background immediately -->
-<style>html,body{background:#1a1410!important;}</style>
+<!-- Prevent white flash on PWA launch — matches pin overlay color -->
+<style>html{background:#1a1410;}body{background:var(--paper,#f5f0e8);}</style>
 <title>My Expense Ledger</title>
 
 <!-- PWA: inline manifest with base64 icon — works on desktop Chrome + Android -->
@@ -46,7 +46,7 @@
     description: 'Personal finance tracker — expenses, income, budgets and reports.',
     start_url: './',
     scope: './',
-    display: 'fullscreen',
+    display: 'standalone',
     orientation: 'portrait-primary',
     background_color: '#1a1410',
     theme_color: '#1a1410',
@@ -836,7 +836,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);m
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.6;}
 
 /* HEADER */
-header{background:var(--ink);color:var(--paper);padding:18px 40px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+header{background:var(--ink);color:var(--paper);padding:18px 40px;padding-top:max(18px, env(safe-area-inset-top, 18px));display:flex;align-items:center;justify-content:space-between;gap:16px;}
 header h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;letter-spacing:-0.5px;line-height:1;}
 header h1 span{color:var(--gold2);}
 .header-center{flex:1;display:flex;justify-content:center;}
@@ -862,7 +862,6 @@ nav.tabs button.active{color:var(--gold2);border-bottom-color:var(--gold);}
 main{max-width:1300px;margin:0 auto;padding:20px 40px;}
 .panel{display:none;}.panel.active{display:block;}
 .section-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:12px;}
-.section-title::before{content:'';display:inline-block;width:8px;height:28px;background:var(--gold);border-radius:2px;}
 
 .card{background:white;border:1px solid var(--border);border-radius:4px;padding:24px;box-shadow:4px 4px 0 var(--shadow);}
 .card label{display:block;font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
@@ -1380,7 +1379,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 <!-- Always-fixed top: user bar + nav tabs -->
 <div id="fixed-topbar" style="position:fixed;top:0;left:0;right:0;z-index:300;background:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,0.4);">
 <!-- Always-visible user bar — always shown -->
-<div id="hdr-user-bar" style="background:var(--ink);padding:6px 14px;border-bottom:1px solid #2e2620;display:flex;flex-direction:column;gap:4px;">
+<div id="hdr-user-bar" style="background:var(--ink);padding:6px 14px;padding-top:max(6px, env(safe-area-inset-top, 6px));border-bottom:1px solid #2e2620;display:flex;flex-direction:column;gap:4px;">
   <!-- Row 1: profile · initials · sync · hide -->
   <div style="display:flex;align-items:center;justify-content:space-between;">
     <div style="display:flex;align-items:center;gap:8px;">
@@ -2390,7 +2389,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:flex-start;justify-content:center;flex-direction:column;padding:20px;overflow-y:auto;">
+<div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:flex-start;justify-content:center;flex-direction:column;padding:20px;padding-top:max(20px, env(safe-area-inset-top, 20px));overflow-y:auto;">
   <div style="text-align:center;max-width:400px;width:100%;margin:auto;padding:20px 0;">
     <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My <span style="color:var(--gold);">Expense</span> Ledger</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;letter-spacing:2px;margin-bottom:6px;">PERSONAL FINANCE TRACKER</div>
@@ -6859,10 +6858,6 @@ function switchTab(name,btn){
   if(btn)btn.classList.add('active');
   // Save active tab so refresh restores it
   localStorage.setItem('expense_active_tab', name);
-  // Push to browser history so Back button navigates between tabs
-  if (history.state && history.state.tab !== name) {
-    history.pushState({ tab: name, mode: 'expenses' }, '', '');
-  }
   if(name==='categorize'){
     catDescFilter = '';
     var dsi = document.getElementById('cat-desc-search'); if (dsi) dsi.value = '';
@@ -8647,10 +8642,6 @@ function switchIncomeTab(name, btn) {
   if (btn)   btn.classList.add('active');
   // Save active income tab so refresh restores it
   localStorage.setItem('expense_active_inc_tab', name);
-  // Push to browser history so Back button navigates between tabs
-  if (history.state && history.state.tab !== name) {
-    history.pushState({ tab: name, mode: 'income' }, '', '');
-  }
   if (name === 'inc-categorize')  renderIncomeCatTable();
   if (name === 'inc-monthly')     { incPopulateDailyFilters(); renderIncomeMonthly(); }
   if (name === 'inc-dashboard')   renderIncomeDashboard();
@@ -12832,27 +12823,13 @@ document.addEventListener('keydown', function(e) {
   if (o && o.style.display === 'flex') { e.preventDefault(); closeReferralPanel(); }
 });
 
-// ── Back button navigation — popstate handler ──
-// When user presses Back on phone, restore the previous tab instead of exiting
-window.addEventListener('popstate', function(e) {
-  if (!_userId) return; // not logged in — let browser handle it
-  var state = e.state;
-  if (!state || !state.tab) return;
-  if (state.mode === 'income') {
-    switchIncomeTab(state.tab, null);
-  } else {
-    switchTab(state.tab, null);
-  }
-  // Re-push so there's always a state to pop back to (prevents app exit on first back)
-  history.pushState(state, '', '');
-});
-
-// Seed initial history state so first Back press doesn't exit the app
-(function() {
-  if (!history.state) {
-    history.replaceState({ tab: 'import', mode: 'expenses' }, '', '');
-  }
-})();
+// ── Back button: disabled — pressing back does nothing in the app ──
+try {
+  history.replaceState({ noback: true }, '', window.location.pathname);
+  window.addEventListener('popstate', function() {
+    try { history.pushState({ noback: true }, '', window.location.pathname); } catch(e) {}
+  });
+} catch(e) { /* iframe preview — ignore */ }
 
 syncInit();
 </script>
