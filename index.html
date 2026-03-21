@@ -10,14 +10,18 @@
   gtag('config', 'G-GYDLHGMNGB');
 </script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="My Expense Ledger">
 <meta name="application-name" content="My Expense Ledger">
 <meta name="description" content="Personal finance tracker — record spending, track income, set budgets and generate reports.">
 <meta name="theme-color" content="#1a1410">
+<meta name="msapplication-navbutton-color" content="#1a1410">
+<meta name="msapplication-starturl" content="./">
+<!-- Prevent address bar flash — set background immediately -->
+<style>html,body{background:#1a1410!important;}</style>
 <title>My Expense Ledger</title>
 
 <!-- PWA: inline manifest with base64 icon — works on desktop Chrome + Android -->
@@ -42,13 +46,15 @@
     description: 'Personal finance tracker — expenses, income, budgets and reports.',
     start_url: './',
     scope: './',
-    display: 'standalone',
+    display: 'fullscreen',
     orientation: 'portrait-primary',
     background_color: '#1a1410',
     theme_color: '#1a1410',
+    splash_screens: [{ src: iconB64, sizes: '512x512' }],
     icons: [
       { src: iconB64, sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
-      { src: iconB64, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' }
+      { src: iconB64, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' },
+      { src: iconB64, sizes: '192x192', type: 'image/svg+xml', purpose: 'maskable' }
     ]
   };
   var mb = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
@@ -1380,7 +1386,10 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:0.9rem;">&#128100;</span>
       <div>
-        <div id="hdr-user-bar-name" style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--gold2);">Not signed in</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div id="hdr-user-bar-name" style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--gold2);">Not signed in</div>
+          <button id="hdr-referral-btn" onclick="openReferralPanel()" title="Your referral link" style="display:none;background:none;border:none;color:rgba(200,150,46,0.6);cursor:pointer;padding:0 2px;font-size:0.85rem;line-height:1;">&#128279;</button>
+        </div>
         <div style="display:flex;align-items:center;gap:4px;">
           <span id="hdr-user-bar-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#555;"></span>
           <span id="hdr-user-bar-status" style="font-family:DM Mono,monospace;font-size:0.6rem;color:#555;">Sign in to sync</span>
@@ -1406,7 +1415,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <button onclick="switchTab('dashboard',this)"><span class="tab-icon">&#128200;</span><span class="tab-label"> Dashboard</span></button>
   <button onclick="switchTab('ledger',this)"><span class="tab-icon">&#128220;</span><span class="tab-label"> Ledger</span></button>
   <button onclick="switchTab('budget',this)"><span class="tab-icon">&#127919;</span><span class="tab-label"> Budget</span></button>
-  <button onclick="switchTab('manage',this)"><span class="tab-icon">&#9881;</span><span class="tab-label"> Manage</span></button>
+  <button onclick="switchTab('manage',this)"><span class="tab-icon">&#9881;&#65039;</span><span class="tab-label"> Manage</span></button>
 </nav>
 <!-- Income nav -->
 <nav class="tabs" id="income-nav" style="display:none;justify-content:center;">
@@ -1415,7 +1424,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <button onclick="switchIncomeTab('inc-monthly',this)"><span class="tab-icon">&#128197;</span><span class="tab-label"> Monthly</span></button>
   <button onclick="switchIncomeTab('inc-dashboard',this)"><span class="tab-icon">&#128200;</span><span class="tab-label"> Dashboard</span></button>
   <button onclick="switchIncomeTab('inc-ledger',this)"><span class="tab-icon">&#128220;</span><span class="tab-label"> Ledger</span></button>
-  <button onclick="switchIncomeTab('inc-manage',this)"><span class="tab-icon">&#9881;</span><span class="tab-label"> Manage</span></button>
+  <button onclick="switchIncomeTab('inc-manage',this)"><span class="tab-icon">&#9881;&#65039;</span><span class="tab-label"> Manage</span></button>
 </nav>
 </div><!-- end fixed-topbar -->
 
@@ -1880,7 +1889,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">Fix wrong auto-categories</div>
       <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:10px;line-height:1.6;">If categories keep reverting to wrong values, click this to clean up learned keyword rules.</div>
-      <button class="btn btn-ghost" style="font-size:0.72rem;padding:8px 14px;" onclick="cleanupCustomRules()">&#9881; Clean up category rules</button>
+      <button class="btn btn-ghost" style="font-size:0.72rem;padding:8px 14px;" onclick="cleanupCustomRules()">&#9881;&#65039; Clean up category rules</button>
     </div>
   </div>
 
@@ -2343,6 +2352,44 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
+<!-- ══ REFERRAL PANEL ══ -->
+<div id="referral-overlay" style="display:none;position:fixed;inset:0;z-index:99995;background:rgba(26,20,16,0.92);align-items:flex-end;justify-content:center;padding:0;">
+  <div style="background:var(--paper);border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:24px 20px 32px;box-shadow:0 -8px 32px rgba(0,0,0,0.4);">
+    <!-- Handle bar -->
+    <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;"></div>
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:var(--ink);">&#128279; Your Referral Link</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);margin-top:2px;">Share this link — earn rewards when friends join</div>
+      </div>
+      <button onclick="closeReferralPanel()" style="background:none;border:none;font-size:1.3rem;color:var(--muted);cursor:pointer;padding:4px;">&#10005;</button>
+    </div>
+    <!-- Referral link box -->
+    <div style="background:#fffbf0;border:1.5px solid var(--gold);border-radius:8px;padding:14px 16px;margin-bottom:14px;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">YOUR UNIQUE LINK</div>
+      <div id="referral-link-text" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);word-break:break-all;line-height:1.5;"></div>
+    </div>
+    <!-- Action buttons -->
+    <div style="display:flex;gap:8px;margin-bottom:18px;">
+      <button onclick="copyReferralLink()" style="flex:1;padding:12px;background:var(--gold);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;letter-spacing:1px;color:var(--ink);cursor:pointer;">&#128203; COPY LINK</button>
+      <button onclick="shareReferralLink()" style="flex:1;padding:12px;background:var(--ink);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;letter-spacing:1px;color:var(--gold2);cursor:pointer;">&#128172; SHARE</button>
+    </div>
+    <!-- Referral count -->
+    <div style="background:white;border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">REFERRALS SO FAR</div>
+        <div id="referral-count-display" style="font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;color:var(--gold);">—</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:2rem;">&#127942;</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:2px;">Rewards coming soon</div>
+      </div>
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);text-align:center;margin-top:12px;line-height:1.6;">Friends who sign up via your link are counted here.<br>You will not see their names — only the total.</div>
+  </div>
+</div>
+
 <div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:flex-start;justify-content:center;flex-direction:column;padding:20px;overflow-y:auto;">
   <div style="text-align:center;max-width:400px;width:100%;margin:auto;padding:20px 0;">
     <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My <span style="color:var(--gold);">Expense</span> Ledger</div>
@@ -2574,13 +2621,15 @@ input[type="password"]::-ms-clear { display:none !important; }
       <p style="margin-bottom:14px;">The app remembers your last active tab. This preference is stored locally and cleared on logout.</p>
       <p style="font-weight:700;margin-bottom:6px;">11. Developer &amp; Branding</p>
       <p style="margin-bottom:14px;">My Expense Ledger was designed and built by <strong>John-de-Scholar</strong> (John Damilola Sunday). The developer name appears on the login screen, Help panel, and printed reports. By using this app you accept that the developer name appears on your reports.</p>
-      <p style="font-weight:700;margin-bottom:6px;">12. Contact</p>
+      <p style="font-weight:700;margin-bottom:6px;">12. Referral Programme</p>
+      <p style="margin-bottom:14px;">Each user has a unique referral link tied to their username. When someone registers via your link, only the count of referrals is shown to you — no names, phone numbers, or personal details of referred users are ever revealed. Referral records stored in Firebase contain only the referrer's username, the month of signup, and a timestamp. This data is used solely for counting referrals and future reward calculations.</p>
+      <p style="font-weight:700;margin-bottom:6px;">13. Contact</p>
       <p style="margin-bottom:0;">Questions? Contact support at myfinanceledgerapp@gmail.com.</p>
     </div>
 
     <!-- Accept button at the very bottom of the scroll area -->
     <div id="privacy-accept-wrap" style="padding:20px 0 8px;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; MARCH 2026 &mdash; v1.9</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; APRIL 2026 &mdash; v2.1</div>
       <button onclick="acceptPrivacy()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.88rem;letter-spacing:2px;font-weight:900;color:var(--ink);cursor:pointer;">&#10003; I ACCEPT &mdash; CONTINUE</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#4a3e30;text-align:center;margin-top:8px;">By tapping Accept you confirm you have read and agree to the above terms.</div>
     </div>
@@ -2595,7 +2644,8 @@ input[type="password"]::-ms-clear { display:none !important; }
     <p style="font-weight:700;margin-bottom:6px;">5. Usage Analytics</p><p style="margin-bottom:12px;">Anonymous usage statistics via Google Analytics. No financial data is shared.</p>
     <p style="font-weight:700;margin-bottom:6px;">6. No Advertising</p><p style="margin-bottom:12px;">No advertisements. Your data is never used for marketing.</p>
     <p style="font-weight:700;margin-bottom:6px;">7. Developer &amp; Branding</p><p style="margin-bottom:12px;">Built by John-de-Scholar (John Damilola Sunday). Developer name appears on login screen, Help, and reports.</p>
-    <p style="font-weight:700;margin-bottom:6px;">8. Contact</p><p>myfinanceledgerapp@gmail.com</p>
+    <p style="font-weight:700;margin-bottom:6px;">8. Referral Programme</p><p style="margin-bottom:12px;">Each user has a unique referral link. Only the count of referrals is shown to you — no names or personal details of referred users are ever revealed.</p>
+    <p style="font-weight:700;margin-bottom:6px;">9. Contact</p><p>myfinanceledgerapp@gmail.com</p>
   </div>
 </div>
 
@@ -6809,6 +6859,10 @@ function switchTab(name,btn){
   if(btn)btn.classList.add('active');
   // Save active tab so refresh restores it
   localStorage.setItem('expense_active_tab', name);
+  // Push to browser history so Back button navigates between tabs
+  if (history.state && history.state.tab !== name) {
+    history.pushState({ tab: name, mode: 'expenses' }, '', '');
+  }
   if(name==='categorize'){
     catDescFilter = '';
     var dsi = document.getElementById('cat-desc-search'); if (dsi) dsi.value = '';
@@ -8593,6 +8647,10 @@ function switchIncomeTab(name, btn) {
   if (btn)   btn.classList.add('active');
   // Save active income tab so refresh restores it
   localStorage.setItem('expense_active_inc_tab', name);
+  // Push to browser history so Back button navigates between tabs
+  if (history.state && history.state.tab !== name) {
+    history.pushState({ tab: name, mode: 'income' }, '', '');
+  }
   if (name === 'inc-categorize')  renderIncomeCatTable();
   if (name === 'inc-monthly')     { incPopulateDailyFilters(); renderIncomeMonthly(); }
   if (name === 'inc-dashboard')   renderIncomeDashboard();
@@ -11379,6 +11437,8 @@ function confirmCode() {
   hidePinScreen();
   updateUserDisplay();
   startSync();
+  // Save referral record if user came via a referral link
+  saveReferralToFirebase(_userId);
   // Onboarding will fire from acceptPrivacy() after user agrees to privacy policy
   // This ensures privacy is always accepted before the tour starts
   // Mark as new version so acceptPrivacy triggers the tour
@@ -11643,6 +11703,9 @@ function updateUserDisplay() {
   // Update name in user bar — show initials only
   var nameEl = document.getElementById('hdr-user-bar-name');
   if (nameEl) nameEl.textContent = _userName ? getInitials(_userName) : '??';
+  // Show/hide referral button
+  var refBtn = document.getElementById('hdr-referral-btn');
+  if (refBtn) refBtn.style.display = _userId ? 'inline' : 'none';
   // Update dot + status
   var dot = document.getElementById('hdr-user-bar-dot');
   var status = document.getElementById('hdr-user-bar-status');
@@ -11795,7 +11858,7 @@ function renderSyncSetupUI() {
     '<div style="background:#fff8e6;border:1px solid var(--gold);border-radius:4px;padding:12px 14px;margin-bottom:12px;">' +
       '<div style="font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Fix wrong auto-categories</div>' +
       '<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);margin-bottom:10px;">If categories keep reverting, click to clean up learned rules.</div>' +
-      '<button class="btn btn-ghost" style="font-size:0.72rem;padding:8px 14px;" onclick="cleanupCustomRules()">&#9881; Clean up rules</button>' +
+      '<button class="btn btn-ghost" style="font-size:0.72rem;padding:8px 14px;" onclick="cleanupCustomRules()">&#9881;&#65039; Clean up rules</button>' +
     '</div>' +
     '<div style="background:var(--paper2);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:12px;">' +
       '<div style="font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Change access code</div>' +
@@ -11827,8 +11890,8 @@ function changePin() {
 // ════════════════════════
 //  PRIVACY POLICY
 // ════════════════════════
-var PRIVACY_VER = '2026-03';
-var APP_VERSION = '2.0.6'; // bump this with every release to force privacy + onboarding re-run
+var PRIVACY_VER = '2026-04';
+var APP_VERSION = '2.1.0'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
@@ -11890,8 +11953,8 @@ function _showPrivacyOverlay() {
   if (lbl) {
     var isExisting = !!localStorage.getItem(UID_KEY);
     lbl.textContent = isExisting
-      ? 'UPDATED TERMS — MARCH 2026 — v1.9 — Please review changes'
-      : 'MY EXPENSE LEDGER — MARCH 2026 — v1.9';
+      ? 'UPDATED TERMS — APRIL 2026 — v2.1 — Referral Programme added'
+      : 'MY EXPENSE LEDGER — APRIL 2026 — v2.1';
   }
   o.style.display = 'flex';
 }
@@ -11935,7 +11998,7 @@ var HELP_ITEMS = [
   {icon:'&#128200;', label:'Dashboard',  tag:'dashboard'},
   {icon:'&#128220;', label:'Ledger',     tag:'ledger'},
   {icon:'&#127919;', label:'Budget',     tag:'budget'},
-  {icon:'&#9881;',   label:'Manage',     tag:'manage'},
+  {icon:'&#9881;&#65039;',   label:'Manage',     tag:'manage'},
   {icon:'&#128176;', label:'Income',     tag:'income'},
   {icon:'&#128467;', label:'Date',       tag:'date'},
   {icon:'&#128275;', label:'Login',      tag:'login'},
@@ -11950,6 +12013,7 @@ var HELP_ITEMS = [
   {icon:'&#128176;', label:'Currencies',  tag:'currencies'},
   {icon:'&#128438;', label:'Print Report', tag:'print'},
   {icon:'&#9000;',   label:'Keyboard',     tag:'keyboard'},
+  {icon:'&#128279;', label:'Referral',     tag:'referral'},
   {icon:'&#10067;',  label:'Help',         tag:'help'}
 ];
 
@@ -12105,6 +12169,20 @@ var HELP_DATA = {
     ],
     example: 'Full Import workflow — no mouse needed:\n1. Ctrl+1 → jump to Import tab.\n2. Hold Alt + arrow keys → navigate to March 2026.\n3. Alt+Enter → cursor jumps into notepad.\n4. Type entries line by line.\n5. Alt+Enter → exit notepad.\n6. Ctrl+Enter → Parse.\n7. Ctrl+Enter → Go to Categorize.\n8. ⇅ Sort → Newest first to see latest entries.\n9. Assign categories.\n10. Save to Ledger.',
     tip: 'The full Import-to-Categorize flow uses only Alt+Enter and Ctrl+Enter — no mouse needed. Alt+Enter gets you in and out of the notepad. Ctrl+Enter does the rest.'
+  },
+  'referral': {
+    title: '🔗 Referral Programme',
+    steps: [
+      'Tap the 🔗 link icon beside your username in the header to open your referral panel.',
+      'Your unique referral link is tied to your username — e.g. https://johnnydeey.github.io/my-expenses/?ref=JDS79.',
+      'Tap COPY LINK to copy it to your clipboard, or SHARE to send it via WhatsApp, email, or any app.',
+      'When someone registers using your link, it counts as one referral.',
+      'You can see your total referral count in the panel — but you will never see the names or details of who used your link.',
+      'Referral rewards (discounts, premium features) will be introduced in a future update based on your count.',
+      'Your referral link never expires. Share it anywhere — social media, WhatsApp groups, email.'
+    ],
+    example: 'User JDS79 shared his referral link in his department WhatsApp group.\n5 colleagues registered using his link.\nHis referral panel now shows: 5 referrals.\nWhen rewards launch, he will be eligible based on this count.',
+    tip: 'The more you share, the higher your count. Rewards will be calculated from your total at the time of launch.'
   },
   'help': {
     title: '❓ Help & Support',
@@ -12632,6 +12710,149 @@ try {
     } catch(err) { /* fail silently */ }
   });
 } catch(err) { /* fail silently */ }
+
+// ════════════════════════════════
+//  REFERRAL SYSTEM
+// ════════════════════════════════
+var APP_BASE_URL = 'https://johnnydeey.github.io/my-expenses/';
+
+function getReferralCode() {
+  // Referral code = username (e.g. JDS79)
+  return _userName || '';
+}
+
+function getReferralLink() {
+  return APP_BASE_URL + '?ref=' + encodeURIComponent(getReferralCode());
+}
+
+function openReferralPanel() {
+  var o = document.getElementById('referral-overlay');
+  if (!o) return;
+  // Set link text
+  var linkEl = document.getElementById('referral-link-text');
+  if (linkEl) linkEl.textContent = getReferralLink();
+  // Load referral count from Firebase
+  var countEl = document.getElementById('referral-count-display');
+  if (countEl) countEl.textContent = '…';
+  if (_db && _userId) {
+    _db.collection('referrals').where('referredBy', '==', getReferralCode())
+      .get().then(function(snap) {
+        if (countEl) countEl.textContent = snap.size;
+      }).catch(function() {
+        if (countEl) countEl.textContent = '0';
+      });
+  } else {
+    if (countEl) countEl.textContent = '0';
+  }
+  o.style.display = 'flex';
+}
+
+function closeReferralPanel() {
+  var o = document.getElementById('referral-overlay');
+  if (o) o.style.display = 'none';
+}
+
+function copyReferralLink() {
+  var link = getReferralLink();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(function() {
+      showToast('🔗 Referral link copied!');
+    }).catch(function() {
+      _fallbackCopyReferral(link);
+    });
+  } else {
+    _fallbackCopyReferral(link);
+  }
+}
+
+function _fallbackCopyReferral(link) {
+  var ta = document.createElement('textarea');
+  ta.value = link;
+  ta.style.cssText = 'position:fixed;opacity:0;';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); showToast('🔗 Referral link copied!'); }
+  catch(e) { showToast('Copy failed — share manually'); }
+  document.body.removeChild(ta);
+}
+
+function shareReferralLink() {
+  var link = getReferralLink();
+  var text = 'Track your finances easily with My Expense Ledger — expenses, income, budgets and reports in one place. Join using my link:';
+  if (navigator.share) {
+    navigator.share({ title: 'My Expense Ledger', text: text, url: link })
+      .catch(function(){});
+  } else {
+    copyReferralLink();
+  }
+}
+
+// ── Track referral on page load ──
+// If ?ref=CODE is in the URL, save it silently to Firebase
+(function trackIncomingReferral() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var ref = params.get('ref');
+    if (!ref) return;
+    // Save to sessionStorage so it persists through registration
+    sessionStorage.setItem('pending_referral', ref.toUpperCase());
+    // Clean the URL immediately so user never sees it
+    var cleanUrl = window.location.pathname;
+    history.replaceState({}, '', cleanUrl);
+  } catch(e) {}
+})();
+
+function saveReferralToFirebase(newUserId) {
+  // Called after successful registration — saves referral record
+  try {
+    var ref = sessionStorage.getItem('pending_referral');
+    if (!ref || !_db) return;
+    if (ref.toUpperCase() === (_userName || '').toUpperCase()) return; // can't refer yourself
+    _db.collection('referrals').add({
+      referredBy:  ref.toUpperCase(),     // referrer's username
+      joinedDate:  new Date().toISOString(),
+      joinedMonth: new Date().toISOString().substring(0, 7),
+      // No personally identifiable info stored — just the count matters
+    }).then(function() {
+      sessionStorage.removeItem('pending_referral');
+    }).catch(function(){});
+  } catch(e) {}
+}
+
+// ── Close referral panel on backdrop tap ──
+document.addEventListener('click', function(e) {
+  var o = document.getElementById('referral-overlay');
+  if (o && o.style.display === 'flex' && e.target === o) closeReferralPanel();
+});
+
+// ── Escape closes referral panel ──
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  var o = document.getElementById('referral-overlay');
+  if (o && o.style.display === 'flex') { e.preventDefault(); closeReferralPanel(); }
+});
+
+// ── Back button navigation — popstate handler ──
+// When user presses Back on phone, restore the previous tab instead of exiting
+window.addEventListener('popstate', function(e) {
+  if (!_userId) return; // not logged in — let browser handle it
+  var state = e.state;
+  if (!state || !state.tab) return;
+  if (state.mode === 'income') {
+    switchIncomeTab(state.tab, null);
+  } else {
+    switchTab(state.tab, null);
+  }
+  // Re-push so there's always a state to pop back to (prevents app exit on first back)
+  history.pushState(state, '', '');
+});
+
+// Seed initial history state so first Back press doesn't exit the app
+(function() {
+  if (!history.state) {
+    history.replaceState({ tab: 'import', mode: 'expenses' }, '', '');
+  }
+})();
 
 syncInit();
 </script>
