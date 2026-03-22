@@ -3094,6 +3094,45 @@ input[type="password"]::-ms-clear { display:none !important; }
 </div>
 
 <!-- ══ ONBOARDING TOUR OVERLAY ══ -->
+<!-- ══ SPOTLIGHT TOUR ══ -->
+<div id="tour-overlay" style="display:none;position:fixed;inset:0;z-index:100010;pointer-events:none;">
+  <!-- Dark mask - 4 rectangles around spotlight -->
+  <div id="tour-mask-top"    style="position:absolute;left:0;right:0;top:0;background:rgba(0,0,0,0.75);transition:all 0.35s ease;"></div>
+  <div id="tour-mask-bottom" style="position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);transition:all 0.35s ease;"></div>
+  <div id="tour-mask-left"   style="position:absolute;top:0;bottom:0;left:0;background:rgba(0,0,0,0.75);transition:all 0.35s ease;"></div>
+  <div id="tour-mask-right"  style="position:absolute;top:0;bottom:0;right:0;background:rgba(0,0,0,0.75);transition:all 0.35s ease;"></div>
+  <!-- Spotlight border -->
+  <div id="tour-spotlight"   style="position:absolute;border:3px solid var(--gold);border-radius:8px;box-shadow:0 0 0 4px rgba(200,150,46,0.3);transition:all 0.35s ease;pointer-events:none;"></div>
+  <!-- Arrow -->
+  <div id="tour-arrow"       style="position:absolute;font-size:2rem;color:var(--gold);transition:all 0.35s ease;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,0.8);">&#8595;</div>
+</div>
+
+<!-- Tour tooltip card -->
+<div id="tour-tooltip" style="display:none;position:fixed;z-index:100011;background:var(--ink);border:2px solid var(--gold);border-radius:10px;padding:18px 20px;width:calc(100% - 32px);max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="tour-step-icon" style="font-size:1.4rem;"></span>
+      <span id="tour-step-num"  style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--gold);letter-spacing:1px;"></span>
+    </div>
+    <button onclick="tourSkip()" style="background:none;border:none;color:#6b5e50;font-size:1rem;cursor:pointer;padding:0 4px;pointer-events:all;">✕</button>
+  </div>
+  <!-- Title -->
+  <div id="tour-step-title" style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);margin-bottom:8px;line-height:1.3;"></div>
+  <!-- Body -->
+  <div id="tour-step-body"  style="font-family:'DM Sans',sans-serif;font-size:0.82rem;color:#c0b090;line-height:1.7;margin-bottom:14px;"></div>
+  <!-- Progress dots -->
+  <div id="tour-dots" style="display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap;"></div>
+  <!-- Buttons -->
+  <div style="display:flex;gap:8px;">
+    <button id="tour-back-btn" onclick="tourNav(-1)" style="flex:1;padding:9px;background:none;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;pointer-events:all;">← Back</button>
+    <button id="tour-next-btn" onclick="tourNav(1)"  style="flex:2;padding:9px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--ink);cursor:pointer;pointer-events:all;">Next →</button>
+  </div>
+  <div style="text-align:center;margin-top:8px;">
+    <button onclick="tourSkip()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a3e30;cursor:pointer;pointer-events:all;text-decoration:underline;">Skip tour</button>
+  </div>
+</div>
+
 <div id="onboard-overlay" style="display:none;position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,0.6);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;">
   <div style="background:white;border-radius:16px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.4);position:relative;margin:auto;display:flex;flex-direction:column;">
     <!-- Progress bar -->
@@ -13418,17 +13457,8 @@ var ONBOARD_INCOME_SLIDES = [
 var _onboardIsReplay = false; // true = user chose to replay, false = forced on login/version
 
 function startOnboarding(mode, force, isReplay) {
-  var key = (mode === 'income') ? ONBOARD_INCOME_KEY : ONBOARD_EXPENSES_KEY;
-  if (!force && localStorage.getItem(key) === '1') return; // already seen
-  _onboardIsReplay = !!isReplay; // track if this is a voluntary replay
-  _onboardSlides = (mode === 'income') ? ONBOARD_INCOME_SLIDES : ONBOARD_EXPENSES_SLIDES;
-  _onboardIndex  = 0;
-  // Close help overlay if open
-  var ho = document.getElementById('help-overlay');
-  if (ho) ho.style.display = 'none';
-  renderOnboardSlide();
-  var ov = document.getElementById('onboard-overlay');
-  if (ov) ov.style.display = 'flex';
+  // Use new spotlight tour system
+  startTour(mode, force, isReplay);
 }
 
 function renderOnboardSlide() {
@@ -14077,6 +14107,149 @@ function _initCountrySelects() {
 }
 document.addEventListener('DOMContentLoaded', _initCountrySelects);
 setTimeout(_initCountrySelects, 500);
+
+document.addEventListener('DOMContentLoaded', _initCountrySelects);
+setTimeout(_initCountrySelects, 500);
+
+// ════════════════════════════════
+//  SPOTLIGHT GUIDED TOUR
+// ════════════════════════════════
+var _tourIndex = 0;
+var _tourSteps = [];
+var _tourMode  = 'expenses';
+
+var TOUR_EXPENSES_STEPS = [
+  { target:null, tab:null, icon:'👋', title:'Welcome to My Expense Ledger!', body:'This guided tour highlights every button and tab with a golden spotlight. Follow the arrow to learn as you go. Tap <strong>Next</strong> to begin.', arrow:null },
+  { target:"button[onclick*=\"switchTab('import'\"]", tab:'import', icon:'📥', title:'Import Tab — Add Your Expenses', body:'Tap here to open the Import tab. This is where you type or paste your expense entries. Use the month navigator to move between months.', arrow:'down' },
+  { target:'#raw-input', tab:'import', icon:'✍️', title:'The Notepad — Type Your Entries', body:'Type expenses here in plain text. Format: <em>date on one line</em>, then <em>Description: amount</em>. Press <strong>Alt+Enter</strong> to activate, <strong>Ctrl+Enter</strong> to parse.', arrow:'down' },
+  { target:'#parse-btn', tab:'import', icon:'⚡', title:'Parse Button — Read Your Entries', body:'After typing entries, tap Parse (or Ctrl+Enter). The app reads each line, extracts dates, descriptions and amounts, then takes you to Categorize.', arrow:'up' },
+  { target:"button[onclick*=\"switchTab('categorize'\"]", tab:'categorize', icon:'🏷️', title:'Categorize — Sort Your Spending', body:'Every parsed entry appears here. Assign a category to each one — Food, Transport, Bills etc. The app learns your patterns and auto-suggests over time.', arrow:'down' },
+  { target:'#assign-all-btn', tab:'categorize', icon:'💾', title:'Assign All — Save Everything at Once', body:'Once all entries have categories, tap Assign All (or Ctrl+Enter). All entries are saved to your Ledger in one click.', arrow:'up' },
+  { target:"button[onclick*=\"switchTab('ledger'\"]", tab:'ledger', icon:'📋', title:'Ledger — Your Complete Record', body:'The Ledger holds every entry you have saved. Filter by year, month, currency or category. Use ← → arrow keys on your keyboard to flip between pages.', arrow:'down' },
+  { target:"button[onclick*=\"switchTab('daily'\"]", tab:'daily', icon:'📅', title:'Daily View — See Any Day', body:'The Daily tab shows a breakdown of spending for a specific date. Use the date picker to jump to any day and see exactly what was spent.', arrow:'down' },
+  { target:"button[onclick*=\"switchTab('dashboard'\"]", tab:'dashboard', icon:'📊', title:'Dashboard — Charts & Totals', body:'See your spending by category, month and currency. One master filter controls all charts simultaneously — monthly trend, category breakdown, heatmap and year-over-year growth.', arrow:'down' },
+  { target:"button[onclick*=\"switchTab('budget'\"]", tab:'budget', icon:'🎯', title:'Budget — Set Monthly Limits', body:'Set a spending limit per category. Progress bars turn amber at 75% and red when exceeded. Set separate budgets per currency.', arrow:'down' },
+  { target:"button[onclick*=\"switchTab('manage'\"]", tab:'manage', icon:'⚙️', title:'Manage Tab — Your Control Centre', body:'Everything important is here — profile, data deletion, recycle bin, currencies, PIN, CSV export. See the next steps for highlights.', arrow:'down' },
+  { target:'#profile-avatar-emoji', tab:'manage', icon:'😊', title:'Your Profile — Tap to Change Avatar', body:'Your profile shows name, username, country, DOB and age. Tap the avatar circle to pick from 6 categories of emoji — Happy, Animals, Cool, Nature, Food and Sports.', arrow:'right' },
+  { target:'#manage-year-filter', tab:'manage', icon:'🔍', title:'Delete Filter — Select Year First', body:'Select a year → months populate. Select a month → days populate. Only matching entries appear. Then tap Delete to move them to the Recycle Bin.', arrow:'up' },
+  { target:'#trash-year-filter', tab:'manage', icon:'♻️', title:'Recycle Bin — Nothing is Lost Forever', body:'Every deleted entry lands here. Filter by year, month and day. Restore individual entries or entire groups, or permanently remove them.', arrow:'up' },
+  { target:'#hdr-referral-btn', tab:null, icon:'🔗', title:'Referral Link — Invite Friends', body:'Tap the 🔗 icon in the header to get your personal referral link. Share it to invite friends and family.', arrow:'down' },
+  { target:'#mode-switch-btn', tab:null, icon:'🔁', title:'Switch to Income Module', body:'Tap this button to switch between Expenses and Income. Each has its own separate ledger, dashboard, categorize and manage tab.', arrow:'down' },
+  { target:null, tab:null, icon:'🚀', title:"You're Ready!", body:'Start by going to <strong>Import</strong> and adding your first expenses. Everything syncs to the cloud automatically — access from any device anytime.', arrow:null, last:true }
+];
+
+var TOUR_INCOME_STEPS = [
+  { target:null, tab:null, icon:'💰', title:'Income Module Tour', body:'This tour covers the Income module. It works just like Expenses but tracks your earnings. Follow the golden arrow.', arrow:null },
+  { target:"button[onclick*=\"switchIncomeTab('inc-import'\"]", tab:'inc-import', icon:'📥', title:'Income Import — Add Earnings', body:'Paste income entries here. Format: date, then <em>Description: amount</em>. Press Ctrl+Enter to parse. Use Y key to toggle between Month and Year mode.', arrow:'down' },
+  { target:'#inc-raw-input', tab:'inc-import', icon:'✍️', title:'Income Notepad', body:'Type income here — salary, freelance, commissions, tips. One entry per line after the date.', arrow:'down' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-categorize'\"]", tab:'inc-categorize', icon:'🏷️', title:'Income Categorize', body:'Assign income categories — Salary, Freelance, Commission, Rental, Gift etc. The app remembers your patterns and suggests categories.', arrow:'down' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-ledger'\"]", tab:'inc-ledger', icon:'📋', title:'Income Ledger', body:'All income entries in one place. Filter, search and edit categories. Use ← → arrow keys to navigate pages.', arrow:'down' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-monthly'\"]", tab:'inc-monthly', icon:'📅', title:'Monthly Income View', body:'See a month-by-month breakdown of all earnings. Compare months and track your income trend over time.', arrow:'down' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-dashboard'\"]", tab:'inc-dashboard', icon:'📊', title:'Income Dashboard', body:'Charts showing income by category, monthly totals and year-over-year growth. Filter by year, month and currency.', arrow:'down' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-manage'\"]", tab:'inc-manage', icon:'⚙️', title:'Income Manage', body:'Delete income data by year, month or day. Export to CSV, generate PDF reports and manage the income recycle bin.', arrow:'down' },
+  { target:null, tab:null, icon:'🚀', title:'Income Tour Complete!', body:'You now know both modules. Switch between them anytime using the 🔁 button in the header. Your data is always safe.', arrow:null, last:true }
+];
+
+function startTour(mode, force, isReplay) {
+  var key = (mode === 'income') ? ONBOARD_INCOME_KEY : ONBOARD_EXPENSES_KEY;
+  if (!force && localStorage.getItem(key) === '1') return;
+  _onboardIsReplay = !!isReplay;
+  _tourMode  = mode || 'expenses';
+  _tourSteps = (mode === 'income') ? TOUR_INCOME_STEPS : TOUR_EXPENSES_STEPS;
+  _tourIndex = 0;
+  var ho = document.getElementById('help-overlay'); if(ho) ho.style.display='none';
+  var oo = document.getElementById('onboard-overlay'); if(oo) oo.style.display='none';
+  document.getElementById('tour-overlay').style.display  = 'block';
+  document.getElementById('tour-tooltip').style.display  = 'block';
+  _renderTourStep();
+}
+
+function _renderTourStep() {
+  var step  = _tourSteps[_tourIndex];
+  var total = _tourSteps.length;
+  if(step.tab) {
+    if(step.tab.indexOf('inc-')===0) switchIncomeTab(step.tab,null);
+    else switchTab(step.tab,null);
+  }
+  document.getElementById('tour-step-icon').textContent  = step.icon;
+  document.getElementById('tour-step-num').textContent   = 'Step '+(_tourIndex+1)+' of '+total;
+  document.getElementById('tour-step-title').textContent = step.title;
+  document.getElementById('tour-step-body').innerHTML    = step.body;
+  var dotsEl = document.getElementById('tour-dots');
+  dotsEl.innerHTML='';
+  for(var i=0;i<total;i++){
+    var d=document.createElement('div');
+    d.style.cssText='width:7px;height:7px;border-radius:50%;flex-shrink:0;background:'+(i===_tourIndex?'var(--gold)':'#3a3020')+';transition:background 0.2s;';
+    dotsEl.appendChild(d);
+  }
+  var bb=document.getElementById('tour-back-btn'); if(bb) bb.style.visibility=_tourIndex===0?'hidden':'visible';
+  var nb=document.getElementById('tour-next-btn'); if(nb) nb.textContent=step.last?"Let's go! 🚀":'Next →';
+  setTimeout(function(){ _positionTourStep(step); }, 150);
+}
+
+function _positionTourStep(step) {
+  var spotlight  = document.getElementById('tour-spotlight');
+  var arrow      = document.getElementById('tour-arrow');
+  var tooltip    = document.getElementById('tour-tooltip');
+  var maskTop    = document.getElementById('tour-mask-top');
+  var maskBottom = document.getElementById('tour-mask-bottom');
+  var maskLeft   = document.getElementById('tour-mask-left');
+  var maskRight  = document.getElementById('tour-mask-right');
+  var vw=window.innerWidth, vh=window.innerHeight, pad=8;
+
+  function centre() {
+    maskTop.style.cssText='position:absolute;inset:0;background:rgba(0,0,0,0.82);';
+    maskBottom.style.height='0'; maskLeft.style.width='0'; maskRight.style.width='0';
+    spotlight.style.opacity='0'; arrow.style.display='none';
+    var tw=Math.min(360,vw-32);
+    tooltip.style.left=Math.max(16,(vw-tw)/2)+'px';
+    tooltip.style.top=Math.max(80,(vh-300)/2)+'px';
+    tooltip.style.bottom='auto'; tooltip.style.width=tw+'px';
+  }
+
+  if(!step.target){ centre(); return; }
+  var el=document.querySelector(step.target);
+  if(!el){ centre(); return; }
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+
+  setTimeout(function(){
+    var rect=el.getBoundingClientRect();
+    var sx=rect.left-pad, sy=rect.top-pad, sw=rect.width+pad*2, sh=rect.height+pad*2;
+    maskTop.style.cssText='position:absolute;left:0;right:0;top:0;height:'+Math.max(0,sy)+'px;background:rgba(0,0,0,0.78);transition:all 0.3s;';
+    maskBottom.style.cssText='position:absolute;left:0;right:0;bottom:0;height:'+Math.max(0,vh-sy-sh)+'px;background:rgba(0,0,0,0.78);transition:all 0.3s;';
+    maskLeft.style.cssText='position:absolute;left:0;top:'+sy+'px;width:'+Math.max(0,sx)+'px;height:'+sh+'px;background:rgba(0,0,0,0.78);transition:all 0.3s;';
+    maskRight.style.cssText='position:absolute;right:0;top:'+sy+'px;width:'+Math.max(0,vw-sx-sw)+'px;height:'+sh+'px;background:rgba(0,0,0,0.78);transition:all 0.3s;';
+    spotlight.style.cssText='position:absolute;left:'+sx+'px;top:'+sy+'px;width:'+sw+'px;height:'+sh+'px;border:3px solid var(--gold);border-radius:8px;box-shadow:0 0 0 4px rgba(200,150,46,0.25);transition:all 0.3s;opacity:1;pointer-events:none;';
+    var aDir=step.arrow||'down', ax, ay;
+    if(aDir==='down'){  ax=sx+sw/2-16; ay=sy-44;      arrow.innerHTML='&#8595;'; }
+    else if(aDir==='up'){ ax=sx+sw/2-16; ay=sy+sh+8; arrow.innerHTML='&#8593;'; }
+    else if(aDir==='right'){ ax=sx-44; ay=sy+sh/2-16; arrow.innerHTML='&#8594;'; }
+    else{ ax=sx+sw+8; ay=sy+sh/2-16; arrow.innerHTML='&#8592;'; }
+    arrow.style.cssText='position:absolute;left:'+ax+'px;top:'+ay+'px;font-size:2rem;color:var(--gold);pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,0.8);animation:tour-bounce 0.7s ease-in-out infinite alternate;display:block;';
+    var tw=Math.min(360,vw-32);
+    var tx=Math.max(16,Math.min(vw-tw-16,sx+sw/2-tw/2));
+    var ty=sy+sh+48<vh ? sy+sh+48 : Math.max(8,sy-240);
+    tooltip.style.cssText='display:block;position:fixed;z-index:100011;background:var(--ink);border:2px solid var(--gold);border-radius:10px;padding:18px 20px;width:'+tw+'px;left:'+tx+'px;top:'+ty+'px;bottom:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
+  }, 80);
+}
+
+function tourNav(dir) {
+  var newIdx=_tourIndex+dir;
+  if(newIdx<0) return;
+  if(newIdx>=_tourSteps.length){ tourFinish(); return; }
+  _tourIndex=newIdx; _renderTourStep();
+}
+function tourSkip(){ tourFinish(); }
+function tourFinish() {
+  var key=(_tourMode==='income')?ONBOARD_INCOME_KEY:ONBOARD_EXPENSES_KEY;
+  localStorage.setItem(key,'1');
+  document.getElementById('tour-overlay').style.display='none';
+  document.getElementById('tour-tooltip').style.display='none';
+  _onboardIsReplay=false;
+  showToast('Tour complete! Replay anytime from Help → Onboarding 🎓');
+}
+// Add bounce animation
+(function(){ var s=document.createElement('style'); s.textContent='@keyframes tour-bounce{from{transform:translateY(0)}to{transform:translateY(-8px)}}'; document.head.appendChild(s); })();
 
 // ════════════════════════════════
 var GUEST_MODE_KEY = 'expense_guest_mode';
