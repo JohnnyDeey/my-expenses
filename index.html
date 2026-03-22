@@ -2909,6 +2909,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div id="fv-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
         <button onclick="submitFullVerify()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Confirm Identity</button>
         <div style="text-align:center;margin-top:12px;display:flex;flex-direction:column;gap:6px;">
+          <button onclick="showPinPadStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--gold);cursor:pointer;text-decoration:underline;">← Back to Sign In</button>
           <button onclick="switchUser()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Switch user</button>
           <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Forgot your PIN?</button>
         </div>
@@ -7010,9 +7011,9 @@ function renderManagePanel(){
   var yearSel  = document.getElementById('manage-year-filter');
   var monthSel = document.getElementById('manage-month-filter');
   var daySel   = document.getElementById('manage-day-filter');
-  var selYear  = yearSel  ? yearSel.value  : 'all';
-  var selMonth = monthSel ? monthSel.value : 'all';
-  var selDay   = daySel   ? daySel.value   : 'all';
+  var selYear  = yearSel  ? yearSel.value  : 'none';
+  var selMonth = monthSel ? monthSel.value : 'none';
+  var selDay   = daySel   ? daySel.value   : 'none';
 
   // Build available years from data
   var years = [];
@@ -7020,9 +7021,20 @@ function renderManagePanel(){
   years.sort().reverse();
   if(yearSel){
     var prevYear = yearSel.value;
-    yearSel.innerHTML = '<option value="all">All Years</option>' +
+    yearSel.innerHTML = '<option value="none">— Year —</option>' +
       years.map(function(y){ return '<option value="'+y+'"'+(y===prevYear?' selected':'')+'>'+y+'</option>'; }).join('');
     selYear = yearSel.value;
+  }
+
+  // Only populate month/day if year is selected
+  if(selYear === 'none'){
+    if(monthSel) monthSel.innerHTML = '<option value="none">— Month —</option>';
+    if(daySel)   daySel.innerHTML   = '<option value="none">— Day —</option>';
+    var list = document.getElementById('manage-month-list');
+    if(list) list.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:24px;">Select a year to view data</div>';
+    var countEl = document.getElementById('manage-filter-count');
+    if(countEl) countEl.textContent = '';
+    return;
   }
 
   // Build available months for selected year
@@ -7044,7 +7056,7 @@ function renderManagePanel(){
   // Build available days for selected year+month
   var days = [];
   data.forEach(function(i){
-    if((selYear==='all'||i.date.substring(0,4)===selYear) && (selMonth==='all'||i.date.substring(5,7)===selMonth)){
+    if((selYear==='none'||i.date.substring(0,4)===selYear) && (selMonth==='none'||selMonth==='all'||i.date.substring(5,7)===selMonth)){
       var d=i.date.substring(8,10); if(days.indexOf(d)<0) days.push(d);
     }
   });
@@ -7058,9 +7070,9 @@ function renderManagePanel(){
 
   // Filter data
   var filtered = data.filter(function(i){
-    if(selYear  !=='all' && i.date.substring(0,4)  !==selYear)  return false;
-    if(selMonth !=='all' && i.date.substring(5,7)  !==selMonth) return false;
-    if(selDay   !=='all' && i.date.substring(8,10) !==selDay)   return false;
+    if(selYear  !=='none' && selYear !=='all' && i.date.substring(0,4)  !==selYear)  return false;
+    if(selMonth !=='none' && selMonth!=='all' && i.date.substring(5,7)  !==selMonth) return false;
+    if(selDay   !=='none' && selDay  !=='all' && i.date.substring(8,10) !==selDay)   return false;
     return true;
   });
 
@@ -7160,9 +7172,9 @@ function onManageMonthChange() {
   renderManagePanel();
 }
 function resetManageFilters() {
-  var ys=document.getElementById('manage-year-filter');  if(ys) ys.value='all';
-  var ms=document.getElementById('manage-month-filter'); if(ms) ms.value='all';
-  var ds=document.getElementById('manage-day-filter');   if(ds) ds.value='all';
+  var ys=document.getElementById('manage-year-filter');  if(ys) ys.value='none';
+  var ms=document.getElementById('manage-month-filter'); if(ms) ms.value='none';
+  var ds=document.getElementById('manage-day-filter');   if(ds) ds.value='none';
   renderManagePanel();
 }
 
@@ -7716,11 +7728,18 @@ function renderTrashPanel() {
   var years = [];
   trash.forEach(function(t){ if(t.date){ var y=t.date.substring(0,4); if(years.indexOf(y)<0) years.push(y); }});
   years.sort().reverse();
-  if(yearSel){ var cy=yearSel.value; yearSel.innerHTML='<option value="all">All Years</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join(''); selYear=yearSel.value; }
+  if(yearSel){ var cy=yearSel.value; yearSel.innerHTML='<option value="none">— Year —</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join(''); selYear=yearSel.value; }
+
+  if(selYear==='none'){
+    if(monthSel) monthSel.innerHTML='<option value="none">— Month —</option>';
+    if(daySel)   daySel.innerHTML='<option value="none">— Day —</option>';
+    el.innerHTML='<div style="text-align:center;padding:24px;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);">Select a year to filter</div>';
+    return;
+  }
 
   // Dynamic months
   var months=[];
-  trash.forEach(function(t){ if(t.date&&(selYear==='all'||t.date.substring(0,4)===selYear)){ var m=t.date.substring(5,7); if(months.indexOf(m)<0) months.push(m); }});
+  trash.forEach(function(t){ if(t.date&&(selYear==='none'||t.date.substring(0,4)===selYear)){ var m=t.date.substring(5,7); if(months.indexOf(m)<0) months.push(m); }});
   months.sort();
   if(monthSel){ var cm=monthSel.value; monthSel.innerHTML='<option value="all">All Months</option>'+months.map(function(m){ return '<option value="'+m+'"'+(m===cm?' selected':'')+'>'+MONTH_NAMES[parseInt(m)-1]+'</option>'; }).join(''); selMonth=monthSel.value; }
 
@@ -7732,9 +7751,9 @@ function renderTrashPanel() {
 
   // Filter
   var filtered = trash.slice();
-  if(selYear !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(0,4)===selYear; });
-  if(selMonth!=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(5,7)===selMonth; });
-  if(selDay  !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(8,10)===selDay; });
+  if(selYear !=='none'&&selYear !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(0,4)===selYear; });
+  if(selMonth!=='none'&&selMonth!=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(5,7)===selMonth; });
+  if(selDay  !=='none'&&selDay  !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(8,10)===selDay; });
   filtered.sort(function(a,b){ return (b._trash_date||'').localeCompare(a._trash_date||''); });
 
   el.innerHTML = '';
@@ -10745,23 +10764,31 @@ function renderIncomeManage() {
   years.sort().reverse();
   if(yearSel){
     var pY=yearSel.value;
-    yearSel.innerHTML='<option value="all">All Years</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===pY?' selected':'')+'>'+y+'</option>'; }).join('');
+    yearSel.innerHTML='<option value="none">— Year —</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===pY?' selected':'')+'>'+y+'</option>'; }).join('');
     selYear=yearSel.value;
+  }
+
+  if(selYear==='none'){
+    if(monthSel) monthSel.innerHTML='<option value="none">— Month —</option>';
+    if(daySel)   daySel.innerHTML='<option value="none">— Day —</option>';
+    if(listEl) listEl.innerHTML='<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:24px;">Select a year to view data</div>';
+    var cEl=document.getElementById('inc-manage-filter-count'); if(cEl) cEl.textContent='';
+    renderIncomeTrash(); return;
   }
 
   // Build months
   var months=[];
-  data.forEach(function(i){ if(selYear==='all'||i.date.substring(0,4)===selYear){ var m=i.date.substring(5,7); if(months.indexOf(m)<0) months.push(m); } });
+  data.forEach(function(i){ if(selYear==='none'||selYear==='all'||i.date.substring(0,4)===selYear){ var m=i.date.substring(5,7); if(months.indexOf(m)<0) months.push(m); } });
   months.sort();
   if(monthSel){
     var pM=monthSel.value;
-    monthSel.innerHTML='<option value="all">All Months</option>'+months.map(function(m){ return '<option value="'+m+'"'+(m===pM?' selected':'')+'>'+MONTH_NAMES[parseInt(m)-1]+'</option>'; }).join('');
+    monthSel.innerHTML='<option value="none">— Month —</option>'+months.map(function(m){ return '<option value="'+m+'"'+(m===pM?' selected':'')+'>'+MONTH_NAMES[parseInt(m)-1]+'</option>'; }).join('');
     selMonth=monthSel.value;
   }
 
   // Build days
   var daysArr=[];
-  data.forEach(function(i){ if((selYear==='all'||i.date.substring(0,4)===selYear)&&(selMonth==='all'||i.date.substring(5,7)===selMonth)){ var d=i.date.substring(8,10); if(daysArr.indexOf(d)<0) daysArr.push(d); } });
+  data.forEach(function(i){ if((selYear==='none'||selYear==='all'||i.date.substring(0,4)===selYear)&&(selMonth==='none'||selMonth==='all'||i.date.substring(5,7)===selMonth)){ var d=i.date.substring(8,10); if(daysArr.indexOf(d)<0) daysArr.push(d); } });
   daysArr.sort();
   if(daySel){
     var pD=daySel.value;
@@ -10770,9 +10797,9 @@ function renderIncomeManage() {
   }
 
   var filtered = data.filter(function(i){
-    if(selYear!=='all'&&i.date.substring(0,4)!==selYear) return false;
-    if(selMonth!=='all'&&i.date.substring(5,7)!==selMonth) return false;
-    if(selDay!=='all'&&i.date.substring(8,10)!==selDay) return false;
+    if(selYear!=='none'&&selYear!=='all'&&i.date.substring(0,4)!==selYear) return false;
+    if(selMonth!=='none'&&selMonth!=='all'&&i.date.substring(5,7)!==selMonth) return false;
+    if(selDay!=='none'&&selDay!=='all'&&i.date.substring(8,10)!==selDay) return false;
     return true;
   });
 
@@ -10831,9 +10858,9 @@ function onIncManageMonthChange() {
   renderIncomeManage();
 }
 function resetIncManageFilters() {
-  var ys=document.getElementById('inc-manage-year-filter');  if(ys) ys.value='all';
-  var ms=document.getElementById('inc-manage-month-filter'); if(ms) ms.value='all';
-  var ds=document.getElementById('inc-manage-day-filter');   if(ds) ds.value='all';
+  var ys=document.getElementById('inc-manage-year-filter');  if(ys) ys.value='none';
+  var ms=document.getElementById('inc-manage-month-filter'); if(ms) ms.value='none';
+  var ds=document.getElementById('inc-manage-day-filter');   if(ds) ds.value='none';
   renderIncomeManage();
 }
 
@@ -10983,11 +11010,18 @@ function renderIncomeTrash() {
   var years=[];
   trash.forEach(function(t){ if(t.date){ var y=t.date.substring(0,4); if(years.indexOf(y)<0) years.push(y); }});
   years.sort().reverse();
-  if(yearSel){ var cy=yearSel.value; yearSel.innerHTML='<option value="all">All Years</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join(''); selYear=yearSel.value; }
+  if(yearSel){ var cy=yearSel.value; yearSel.innerHTML='<option value="none">— Year —</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join(''); selYear=yearSel.value; }
+
+  if(selYear==='none'){
+    if(monthSel) monthSel.innerHTML='<option value="none">— Month —</option>';
+    if(daySel)   daySel.innerHTML='<option value="none">— Day —</option>';
+    el.innerHTML='<div style="text-align:center;padding:24px;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);">Select a year to filter</div>';
+    return;
+  }
 
   // Dynamic months
   var months=[];
-  trash.forEach(function(t){ if(t.date&&(selYear==='all'||t.date.substring(0,4)===selYear)){ var m=t.date.substring(5,7); if(months.indexOf(m)<0) months.push(m); }});
+  trash.forEach(function(t){ if(t.date&&(selYear==='none'||t.date.substring(0,4)===selYear)){ var m=t.date.substring(5,7); if(months.indexOf(m)<0) months.push(m); }});
   months.sort();
   if(monthSel){ var cm=monthSel.value; monthSel.innerHTML='<option value="all">All Months</option>'+months.map(function(m){ return '<option value="'+m+'"'+(m===cm?' selected':'')+'>'+MONTH_NAMES[parseInt(m)-1]+'</option>'; }).join(''); selMonth=monthSel.value; }
 
@@ -10999,9 +11033,9 @@ function renderIncomeTrash() {
 
   // Filter
   var filtered = trash.slice();
-  if(selYear !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(0,4)===selYear; });
-  if(selMonth!=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(5,7)===selMonth; });
-  if(selDay  !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(8,10)===selDay; });
+  if(selYear !=='none'&&selYear !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(0,4)===selYear; });
+  if(selMonth!=='none'&&selMonth!=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(5,7)===selMonth; });
+  if(selDay  !=='none'&&selDay  !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(8,10)===selDay; });
 
   el.innerHTML = '';
   // Groups
@@ -12768,21 +12802,13 @@ function showOnboardingPrompt() {
     localStorage.removeItem('expense_onboard_expenses_done');
     localStorage.removeItem('expense_onboard_income_done');
     var isExistingUser = !!localStorage.getItem(UID_KEY);
-    if (isExistingUser) {
+    var hasPinHash = !!localStorage.getItem('expense_pin_hash_local');
+    if (isExistingUser || hasPinHash) {
       // Existing user — let them log in normally, run update flow 60s after entering app
-      // Do NOT remove privacy_ok here — that would block login
       localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
       sessionStorage.setItem('run_update_flow', '1');
-    } else {
-      // Brand new user — force T&C at gate before anything
-      localStorage.removeItem(_privacyKey());
-      setTimeout(function() {
-        if (localStorage.getItem(_privacyKey()) !== PRIVACY_VER
-          && !sessionStorage.getItem('tc_signed_this_session')) {
-          if (typeof _showPrivacyOverlay === 'function') _showPrivacyOverlay();
-        }
-      }, 800);
     }
+    // New users: T&C shown during Sign Up flow — no auto-flash at page load
   }
 })();
 
