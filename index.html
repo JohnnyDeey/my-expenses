@@ -2129,6 +2129,42 @@ input[type="password"]::-ms-clear { display:none !important; }
     <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="showDeleteAccountOverlay()">&#128465; Delete My Account</button>
   </div>
 
+  <!-- ── Guest Profile (only visible in guest mode) ── -->
+  <div id="guest-profile-card" style="display:none;margin-top:8px;">
+    <div class="card" style="border-left:4px solid var(--gold);">
+      <label>&#127891; Guest Profile</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+        <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">NICKNAME</div>
+          <div id="guest-profile-name" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);">—</div>
+        </div>
+        <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MODE</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--gold);">Guest</div>
+        </div>
+        <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">DATA STORAGE</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);">This device only</div>
+        </div>
+        <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">CLOUD SYNC</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--rust);">Not available</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px 12px;background:#fffbf0;border:1px solid var(--gold);border-radius:6px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--ink);line-height:1.7;">
+        &#128274; Full account features unlock at age 16. Your data will migrate when you upgrade.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── App Version & Copyright ── -->
+  <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
+    <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.2.0</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
+  </div>
+
 </div>
 
 <!-- ══ BUDGET ══ -->
@@ -2464,6 +2500,14 @@ input[type="password"]::-ms-clear { display:none !important; }
     <label style="display:flex;align-items:center;gap:8px;color:var(--rust);">&#9888; Delete My Account &amp; All Data</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Permanently delete your account and all associated data from our servers. This cannot be undone.</p>
     <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="showDeleteAccountOverlay()">&#128465; Delete My Account</button>
+  </div>
+
+  <!-- ── App Version & Copyright ── -->
+  <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
+    <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.2.0</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
   </div>
 </div>
 </div><!-- end income-main -->
@@ -11237,11 +11281,7 @@ function submitPinLogin() {
     });
   }
   showToast('Welcome back, ' + name + '!');
-  // Fire onboarding if new version
-  if (sessionStorage.getItem('new_app_version') === '1') {
-    sessionStorage.removeItem('new_app_version');
-    setTimeout(function(){ startOnboarding(_appMode, true); }, 1200);
-  }
+  // NOTE: onboarding/privacy handled by 60s flow inside app — not at login
 }
 
 // ── Full verify (username OR phone + PIN, against Firebase) ──
@@ -11513,6 +11553,12 @@ function showFullVerifyStep() {
 // ── _resumeSession: enter app immediately, fire Firebase sync in background ──
 function _resumeSession(uid, name, phone) {
   _userId = uid; _userName = name; _userPhone = phone;
+  // Clear guest mode — a real registered user is logging in
+  _isGuestMode = false;
+  localStorage.removeItem(GUEST_MODE_KEY);
+  localStorage.removeItem('expense_guest_nickname');
+  var guestBanner = document.getElementById('guest-banner');
+  if (guestBanner) guestBanner.style.display = 'none';
   // Clear cached tail so getInitials recalculates with correct first-2-digits logic
   localStorage.removeItem(PHONE_TAIL_KEY);
   localStorage.setItem('last_active', String(Date.now()));
@@ -11543,19 +11589,14 @@ function _resumeSession(uid, name, phone) {
   if (sessionStorage.getItem('run_update_flow') === '1') {
     setTimeout(function() {
       sessionStorage.removeItem('run_update_flow');
-      // Now clear privacy_ok so the flow forces re-acceptance
       localStorage.removeItem('privacy_ok');
       _startUpdateFlow();
-    }, 60000); // 60 seconds
+    }, 60000);
   } else {
     // Check phone/DOB confirmation for users who haven't done it yet
     setTimeout(function() { checkExistingUserConfirmation(); }, 60000);
   }
-  // Fire onboarding IMMEDIATELY on new version — before any async sync
-  if (sessionStorage.getItem('new_app_version') === '1') {
-    sessionStorage.removeItem('new_app_version');
-    setTimeout(function(){ startOnboarding(_appMode, true); }, 1000);
-  }
+  // NOTE: Do NOT fire onboarding or privacy here for existing users — handled by 60s flow
   // Fire sync in background — app is already usable
   loadIncomeFromFirebase(function(){});
   getDB(function() {
@@ -11582,13 +11623,6 @@ function syncInit() {
   var wasRecentlyActive = lastActive > 0 && (Date.now() - lastActive) < INACTIVE_MS;
 
   if (uid && name && phone && pinHash && (isActiveSession || wasRecentlyActive)) {
-    // If new version AND T&C not yet signed — force PIN so T&C shows
-    var tcNotSigned = localStorage.getItem('privacy_ok') !== PRIVACY_VER;
-    if (sessionStorage.getItem('new_app_version') === '1' && tcNotSigned) {
-      showPinScreen();
-      showPinPadStep();
-      return;
-    }
     // Hide pin-overlay IMMEDIATELY — session is valid, no need to show lock screen
     var pinOv = document.getElementById('pin-overlay');
     if (pinOv) pinOv.style.display = 'none';
@@ -13634,7 +13668,8 @@ function submitDobOnly() {
   var dob   = (document.getElementById('dob-only-input') || {}).value;
   var errEl = document.getElementById('dob-only-error');
   if (!dob) { if(errEl) errEl.textContent = 'Please enter your date of birth.'; return; }
-  if (_isUnderage(dob)) {
+  var isRegisteredUser = !!localStorage.getItem(UID_KEY);
+  if (!isRegisteredUser && _isUnderage(dob)) {
     var o = document.getElementById('dob-only-overlay'); if(o) o.style.display='none';
     showUnderageScreen(); return;
   }
@@ -13686,7 +13721,7 @@ function checkExistingUserConfirmation() {
   var notice = document.createElement('div');
   notice.id = 'phone-confirm-notice';
   notice.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99993;background:var(--paper);border:2px solid var(--gold);border-radius:8px;padding:16px 18px;width:90%;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
-  notice.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--ink);">📋 One-time verification needed</span><button onclick="document.getElementById(\'phone-confirm-notice\').remove()" style="background:none;border:none;font-size:1rem;cursor:pointer;color:var(--muted);">✕</button></div><p style="font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);line-height:1.6;margin-bottom:12px;">To comply with data protection laws, please confirm your country and date of birth. Takes 30 seconds.</p><button onclick="showPhoneConfirmOverlay()" style="width:100%;padding:10px;background:var(--gold);border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:var(--ink);cursor:pointer;letter-spacing:1px;">CONFIRM NOW</button><button onclick="document.getElementById(\'phone-confirm-notice\').remove()" style="width:100%;padding:8px;background:none;border:none;font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);cursor:pointer;margin-top:4px;">Remind me later</button>';
+  notice.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--ink);">📋 Action Required</span></div><p style="font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);line-height:1.6;margin-bottom:6px;">To continue using the app, please confirm your country and date of birth. This is required by data protection regulations.</p><p style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--rust);margin-bottom:12px;">⚠️ You must complete this before continuing.</p><button onclick="showPhoneConfirmOverlay()" style="width:100%;padding:10px;background:var(--gold);border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:var(--ink);cursor:pointer;letter-spacing:1px;">CONFIRM NOW →</button>';
   document.body.appendChild(notice);
 }
 function showPhoneConfirmOverlay() {
@@ -13700,7 +13735,9 @@ function submitPhoneConfirm() {
   var number = (document.getElementById('confirm-phone-number') || {}).value.trim();
   var errEl  = document.getElementById('phone-confirm-error');
   if(!dob) { if(errEl) errEl.textContent='Please enter your date of birth.'; return; }
-  if(_isUnderage(dob)) {
+  // Only block underage for NEW registrations — existing registered users get benefit of doubt
+  var isRegisteredUser = !!localStorage.getItem(UID_KEY);
+  if(!isRegisteredUser && _isUnderage(dob)) {
     var o = document.getElementById('phone-confirm-overlay'); if(o) o.style.display='none';
     showUnderageScreen(); return;
   }
@@ -13713,7 +13750,6 @@ function submitPhoneConfirm() {
   if(_db && _userId) userCol('settings').doc('profile').set({dob:dob,country:country,dial:dial,phone:dial+number,age:_calcAge(dob),updated:Date.now()},{merge:true}).catch(function(){});
   var o = document.getElementById('phone-confirm-overlay'); if(o) o.style.display='none';
   showToast('✅ Details confirmed. Thank you!');
-  // If update flow active — proceed to next step
   if (_updateFlowActive && typeof window._submitPhoneConfirmCallback === 'function') {
     setTimeout(function(){ window._submitPhoneConfirmCallback(); window._submitPhoneConfirmCallback = null; }, 400);
   }
@@ -13771,8 +13807,8 @@ function _applyGuestMode() {
   _isGuestMode = true;
   var banner = document.getElementById('guest-banner');
   if (banner) banner.style.display = 'flex';
-  // Hide advanced tabs in expenses module
-  ['dashboard','budget','manage'].forEach(function(tab) {
+  // Hide advanced tabs in expenses module — but KEEP manage for profile
+  ['dashboard','budget'].forEach(function(tab) {
     var btns = document.querySelectorAll("button[onclick*=\"switchTab('"+tab+"'\"]");
     btns.forEach(function(b){ b.style.display='none'; });
   });
@@ -13781,7 +13817,35 @@ function _applyGuestMode() {
     var btns = document.querySelectorAll("button[onclick*=\"switchIncomeTab('"+tab+"'\"]");
     btns.forEach(function(b){ b.style.display='none'; });
   });
-  // Keep income module switch visible — guests can use both modules
+  // In manage tab — hide everything except profile card and version footer
+  // by showing only the guest profile card and hiding full-user cards
+  setTimeout(function() {
+    var guestCard = document.getElementById('guest-profile-card');
+    if (guestCard) {
+      guestCard.style.display = 'block';
+      // Populate guest profile
+      var nn = localStorage.getItem('expense_guest_nickname') || 'Guest';
+      var nameEl = document.getElementById('guest-profile-name');
+      if (nameEl) nameEl.textContent = nn;
+    }
+    // Hide cards that guests don't need
+    var hideIds = [
+      'sync-setup-content','manage-month-list',
+      'currency-manager-content','current-fullname-display',
+      'current-username-display'
+    ];
+    // Hide all full-user cards in manage panel except profile card and version
+    var manageCards = document.querySelectorAll('#panel-manage .card:not(#guest-profile-card):not(.profile-card-main)');
+    manageCards.forEach(function(c){
+      // Keep the user profile card (first card) and guest profile card
+      if (!c.querySelector('#profile-avatar-emoji') && !c.querySelector('#guest-profile-name')) {
+        c.style.display = 'none';
+      }
+    });
+    // Also hide the manage-grid (data overview + delete by month)
+    var mg = document.querySelector('#panel-manage .manage-grid');
+    if (mg) mg.style.display = 'none';
+  }, 200);
   // Hide referral button
   var rb = document.getElementById('hdr-referral-btn');
   if (rb) rb.style.display = 'none';
