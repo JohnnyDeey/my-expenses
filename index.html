@@ -3097,10 +3097,10 @@ input[type="password"]::-ms-clear { display:none !important; }
 <!-- ══ SPOTLIGHT TOUR ══ -->
 <div id="tour-overlay" style="display:none;position:fixed;inset:0;z-index:100010;pointer-events:none;">
   <!-- Dark mask - 4 rectangles around spotlight -->
-  <div id="tour-mask-top"    style="position:absolute;left:0;right:0;top:0;background:rgba(0,0,0,0.75);transition:all 0.35s ease;"></div>
-  <div id="tour-mask-bottom" style="position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);transition:all 0.35s ease;"></div>
-  <div id="tour-mask-left"   style="position:absolute;top:0;bottom:0;left:0;background:rgba(0,0,0,0.75);transition:all 0.35s ease;"></div>
-  <div id="tour-mask-right"  style="position:absolute;top:0;bottom:0;right:0;background:rgba(0,0,0,0.75);transition:all 0.35s ease;"></div>
+  <div id="tour-mask-top"    style="position:absolute;left:0;right:0;top:0;background:transparent;transition:all 0.35s ease;"></div>
+  <div id="tour-mask-bottom" style="position:absolute;left:0;right:0;bottom:0;background:transparent;transition:all 0.35s ease;"></div>
+  <div id="tour-mask-left"   style="position:absolute;top:0;bottom:0;left:0;background:transparent;transition:all 0.35s ease;"></div>
+  <div id="tour-mask-right"  style="position:absolute;top:0;bottom:0;right:0;background:transparent;transition:all 0.35s ease;"></div>
   <!-- Spotlight border -->
   <div id="tour-spotlight"   style="position:absolute;border:3px solid var(--gold);border-radius:8px;box-shadow:0 0 0 4px rgba(200,150,46,0.3);transition:all 0.35s ease;pointer-events:none;"></div>
   <!-- Arrow -->
@@ -14198,12 +14198,15 @@ function _positionTourStep(step) {
   var vw=window.innerWidth, vh=window.innerHeight, pad=8;
 
   function centre() {
-    maskTop.style.cssText='position:absolute;inset:0;background:rgba(0,0,0,0.82);';
+    maskTop.style.cssText='position:absolute;inset:0;background:transparent;';
     maskBottom.style.height='0'; maskLeft.style.width='0'; maskRight.style.width='0';
     spotlight.style.opacity='0'; arrow.style.display='none';
     var tw=Math.min(360,vw-32);
-    tooltip.style.left=Math.max(16,(vw-tw)/2)+'px';
-    tooltip.style.top=Math.max(80,(vh-300)/2)+'px';
+    var tx=Math.max(16,(vw-tw)/2);
+    // Always keep tooltip fully on screen — prefer centre vertically
+    var ty=Math.max(80,Math.min(vh-320,(vh-300)/2));
+    tooltip.style.left=tx+'px';
+    tooltip.style.top=ty+'px';
     tooltip.style.bottom='auto'; tooltip.style.width=tw+'px';
   }
 
@@ -14215,10 +14218,11 @@ function _positionTourStep(step) {
   setTimeout(function(){
     var rect=el.getBoundingClientRect();
     var sx=rect.left-pad, sy=rect.top-pad, sw=rect.width+pad*2, sh=rect.height+pad*2;
-    maskTop.style.cssText='position:absolute;left:0;right:0;top:0;height:'+Math.max(0,sy)+'px;background:rgba(0,0,0,0.78);transition:all 0.3s;';
-    maskBottom.style.cssText='position:absolute;left:0;right:0;bottom:0;height:'+Math.max(0,vh-sy-sh)+'px;background:rgba(0,0,0,0.78);transition:all 0.3s;';
-    maskLeft.style.cssText='position:absolute;left:0;top:'+sy+'px;width:'+Math.max(0,sx)+'px;height:'+sh+'px;background:rgba(0,0,0,0.78);transition:all 0.3s;';
-    maskRight.style.cssText='position:absolute;right:0;top:'+sy+'px;width:'+Math.max(0,vw-sx-sw)+'px;height:'+sh+'px;background:rgba(0,0,0,0.78);transition:all 0.3s;';
+    // Masks stay transparent — just move them (no colour)
+    maskTop.style.cssText='position:absolute;left:0;right:0;top:0;height:'+Math.max(0,sy)+'px;background:transparent;transition:all 0.3s;';
+    maskBottom.style.cssText='position:absolute;left:0;right:0;bottom:0;height:'+Math.max(0,vh-sy-sh)+'px;background:transparent;transition:all 0.3s;';
+    maskLeft.style.cssText='position:absolute;left:0;top:'+sy+'px;width:'+Math.max(0,sx)+'px;height:'+sh+'px;background:transparent;transition:all 0.3s;';
+    maskRight.style.cssText='position:absolute;right:0;top:'+sy+'px;width:'+Math.max(0,vw-sx-sw)+'px;height:'+sh+'px;background:transparent;transition:all 0.3s;';
     spotlight.style.cssText='position:absolute;left:'+sx+'px;top:'+sy+'px;width:'+sw+'px;height:'+sh+'px;border:3px solid var(--gold);border-radius:8px;box-shadow:0 0 0 4px rgba(200,150,46,0.25);transition:all 0.3s;opacity:1;pointer-events:none;';
     var aDir=step.arrow||'down', ax, ay;
     if(aDir==='down'){  ax=sx+sw/2-16; ay=sy-44;      arrow.innerHTML='&#8595;'; }
@@ -14226,10 +14230,31 @@ function _positionTourStep(step) {
     else if(aDir==='right'){ ax=sx-44; ay=sy+sh/2-16; arrow.innerHTML='&#8594;'; }
     else{ ax=sx+sw+8; ay=sy+sh/2-16; arrow.innerHTML='&#8592;'; }
     arrow.style.cssText='position:absolute;left:'+ax+'px;top:'+ay+'px;font-size:2rem;color:var(--gold);pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,0.8);animation:tour-bounce 0.7s ease-in-out infinite alternate;display:block;';
+
+    // ── Tooltip positioning — ALWAYS stay fully on screen ──
     var tw=Math.min(360,vw-32);
-    var tx=Math.max(16,Math.min(vw-tw-16,sx+sw/2-tw/2));
-    var ty=sy+sh+48<vh ? sy+sh+48 : Math.max(8,sy-240);
-    tooltip.style.cssText='display:block;position:fixed;z-index:100011;background:var(--ink);border:2px solid var(--gold);border-radius:10px;padding:18px 20px;width:'+tw+'px;left:'+tx+'px;top:'+ty+'px;bottom:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
+    var tx=Math.max(16,Math.min(vw-tw-16, sx+sw/2-tw/2));
+
+    // Estimate tooltip height (~220px)
+    var tooltipH = 240;
+    var spaceBelow = vh - (sy+sh);
+    var spaceAbove = sy;
+    var ty;
+
+    if(spaceBelow >= tooltipH + 16) {
+      // Enough room below spotlight
+      ty = sy + sh + 16;
+    } else if(spaceAbove >= tooltipH + 16) {
+      // Enough room above spotlight
+      ty = sy - tooltipH - 16;
+    } else {
+      // Not enough room either side — pin to bottom of screen with margin
+      ty = Math.max(8, vh - tooltipH - 16);
+    }
+    // Final clamp — never go off screen top or bottom
+    ty = Math.max(8, Math.min(vh - tooltipH - 8, ty));
+
+    tooltip.style.cssText='display:block;position:fixed;z-index:100011;background:var(--ink);border:2px solid var(--gold);border-radius:10px;padding:18px 20px;width:'+tw+'px;left:'+tx+'px;top:'+ty+'px;bottom:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6);max-height:'+(vh-ty-16)+'px;overflow-y:auto;';
   }, 80);
 }
 
