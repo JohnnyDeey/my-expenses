@@ -1909,9 +1909,10 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- ── USER PROFILE CARD ── -->
   <div class="card" style="margin-bottom:18px;border-left:4px solid var(--gold);">
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
-      <!-- Avatar -->
-      <div style="width:64px;height:64px;border-radius:50%;background:var(--ink);border:3px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <span id="profile-avatar-initials" style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--gold2);">?</span>
+      <!-- Clickable Avatar -->
+      <div onclick="showAvatarPicker()" style="width:64px;height:64px;border-radius:50%;background:var(--ink);border:3px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;position:relative;" title="Tap to change avatar">
+        <span id="profile-avatar-emoji" style="font-size:2rem;line-height:1;">😊</span>
+        <span style="position:absolute;bottom:-2px;right:-2px;background:var(--gold);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;">✏️</span>
       </div>
       <div>
         <div id="profile-display-name" style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--ink);">—</div>
@@ -2608,6 +2609,25 @@ input[type="password"]::-ms-clear { display:none !important; }
     <button onclick="startGuestMode()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:10px;">&#127891; START GUEST MODE</button>
     <button onclick="document.getElementById('underage-overlay').style.display='none';showPinPadStep();" style="width:100%;padding:10px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;">← Back to Sign In</button>
     <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a3e30;margin-top:14px;line-height:1.7;">When you turn 16, you can upgrade to a full account and keep all your data.</div>
+  </div>
+</div>
+
+<!-- ══ AVATAR PICKER OVERLAY ══ -->
+<div id="avatar-picker-overlay" style="display:none;position:fixed;inset:0;z-index:99995;background:rgba(26,20,16,0.92);align-items:flex-end;justify-content:center;padding:0;">
+  <div style="background:var(--paper);border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:24px 20px 32px;max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--ink);">Choose Your Avatar</div>
+      <button onclick="closeAvatarPicker()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);padding:0 4px;">✕</button>
+    </div>
+    <!-- Categories -->
+    <div id="avatar-categories" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
+    <!-- Emoji grid -->
+    <div id="avatar-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;"></div>
+    <!-- Selected preview -->
+    <div id="avatar-preview-bar" style="display:none;margin-top:16px;padding:12px;background:var(--paper2);border-radius:8px;display:flex;align-items:center;gap:14px;">
+      <span id="avatar-preview-emoji" style="font-size:2.4rem;"></span>
+      <button onclick="saveAvatar()" style="flex:1;padding:12px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:700;color:var(--ink);cursor:pointer;letter-spacing:1px;">✓ USE THIS AVATAR</button>
+    </div>
   </div>
 </div>
 
@@ -6840,8 +6860,7 @@ function clearAllCancel(){
 // ════════════════════════════════
 
 function renderUserProfileCard() {
-  // Avatar initials
-  var initEl  = document.getElementById('profile-avatar-initials');
+  var initEl  = document.getElementById('profile-avatar-emoji');
   var nameEl  = document.getElementById('profile-display-name');
   var userEl  = document.getElementById('profile-username');
   var sinceEl = document.getElementById('profile-member-since');
@@ -6849,27 +6868,21 @@ function renderUserProfileCard() {
   var dobEl   = document.getElementById('profile-dob');
   var ageEl   = document.getElementById('profile-age');
   var phoneEl = document.getElementById('profile-phone');
-  if (!initEl) return;
+  if (!nameEl) return;
 
   var fullName = localStorage.getItem(FULL_NAME_KEY) || _userName || '?';
   var username = _userName || '—';
   var country  = localStorage.getItem('expense_user_country') || '—';
   var dob      = localStorage.getItem('expense_user_dob') || '';
   var dial     = localStorage.getItem('expense_user_dial') || '';
+  var savedAvatar = localStorage.getItem(AVATAR_KEY) || '😊';
 
-  // Initials from full name
-  var parts    = fullName.trim().split(' ').filter(Boolean);
-  var initials = parts.length >= 2
-    ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase()
-    : fullName.substring(0,2).toUpperCase();
-
-  if (initEl)   initEl.textContent  = initials;
+  if (initEl)   initEl.textContent  = savedAvatar;
   if (nameEl)   nameEl.textContent  = fullName;
   if (userEl)   userEl.textContent  = '@' + username;
   if (countryEl) countryEl.textContent = country;
   if (phoneEl)  phoneEl.textContent = dial ? dial + ' ••••••' : '—';
 
-  // DOB and age
   if (dob) {
     var dobDate = new Date(dob);
     if (dobEl) dobEl.textContent = dobDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
@@ -6879,7 +6892,6 @@ function renderUserProfileCard() {
     if (ageEl) ageEl.textContent = '—';
   }
 
-  // Member since — use UID creation if available, else first entry date
   if (sinceEl) {
     var firstEntry = loadData().sort(function(a,b){ return a.date.localeCompare(b.date); })[0];
     if (firstEntry) {
@@ -11527,16 +11539,18 @@ function _resumeSession(uid, name, phone) {
   }, 50);
   setTimeout(function() { checkInactivity(); }, 500);
   setTimeout(checkBackupReminder, 3000);
-  // Run mandatory sequential update flow if needed
-  setTimeout(function() {
-    if (sessionStorage.getItem('run_update_flow') === '1') {
+  // Run mandatory sequential update flow 60 seconds after entering app
+  if (sessionStorage.getItem('run_update_flow') === '1') {
+    setTimeout(function() {
       sessionStorage.removeItem('run_update_flow');
+      // Now clear privacy_ok so the flow forces re-acceptance
+      localStorage.removeItem('privacy_ok');
       _startUpdateFlow();
-    } else {
-      // Check phone/DOB confirmation for users who haven't done it yet
-      checkExistingUserConfirmation();
-    }
-  }, 1500);
+    }, 60000); // 60 seconds
+  } else {
+    // Check phone/DOB confirmation for users who haven't done it yet
+    setTimeout(function() { checkExistingUserConfirmation(); }, 60000);
+  }
   // Fire onboarding IMMEDIATELY on new version — before any async sync
   if (sessionStorage.getItem('new_app_version') === '1') {
     sessionStorage.removeItem('new_app_version');
@@ -12537,9 +12551,9 @@ function showOnboardingPrompt() {
     localStorage.removeItem('expense_onboard_income_done');
     var isExistingUser = !!localStorage.getItem(UID_KEY);
     if (isExistingUser) {
-      // Existing user — force sequential mandatory flow after login
-      localStorage.removeItem('privacy_ok'); // must re-sign
-      localStorage.setItem(APP_VERSION_KEY, APP_VERSION); // save version now
+      // Existing user — let them log in normally, run update flow 60s after entering app
+      // Do NOT remove privacy_ok here — that would block login
+      localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
       sessionStorage.setItem('run_update_flow', '1');
     } else {
       // Brand new user — force T&C at gate before anything
@@ -13526,7 +13540,94 @@ try {
 } catch(err) { /* fail silently */ }
 
 // ════════════════════════════════
-//  GUEST MODE (under 16)
+//  AVATAR PICKER
+// ════════════════════════════════
+var AVATAR_KEY = 'expense_user_avatar';
+var _selectedAvatarEmoji = '';
+
+var AVATAR_CATEGORIES = [
+  { label: '😊 Happy',    emojis: ['😊','😄','😁','😀','🙂','😇','🥰','😍','🤩','😎','🤓','🧐','😏','😌','🥳','😜','🤪','😋','🤗','😤','🤔','😴','🤫','🫡'] },
+  { label: '🐶 Animals',  emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺'] },
+  { label: '🌟 Cool',     emojis: ['🌟','⭐','💫','✨','🔥','💥','❄️','🌈','☀️','🌙','⚡','💎','👑','🏆','🎯','🎸','🎮','🚀','💡','🧠','💪','🦾','🫀','🎭'] },
+  { label: '🌿 Nature',   emojis: ['🌿','🌸','🌺','🌻','🌹','🍀','🌴','🌵','🎄','🍁','🍃','🌊','🏔️','🌋','🌍','🌞','🌝','🌚','🌕','🌖','⭐','🌠','☁️','🌤️'] },
+  { label: '🍕 Food',     emojis: ['🍕','🍔','🍟','🌮','🍣','🍜','🍩','🎂','🍰','🧁','🍫','🍭','☕','🧋','🍺','🥤','🍓','🍇','🍊','🍋','🥑','🌽','🥦','🧀'] },
+  { label: '⚽ Sports',   emojis: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸','🥊','🎯','🏹','🥋','🤸','⛷️','🏊','🚴','🏋️','🤾','🧗','🏇','🤺','🏌️'] },
+];
+
+var _currentCategory = 0;
+
+function showAvatarPicker() {
+  var o = document.getElementById('avatar-picker-overlay');
+  if (!o) return;
+  _selectedAvatarEmoji = localStorage.getItem(AVATAR_KEY) || '';
+  _renderAvatarCategories();
+  _renderAvatarGrid(0);
+  o.style.display = 'flex';
+}
+
+function closeAvatarPicker() {
+  var o = document.getElementById('avatar-picker-overlay');
+  if (o) o.style.display = 'none';
+  _selectedAvatarEmoji = '';
+  var pb = document.getElementById('avatar-preview-bar');
+  if (pb) pb.style.display = 'none';
+}
+
+function _renderAvatarCategories() {
+  var el = document.getElementById('avatar-categories');
+  if (!el) return;
+  el.innerHTML = '';
+  AVATAR_CATEGORIES.forEach(function(cat, i) {
+    var btn = document.createElement('button');
+    btn.style.cssText = 'padding:6px 12px;border-radius:20px;font-family:DM Mono,monospace;font-size:0.68rem;cursor:pointer;border:1.5px solid var(--border);background:'+(i===_currentCategory?'var(--ink)':'var(--paper2)')+';color:'+(i===_currentCategory?'var(--gold)':'var(--muted)')+';transition:all 0.15s;';
+    btn.textContent = cat.label;
+    btn.onclick = function(){ _currentCategory = i; _renderAvatarCategories(); _renderAvatarGrid(i); };
+    el.appendChild(btn);
+  });
+}
+
+function _renderAvatarGrid(catIndex) {
+  var grid = document.getElementById('avatar-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  var saved = localStorage.getItem(AVATAR_KEY) || '';
+  AVATAR_CATEGORIES[catIndex].emojis.forEach(function(emoji) {
+    var btn = document.createElement('button');
+    var isSelected = emoji === _selectedAvatarEmoji || emoji === saved;
+    btn.style.cssText = 'font-size:1.8rem;padding:8px;border-radius:10px;border:'+(isSelected?'2.5px solid var(--gold)':'1.5px solid var(--border)')+';background:'+(isSelected?'#fffbf0':'var(--paper2)')+';cursor:pointer;transition:all 0.15s;aspect-ratio:1;';
+    btn.textContent = emoji;
+    btn.onclick = function() {
+      _selectedAvatarEmoji = emoji;
+      _renderAvatarGrid(catIndex); // re-render to show selection
+      var pb = document.getElementById('avatar-preview-bar');
+      var pe = document.getElementById('avatar-preview-emoji');
+      if (pb) pb.style.display = 'flex';
+      if (pe) pe.textContent = emoji;
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function saveAvatar() {
+  if (!_selectedAvatarEmoji) return;
+  localStorage.setItem(AVATAR_KEY, _selectedAvatarEmoji);
+  // Update profile card immediately
+  var el = document.getElementById('profile-avatar-emoji');
+  if (el) el.textContent = _selectedAvatarEmoji;
+  // Update header avatar if present
+  var hdrAvatar = document.getElementById('hdr-avatar-emoji');
+  if (hdrAvatar) hdrAvatar.textContent = _selectedAvatarEmoji;
+  closeAvatarPicker();
+  showToast('Avatar saved! ' + _selectedAvatarEmoji);
+}
+
+// Close on backdrop tap
+document.addEventListener('click', function(e) {
+  var o = document.getElementById('avatar-picker-overlay');
+  if (o && o.style.display === 'flex' && e.target === o) closeAvatarPicker();
+});
+
+// ════════════════════════════════
 // ════════════════════════════════
 // ── Gentle update notice ──
 function submitDobOnly() {
