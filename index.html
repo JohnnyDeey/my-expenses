@@ -1350,30 +1350,9 @@ nav.tabs{position:relative;}
 @keyframes ob-bounce-in  { 0% { opacity:0; transform:scale(0.3); } 60% { opacity:1; transform:scale(1.08); } 80% { transform:scale(0.96); } 100% { transform:scale(1); } }
 .ob-anim { animation-duration:0.42s; animation-timing-function:cubic-bezier(0.34,1.36,0.64,1); animation-fill-mode:both; }
 
-/* ── Fingerprint button ── */
-.fp-unlock-btn {
-  width: 100%;
-  max-width: 240px;
-  margin: 0 auto 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 13px;
-  background: rgba(200,150,46,0.1);
-  border: 1.5px solid rgba(200,150,46,0.45);
-  border-radius: 4px;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--gold);
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: background 0.15s, border-color 0.15s;
-}
-.fp-unlock-btn:active { background: rgba(200,150,46,0.22); }
-.fp-unlock-btn .fp-icon { font-size: 1.3rem; line-height: 1; }
+
+
+
 @keyframes pin-shake {
   0%,100% { transform: translateX(0); }
   20%     { transform: translateX(-8px); }
@@ -2903,12 +2882,6 @@ input[type="password"]::-ms-clear { display:none !important; }
           <button onclick="pinPadClear()" class="pin-pad-btn" style="font-size:0.65rem;color:#6b5e50;">CLR</button>
           <button onclick="pinPadPress('0')" class="pin-pad-btn">0</button>
           <button onclick="pinPadDelete()" class="pin-pad-btn" style="font-size:1.1rem;">⌫</button>
-        </div>
-        <!-- FINGERPRINT button — shown only when registered -->
-        <div id="fp-btn-wrap" style="max-width:240px;margin:0 auto 6px;display:none;">
-          <button class="fp-unlock-btn" onclick="tryFingerprintFL()">
-            <span class="fp-icon">☝</span> Use Fingerprint
-          </button>
         </div>
         <!-- ENTER button — for PINs shorter than 6 digits -->
         <div style="max-width:240px;margin:0 auto 14px;">
@@ -11354,16 +11327,14 @@ function getNextFullVerifyInterval() {
 
 function needsFullVerify() {
   var stored = localStorage.getItem(FULL_VERIFY_KEY);
-  // Never done full verify on this device — only require it if it has NEVER been done
-  // (i.e. brand new device/browser). After a normal logout, FULL_VERIFY_KEY persists.
-  if (!stored) {
-    // Check if this looks like a fresh device (no pin hash either = truly new)
-    // If pin hash exists, user has logged in before — don't force security check
-    var hasPinHash = !!localStorage.getItem('expense_pin_hash_local');
-    var hasName    = !!localStorage.getItem(NAME_KEY);
-    if (hasPinHash || hasName) return false; // returning user on this device — don't force
-    return true; // truly first time on this device
-  }
+  // If no stored timestamp — this could mean:
+  //   a) Truly brand new device (never logged in here before), OR
+  //   b) Laptop where localStorage was cleared on tab close
+  // We can't tell the difference at this point, so we NEVER force full verify here.
+  // Full verify is only triggered when the interval has genuinely expired,
+  // which we can only know once Firebase has restored the timestamp.
+  // See _checkFullVerifyAfterFirebase() which runs after Firebase loads.
+  if (!stored) return false;
   var last = parseInt(stored, 10);
   var interval = localStorage.getItem('expense_fv_interval');
   if (!interval) {
@@ -11373,6 +11344,20 @@ function needsFullVerify() {
     interval = parseInt(interval, 10);
   }
   return (Date.now() - last) >= interval;
+}
+
+// Called after Firebase has restored last_full_verify — only NOW can we
+// reliably decide if a full verify is needed. This prevents laptop false triggers.
+function _checkFullVerifyAfterFirebase() {
+  if (!localStorage.getItem(FULL_VERIFY_KEY)) return; // no data even from Firebase — skip
+  if (needsFullVerify()) {
+    // Interval genuinely expired — show full verify now
+    // Only show if PIN overlay is currently visible (user hasn't logged in yet)
+    var pinO = document.getElementById('pin-overlay');
+    if (pinO && pinO.style.display !== 'none') {
+      showFullVerifyStep();
+    }
+  }
 }
 
 function recordFullVerify() {
@@ -11520,8 +11505,6 @@ function submitPinLogin() {
     });
   }
   showToast('Welcome back, ' + name + '!');
-  // Keep IndexedDB identity fresh so fingerprint works even after localStorage clear
-  setTimeout(_idbRefreshIdentity, 1000);
   // Sequence starts from _resumeSession after Firebase data loads
   // NOTE: onboarding/privacy handled by post-login sequence
 }
@@ -11774,8 +11757,6 @@ function showPinPadStep() {
   var nameEl = document.getElementById('pin-login-username-display');
   if (nameEl) { var n = localStorage.getItem(NAME_KEY); nameEl.textContent = n ? n.toUpperCase() : ''; }
   document.getElementById('pin-step-login').style.display = 'block';
-  // Show fingerprint button if registered, and auto-trigger scan
-  initFingerprintBtn();
   // Scroll to top so title is visible
   var o = document.getElementById('pin-overlay'); if(o) setTimeout(function(){ o.scrollTop = 0; }, 30);
 }
@@ -11938,205 +11919,17 @@ function _resumeSession(uid, name, phone) {
         // Restore full verify timestamp — stops laptop asking username+PIN every session
         if (d.last_full_verify) localStorage.setItem(FULL_VERIFY_KEY, d.last_full_verify);
         if (d.fv_interval)      localStorage.setItem('expense_fv_interval', d.fv_interval);
+        // Now we have real data — check if full verify is genuinely due
+        _checkFullVerifyAfterFirebase();
       }
       prefsDone = true; _checkAllDone();
     }).catch(function(){ prefsDone = true; _checkAllDone(); });
   });
 }
 
-// ── FINGERPRINT / WEBAUTHN + IndexedDB identity store ────────────────────────
-// WHY IndexedDB: localStorage is wiped when user clears the app on Android.
 // IndexedDB survives in a separate partition — so uid/name/phone/credId
-// stored here persist even after "Clear app data", allowing fingerprint
 // to fully restore the session without asking for PIN again.
 
-var FL_CRED_KEY  = 'fl_credId';
-var FL_IDB_NAME  = 'fl_identity_db';
-var FL_IDB_STORE = 'identity';
-
-function _idbOpen(cb) {
-  try {
-    var req = indexedDB.open(FL_IDB_NAME, 1);
-    req.onupgradeneeded = function(e){ e.target.result.createObjectStore(FL_IDB_STORE); };
-    req.onsuccess = function(e){ cb(null, e.target.result); };
-    req.onerror   = function(e){ cb(e.target.error, null); };
-  } catch(e){ cb(e, null); }
-}
-function _idbSave(record) {
-  _idbOpen(function(err, db){
-    if(err||!db) return;
-    try{ db.transaction(FL_IDB_STORE,'readwrite').objectStore(FL_IDB_STORE).put(JSON.stringify(record),'user'); }catch(e){}
-  });
-}
-function _idbRead(cb) {
-  _idbOpen(function(err, db){
-    if(err||!db){ cb(null); return; }
-    try{
-      var req = db.transaction(FL_IDB_STORE,'readonly').objectStore(FL_IDB_STORE).get('user');
-      req.onsuccess = function(e){ try{ cb(e.target.result ? JSON.parse(e.target.result) : null); }catch(e2){ cb(null); } };
-      req.onerror   = function(){ cb(null); };
-    }catch(e){ cb(null); }
-  });
-}
-function _idbClear() {
-  _idbOpen(function(err,db){
-    if(err||!db) return;
-    try{ db.transaction(FL_IDB_STORE,'readwrite').objectStore(FL_IDB_STORE).delete('user'); }catch(e){}
-  });
-}
-// Refresh IndexedDB whenever session is active (keeps it in sync after PIN change)
-function _idbRefreshIdentity() {
-  var credId = localStorage.getItem(FL_CRED_KEY); if(!credId) return;
-  var uid   = _userId   || localStorage.getItem(UID_KEY);
-  var name  = _userName || localStorage.getItem(NAME_KEY);
-  var phone = _userPhone|| localStorage.getItem(PHONE_KEY);
-  var hash  = localStorage.getItem('expense_pin_hash_local');
-  if(!uid||!name||!phone) return;
-  _idbSave({ credId:credId, uid:uid, name:name, phone:phone, pinHash:hash, saved:Date.now() });
-}
-
-async function _fpAvailable() {
-  if(!window.PublicKeyCredential||!window.crypto||!window.crypto.getRandomValues) return false;
-  try{ return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); }catch(e){ return false; }
-}
-
-async function initFingerprintBtn() {
-  var wrap = document.getElementById('fp-btn-wrap');
-  if(!wrap) return;
-  wrap.style.display = 'none';
-  var storedId = localStorage.getItem(FL_CRED_KEY);
-  if(!storedId) {
-    // localStorage may have been cleared — check IndexedDB
-    _idbRead(function(rec){
-      if(rec && rec.credId){
-        localStorage.setItem(FL_CRED_KEY, rec.credId); // restore
-        _initFpBtn(wrap);
-      }
-    });
-    return;
-  }
-  _initFpBtn(wrap);
-}
-async function _initFpBtn(wrap) {
-  var ok = await _fpAvailable(); if(!ok) return;
-  wrap.style.display = 'block';
-  // Trigger immediately — no unnecessary delay
-  setTimeout(tryFingerprintFL, 100);
-}
-
-async function tryFingerprintFL() {
-  var errEl = document.getElementById('login-error');
-  if(errEl) errEl.textContent = '';
-  var ok = await _fpAvailable();
-  if(!ok){ if(errEl) errEl.textContent='Biometrics not available.'; return; }
-
-  function doAssertion(credId) {
-    try {
-      var challenge = window.crypto.getRandomValues(new Uint8Array(32));
-      var rawId = Uint8Array.from(atob(credId), function(c){ return c.charCodeAt(0); });
-      navigator.credentials.get({ publicKey:{
-        challenge:challenge, timeout:30000, userVerification:'required',
-        rpId:location.hostname,
-        allowCredentials:[{ type:'public-key', id:rawId, transports:['internal'] }]
-      }}).then(function(assertion){
-        if(!assertion){ if(errEl) errEl.textContent='Fingerprint not recognised — try PIN.'; return; }
-        // SUCCESS — get identity from localStorage first, then IndexedDB fallback
-        var uid   = localStorage.getItem(UID_KEY);
-        var name  = localStorage.getItem(NAME_KEY);
-        var phone = localStorage.getItem(PHONE_KEY);
-        var hash  = localStorage.getItem('expense_pin_hash_local');
-        if(uid && name && phone){
-          _fpEnter(uid, name, phone, hash);
-        } else {
-          _idbRead(function(rec){
-            if(rec && rec.uid && rec.name && rec.phone){
-              localStorage.setItem(UID_KEY,   rec.uid);
-              localStorage.setItem(NAME_KEY,  rec.name);
-              localStorage.setItem(PHONE_KEY, rec.phone);
-              if(rec.pinHash) localStorage.setItem('expense_pin_hash_local', rec.pinHash);
-              _fpEnter(rec.uid, rec.name, rec.phone, rec.pinHash);
-            } else {
-              if(errEl) errEl.textContent='Session expired — enter PIN once to restore.';
-              showFullVerifyStep();
-            }
-          });
-        }
-      }).catch(function(e){
-        var m = e.name==='NotAllowedError' ? 'Fingerprint cancelled — enter PIN below'
-              : e.name==='SecurityError'   ? 'Security error — enter PIN below'
-              : 'Biometric error ('+e.name+') — use PIN';
-        if(errEl) errEl.textContent = m;
-      });
-    } catch(e){ if(errEl) errEl.textContent='Fingerprint error — use PIN below'; }
-  }
-
-  var storedId = localStorage.getItem(FL_CRED_KEY);
-  if(storedId){
-    doAssertion(storedId);
-  } else {
-    _idbRead(function(rec){
-      if(rec && rec.credId){
-        localStorage.setItem(FL_CRED_KEY, rec.credId);
-        doAssertion(rec.credId);
-      } else {
-        if(errEl) errEl.textContent='No fingerprint registered — use PIN below.';
-        var w = document.getElementById('fp-btn-wrap'); if(w) w.style.display='none';
-      }
-    });
-  }
-}
-
-function _fpEnter(uid, name, phone, hash) {
-  _loginAttempts = 0; _pinBuffer = ''; updatePinDots();
-  _userId = uid; _userName = name; _userPhone = phone;
-  sessionStorage.setItem('app_session','1');
-  localStorage.setItem('last_active', String(Date.now()));
-  var pinO = document.getElementById('pin-overlay'); if(pinO) pinO.style.display='none';
-  updateUserDisplay(); resetInactivityTimer();
-  function afterDB(){
-    syncSetStatus('live'); syncStartListener(); updateHeaderContext(); renderMonthPicker(); populateFilters();
-    if(!window._trashDeletePending)    fetchTrashFromFirebase();
-    if(!window._incTrashDeletePending) fetchIncTrashFromFirebase();
-  }
-  if(_db && !_syncUnsubscribe){ afterDB(); }
-  else if(!_db){ getDB(function(){ renderSyncSetupUI(); afterDB(); }); }
-  showToast('Welcome back, ' + name + '! 👆');
-  setTimeout(_seqNext, 2500);
-}
-
-async function offerFingerprintFL(name) {
-  if(localStorage.getItem(FL_CRED_KEY)) return;
-  var ok = await _fpAvailable(); if(!ok) return;
-  await new Promise(function(r){ setTimeout(r,800); });
-  var want = confirm('👆 Fingerprint Login\n\nWould you like to unlock "My Expense Ledger" with your fingerprint next time instead of typing your PIN?\n\nTap OK then touch your fingerprint sensor.');
-  if(!want) return;
-  try {
-    var challenge = window.crypto.getRandomValues(new Uint8Array(32));
-    var userId    = window.crypto.getRandomValues(new Uint8Array(16));
-    var cred = await navigator.credentials.create({ publicKey:{
-      challenge:challenge,
-      rp:{ name:'My Expense Ledger', id:location.hostname },
-      user:{ id:userId, name:(name||'user').toLowerCase().replace(/\s+/g,''), displayName:name||'User' },
-      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
-      authenticatorSelection:{ authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred' },
-      timeout:60000
-    }});
-    if(cred){
-      var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(cred.rawId)));
-      localStorage.setItem(FL_CRED_KEY, b64);
-      // Save full identity to IndexedDB — survives localStorage clearing
-      _idbSave({
-        credId:b64,
-        uid:   _userId   || localStorage.getItem(UID_KEY),
-        name:  _userName || localStorage.getItem(NAME_KEY),
-        phone: _userPhone|| localStorage.getItem(PHONE_KEY),
-        pinHash: localStorage.getItem('expense_pin_hash_local'),
-        saved: Date.now()
-      });
-      showToast('✅ Fingerprint registered! Touch the sensor next time to log in.');
-    }
-  } catch(e){ if(e.name!=='NotAllowedError') console.warn('FP register:',e.name,e.message); }
-}
 // ── syncInit: called on page load ──
 function syncInit() {
   var uid   = localStorage.getItem(UID_KEY);
@@ -13341,29 +13134,18 @@ function _seqNext() {
     // submitPhoneConfirm() will call _seqNext() when user confirms
     return;
   }
-  // Step 4: Fingerprint — all previous steps done, offer now
-  if (!localStorage.getItem(FL_CRED_KEY)) {
-    offerFingerprintFL(localStorage.getItem(NAME_KEY));
-  }
+  // All steps done
 }
 
-// ── Chain: after privacy signed → tour → confirmation → fingerprint ──
+// ── Chain: after privacy signed → tour → confirmation ──
 function _postPrivacyChainContinue() {
   _seqNext(); // hand off to the sequence
 }
 
-function _maybeFingerprintOffer(name) {
-  // Kept for compatibility — offer directly if all steps done
-  if (!localStorage.getItem(FL_CRED_KEY)) offerFingerprintFL(name || localStorage.getItem(NAME_KEY));
-}
+
 
 // Stop the old poller if it was running
-var _fpPollTimer = null;
-var _fpLastOverlayClear = 0;
-function _startFingerprintPoller(name) {
-  // No longer used — sequence handles this now
-  if (!localStorage.getItem(FL_CRED_KEY)) offerFingerprintFL(name || localStorage.getItem(NAME_KEY));
-}
+
 
 // ════════════════════════
 //  HELP SYSTEM
