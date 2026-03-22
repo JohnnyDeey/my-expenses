@@ -11376,9 +11376,18 @@ function needsFullVerify() {
 }
 
 function recordFullVerify() {
-  localStorage.setItem(FULL_VERIFY_KEY, String(Date.now()));
-  // Pick a new random interval for next time
-  localStorage.setItem('expense_fv_interval', String(getNextFullVerifyInterval()));
+  var now = String(Date.now());
+  var interval = String(getNextFullVerifyInterval());
+  localStorage.setItem(FULL_VERIFY_KEY, now);
+  localStorage.setItem('expense_fv_interval', interval);
+  // Save to Firebase so it survives tab close on laptop / new devices
+  if (_db && _userId) {
+    userCol('settings').doc('preferences').set({
+      last_full_verify: now,
+      fv_interval: interval,
+      updated: Date.now()
+    }, { merge: true }).catch(function(){});
+  }
 }
 
 // ── PIN pad button handlers ──
@@ -11926,6 +11935,9 @@ function _resumeSession(uid, name, phone) {
           var hdr = document.getElementById('hdr-avatar-emoji'); if(hdr) hdr.textContent = d.avatar;
         }
         if (d.inc_custom_cats) localStorage.setItem(getIncCatsKey(), d.inc_custom_cats);
+        // Restore full verify timestamp — stops laptop asking username+PIN every session
+        if (d.last_full_verify) localStorage.setItem(FULL_VERIFY_KEY, d.last_full_verify);
+        if (d.fv_interval)      localStorage.setItem('expense_fv_interval', d.fv_interval);
       }
       prefsDone = true; _checkAllDone();
     }).catch(function(){ prefsDone = true; _checkAllDone(); });
