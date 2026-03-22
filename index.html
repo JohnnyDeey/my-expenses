@@ -1980,20 +1980,24 @@ input[type="password"]::-ms-clear { display:none !important; }
       </div>
     </div>
 
-    <!-- ── 3. DELETE BY MONTH ── -->
+    <!-- ── 3. DELETE BY FILTER ── -->
     <div class="card">
-      <label>Delete by Month</label>
-      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Deleted months go to the Recycle Bin — you can restore them.</p>
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
-        <select id="manage-year-filter" onchange="renderManagePanel()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
+      <label>&#128465; Delete Data</label>
+      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Filter by year, month, or day. Deleted entries go to the Recycle Bin.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="manage-year-filter" onchange="onManageYearChange()" style="flex:1;min-width:90px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
           <option value="all">All Years</option>
         </select>
-        <select id="manage-cur-filter" onchange="renderManagePanel()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;">
-          <option value="all">All Currencies</option>
-          <option value="EUR">EUR</option><option value="NGN">NGN</option>
-          <option value="USD">USD</option><option value="GBP">GBP</option>
+        <select id="manage-month-filter" onchange="onManageMonthChange()" style="flex:1;min-width:110px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
+          <option value="all">All Months</option>
         </select>
-        <span id="manage-filter-count" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-left:auto;"></span>
+        <select id="manage-day-filter" onchange="renderManagePanel()" style="flex:1;min-width:80px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
+          <option value="all">All Days</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span id="manage-filter-count" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);"></span>
+        <button onclick="resetManageFilters()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);cursor:pointer;text-decoration:underline;">Reset filters</button>
       </div>
       <div id="manage-month-list"></div>
     </div>
@@ -2096,20 +2100,14 @@ input[type="password"]::-ms-clear { display:none !important; }
     </label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Deleted and skipped entries land here. Restore anytime or permanently delete.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-      <select id="trash-year-filter" onchange="renderTrashPanel()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:6px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
+      <select id="trash-year-filter" onchange="onTrashYearChange()" style="flex:1;min-width:90px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
         <option value="all">All Years</option>
       </select>
-      <select id="trash-month-filter" onchange="renderTrashPanel()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:6px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
+      <select id="trash-month-filter" onchange="onTrashMonthChange()" style="flex:1;min-width:100px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
         <option value="all">All Months</option>
-        <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
-        <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
-        <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
-        <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
       </select>
-      <select id="trash-source-filter" onchange="renderTrashPanel()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:6px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
-        <option value="all">All Sources</option>
-        <option value="deleted">Deleted entries</option>
-        <option value="skipped">Skipped (parse errors)</option>
+      <select id="trash-day-filter" onchange="renderTrashPanel()" style="flex:1;min-width:80px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
+        <option value="all">All Days</option>
       </select>
     </div>
     <div id="trash-content"></div>
@@ -2160,7 +2158,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- ── App Version & Copyright ── -->
   <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.2.0</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.3.0</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
   </div>
@@ -2461,7 +2459,23 @@ input[type="password"]::-ms-clear { display:none !important; }
       <button class="btn btn-primary" style="width:100%;padding:12px;justify-content:center;margin-top:8px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
     </div>
     <div class="card">
-      <label>Delete by Month</label>
+      <label>&#128465; Delete Data</label>
+      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Filter by year, month, or day. Deleted entries go to the Recycle Bin.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="inc-manage-year-filter" onchange="onIncManageYearChange()" style="flex:1;min-width:90px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
+          <option value="all">All Years</option>
+        </select>
+        <select id="inc-manage-month-filter" onchange="onIncManageMonthChange()" style="flex:1;min-width:110px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
+          <option value="all">All Months</option>
+        </select>
+        <select id="inc-manage-day-filter" onchange="renderIncomeManage()" style="flex:1;min-width:80px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
+          <option value="all">All Days</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span id="inc-manage-filter-count" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);"></span>
+        <button onclick="resetIncManageFilters()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);cursor:pointer;text-decoration:underline;">Reset filters</button>
+      </div>
       <div id="inc-manage-month-list"></div>
     </div>
   </div>
@@ -2485,6 +2499,17 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
   <div class="card" style="border-color:var(--rust);">
     <label>&#128465; Income Recycle Bin <span id="inc-trash-count-badge" style="font-family:'DM Mono',monospace;font-size:0.7rem;background:var(--rust);color:white;padding:2px 7px;border-radius:10px;margin-left:6px;"></span></label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+      <select id="inc-trash-year-filter" onchange="onIncTrashYearChange()" style="flex:1;min-width:90px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
+        <option value="all">All Years</option>
+      </select>
+      <select id="inc-trash-month-filter" onchange="onIncTrashMonthChange()" style="flex:1;min-width:100px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
+        <option value="all">All Months</option>
+      </select>
+      <select id="inc-trash-day-filter" onchange="renderIncTrashPanel()" style="flex:1;min-width:80px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
+        <option value="all">All Days</option>
+      </select>
+    </div>
     <div id="inc-trash-content"></div>
   </div>
 
@@ -2505,7 +2530,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- ── App Version & Copyright ── -->
   <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.2.0</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.3.0</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
   </div>
@@ -2999,15 +3024,21 @@ input[type="password"]::-ms-clear { display:none !important; }
       <p style="margin-bottom:14px;">This app uses your device's local storage (similar to cookies) to remember your session, active tab, and preferences. No tracking cookies are used. Local storage is cleared when you log out or delete your account. By using this app you consent to this use of local storage.</p>
       <p style="font-weight:700;margin-bottom:6px;">17. Governing Law &amp; Jurisdiction</p>
       <p style="margin-bottom:14px;">These Terms and Privacy Policy are governed by the laws of the <strong>Federal Republic of Nigeria</strong> (Nigeria Data Protection Regulation — NDPR) and comply with the <strong>General Data Protection Regulation (GDPR)</strong> of the European Union where applicable. Any disputes shall be resolved under Nigerian jurisdiction.</p>
+      <p style="font-weight:700;margin-bottom:6px;">15. Guest Mode (Under 16)</p>
+      <p style="margin-bottom:14px;">Users under 16 are offered a Guest Mode with limited features (Import, Categorize, Ledger, Manage). In Guest Mode, no personal data is sent to our servers. All data is stored locally on the device only. Guest users may upgrade to a full account when they turn 16, and their data will be migrated.</p>
+      <p style="font-weight:700;margin-bottom:6px;">16. Avatar &amp; Profile Customisation</p>
+      <p style="margin-bottom:14px;">Users may choose an emoji avatar for their profile. This preference is stored locally on the device and synced to Firebase under the user's account. No biometric, facial, or photographic data is collected. Avatar choices are entirely optional and can be changed at any time.</p>
+      <p style="font-weight:700;margin-bottom:6px;">17. Data Filtering &amp; Deletion</p>
+      <p style="margin-bottom:14px;">Users can filter their expense and income data by year, month, or day within the Manage tab, and permanently delete specific periods of data. Deleted data is moved to a Recycle Bin where it can be restored or permanently removed. Firebase and local storage are updated simultaneously on all delete operations.</p>
       <p style="font-weight:700;margin-bottom:6px;">18. Last Updated</p>
-      <p style="margin-bottom:14px;">This Privacy Policy and Terms of Service were last updated on <strong>22 March 2026</strong> (v2.2.0). We reserve the right to update these terms. All users will be required to re-accept updated terms upon next login.</p>
+      <p style="margin-bottom:14px;">This Privacy Policy and Terms of Service were last updated on <strong>22 March 2026</strong> (v2.3.0). We reserve the right to update these terms. All users will be required to re-accept updated terms upon next login.</p>
       <p style="font-weight:700;margin-bottom:6px;">19. Contact</p>
       <p style="margin-bottom:0;">Questions about your data or these terms? Contact us at myfinanceledgerapp [at] gmail.com. We aim to respond within 48 hours.</p>
     </div>
 
     <!-- Accept button at the very bottom of the scroll area -->
     <div id="privacy-accept-wrap" style="padding:20px 0 8px;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; MARCH 2026 &mdash; v2.2.0</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; MARCH 2026 &mdash; v2.3.0</div>
       <button onclick="acceptPrivacy()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.88rem;letter-spacing:2px;font-weight:900;color:var(--ink);cursor:pointer;">&#10003; I ACCEPT &mdash; CONTINUE</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#4a3e30;text-align:center;margin-top:8px;">By tapping Accept you confirm you have read and agree to the above terms.</div>
     </div>
@@ -3028,7 +3059,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     <p style="font-weight:700;margin-bottom:6px;">11. Right to Data Export</p><p style="margin-bottom:12px;">Export your data anytime via PDF Report (Dashboard) or Monthly Report (Income). Full CSV export coming in a future update.</p>
     <p style="font-weight:700;margin-bottom:6px;">12. Age Restriction</p><p style="margin-bottom:12px;">You must be at least 16 years old to use this app. By registering you confirm you meet this requirement.</p>
     <p style="font-weight:700;margin-bottom:6px;">13. Local Storage</p><p style="margin-bottom:12px;">This app uses device local storage (similar to cookies) to remember your session and preferences. No tracking cookies are used.</p>
-    <p style="font-weight:700;margin-bottom:6px;">14. Governing Law</p><p style="margin-bottom:12px;">Governed by Nigerian law (NDPR) and GDPR where applicable. Last updated: 22 March 2026 (v2.1.2).</p>
+    <p style="font-weight:700;margin-bottom:6px;">14. Governing Law</p><p style="margin-bottom:12px;">Governed by Nigerian law (NDPR) and GDPR where applicable. Last updated: 22 March 2026 (v2.3.0).</p>
     <p style="font-weight:700;margin-bottom:6px;">15. Contact</p><p>myfinanceledgerapp [at] gmail.com</p>
   </div>
 </div>
@@ -6972,180 +7003,167 @@ function renderManagePanel(){
   renderTrashPanel();
   renderManageUserBar();
   updateBackupLastLabel();
-  // Populate user profile card
   renderUserProfileCard();
-
-  // Hide/show sync details card
   var syncCard = document.getElementById('sync-setup-card');
   if (syncCard) syncCard.style.display = _userId ? 'block' : 'none';
-  var curFilter = document.getElementById('manage-cur-filter') ? document.getElementById('manage-cur-filter').value : 'all';
 
-  // Group by year → month
-  var byYear = {};
+  var yearSel  = document.getElementById('manage-year-filter');
+  var monthSel = document.getElementById('manage-month-filter');
+  var daySel   = document.getElementById('manage-day-filter');
+  var selYear  = yearSel  ? yearSel.value  : 'all';
+  var selMonth = monthSel ? monthSel.value : 'all';
+  var selDay   = daySel   ? daySel.value   : 'all';
+
+  // Build available years from data
+  var years = [];
+  data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)<0) years.push(y); });
+  years.sort().reverse();
+  if(yearSel){
+    var prevYear = yearSel.value;
+    yearSel.innerHTML = '<option value="all">All Years</option>' +
+      years.map(function(y){ return '<option value="'+y+'"'+(y===prevYear?' selected':'')+'>'+y+'</option>'; }).join('');
+    selYear = yearSel.value;
+  }
+
+  // Build available months for selected year
+  var months = [];
   data.forEach(function(i){
-    var y = i.date.substring(0,4);
-    var m = i.date.substring(0,7);
-    if(!byYear[y]) byYear[y] = {};
-    if(!byYear[y][m]) byYear[y][m] = [];
-    byYear[y][m].push(i);
+    if(selYear==='all' || i.date.substring(0,4)===selYear){
+      var m=i.date.substring(5,7); if(months.indexOf(m)<0) months.push(m);
+    }
+  });
+  months.sort();
+  var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if(monthSel){
+    var prevMonth = monthSel.value;
+    monthSel.innerHTML = '<option value="all">All Months</option>' +
+      months.map(function(m){ return '<option value="'+m+'"'+(m===prevMonth?' selected':'')+'>'+MONTH_NAMES[parseInt(m)-1]+'</option>'; }).join('');
+    selMonth = monthSel.value;
+  }
+
+  // Build available days for selected year+month
+  var days = [];
+  data.forEach(function(i){
+    if((selYear==='all'||i.date.substring(0,4)===selYear) && (selMonth==='all'||i.date.substring(5,7)===selMonth)){
+      var d=i.date.substring(8,10); if(days.indexOf(d)<0) days.push(d);
+    }
+  });
+  days.sort();
+  if(daySel){
+    var prevDay = daySel.value;
+    daySel.innerHTML = '<option value="all">All Days</option>' +
+      days.map(function(d){ return '<option value="'+d+'"'+(d===prevDay?' selected':'')+'>'+d+'</option>'; }).join('');
+    selDay = daySel.value;
+  }
+
+  // Filter data
+  var filtered = data.filter(function(i){
+    if(selYear  !=='all' && i.date.substring(0,4)  !==selYear)  return false;
+    if(selMonth !=='all' && i.date.substring(5,7)  !==selMonth) return false;
+    if(selDay   !=='all' && i.date.substring(8,10) !==selDay)   return false;
+    return true;
   });
 
-  var years = Object.keys(byYear).sort().reverse();
-
-  // Currency filter on year-level
-  if(curFilter !== 'all'){
-    years = years.filter(function(y){
-      return Object.keys(byYear[y]).some(function(m){
-        return byYear[y][m].some(function(i){ return i.currency===curFilter; });
-      });
-    });
-  }
-
-  // Update currency filter dropdown — dynamic from actual data
-  var curSel = document.getElementById('manage-cur-filter');
-  if (curSel) {
-    var manageDataCurs = [];
-    data.forEach(function(i){ if(i.currency && manageDataCurs.indexOf(i.currency)===-1) manageDataCurs.push(i.currency); });
-    manageDataCurs.sort();
-    curSel.innerHTML = '<option value="all">All Currencies</option>' +
-      manageDataCurs.map(function(c){ return '<option value="'+c+'"'+(curFilter===c?' selected':'')+'>'+c+'</option>'; }).join('');
-  }
-
   var countEl = document.getElementById('manage-filter-count');
-  var totalMonths = Object.values(byYear).reduce(function(s,y){return s+Object.keys(y).length;},0);
-  if(countEl) countEl.textContent = years.length + ' years · ' + totalMonths + ' months';
+  if(countEl) countEl.textContent = filtered.length + ' entr' + (filtered.length===1?'y':'ies');
 
   var list = document.getElementById('manage-month-list');
   list.innerHTML = '';
 
-  if(!years.length){
-    list.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">No data for selected filter</div>';
+  if(!filtered.length){
+    list.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">No entries for selected filter</div>';
     return;
   }
 
-  if(!window._manOpenYears) window._manOpenYears = {};
-
-  years.forEach(function(y){
-    var months = Object.keys(byYear[y]).sort().reverse();
-    if(curFilter !== 'all'){
-      months = months.filter(function(m){
-        return byYear[y][m].some(function(i){ return i.currency===curFilter; });
-      });
+  // Group by display unit depending on filter level
+  var grouped = {};
+  filtered.forEach(function(i){
+    var key, label;
+    if(selDay !== 'all') {
+      // Single day — show all entries flat with a single delete button
+      key = i.date.substring(0,10); label = key;
+    } else if(selMonth !== 'all') {
+      // Month selected — group by day
+      key = i.date.substring(0,10);
+      label = parseInt(i.date.substring(8,10)) + ' ' + MONTH_NAMES[parseInt(i.date.substring(5,7))-1] + ' ' + i.date.substring(0,4);
+    } else if(selYear !== 'all') {
+      // Year selected — group by month
+      key = i.date.substring(0,7);
+      label = MONTH_NAMES[parseInt(i.date.substring(5,7))-1] + ' ' + i.date.substring(0,4);
+    } else {
+      // All years — group by year
+      key = i.date.substring(0,4);
+      label = i.date.substring(0,4);
     }
-    var yearItems = [];
-    months.forEach(function(m){ yearItems = yearItems.concat(byYear[y][m]); });
-
-    // Year totals
-    var yTotals = {};
-    yearItems.forEach(function(i){ if(i.amount>0) yTotals[i.currency]=(yTotals[i.currency]||0)+i.amount; });
-    var yTotalStr = Object.keys(yTotals).map(function(c){
-      return '<span class="currency-badge currency-'+c+'" style="font-size:0.7rem;">'+(SYMS[c]||'')+fmtNum(yTotals[c])+'</span>';
-    }).join(' ');
-
-    var isOpen = !!window._manOpenYears[y];
-
-    var yearBlock = document.createElement('div');
-    yearBlock.style.cssText = 'margin-bottom:8px;border-radius:5px;overflow:hidden;border:1px solid var(--border);box-shadow:2px 2px 0 var(--shadow);';
-
-    var yearHeader = document.createElement('div');
-    yearHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;user-select:none;'+(isOpen?'background:var(--ink);color:var(--paper);':'background:white;');
-    yearHeader.innerHTML =
-      '<div style="display:flex;align-items:center;gap:12px;">' +
-        '<div style="font-family:\'Playfair Display\',serif;font-size:1.5rem;font-weight:900;color:'+(isOpen?'var(--gold2)':'var(--gold)')+';">'+y+'</div>' +
-        '<div>' +
-          '<div style="font-family:DM Mono,monospace;font-size:0.7rem;color:'+(isOpen?'#9e8e7e':'var(--muted)')+';">'+yearItems.length+' entries · '+months.length+' months</div>' +
-          '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">'+yTotalStr+'</div>' +
-        '</div>' +
-      '</div>' +
-      '<span class="yr-arrow" style="font-size:0.75rem;display:inline-block;color:'+(isOpen?'var(--gold2)':'var(--muted)')+';">&#9660;</span>';
-
-    var yearBody = document.createElement('div');
-    yearBody.style.cssText = 'display:'+(isOpen?'block':'none')+';background:#fafaf7;border-top:1px solid var(--border);padding:10px;';
-
-    yearHeader.addEventListener('click', function(){
-      var open = yearBody.style.display !== 'none';
-      yearBody.style.display = open ? 'none' : 'block';
-      window._manOpenYears[y] = !open;
-      yearHeader.style.background = open ? 'white' : 'var(--ink)';
-      yearHeader.style.color = open ? '' : 'var(--paper)';
-      var arrow = yearHeader.querySelector('.yr-arrow');
-      if(arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
-    });
-
-    // Month rows inside year
-    months.forEach(function(key){
-      var p = key.split('-'); var mIdx = parseInt(p[1])-1;
-      var items = byYear[y][key];
-      var displayItems = curFilter!=='all' ? items.filter(function(i){return i.currency===curFilter;}) : items;
-      var totals = {};
-      displayItems.forEach(function(i){ if(i.amount>0) totals[i.currency]=(totals[i.currency]||0)+i.amount; });
-      var totalStr = Object.keys(totals).map(function(c){ return (SYMS[c]||'')+fmtNum(totals[c]); }).join(' · ') || '—';
-
-      var row = document.createElement('div');
-      row.className = 'manage-month-row';
-      row.style.marginBottom = '6px';
-
-      var info = document.createElement('div');
-      info.innerHTML =
-        '<div class="manage-month-name">'+MONTHS[mIdx]+'</div>'+
-        '<div class="manage-month-meta">'+items.length+' entries · '+totalStr+'</div>';
-
-      var btnWrap = document.createElement('div');
-      btnWrap.style.cssText = 'display:flex;align-items:center;gap:8px;';
-
-      var btn = document.createElement('button');
-      btn.className = 'btn btn-warn';
-      btn.textContent = 'Delete';
-
-      var confirmWrap = document.createElement('div');
-      confirmWrap.style.cssText = 'display:none;align-items:center;gap:6px;';
-      confirmWrap.innerHTML = '<span style="font-family:DM Mono,monospace;font-size:0.72rem;color:var(--rust);">Sure?</span>';
-
-      var yesBtn = document.createElement('button');
-      yesBtn.className = 'btn btn-danger';
-      yesBtn.style.cssText = 'padding:5px 10px;font-size:0.72rem;';
-      yesBtn.textContent = 'Yes';
-
-      var noBtn = document.createElement('button');
-      noBtn.className = 'btn btn-ghost';
-      noBtn.style.cssText = 'padding:5px 10px;font-size:0.72rem;';
-      noBtn.textContent = 'Cancel';
-
-      confirmWrap.appendChild(yesBtn);
-      confirmWrap.appendChild(noBtn);
-
-      btn.addEventListener('click', function(){
-        btn.style.display = 'none';
-        confirmWrap.style.display = 'flex';
-      });
-      noBtn.addEventListener('click', function(){
-        confirmWrap.style.display = 'none';
-        btn.style.display = 'inline-flex';
-      });
-      yesBtn.addEventListener('click', function(){
-        var all = loadData();
-        var toDelete = all.filter(function(i){ return i.date.substring(0,7)===key; });
-        var monthGroupLabel = MONTHS[mIdx] + ' ' + y;
-        if (toDelete.length) addToTrash(toDelete, 'deleted', monthGroupLabel);
-        window._lastDeleteTime = Date.now();
-        var remaining = all.filter(function(i){ return i.date.substring(0,7)!==key; });
-        localStorage.setItem('expense_ledger', JSON.stringify(remaining));
-        syncPushNow();
-        showToast(MONTHS[mIdx]+' '+y+' moved to recycle bin ('+toDelete.length+' entries)');
-        renderManagePanel(); updateHeaderContext(); renderMonthPicker();
-      });
-
-      btnWrap.appendChild(btn);
-      btnWrap.appendChild(confirmWrap);
-      row.appendChild(info);
-      row.appendChild(btnWrap);
-      yearBody.appendChild(row);
-    });
-
-    yearBlock.appendChild(yearHeader);
-    yearBlock.appendChild(yearBody);
-    list.appendChild(yearBlock);
+    if(!grouped[key]) grouped[key] = { label:label, items:[] };
+    grouped[key].items.push(i);
   });
+
+  var keys = Object.keys(grouped).sort().reverse();
+
+  keys.forEach(function(key){
+    var grp = grouped[key];
+    var totals = {};
+    grp.items.forEach(function(i){ if(i.amount>0) totals[i.currency]=(totals[i.currency]||0)+i.amount; });
+    var totalStr = Object.keys(totals).map(function(c){ return (SYMS[c]||'')+fmtNum(totals[c]); }).join(' · ') || '—';
+
+    var row = document.createElement('div');
+    row.className = 'manage-month-row';
+    row.style.marginBottom = '6px';
+
+    var info = document.createElement('div');
+    info.innerHTML =
+      '<div class="manage-month-name">'+grp.label+'</div>'+
+      '<div class="manage-month-meta">'+grp.items.length+' entr'+(grp.items.length===1?'y':'ies')+' · '+totalStr+'</div>';
+
+    var btnWrap = document.createElement('div');
+    btnWrap.style.cssText = 'display:flex;align-items:center;gap:8px;';
+    var btn = document.createElement('button');
+    btn.className = 'btn btn-warn'; btn.textContent = 'Delete';
+    var confirmWrap = document.createElement('div');
+    confirmWrap.style.cssText = 'display:none;align-items:center;gap:6px;';
+    confirmWrap.innerHTML = '<span style="font-family:DM Mono,monospace;font-size:0.72rem;color:var(--rust);">Sure?</span>';
+    var yesBtn = document.createElement('button');
+    yesBtn.className = 'btn btn-danger'; yesBtn.style.cssText = 'padding:5px 10px;font-size:0.72rem;'; yesBtn.textContent = 'Yes';
+    var noBtn = document.createElement('button');
+    noBtn.className = 'btn btn-ghost'; noBtn.style.cssText = 'padding:5px 10px;font-size:0.72rem;'; noBtn.textContent = 'Cancel';
+    confirmWrap.appendChild(yesBtn); confirmWrap.appendChild(noBtn);
+    btn.addEventListener('click', function(){ btn.style.display='none'; confirmWrap.style.display='flex'; });
+    noBtn.addEventListener('click', function(){ confirmWrap.style.display='none'; btn.style.display='inline-flex'; });
+    yesBtn.addEventListener('click', function(){
+      var all = loadData();
+      var toDelete = grp.items;
+      if(toDelete.length) addToTrash(toDelete, 'deleted', grp.label);
+      window._lastDeleteTime = Date.now();
+      var ids = toDelete.map(function(i){ return i.id||i._id||(i.date+i.desc+i.amount); });
+      var remaining = all.filter(function(i){ return ids.indexOf(i.id||i._id||(i.date+i.desc+i.amount))<0; });
+      localStorage.setItem('expense_ledger', JSON.stringify(remaining));
+      syncPushNow();
+      showToast(grp.label+' moved to recycle bin ('+toDelete.length+' entries)');
+      renderManagePanel(); updateHeaderContext(); renderMonthPicker();
+    });
+    btnWrap.appendChild(btn); btnWrap.appendChild(confirmWrap);
+    row.appendChild(info); row.appendChild(btnWrap);
+    list.appendChild(row);
+  });
+}
+
+function onManageYearChange() {
+  // Reset month and day when year changes
+  var ms = document.getElementById('manage-month-filter'); if(ms) ms.value='all';
+  var ds = document.getElementById('manage-day-filter');   if(ds) ds.value='all';
+  renderManagePanel();
+}
+function onManageMonthChange() {
+  // Reset day when month changes
+  var ds = document.getElementById('manage-day-filter'); if(ds) ds.value='all';
+  renderManagePanel();
+}
+function resetManageFilters() {
+  var ys=document.getElementById('manage-year-filter');  if(ys) ys.value='all';
+  var ms=document.getElementById('manage-month-filter'); if(ms) ms.value='all';
+  var ds=document.getElementById('manage-day-filter');   if(ds) ds.value='all';
+  renderManagePanel();
 }
 
 
@@ -7675,48 +7693,48 @@ function clearAllTrash() {
 function renderTrashPanel() {
   var el = document.getElementById('trash-content');
   if (!el) return;
-
-  // Don't show trash if not logged in
   if (!_userId) {
     el.innerHTML = '<div style="text-align:center;padding:20px;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);">Sign in to view recycle bin</div>';
     return;
   }
-
   var trash = loadTrash();
-
-  // Update count badge
   var badge = document.getElementById('trash-count-badge');
   if (badge) badge.textContent = trash.length > 0 ? trash.length : '';
-
   if (!trash.length) {
     el.innerHTML = '<div style="text-align:center;padding:40px;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);">&#128465; Recycle bin is empty</div>';
     return;
   }
-
-  // Filters
+  var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var yearSel  = document.getElementById('trash-year-filter');
   var monthSel = document.getElementById('trash-month-filter');
-  var srcSel   = document.getElementById('trash-source-filter');
-  var yearVal  = yearSel  ? yearSel.value  : 'all';
-  var monthVal = monthSel ? monthSel.value : 'all';
-  var srcVal   = srcSel   ? srcSel.value   : 'all';
+  var daySel   = document.getElementById('trash-day-filter');
+  var selYear  = yearSel  ? yearSel.value  : 'all';
+  var selMonth = monthSel ? monthSel.value : 'all';
+  var selDay   = daySel   ? daySel.value   : 'all';
 
-  // Populate year filter
+  // Dynamic years
   var years = [];
-  trash.forEach(function(t){ if(t.date){ var y=t.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }});
+  trash.forEach(function(t){ if(t.date){ var y=t.date.substring(0,4); if(years.indexOf(y)<0) years.push(y); }});
   years.sort().reverse();
-  if (yearSel) {
-    var cy = yearSel.value;
-    yearSel.innerHTML = '<option value="all">All Years</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join('');
-  }
+  if(yearSel){ var cy=yearSel.value; yearSel.innerHTML='<option value="all">All Years</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join(''); selYear=yearSel.value; }
+
+  // Dynamic months
+  var months=[];
+  trash.forEach(function(t){ if(t.date&&(selYear==='all'||t.date.substring(0,4)===selYear)){ var m=t.date.substring(5,7); if(months.indexOf(m)<0) months.push(m); }});
+  months.sort();
+  if(monthSel){ var cm=monthSel.value; monthSel.innerHTML='<option value="all">All Months</option>'+months.map(function(m){ return '<option value="'+m+'"'+(m===cm?' selected':'')+'>'+MONTH_NAMES[parseInt(m)-1]+'</option>'; }).join(''); selMonth=monthSel.value; }
+
+  // Dynamic days
+  var days=[];
+  trash.forEach(function(t){ if(t.date&&(selYear==='all'||t.date.substring(0,4)===selYear)&&(selMonth==='all'||t.date.substring(5,7)===selMonth)){ var d=t.date.substring(8,10); if(days.indexOf(d)<0) days.push(d); }});
+  days.sort();
+  if(daySel){ var cd=daySel.value; daySel.innerHTML='<option value="all">All Days</option>'+days.map(function(d){ return '<option value="'+d+'"'+(d===cd?' selected':'')+'>'+d+'</option>'; }).join(''); selDay=daySel.value; }
 
   // Filter
   var filtered = trash.slice();
-  if (yearVal  !== 'all') filtered = filtered.filter(function(t){ return t.date && t.date.indexOf(yearVal)===0; });
-  if (monthVal !== 'all') filtered = filtered.filter(function(t){ return t.date && t.date.substring(5,7)===monthVal; });
-  if (srcVal   !== 'all') filtered = filtered.filter(function(t){ return t._trash_source === srcVal; });
-
-  // Sort newest deleted first
+  if(selYear !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(0,4)===selYear; });
+  if(selMonth!=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(5,7)===selMonth; });
+  if(selDay  !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(8,10)===selDay; });
   filtered.sort(function(a,b){ return (b._trash_date||'').localeCompare(a._trash_date||''); });
 
   el.innerHTML = '';
@@ -10712,77 +10730,111 @@ function renderIncomeManage() {
   if (!listEl) return;
   listEl.innerHTML = '';
 
-  // Group months by year
-  var byMonth = {};
-  data.forEach(function(i){ var k=i.date.substring(0,7); if(!byMonth[k]) byMonth[k]=[]; byMonth[k].push(i); });
-  var byYear = {};
-  Object.keys(byMonth).forEach(function(ym){
-    var y = ym.substring(0,4);
-    if (!byYear[y]) byYear[y] = [];
-    byYear[y].push(ym);
+  var yearSel  = document.getElementById('inc-manage-year-filter');
+  var monthSel = document.getElementById('inc-manage-month-filter');
+  var daySel   = document.getElementById('inc-manage-day-filter');
+  var selYear  = yearSel  ? yearSel.value  : 'all';
+  var selMonth = monthSel ? monthSel.value : 'all';
+  var selDay   = daySel   ? daySel.value   : 'all';
+
+  var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Build years
+  var years = [];
+  data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)<0) years.push(y); });
+  years.sort().reverse();
+  if(yearSel){
+    var pY=yearSel.value;
+    yearSel.innerHTML='<option value="all">All Years</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===pY?' selected':'')+'>'+y+'</option>'; }).join('');
+    selYear=yearSel.value;
+  }
+
+  // Build months
+  var months=[];
+  data.forEach(function(i){ if(selYear==='all'||i.date.substring(0,4)===selYear){ var m=i.date.substring(5,7); if(months.indexOf(m)<0) months.push(m); } });
+  months.sort();
+  if(monthSel){
+    var pM=monthSel.value;
+    monthSel.innerHTML='<option value="all">All Months</option>'+months.map(function(m){ return '<option value="'+m+'"'+(m===pM?' selected':'')+'>'+MONTH_NAMES[parseInt(m)-1]+'</option>'; }).join('');
+    selMonth=monthSel.value;
+  }
+
+  // Build days
+  var daysArr=[];
+  data.forEach(function(i){ if((selYear==='all'||i.date.substring(0,4)===selYear)&&(selMonth==='all'||i.date.substring(5,7)===selMonth)){ var d=i.date.substring(8,10); if(daysArr.indexOf(d)<0) daysArr.push(d); } });
+  daysArr.sort();
+  if(daySel){
+    var pD=daySel.value;
+    daySel.innerHTML='<option value="all">All Days</option>'+daysArr.map(function(d){ return '<option value="'+d+'"'+(d===pD?' selected':'')+'>'+d+'</option>'; }).join('');
+    selDay=daySel.value;
+  }
+
+  var filtered = data.filter(function(i){
+    if(selYear!=='all'&&i.date.substring(0,4)!==selYear) return false;
+    if(selMonth!=='all'&&i.date.substring(5,7)!==selMonth) return false;
+    if(selDay!=='all'&&i.date.substring(8,10)!==selDay) return false;
+    return true;
   });
 
-  Object.keys(byYear).sort().reverse().forEach(function(year) {
-    var months = byYear[year].sort().reverse();
-    var yearTotal = months.reduce(function(s,m){ return s+byMonth[m].length; }, 0);
+  var countEl = document.getElementById('inc-manage-filter-count');
+  if(countEl) countEl.textContent = filtered.length + ' entr'+(filtered.length===1?'y':'ies');
 
-    // Year header (foldable)
-    var yearDiv = document.createElement('div');
-    yearDiv.style.cssText = 'margin-bottom:8px;border:1px solid var(--border);border-radius:4px;overflow:hidden;';
+  if(!filtered.length){
+    listEl.innerHTML='<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">No entries for selected filter</div>';
+    renderIncomeTrash(); return;
+  }
 
-    var yearHdr = document.createElement('div');
-    yearHdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--ink);color:var(--paper);cursor:pointer;user-select:none;';
-    yearHdr.innerHTML =
-      '<div style="display:flex;align-items:center;gap:10px;">'+
-        '<span style="font-family:Playfair Display,serif;font-size:1.1rem;font-weight:900;color:var(--gold);">'+year+'</span>'+
-        '<span style="font-family:DM Mono,monospace;font-size:0.7rem;color:#9e8e7e;">'+months.length+' months · '+yearTotal+' entries</span>'+
-      '</div>'+
-      '<span class="yr-arr" style="font-size:0.75rem;color:var(--gold);">&#9660;</span>';
+  // Group
+  var grouped={};
+  filtered.forEach(function(i){
+    var key, label;
+    if(selDay!=='all'){ key=i.date.substring(0,10); label=key; }
+    else if(selMonth!=='all'){ key=i.date.substring(0,10); label=parseInt(i.date.substring(8,10))+' '+MONTH_NAMES[parseInt(i.date.substring(5,7))-1]+' '+i.date.substring(0,4); }
+    else if(selYear!=='all'){ key=i.date.substring(0,7); label=MONTH_NAMES[parseInt(i.date.substring(5,7))-1]+' '+i.date.substring(0,4); }
+    else{ key=i.date.substring(0,4); label=i.date.substring(0,4); }
+    if(!grouped[key]) grouped[key]={label:label,items:[]};
+    grouped[key].items.push(i);
+  });
 
-    var yearBody = document.createElement('div');
-    yearBody.style.display = 'block';
-    yearBody.style.cssText += 'background:#fafaf7;';
-
-    yearHdr.addEventListener('click', function(){
-      var open = yearBody.style.display !== 'none';
-      yearBody.style.display = open ? 'none' : 'block';
-      yearHdr.querySelector('.yr-arr').style.transform = open ? 'rotate(-90deg)' : '';
-    });
-
-    months.forEach(function(key) {
-      var p = key.split('-');
-      var mLabel = MONTHS[parseInt(p[1])-1] + ' ' + p[0];
-      var items  = byMonth[key];
-      var row = document.createElement('div');
-      row.className = 'manage-month-row';
-      row.style.cssText = 'border-bottom:1px solid var(--border);padding:8px 14px;';
-      var info = document.createElement('div');
-      info.innerHTML = '<div class="manage-month-name">'+mLabel+'</div><div class="manage-month-meta">'+items.length+' entries</div>';
-      var delBtn = document.createElement('button');
-      delBtn.className = 'btn btn-warn';
-      delBtn.textContent = 'Delete';
-      (function(k2, lbl, its) {
-        delBtn.addEventListener('click', function() {
-          var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
-          var now = new Date().toISOString().substring(0,10);
-          var gid = 'incgrp_'+Date.now();
-          its.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:lbl})); });
-          localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
-          pushIncTrashToFirebase();
-          saveIncomeData(loadIncomeData().filter(function(i){ return i.date.substring(0,7)!==k2; }));
-          renderIncomeManage();
-          showToast(lbl+' moved to income recycle bin');
-        });
-      })(key, mLabel, items);
-      row.appendChild(info); row.appendChild(delBtn);
-      yearBody.appendChild(row);
-    });
-
-    yearDiv.appendChild(yearHdr); yearDiv.appendChild(yearBody);
-    listEl.appendChild(yearDiv);
+  Object.keys(grouped).sort().reverse().forEach(function(key){
+    var grp=grouped[key];
+    var row=document.createElement('div');
+    row.className='manage-month-row'; row.style.cssText='border-bottom:1px solid var(--border);padding:8px 14px;';
+    var info=document.createElement('div');
+    info.innerHTML='<div class="manage-month-name">'+grp.label+'</div><div class="manage-month-meta">'+grp.items.length+' entr'+(grp.items.length===1?'y':'ies')+'</div>';
+    var delBtn=document.createElement('button');
+    delBtn.className='btn btn-warn'; delBtn.textContent='Delete';
+    (function(g){ delBtn.addEventListener('click', function(){
+      var incTrash=JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
+      var now=new Date().toISOString().substring(0,10);
+      var gid='incgrp_'+Date.now();
+      var ids=g.items.map(function(i){ return i.id||i._id||(i.date+i.desc+i.amount); });
+      g.items.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:g.label})); });
+      localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash)); pushIncTrashToFirebase();
+      saveIncomeData(loadIncomeData().filter(function(i){ return ids.indexOf(i.id||i._id||(i.date+i.desc+i.amount))<0; }));
+      renderIncomeManage(); showToast(g.label+' moved to income recycle bin');
+    }); })(grp);
+    row.appendChild(info); row.appendChild(delBtn);
+    listEl.appendChild(row);
   });
 
   renderIncomeTrash();
+}
+
+function onIncManageYearChange() {
+  var ms=document.getElementById('inc-manage-month-filter'); if(ms) ms.value='all';
+  var ds=document.getElementById('inc-manage-day-filter');   if(ds) ds.value='all';
+  renderIncomeManage();
+}
+function onIncManageMonthChange() {
+  var ds=document.getElementById('inc-manage-day-filter'); if(ds) ds.value='all';
+  renderIncomeManage();
+}
+function resetIncManageFilters() {
+  var ys=document.getElementById('inc-manage-year-filter');  if(ys) ys.value='all';
+  var ms=document.getElementById('inc-manage-month-filter'); if(ms) ms.value='all';
+  var ds=document.getElementById('inc-manage-day-filter');   if(ds) ds.value='all';
+  renderIncomeManage();
 }
 
 function clearAllIncome() {
@@ -10891,6 +10943,26 @@ function importIncomeCSV(event) {
   reader.readAsText(file);
 }
 
+function onTrashYearChange() {
+  var ms=document.getElementById('trash-month-filter'); if(ms) ms.value='all';
+  var ds=document.getElementById('trash-day-filter');   if(ds) ds.value='all';
+  renderTrashPanel();
+}
+function onTrashMonthChange() {
+  var ds=document.getElementById('trash-day-filter'); if(ds) ds.value='all';
+  renderTrashPanel();
+}
+function onIncTrashYearChange() {
+  var ms=document.getElementById('inc-trash-month-filter'); if(ms) ms.value='all';
+  var ds=document.getElementById('inc-trash-day-filter');   if(ds) ds.value='all';
+  renderIncomeTrash();
+}
+function onIncTrashMonthChange() {
+  var ds=document.getElementById('inc-trash-day-filter'); if(ds) ds.value='all';
+  renderIncomeTrash();
+}
+var renderIncTrashPanel = renderIncomeTrash; // alias
+
 function renderIncomeTrash() {
   var el = document.getElementById('inc-trash-content');
   if (!el) return;
@@ -10899,11 +10971,43 @@ function renderIncomeTrash() {
   if (badge) badge.textContent = trash.length > 0 ? trash.length : '';
   if (!trash.length) { el.innerHTML = '<div style="text-align:center;padding:20px;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);">Recycle bin is empty</div>'; return; }
 
+  var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var yearSel  = document.getElementById('inc-trash-year-filter');
+  var monthSel = document.getElementById('inc-trash-month-filter');
+  var daySel   = document.getElementById('inc-trash-day-filter');
+  var selYear  = yearSel  ? yearSel.value  : 'all';
+  var selMonth = monthSel ? monthSel.value : 'all';
+  var selDay   = daySel   ? daySel.value   : 'all';
+
+  // Dynamic years
+  var years=[];
+  trash.forEach(function(t){ if(t.date){ var y=t.date.substring(0,4); if(years.indexOf(y)<0) years.push(y); }});
+  years.sort().reverse();
+  if(yearSel){ var cy=yearSel.value; yearSel.innerHTML='<option value="all">All Years</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join(''); selYear=yearSel.value; }
+
+  // Dynamic months
+  var months=[];
+  trash.forEach(function(t){ if(t.date&&(selYear==='all'||t.date.substring(0,4)===selYear)){ var m=t.date.substring(5,7); if(months.indexOf(m)<0) months.push(m); }});
+  months.sort();
+  if(monthSel){ var cm=monthSel.value; monthSel.innerHTML='<option value="all">All Months</option>'+months.map(function(m){ return '<option value="'+m+'"'+(m===cm?' selected':'')+'>'+MONTH_NAMES[parseInt(m)-1]+'</option>'; }).join(''); selMonth=monthSel.value; }
+
+  // Dynamic days
+  var days=[];
+  trash.forEach(function(t){ if(t.date&&(selYear==='all'||t.date.substring(0,4)===selYear)&&(selMonth==='all'||t.date.substring(5,7)===selMonth)){ var d=t.date.substring(8,10); if(days.indexOf(d)<0) days.push(d); }});
+  days.sort();
+  if(daySel){ var cd=daySel.value; daySel.innerHTML='<option value="all">All Days</option>'+days.map(function(d){ return '<option value="'+d+'"'+(d===cd?' selected':'')+'>'+d+'</option>'; }).join(''); selDay=daySel.value; }
+
+  // Filter
+  var filtered = trash.slice();
+  if(selYear !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(0,4)===selYear; });
+  if(selMonth!=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(5,7)===selMonth; });
+  if(selDay  !=='all') filtered=filtered.filter(function(t){ return t.date&&t.date.substring(8,10)===selDay; });
+
   el.innerHTML = '';
   // Groups
   var groups = {};
   var singles = [];
-  trash.forEach(function(t) {
+  filtered.forEach(function(t) {
     if (t._group_id) {
       if (!groups[t._group_id]) groups[t._group_id] = {label:t._group_label,items:[],date:t._trash_date};
       groups[t._group_id].items.push(t);
@@ -12549,7 +12653,7 @@ function _privacyKey() {
   return 'privacy_ok_' + (_userId || localStorage.getItem('expense_uid') || 'default');
 }
 var PRIVACY_VER = '2026-03-22';
-var APP_VERSION = '2.2.0'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '2.3.0'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── Sequential mandatory update flow ──
@@ -12728,8 +12832,8 @@ function _showPrivacyOverlay() {
   if (lbl) {
     var isExisting = !!localStorage.getItem(UID_KEY);
     lbl.textContent = isExisting
-      ? 'UPDATED TERMS — MARCH 2026 — v2.1.2 — Age, jurisdiction & data export added'
-      : 'MY EXPENSE LEDGER — MARCH 2026 — v2.1.2';
+      ? 'UPDATED TERMS — MARCH 2026 — v2.3.0 — Age, jurisdiction & data export added'
+      : 'MY EXPENSE LEDGER — MARCH 2026 — v2.3.0';
   }
   o.style.display = 'flex';
 }
@@ -12779,6 +12883,8 @@ var HELP_ITEMS = [
   {icon:'&#128220;', label:'Ledger',     tag:'ledger'},
   {icon:'&#127919;', label:'Budget',     tag:'budget'},
   {icon:'&#9881;&#65039;',   label:'Manage',     tag:'manage'},
+  {icon:'&#128522;',        label:'Avatar',     tag:'avatar'},
+  {icon:'&#127891;',        label:'Guest Mode', tag:'guest'},
   {icon:'&#128176;', label:'Income',     tag:'income'},
   {icon:'&#128467;', label:'Date',       tag:'date'},
   {icon:'&#128275;', label:'Login',      tag:'login'},
@@ -12863,9 +12969,47 @@ var HELP_DATA = {
   },
   'manage': {
     title: '⚙️ Manage — Data Settings & Control',
-    steps: ['Edit Full Name — sets your name for PDF reports.','Change Username — updates your login username.','Change Access Code — updates your PIN.','Export CSV — downloads your data as a spreadsheet.','Import from CSV — restores data from a backup.','Delete by Month — removes a month (goes to Recycle Bin).','Recycle Bin — restore or permanently delete removed entries.'],
-    example: 'User jd0292 went to Manage, expanded 2024, clicked Delete on February 2024. The 34 entries moved to Recycle Bin. He later restored 30 of them.',
-    tip: 'Export a CSV backup at least once a month to keep your data safe.'
+    steps: [
+      '👤 User Profile — shows your name, username, avatar, country, DOB and age at the top.',
+      'Tap your avatar circle to open the avatar picker — choose from 6 categories of emoji.',
+      'Delete Data — use 3 cascading filters (Year → Month → Day) to pinpoint entries to delete.',
+      'Select All Years to see yearly groups. Select a year to see months. Select a month to see individual days.',
+      'Click Delete on any group — it moves to the Recycle Bin (recoverable).',
+      'Recycle Bin — filter by year/month/day, then restore or permanently delete.',
+      'Export CSV — downloads your data as a spreadsheet file.',
+      'Change PIN, Username, Full Name — all found in separate cards below the profile.',
+      'Delete Account — permanently removes all your data from our servers.'
+    ],
+    example: 'User jd0292 went to Manage, selected Year: 2024, Month: Feb. The 34 February entries appeared. He clicked Delete — they moved to Recycle Bin. He later filtered the bin to Feb 2024 and restored 30 of them.',
+    tip: 'Export a CSV backup at least once a month. The Recycle Bin is your safety net for accidental deletions.'
+  },
+  'avatar': {
+    title: '😊 Avatar — Personalise Your Profile',
+    steps: [
+      'Go to Manage tab — your profile card is at the top.',
+      'Tap the emoji circle (your current avatar) to open the picker.',
+      'Browse 6 categories: Happy, Animals, Cool, Nature, Food, Sports.',
+      'Tap any emoji to select it — a gold border appears around your choice.',
+      'Tap ✓ USE THIS AVATAR to save.',
+      'Your avatar appears on your profile card immediately.',
+      'Avatar is saved per user — switching accounts restores each user\'s own avatar.'
+    ],
+    example: 'User mk0374 picked 🦁 from the Animals category. It now shows on her profile card under Manage.',
+    tip: 'Your avatar is stored on your device. It persists across sessions.'
+  },
+  'guest': {
+    title: '🎓 Guest Mode — For Users Under 16',
+    steps: [
+      'Guest Mode is activated automatically if your confirmed age is under 16.',
+      'Guest Mode gives access to: Import, Categorize, Ledger (both Expenses and Income), and Manage (profile only).',
+      'Dashboard, Budget, Reports and cloud sync are not available in Guest Mode.',
+      'Your data is stored locally on the device only — nothing is sent to the cloud.',
+      'An orange banner at the top confirms you are in Guest Mode.',
+      'When you turn 16, register a full account — your data will migrate.',
+      'Guest Mode is applied per user — other users on the same device are not affected.'
+    ],
+    example: 'Alex (age 14) opens the app. After confirming their DOB, Guest Mode activates showing 4 tabs. Alex tracks pocket money in the ledger. When Alex turns 16, they upgrade and all their data carries over.',
+    tip: 'Even in Guest Mode your data is safe on your device. Export to CSV for a backup.'
   },
   'income': {
     title: '💰 Income — Tracking Earnings',
