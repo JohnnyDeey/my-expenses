@@ -2877,8 +2877,8 @@ input[type="password"]::-ms-clear { display:none !important; }
               onblur="this.style.borderColor='#3a3020';this.style.boxShadow='none'"
               onkeydown="if(event.key==='Enter')submitFullVerify()">
             <button type="button" id="fv-pin-eye"
-              onclick="fvPinToggle()"
-              style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:#aaa;font-size:1.1rem;-webkit-tap-highlight-color:transparent;user-select:none;" title="Show/hide PIN">&#128065;</button>
+              onmousedown="showPin('fv-pin','fv-pin-eye')" onmouseup="hidePin('fv-pin','fv-pin-eye')" onmouseleave="hidePin('fv-pin','fv-pin-eye')" ontouchstart="showPin('fv-pin','fv-pin-eye')" ontouchend="hidePin('fv-pin','fv-pin-eye')"
+              style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:#aaa;font-size:1.1rem;-webkit-tap-highlight-color:transparent;user-select:none;" title="Hold to show PIN">&#128065;</button>
           </div>
         </div>
         <div id="fv-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
@@ -8544,7 +8544,7 @@ function showUsernameStep() {
 
   // T&C must be accepted before proceeding
   var regTc = document.getElementById('reg-tc-check');
-  var tcAccepted = localStorage.getItem('privacy_ok') === PRIVACY_VER
+  var tcAccepted = localStorage.getItem(_privacyKey()) === PRIVACY_VER
     || sessionStorage.getItem('tc_signed_this_session') === '1'
     || (regTc && regTc.checked);
   if (_tcRequired() && !tcAccepted) {
@@ -11469,7 +11469,7 @@ function showLoginStep() {
 function _tcRequired() {
   // Required if this exact version has NOT been signed yet
   // This catches both: brand new users AND existing users on a new app version
-  if (localStorage.getItem('privacy_ok') === PRIVACY_VER) return false;
+  if (localStorage.getItem(_privacyKey()) === PRIVACY_VER) return false;
   return true; // always require until this version is signed
 }
 
@@ -11503,7 +11503,7 @@ function openPrivacyFromPin(e) {
 function _checkTc(checkboxId) {
   if (!_tcRequired()) return true; // not required — pass
   // Check if accepted via the full overlay (no more checkbox)
-  if (localStorage.getItem('privacy_ok') === PRIVACY_VER) return true;
+  if (localStorage.getItem(_privacyKey()) === PRIVACY_VER) return true;
   if (sessionStorage.getItem('tc_signed_this_session') === '1') return true;
   // Not yet accepted — show error and open the T&C overlay
   var errId = checkboxId === 'pin-tc-check' ? 'login-error'
@@ -11575,6 +11575,10 @@ function _resumeSession(uid, name, phone) {
   applyMode();
   adjustMainPadding();
 
+  // Always restore full tabs first — default assumption is full access
+  _isGuestMode = false;
+  _restoreFullTabs();
+
   // ── Age-based mode check ──
   // If DOB confirmed and user is underage → apply guest mode immediately
   var confirmedDob = localStorage.getItem('expense_user_dob_'+(_userId||'default'));
@@ -11604,7 +11608,7 @@ function _resumeSession(uid, name, phone) {
   if (sessionStorage.getItem('run_update_flow') === '1') {
     setTimeout(function() {
       sessionStorage.removeItem('run_update_flow');
-      localStorage.removeItem('privacy_ok');
+      localStorage.removeItem(_privacyKey());
       _startUpdateFlow();
     }, 60000);
   } else {
@@ -12392,7 +12396,7 @@ function logOut() {
 
 function switchUser() {
   if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
-  // Clear this user's local data before switching
+  // Clear this user's session data
   localStorage.removeItem('expense_ledger');
   localStorage.removeItem('custom_categories');
   localStorage.removeItem('custom_cat_rules');
@@ -12403,16 +12407,51 @@ function switchUser() {
   localStorage.removeItem(PHONE_KEY);
   localStorage.removeItem(PHONE_TAIL_KEY);
   localStorage.removeItem(FULL_NAME_KEY);
-  // Force next user to see T&C and onboarding
-  localStorage.removeItem('privacy_ok');
-  localStorage.removeItem('expense_onboard_expenses_done');
-  localStorage.removeItem('expense_onboard_income_done');
-  sessionStorage.setItem('new_app_version', '1');
+  // Clear update flow flags
+  sessionStorage.removeItem('run_update_flow');
+  sessionStorage.removeItem('update_flow_step');
+  sessionStorage.removeItem('new_app_version');
   sessionStorage.removeItem('app_session');
+  // Restore full app tabs (in case previous user was in guest mode)
+  _isGuestMode = false;
+  _restoreFullTabs();
+  // Unfreeze in case update flow was active
+  _unfreezeApp();
   showPinScreen();
-  showPinPadStep();
+  // Switch user goes straight to security check (full verify)
+  showFullVerifyStep();
   syncSetStatus('off');
   updateHeaderContext();
+}
+
+// Restore all tabs to full visibility (reverse of _applyGuestMode)
+function _restoreFullTabs() {
+  var ALL_TABS = ['import','categorize','daily','dashboard','ledger','budget','manage'];
+  ALL_TABS.forEach(function(tab) {
+    var btns = document.querySelectorAll("button[onclick*=\"switchTab('"+tab+"'\"]");
+    btns.forEach(function(b){ b.style.display = ''; });
+  });
+  var ALL_INC = ['inc-import','inc-categorize','inc-monthly','inc-dashboard','inc-ledger','inc-manage'];
+  ALL_INC.forEach(function(tab) {
+    var btns = document.querySelectorAll("button[onclick*=\"switchIncomeTab('"+tab+"'\"]");
+    btns.forEach(function(b){ b.style.display = ''; });
+  });
+  // Restore all manage cards
+  var managePanel = document.getElementById('panel-manage');
+  if (managePanel) {
+    managePanel.querySelectorAll('.card').forEach(function(c){ c.style.display = ''; });
+    var mg = managePanel.querySelector('.manage-grid');
+    if (mg) mg.style.display = '';
+  }
+  // Hide guest profile card
+  var gpc = document.getElementById('guest-profile-card');
+  if (gpc) gpc.style.display = 'none';
+  // Hide guest banner
+  var gb = document.getElementById('guest-banner');
+  if (gb) gb.style.display = 'none';
+  // Show referral button if logged in
+  var rb = document.getElementById('hdr-referral-btn');
+  if (rb) rb.style.display = '';
 }
 
 function fullReset() {
@@ -12434,7 +12473,7 @@ function fullResetConfirmed() {
   var keysToRemove = [
     UID_KEY, NAME_KEY, FULL_NAME_KEY, PHONE_KEY,
     'expense_ledger', 'custom_categories', 'custom_cat_rules',
-    'last_active', 'keep_login_pref', 'privacy_ok',
+    'last_active', 'keep_login_pref',
     APP_MODE_KEY, 'reload_time', 'budgets_data',
     'expense_budget_data', 'expense_income_data',
     TRASH_KEY, 'expense_backup_reminder'
@@ -12449,7 +12488,7 @@ function fullResetConfirmed() {
     allKeys.push(localStorage.key(i));
   }
   allKeys.forEach(function(k) {
-    if (k && (k.indexOf('expense_') === 0 || k.indexOf('inc_') === 0 || k.indexOf('finance_') === 0 || k === 'privacy_ok' || k === 'keep_login_pref' || k === 'last_active' || k === 'reload_time')) {
+    if (k && (k.indexOf('expense_') === 0 || k.indexOf('inc_') === 0 || k.indexOf('finance_') === 0 || k.indexOf('privacy_ok_') === 0 || k === 'keep_login_pref' || k === 'last_active' || k === 'reload_time')) {
       localStorage.removeItem(k);
     }
   });
@@ -12505,6 +12544,10 @@ function changePin() {
 // ════════════════════════
 //  PRIVACY POLICY
 // ════════════════════════
+
+function _privacyKey() {
+  return 'privacy_ok_' + (_userId || localStorage.getItem('expense_uid') || 'default');
+}
 var PRIVACY_VER = '2026-03-22';
 var APP_VERSION = '2.2.0'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
@@ -12628,9 +12671,9 @@ function showOnboardingPrompt() {
       sessionStorage.setItem('run_update_flow', '1');
     } else {
       // Brand new user — force T&C at gate before anything
-      localStorage.removeItem('privacy_ok');
+      localStorage.removeItem(_privacyKey());
       setTimeout(function() {
-        if (localStorage.getItem('privacy_ok') !== PRIVACY_VER
+        if (localStorage.getItem(_privacyKey()) !== PRIVACY_VER
           && !sessionStorage.getItem('tc_signed_this_session')) {
           if (typeof _showPrivacyOverlay === 'function') _showPrivacyOverlay();
         }
@@ -12648,17 +12691,17 @@ function checkPrivacy() {
     userCol('settings').doc('privacy').get().then(function(doc) {
       var data = doc.exists ? doc.data() : {};
       if (!isNewVersion && data.version === PRIVACY_VER) {
-        localStorage.setItem('privacy_ok', PRIVACY_VER);
+        localStorage.setItem(_privacyKey(), PRIVACY_VER);
         return;
       }
       // Show policy — either new version or not yet accepted
       _showPrivacyOverlay();
     }).catch(function() {
-      if (!isNewVersion && localStorage.getItem('privacy_ok') === PRIVACY_VER) return;
+      if (!isNewVersion && localStorage.getItem(_privacyKey()) === PRIVACY_VER) return;
       _showPrivacyOverlay();
     });
   } else {
-    if (!isNewVersion && localStorage.getItem('privacy_ok') === PRIVACY_VER) return;
+    if (!isNewVersion && localStorage.getItem(_privacyKey()) === PRIVACY_VER) return;
     _showPrivacyOverlay();
   }
 }
@@ -12692,7 +12735,7 @@ function _showPrivacyOverlay() {
 }
 
 function acceptPrivacy() {
-  localStorage.setItem('privacy_ok', PRIVACY_VER);
+  localStorage.setItem(_privacyKey(), PRIVACY_VER);
   localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
   sessionStorage.setItem('tc_signed_this_session', '1');
   if (_db && _userId) {
