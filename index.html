@@ -1508,7 +1508,11 @@ input[type="password"]::-ms-clear { display:none !important; }
 <div id="sticky-topbar">
 <!-- Always-fixed top: user bar + nav tabs -->
 <div id="fixed-topbar" style="position:fixed;top:0;left:0;right:0;z-index:300;background:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,0.4);">
-<!-- Always-visible user bar — always shown -->
+  <!-- Guest Mode Banner -->
+  <div id="guest-banner" style="display:none;background:#7c4a00;padding:6px 16px;display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+    <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#ffd080;letter-spacing:1px;">&#127891; GUEST MODE — Data stored locally on this device only. No cloud sync.</span>
+    <button onclick="showGuestUpgradePrompt()" style="background:var(--gold);border:none;border-radius:3px;padding:3px 10px;font-family:'DM Mono',monospace;font-size:0.62rem;font-weight:700;color:var(--ink);cursor:pointer;letter-spacing:1px;">UPGRADE</button>
+  </div><!-- Always-visible user bar — always shown -->
 <div id="hdr-user-bar" style="background:var(--ink);padding:6px 14px;padding-top:max(6px, env(safe-area-inset-top, 6px));border-bottom:1px solid #2e2620;display:flex;flex-direction:column;gap:4px;">
   <!-- Row 1: profile · initials · sync · hide -->
   <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -2083,6 +2087,13 @@ input[type="password"]::-ms-clear { display:none !important; }
     <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="_showPrivacyOverlay()">&#128220; View Terms &amp; Conditions</button>
   </div>
 
+  <!-- ── Delete Account ── -->
+  <div class="card" style="border-color:var(--rust);margin-top:8px;">
+    <label style="display:flex;align-items:center;gap:8px;color:var(--rust);">&#9888; Delete My Account &amp; All Data</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Permanently delete your account and all associated data from our servers. This cannot be undone.</p>
+    <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="showDeleteAccountOverlay()">&#128465; Delete My Account</button>
+  </div>
+
 </div>
 
 <!-- ══ BUDGET ══ -->
@@ -2412,8 +2423,14 @@ input[type="password"]::-ms-clear { display:none !important; }
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Read the full Terms &amp; Conditions and Privacy Policy for My Expense Ledger.</p>
     <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="_showPrivacyOverlay()">&#128220; View Terms &amp; Conditions</button>
   </div>
-</div>
 
+  <!-- ── Delete Account ── -->
+  <div class="card" style="border-color:var(--rust);margin-top:8px;">
+    <label style="display:flex;align-items:center;gap:8px;color:var(--rust);">&#9888; Delete My Account &amp; All Data</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Permanently delete your account and all associated data from our servers. This cannot be undone.</p>
+    <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="showDeleteAccountOverlay()">&#128465; Delete My Account</button>
+  </div>
+</div>
 </div><!-- end income-main -->
 
 </main>
@@ -2485,6 +2502,103 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
+<!-- ══ DELETE ACCOUNT OVERLAY ══ -->
+<div id="delete-account-overlay" style="display:none;position:fixed;inset:0;z-index:99993;background:rgba(26,20,16,0.95);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--paper);border:2px solid var(--rust);border-radius:8px;width:100%;max-width:420px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--rust);border-radius:6px 6px 0 0;">
+      <span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:white;">&#9888; Delete Account</span>
+      <button onclick="closeDeleteAccountOverlay()" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:1.4rem;cursor:pointer;padding:0 4px;">&#10005;</button>
+    </div>
+    <div id="delete-account-step1" style="padding:24px 20px;">
+      <div style="background:#fff0f0;border:1px solid var(--rust);border-radius:6px;padding:14px;margin-bottom:18px;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.75rem;font-weight:700;color:var(--rust);margin-bottom:8px;">&#9888; THIS WILL PERMANENTLY DELETE:</div>
+        <ul style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:2;margin:0;padding-left:18px;">
+          <li>All your expense entries</li>
+          <li>All your income entries</li>
+          <li>All budgets and settings</li>
+          <li>Your recycle bin</li>
+          <li>Your referral history</li>
+          <li>Your account from our servers</li>
+        </ul>
+      </div>
+      <p style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:16px;line-height:1.7;">This action is <strong>irreversible</strong>. Your data cannot be recovered once deleted.</p>
+      <div style="margin-bottom:16px;">
+        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">ENTER YOUR PIN TO CONFIRM</label>
+        <input type="password" id="delete-account-pin" inputmode="numeric" maxlength="8" placeholder="Enter your PIN" style="width:100%;padding:10px 12px;font-family:'DM Mono',monospace;font-size:1rem;letter-spacing:4px;border:1.5px solid var(--border);border-radius:4px;outline:none;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:18px;display:flex;align-items:flex-start;gap:10px;">
+        <input type="checkbox" id="delete-account-confirm-check" style="margin-top:3px;accent-color:var(--rust);width:16px;height:16px;flex-shrink:0;">
+        <label for="delete-account-confirm-check" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.6;cursor:pointer;">I understand this is permanent and all my data will be deleted from My Expense Ledger servers forever.</label>
+      </div>
+      <div id="delete-account-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--rust);margin-bottom:10px;min-height:18px;"></div>
+      <button onclick="confirmDeleteAccount()" style="width:100%;padding:13px;background:var(--rust);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px;">&#128465; DELETE MY ACCOUNT PERMANENTLY</button>
+      <button onclick="closeDeleteAccountOverlay()" style="width:100%;padding:12px;background:none;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);cursor:pointer;">Cancel — Keep My Account</button>
+    </div>
+    <!-- Success step -->
+    <div id="delete-account-step2" style="display:none;padding:32px 20px;text-align:center;">
+      <div style="font-size:2.5rem;margin-bottom:12px;">&#128465;</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:10px;">Account Deleted</div>
+      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);line-height:1.7;">Your account and all data have been permanently deleted from our servers. Thank you for using My Expense Ledger.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ UNDERAGE OVERLAY ══ -->
+<div id="underage-overlay" style="display:none;position:fixed;inset:0;z-index:999999;background:#1a1410;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
+  <div style="background:rgba(255,255,255,0.04);border:2px solid var(--gold);border-radius:12px;width:100%;max-width:400px;padding:32px 24px;text-align:center;margin:auto;">
+    <div style="font-size:2.5rem;margin-bottom:12px;">📚</div>
+    <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--gold2);margin-bottom:8px;">Welcome, Young Learner!</div>
+    <p style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#a09070;line-height:1.8;margin-bottom:18px;">Full accounts require age <strong style="color:var(--gold);">16+</strong> due to data protection laws. But you can still use <strong style="color:var(--gold);">My Expense Ledger</strong> in <strong style="color:var(--gold2);">Guest Mode</strong> — perfect for learning financial literacy!</p>
+    <!-- Guest mode features -->
+    <div style="background:rgba(200,150,46,0.08);border:1px solid rgba(200,150,46,0.3);border-radius:8px;padding:14px;margin-bottom:20px;text-align:left;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--gold);letter-spacing:1px;margin-bottom:10px;">GUEST MODE INCLUDES:</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#c0b090;line-height:2;">
+        ✅ Import &amp; track expenses<br>
+        ✅ Import &amp; track income<br>
+        ✅ Categorize your spending<br>
+        ✅ View expense &amp; income ledger<br>
+        ✅ Multi-currency support<br>
+        ❌ Cloud sync (data stays on device)<br>
+        ❌ Dashboard &amp; charts<br>
+        ❌ Budget targets<br>
+        ❌ PDF reports
+      </div>
+    </div>
+    <!-- Nickname input -->
+    <div style="margin-bottom:16px;text-align:left;">
+      <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;display:block;margin-bottom:6px;">YOUR NICKNAME</label>
+      <input id="guest-nickname" type="text" maxlength="12" placeholder="e.g. Alex or JuniorSaver" style="width:100%;padding:11px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')startGuestMode()">
+      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:4px;">No personal data collected. No phone number needed.</div>
+    </div>
+    <div id="guest-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:18px;"></div>
+    <button onclick="startGuestMode()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:10px;">&#127891; START GUEST MODE</button>
+    <button onclick="document.getElementById('underage-overlay').style.display='none';showPinPadStep();" style="width:100%;padding:10px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;">← Back to Sign In</button>
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a3e30;margin-top:14px;line-height:1.7;">When you turn 16, you can upgrade to a full account and keep all your data.</div>
+  </div>
+</div>
+
+<!-- ══ PHONE CONFIRM OVERLAY (existing users) ══ -->
+<div id="phone-confirm-overlay" style="display:none;position:fixed;inset:0;z-index:99996;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:420px;padding:28px 24px;">
+    <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:6px;">&#128241; Confirm Your Details</div>
+    <p style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);line-height:1.7;margin-bottom:20px;">To comply with data protection regulations, we need to confirm your phone number (with country code) and date of birth. This is a one-time requirement.</p>
+    <div style="margin-bottom:14px;">
+      <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">DATE OF BIRTH</label>
+      <input type="date" id="confirm-dob" style="width:100%;padding:10px 12px;font-family:'DM Mono',monospace;font-size:0.9rem;border:1.5px solid var(--border);border-radius:4px;outline:none;box-sizing:border-box;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);margin-top:4px;">You must be at least 16 years old.</div>
+    </div>
+    <div style="margin-bottom:18px;">
+      <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">PHONE NUMBER</label>
+      <div style="display:flex;gap:8px;">
+        <select id="confirm-country-code" style="width:130px;flex-shrink:0;padding:10px 6px;font-family:'DM Mono',monospace;font-size:0.78rem;border:1.5px solid var(--border);border-radius:4px;outline:none;"></select>
+        <input type="tel" id="confirm-phone-number" placeholder="e.g. 8012345678" style="flex:1;padding:10px 12px;font-family:'DM Mono',monospace;font-size:0.9rem;border:1.5px solid var(--border);border-radius:4px;outline:none;">
+      </div>
+    </div>
+    <div id="phone-confirm-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--rust);margin-bottom:12px;min-height:18px;"></div>
+    <button onclick="submitPhoneConfirm()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;">CONFIRM &amp; CONTINUE</button>
+  </div>
+</div>
+
 <!-- ══ REFERRAL PANEL ══ -->
 <div id="referral-overlay" style="display:none;position:fixed;inset:0;z-index:99995;background:rgba(26,20,16,0.92);align-items:flex-end;justify-content:center;padding:0;">
   <div style="background:var(--paper);border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:24px 20px 32px;box-shadow:0 -8px 32px rgba(0,0,0,0.4);">
@@ -2535,14 +2649,25 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div id="reg-step-name">
           <div style="margin-bottom:14px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Full name</label>
-            <input id="reg-name" type="text" placeholder="e.g. John David" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('reg-phone').focus()">
+            <input id="reg-name" type="text" placeholder="e.g. John David" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('reg-dob').focus()">
           </div>
+          <!-- Date of Birth -->
+          <div style="margin-bottom:14px;">
+            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Date of birth <span style="color:#b5451b;">*</span></label>
+            <input id="reg-dob" type="date" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')document.getElementById('reg-phone-number').focus()">
+            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:4px;">You must be at least 16 years old to use this app.</div>
+          </div>
+          <!-- Phone with country code -->
           <div style="margin-bottom:20px;">
-            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number</label>
-            <input id="reg-phone" type="tel" placeholder="e.g. 07012345678" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')showUsernameStep()">
+            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number <span style="color:#b5451b;">*</span></label>
+            <div style="display:flex;gap:8px;">
+              <select id="reg-country-code" style="width:130px;flex-shrink:0;padding:12px 6px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--paper);outline:none;"></select>
+              <input id="reg-phone-number" type="tel" placeholder="e.g. 8012345678" style="flex:1;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')showUsernameStep()">
+            </div>
+            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:4px;">Select your country code then enter your number.</div>
           </div>
           <div id="reg-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
-          <!-- T&C — must read and accept before Next -->
+          <!-- T&C -->
           <div style="margin-bottom:14px;">
             <button onclick="openPrivacyFromPin(event)" style="width:100%;padding:10px 14px;background:rgba(200,150,46,0.1);border:1.5px solid rgba(200,150,46,0.4);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--gold);cursor:pointer;text-align:center;letter-spacing:1px;">&#128220; READ &amp; ACCEPT TERMS &amp; CONDITIONS</button>
           </div>
@@ -2755,13 +2880,25 @@ input[type="password"]::-ms-clear { display:none !important; }
       <p style="margin-bottom:14px;">Each user has a unique referral link tied to their username. When someone registers via your link, only the count of referrals is shown to you — no names, phone numbers, or personal details of referred users are ever revealed. Referral records stored in Firebase contain only the referrer's username, the month of signup, and a timestamp. This data is used solely for counting referrals and future reward calculations.</p>
       <p style="font-weight:700;margin-bottom:6px;">13. Updates &amp; Version Policy</p>
       <p style="margin-bottom:14px;">When a new version of the app is deployed, all users are required to re-read and re-accept the Terms &amp; Conditions before continuing. This ensures all users are always aware of the latest terms. Onboarding may also be replayed on major updates.</p>
-      <p style="font-weight:700;margin-bottom:6px;">14. Contact</p>
-      <p style="margin-bottom:0;">Questions? Contact support at myfinanceledgerapp [at] gmail.com.</p>
+      <p style="font-weight:700;margin-bottom:6px;">14. Age Restriction</p>
+      <p style="margin-bottom:14px;">My Expense Ledger is only available to users aged <strong>16 and above</strong>, in line with GDPR recommendations. By registering, you confirm that you are at least 16 years old. Users found to be under 16 will have their accounts and data permanently removed.</p>
+      <p style="font-weight:700;margin-bottom:6px;">15. Right to Erasure &amp; Account Deletion</p>
+      <p style="margin-bottom:14px;">You have the right to permanently delete your account and all associated data at any time. To exercise this right, go to <strong>Manage tab → Delete My Account</strong>. This will permanently remove all your expense entries, income entries, budgets, settings, recycle bin, and referral history from our servers. This action is irreversible. Once deleted, your data cannot be recovered.</p>
+      <p style="font-weight:700;margin-bottom:6px;">15. Right to Data Export</p>
+      <p style="margin-bottom:14px;">You have the right to export your financial data at any time. Use the <strong>PDF Report</strong> feature in the Dashboard tab and the <strong>Monthly Report</strong> in Income to download your records. Full CSV/JSON export will be available in a future update.</p>
+      <p style="font-weight:700;margin-bottom:6px;">16. Local Storage &amp; Device Data</p>
+      <p style="margin-bottom:14px;">This app uses your device's local storage (similar to cookies) to remember your session, active tab, and preferences. No tracking cookies are used. Local storage is cleared when you log out or delete your account. By using this app you consent to this use of local storage.</p>
+      <p style="font-weight:700;margin-bottom:6px;">17. Governing Law &amp; Jurisdiction</p>
+      <p style="margin-bottom:14px;">These Terms and Privacy Policy are governed by the laws of the <strong>Federal Republic of Nigeria</strong> (Nigeria Data Protection Regulation — NDPR) and comply with the <strong>General Data Protection Regulation (GDPR)</strong> of the European Union where applicable. Any disputes shall be resolved under Nigerian jurisdiction.</p>
+      <p style="font-weight:700;margin-bottom:6px;">18. Last Updated</p>
+      <p style="margin-bottom:14px;">This Privacy Policy and Terms of Service were last updated on <strong>22 March 2026</strong> (v2.2.0). We reserve the right to update these terms. All users will be required to re-accept updated terms upon next login.</p>
+      <p style="font-weight:700;margin-bottom:6px;">19. Contact</p>
+      <p style="margin-bottom:0;">Questions about your data or these terms? Contact us at myfinanceledgerapp [at] gmail.com. We aim to respond within 48 hours.</p>
     </div>
 
     <!-- Accept button at the very bottom of the scroll area -->
     <div id="privacy-accept-wrap" style="padding:20px 0 8px;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; APRIL 2026 &mdash; v2.1</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; MARCH 2026 &mdash; v2.2.0</div>
       <button onclick="acceptPrivacy()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.88rem;letter-spacing:2px;font-weight:900;color:var(--ink);cursor:pointer;">&#10003; I ACCEPT &mdash; CONTINUE</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#4a3e30;text-align:center;margin-top:8px;">By tapping Accept you confirm you have read and agree to the above terms.</div>
     </div>
@@ -2778,7 +2915,12 @@ input[type="password"]::-ms-clear { display:none !important; }
     <p style="font-weight:700;margin-bottom:6px;">7. Developer &amp; Branding</p><p style="margin-bottom:12px;">Built by John-de-Scholar (John Damilola Sunday). Developer name appears on login screen, Help, and reports.</p>
     <p style="font-weight:700;margin-bottom:6px;">8. Referral Programme</p><p style="margin-bottom:12px;">Each user has a unique referral link. Only the count of referrals is shown to you — no names or personal details of referred users are ever revealed.</p>
     <p style="font-weight:700;margin-bottom:6px;">9. Updates &amp; Version Policy</p><p style="margin-bottom:12px;">On every new version, all users must re-accept these Terms before continuing. This ensures everyone is always aware of the latest terms.</p>
-    <p style="font-weight:700;margin-bottom:6px;">10. Contact</p><p>myfinanceledgerapp [at] gmail.com</p>
+    <p style="font-weight:700;margin-bottom:6px;">10. Right to Erasure</p><p style="margin-bottom:12px;">You can permanently delete your account and all data at any time via Manage tab → Delete My Account. This is irreversible and cannot be undone.</p>
+    <p style="font-weight:700;margin-bottom:6px;">11. Right to Data Export</p><p style="margin-bottom:12px;">Export your data anytime via PDF Report (Dashboard) or Monthly Report (Income). Full CSV export coming in a future update.</p>
+    <p style="font-weight:700;margin-bottom:6px;">12. Age Restriction</p><p style="margin-bottom:12px;">You must be at least 16 years old to use this app. By registering you confirm you meet this requirement.</p>
+    <p style="font-weight:700;margin-bottom:6px;">13. Local Storage</p><p style="margin-bottom:12px;">This app uses device local storage (similar to cookies) to remember your session and preferences. No tracking cookies are used.</p>
+    <p style="font-weight:700;margin-bottom:6px;">14. Governing Law</p><p style="margin-bottom:12px;">Governed by Nigerian law (NDPR) and GDPR where applicable. Last updated: 22 March 2026 (v2.1.2).</p>
+    <p style="font-weight:700;margin-bottom:6px;">15. Contact</p><p>myfinanceledgerapp [at] gmail.com</p>
   </div>
 </div>
 
@@ -7172,9 +7314,9 @@ function pushTrashToFirebase() {
 
 function fetchTrashFromFirebase() {
   if (!_db || !_userId) return;
-  if (window._trashDeletePending) return; // don't overwrite after permanent delete
+  if (window._trashDeletePending) return;
   userCol('settings').doc('trash').get().then(function(doc) {
-    window._trashFetched = true; // mark that we've fetched — safe to push now
+    window._trashFetched = true;
     if (!doc.exists) { renderTrashPanel(); return; }
     var d = doc.data();
     if (!d.items) { renderTrashPanel(); return; }
@@ -7190,8 +7332,44 @@ function fetchTrashFromFirebase() {
     saveTrash(merged);
     renderTrashPanel();
   }).catch(function(e){
-    window._trashFetched = true; // even on error, allow future pushes
+    window._trashFetched = true;
     console.log('Trash fetch error:', e);
+  });
+}
+
+// ── Income trash Firebase sync ──
+function pushIncTrashToFirebase() {
+  if (!_db || !_userId) return;
+  window._incTrashDeletePending = true;
+  var trashData = localStorage.getItem(getIncTrashKey()) || '[]';
+  userCol('settings').doc('inc_trash').set({ items: trashData, updated: Date.now() })
+    .then(function(){ setTimeout(function(){ window._incTrashDeletePending = false; }, 5000); })
+    .catch(function(){ window._incTrashDeletePending = false; });
+}
+
+function fetchIncTrashFromFirebase() {
+  if (!_db || !_userId) return;
+  if (window._incTrashDeletePending) return;
+  userCol('settings').doc('inc_trash').get().then(function(doc) {
+    window._incTrashFetched = true;
+    if (!doc.exists) { renderIncTrashPanel(); return; }
+    var d = doc.data();
+    if (!d.items) { renderIncTrashPanel(); return; }
+    var remoteTrash = [];
+    try { remoteTrash = JSON.parse(d.items); } catch(e){ renderIncTrashPanel(); return; }
+    var localTrash = [];
+    try { localTrash = JSON.parse(localStorage.getItem(getIncTrashKey()) || '[]'); } catch(e){}
+    var seen = {};
+    var merged = [];
+    localTrash.concat(remoteTrash).forEach(function(t) {
+      var key = String(t._trash_id);
+      if (!seen[key]) { seen[key] = true; merged.push(t); }
+    });
+    localStorage.setItem(getIncTrashKey(), JSON.stringify(merged));
+    renderIncTrashPanel();
+  }).catch(function(e){
+    window._incTrashFetched = true;
+    console.log('Inc trash fetch error:', e);
   });
 }
 
@@ -7232,6 +7410,8 @@ function addToTrash(items, source, groupLabel) {
     });
   }
   saveTrash(trash);
+  // Push to Firebase so trash survives across devices and sessions
+  pushTrashToFirebase();
 }
 function restoreFromTrash(trashId) {
   var trash = loadTrash();
@@ -8185,13 +8365,30 @@ function generateUsernameOptions(fullName) {
 }
 
 function showUsernameStep() {
-  var name  = (document.getElementById('reg-name')  ||{}).value.trim();
-  var phone = (document.getElementById('reg-phone') ||{}).value.trim();
-  var errEl = document.getElementById('reg-error');
+  var name   = (document.getElementById('reg-name')  ||{}).value.trim();
+  var dob    = (document.getElementById('reg-dob')   ||{}).value;
+  var dial   = (document.getElementById('reg-country-code') ||{}).value || '';
+  var number = (document.getElementById('reg-phone-number') ||{}).value.trim();
+  var phone  = dial + number;
+  var errEl  = document.getElementById('reg-error');
+
   if (!name)  { if(errEl) errEl.textContent='Please enter your full name'; return; }
-  if (!phone || phone.replace(/\D/g,'').length < 7) {
+
+  // Age check
+  if (!dob) { if(errEl) errEl.textContent='Please enter your date of birth'; return; }
+  if (_isUnderage(dob)) {
+    if(errEl) errEl.textContent = '';
+    // Hide register form and show underage screen
+    document.getElementById('pin-step-register').style.display = 'none';
+    showUnderageScreen();
+    return;
+  }
+
+  // Phone check
+  if (!number || number.replace(/\D/g,'').length < 5) {
     if(errEl) errEl.textContent='Please enter a valid phone number'; return;
   }
+
   // T&C must be accepted before proceeding
   var regTc = document.getElementById('reg-tc-check');
   var tcAccepted = localStorage.getItem('privacy_ok') === PRIVACY_VER
@@ -9174,6 +9371,7 @@ function incYearSaveAll() {
       if (typeof s === 'string') incTrash.push({ _raw_line:s, date:'', _trash_source:'skipped', _trash_date:now, _trash_id:Date.now()+Math.random() });
     });
     localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
+    pushIncTrashToFirebase();
   }
 
   var months = Object.keys(byMonth).length;
@@ -9329,6 +9527,7 @@ function parseIncomeInput() {
       incTrash.push({ _raw_line:s, date:currentDate||'', _trash_source:'skipped', _trash_date:now, _trash_id:Date.now()+Math.random() });
     });
     localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
+    pushIncTrashToFirebase();
     showToast('Parsed ' + incPendingItems.length + ' · ' + skipped.length + ' skipped to recycle bin');
   } else {
     showToast('Parsed ' + incPendingItems.length + ' income entries');
@@ -10242,6 +10441,7 @@ function renderIncomeLedger() {
         var now = new Date().toISOString().substring(0,10);
         toTrash.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random()})); });
         localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
+        pushIncTrashToFirebase();
       }
       saveIncomeData(d3.filter(function(i){ return String(i.id)!==String(item.id); }));
       renderIncomeLedger();
@@ -10415,6 +10615,7 @@ function renderIncomeManage() {
           var gid = 'incgrp_'+Date.now();
           its.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:lbl})); });
           localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
+          pushIncTrashToFirebase();
           saveIncomeData(loadIncomeData().filter(function(i){ return i.date.substring(0,7)!==k2; }));
           renderIncomeManage();
           showToast(lbl+' moved to income recycle bin');
@@ -10440,6 +10641,7 @@ function clearAllIncome() {
     var gid = 'incgrp_'+Date.now();
     all.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:'All Income Data'})); });
     localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
+    pushIncTrashToFirebase();
   }
   saveIncomeData([]);
   renderIncomeManage();
@@ -10606,6 +10808,7 @@ function renderIncomeTrash() {
         localStorage.setItem(bufKey, existing+(existing?String.fromCharCode(10):'')+( t._raw_line||t.desc||''));
         var trash2 = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
         localStorage.setItem(getIncTrashKey(), JSON.stringify(trash2));
+        pushIncTrashToFirebase();
         renderIncomeTrash();
         showToast('Saved to Import notepad for that month');
       } else {
@@ -10617,6 +10820,7 @@ function renderIncomeTrash() {
     (function(t){ pb.addEventListener('click', function(){
       var tr2 = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
       localStorage.setItem(getIncTrashKey(), JSON.stringify(tr2));
+      pushIncTrashToFirebase();
       renderIncomeTrash();
     }); })(item);
     actTd.appendChild(pb);
@@ -10641,6 +10845,7 @@ function restoreIncomeItem(trashId) {
       saveIncomeData(data);
     }
     localStorage.setItem(getIncTrashKey(), JSON.stringify(trash));
+    pushIncTrashToFirebase();
     renderIncomeTrash();
     showToast('Income entry restored');
   }
@@ -10658,6 +10863,7 @@ function restoreIncomeGroup(gid) {
   data.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
   saveIncomeData(data);
   localStorage.setItem(getIncTrashKey(), JSON.stringify(remaining));
+  pushIncTrashToFirebase();
   renderIncomeTrash();
   renderIncomeManage();
   showToast(toRestore.length + ' income entries restored');
@@ -10665,6 +10871,7 @@ function restoreIncomeGroup(gid) {
 function deleteIncomeGroup(gid) {
   var trash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(t){ return t._group_id!==gid; });
   localStorage.setItem(getIncTrashKey(), JSON.stringify(trash));
+  pushIncTrashToFirebase();
   renderIncomeTrash();
   showToast('Group permanently deleted');
 }
@@ -10707,6 +10914,7 @@ document.addEventListener('visibilitychange', function() {
     // Returned to app — check if 10 minutes have passed since last interaction
     checkInactivity();
     if (_db && !window._trashDeletePending) fetchTrashFromFirebase();
+    if (_db && !window._incTrashDeletePending) fetchIncTrashFromFirebase();
   }
   // When hiding: do NOT update last_active — we want to measure from last real interaction
 });
@@ -11223,6 +11431,8 @@ function _resumeSession(uid, name, phone) {
   }, 50);
   setTimeout(function() { checkInactivity(); }, 500);
   setTimeout(checkBackupReminder, 3000);
+  // Check if existing user needs to confirm phone + DOB
+  setTimeout(function() { checkExistingUserConfirmation(); }, 2000);
   // Fire onboarding IMMEDIATELY on new version — before any async sync
   if (sessionStorage.getItem('new_app_version') === '1') {
     sessionStorage.removeItem('new_app_version');
@@ -11581,17 +11791,31 @@ function showCodeStep() {
 }
 
 function generateCode() {
-  var name  = (document.getElementById('reg-name')  ||{}).value.trim();
-  var phone = (document.getElementById('reg-phone') ||{}).value.trim();
-  var errEl = document.getElementById('reg-error');
+  var name   = (document.getElementById('reg-name')  ||{}).value.trim();
+  var dob    = (document.getElementById('reg-dob')   ||{}).value;
+  var dial   = (document.getElementById('reg-country-code') ||{}).value || '';
+  var number = (document.getElementById('reg-phone-number') ||{}).value.trim();
+  var phone  = dial + number;
+  var errEl  = document.getElementById('reg-error');
   if (!name)  { if(errEl) errEl.textContent='Please enter your name'; return; }
-  if (!phone || phone.replace(/[^0-9]/g,'').length < 7) {
+  if (!number || number.replace(/[^0-9]/g,'').length < 5) {
     if(errEl) errEl.textContent='Please enter a valid phone number'; return;
   }
   if (!_selectedUsername) { showToast('Please select a username first'); return; }
   if(errEl) errEl.textContent = 'Checking...';
-  _pendingName  = _selectedUsername; // use chosen username as display name
-  _pendingFullName = name; // store real full name
+
+  // Save DOB and country to localStorage
+  var country = '';
+  if (typeof COUNTRY_CODES !== 'undefined') {
+    COUNTRY_CODES.forEach(function(c) { if (c.dial === dial) country = c.name; });
+  }
+  localStorage.setItem('expense_user_dob',     dob);
+  localStorage.setItem('expense_user_country',  country);
+  localStorage.setItem('expense_user_dial',     dial);
+  localStorage.setItem(PHONE_CONFIRM_KEY, '1'); // mark confirmed at registration
+
+  _pendingName  = _selectedUsername;
+  _pendingFullName = name;
   _pendingPhone = hashPhone(phone);
   // Save last 2 digits of raw phone for display initials
   var rawDigits = phone.replace(/[^0-9]/g,'');
@@ -11777,6 +12001,7 @@ function useResetCodeNow() {
   if (hint) hint.style.display = 'none';
   hidePinScreen();
   fetchTrashFromFirebase();
+  fetchIncTrashFromFirebase();
   startSync();
   showToast('Signed in! Change your PIN in Manage now.');
   setTimeout(function() {
@@ -11845,6 +12070,7 @@ function submitLogin() {
     if (hint) hint.style.display = 'none';
     hidePinScreen();
     fetchTrashFromFirebase();
+  fetchIncTrashFromFirebase();
     startSync();
     return true;
   }
@@ -12108,8 +12334,8 @@ function changePin() {
 // ════════════════════════
 //  PRIVACY POLICY
 // ════════════════════════
-var PRIVACY_VER = '2026-04';
-var APP_VERSION = '2.1.1'; // bump this with every release to force privacy + onboarding re-run
+var PRIVACY_VER = '2026-03-22';
+var APP_VERSION = '2.2.0'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── On every page load: detect new version ──
@@ -12179,8 +12405,8 @@ function _showPrivacyOverlay() {
   if (lbl) {
     var isExisting = !!localStorage.getItem(UID_KEY);
     lbl.textContent = isExisting
-      ? 'UPDATED TERMS — APRIL 2026 — v2.1 — Referral Programme added'
-      : 'MY EXPENSE LEDGER — APRIL 2026 — v2.1';
+      ? 'UPDATED TERMS — MARCH 2026 — v2.1.2 — Age, jurisdiction & data export added'
+      : 'MY EXPENSE LEDGER — MARCH 2026 — v2.1.2';
   }
   o.style.display = 'flex';
 }
@@ -13101,7 +13327,165 @@ try {
 } catch(err) { /* fail silently */ }
 
 // ════════════════════════════════
-//  REFERRAL SYSTEM
+//  GUEST MODE (under 16)
+// ════════════════════════════════
+var GUEST_MODE_KEY = 'expense_guest_mode';
+var _isGuestMode = false;
+
+function startGuestMode() {
+  var nickname = (document.getElementById('guest-nickname') || {}).value.trim();
+  var errEl    = document.getElementById('guest-error');
+  if (!nickname || nickname.length < 2) {
+    if (errEl) errEl.textContent = 'Please enter a nickname (at least 2 characters)';
+    return;
+  }
+  if (errEl) errEl.textContent = '';
+  _isGuestMode = true;
+  localStorage.setItem(GUEST_MODE_KEY, '1');
+  localStorage.setItem('expense_guest_nickname', nickname);
+  var o = document.getElementById('underage-overlay');
+  if (o) o.style.display = 'none';
+  _userId = 'guest_local'; _userName = nickname; _userPhone = 'guest';
+  var pinO = document.getElementById('pin-overlay');
+  if (pinO) pinO.style.display = 'none';
+  document.body.classList.add('app-ready');
+  _applyGuestMode();
+  buildSYMS(); refreshAllCurrencyDropdowns(); updateUserDisplay(); adjustMainPadding();
+  _appMode = 'expenses'; applyMode(); switchTab('import', null);
+  showToast('👋 Welcome ' + nickname + '! Guest Mode active.');
+}
+
+function _applyGuestMode() {
+  _isGuestMode = true;
+  var banner = document.getElementById('guest-banner');
+  if (banner) banner.style.display = 'flex';
+  // Hide advanced tabs in expenses module
+  ['dashboard','budget','manage'].forEach(function(tab) {
+    var btns = document.querySelectorAll("button[onclick*=\"switchTab('"+tab+"'\"]");
+    btns.forEach(function(b){ b.style.display='none'; });
+  });
+  // Hide advanced tabs in income module
+  ['inc-dashboard','inc-monthly','inc-manage'].forEach(function(tab) {
+    var btns = document.querySelectorAll("button[onclick*=\"switchIncomeTab('"+tab+"'\"]");
+    btns.forEach(function(b){ b.style.display='none'; });
+  });
+  // Keep income module switch visible — guests can use both modules
+  // Hide referral button
+  var rb = document.getElementById('hdr-referral-btn');
+  if (rb) rb.style.display = 'none';
+}
+
+function showGuestUpgradePrompt() {
+  showToast('When you turn 16 you can upgrade — your data will migrate to a full account!');
+}
+
+// Auto-resume guest session on page load
+(function resumeGuestIfNeeded() {
+  if (localStorage.getItem(GUEST_MODE_KEY) !== '1') return;
+  var nickname = localStorage.getItem('expense_guest_nickname') || 'Guest';
+  _isGuestMode = true; _userName = nickname; _userId = 'guest_local'; _userPhone = 'guest';
+  setTimeout(function() {
+    var pinO = document.getElementById('pin-overlay');
+    if (pinO) pinO.style.display = 'none';
+    document.body.classList.add('app-ready');
+    _applyGuestMode();
+    buildSYMS(); refreshAllCurrencyDropdowns(); updateUserDisplay(); adjustMainPadding();
+    _appMode = 'expenses'; applyMode();
+    var savedTab = localStorage.getItem('expense_active_tab');
+    if (savedTab) switchTab(savedTab, null);
+  }, 200);
+})();
+
+// ════════════════════════════════
+//  DELETE ACCOUNT
+// ════════════════════════════════
+function showDeleteAccountOverlay() {
+  var o = document.getElementById('delete-account-overlay');
+  if (!o) return;
+  // Reset form
+  var pinEl   = document.getElementById('delete-account-pin');
+  var chkEl   = document.getElementById('delete-account-confirm-check');
+  var errEl   = document.getElementById('delete-account-error');
+  var step1   = document.getElementById('delete-account-step1');
+  var step2   = document.getElementById('delete-account-step2');
+  if (pinEl)  pinEl.value = '';
+  if (chkEl)  chkEl.checked = false;
+  if (errEl)  errEl.textContent = '';
+  if (step1)  step1.style.display = 'block';
+  if (step2)  step2.style.display = 'none';
+  o.style.display = 'flex';
+}
+
+function closeDeleteAccountOverlay() {
+  var o = document.getElementById('delete-account-overlay');
+  if (o) o.style.display = 'none';
+}
+
+function confirmDeleteAccount() {
+  var pinEl  = document.getElementById('delete-account-pin');
+  var chkEl  = document.getElementById('delete-account-confirm-check');
+  var errEl  = document.getElementById('delete-account-error');
+  var pin    = pinEl ? pinEl.value.trim() : '';
+  var errMsg = '';
+
+  if (!pin) { errMsg = 'Please enter your PIN to confirm.'; }
+  else if (!chkEl || !chkEl.checked) { errMsg = 'Please tick the confirmation checkbox.'; }
+  else {
+    // Verify PIN
+    var storedHash = localStorage.getItem('expense_pin_hash_local');
+    if (storedHash && hashPin(pin) !== storedHash) { errMsg = 'Incorrect PIN. Please try again.'; }
+  }
+
+  if (errMsg) {
+    if (errEl) errEl.textContent = errMsg;
+    if (pinEl) pinEl.style.borderColor = 'var(--rust)';
+    return;
+  }
+
+  // PIN verified — delete everything
+  if (errEl) errEl.textContent = '';
+
+  // 1. Delete all Firebase data
+  if (_db && _userId) {
+    var cols = ['expenses', 'income', 'settings', 'categories'];
+    cols.forEach(function(col) {
+      userCol(col).get().then(function(snap) {
+        snap.forEach(function(doc) { doc.ref.delete().catch(function(){}); });
+      }).catch(function(){});
+    });
+    // Delete user registry entry
+    if (_userPhone) {
+      _db.collection('user_registry').doc(_userPhone).delete().catch(function(){});
+    }
+  }
+
+  // 2. Clear all localStorage
+  var keysToRemove = [];
+  for (var i = 0; i < localStorage.length; i++) {
+    keysToRemove.push(localStorage.key(i));
+  }
+  keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
+  sessionStorage.clear();
+
+  // 3. Show success step
+  var step1 = document.getElementById('delete-account-step1');
+  var step2 = document.getElementById('delete-account-step2');
+  if (step1) step1.style.display = 'none';
+  if (step2) step2.style.display = 'block';
+
+  // 4. Redirect to login after 3 seconds
+  setTimeout(function() {
+    window.location.reload();
+  }, 3000);
+}
+
+// Close delete overlay on backdrop tap
+document.addEventListener('click', function(e) {
+  var o = document.getElementById('delete-account-overlay');
+  if (o && o.style.display === 'flex' && e.target === o) closeDeleteAccountOverlay();
+});
+
+// ════════════════════════════════
 // ════════════════════════════════
 var APP_BASE_URL = 'https://johnnydeey.github.io/my-expenses/';
 
