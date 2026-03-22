@@ -668,9 +668,9 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'b' || e.key === 'B') { e.preventDefault(); if (typeof onboardNav === 'function') onboardNav(-1); }
   // S = skip ONLY during forced onboarding (new user/version), NOT during replay
   if (e.key === 's' || e.key === 'S') {
-    if (typeof _onboardIsReplay !== 'undefined' && _onboardIsReplay) return; // replay — do nothing
+    // Tour is mandatory — S key never skips
     e.preventDefault();
-    if (typeof skipOnboarding === 'function') skipOnboarding();
+    return;
   }
 });
 
@@ -2158,7 +2158,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- ── App Version & Copyright ── -->
   <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.3.1</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.3.2</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
   </div>
@@ -2530,7 +2530,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- ── App Version & Copyright ── -->
   <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.3.1</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.3.2</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
   </div>
@@ -3039,7 +3039,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
     <!-- Accept button at the very bottom of the scroll area -->
     <div id="privacy-accept-wrap" style="padding:20px 0 8px;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; MARCH 2026 &mdash; v2.3.1</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; MARCH 2026 &mdash; v2.3.2</div>
       <button onclick="acceptPrivacy()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.88rem;letter-spacing:2px;font-weight:900;color:var(--ink);cursor:pointer;">&#10003; I ACCEPT &mdash; CONTINUE</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#4a3e30;text-align:center;margin-top:8px;">By tapping Accept you confirm you have read and agree to the above terms.</div>
     </div>
@@ -3115,7 +3115,6 @@ input[type="password"]::-ms-clear { display:none !important; }
       <span id="tour-step-icon" style="font-size:1.4rem;"></span>
       <span id="tour-step-num"  style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--gold);letter-spacing:1px;"></span>
     </div>
-    <button onclick="tourSkip()" style="background:none;border:none;color:#6b5e50;font-size:1rem;cursor:pointer;padding:0 4px;pointer-events:all;">✕</button>
   </div>
   <!-- Title -->
   <div id="tour-step-title" style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);margin-bottom:8px;line-height:1.3;"></div>
@@ -3128,9 +3127,6 @@ input[type="password"]::-ms-clear { display:none !important; }
     <button id="tour-back-btn" onclick="tourNav(-1)" style="flex:1;padding:9px;background:none;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;pointer-events:all;">← Back</button>
     <button id="tour-next-btn" onclick="tourNav(1)"  style="flex:2;padding:9px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--ink);cursor:pointer;pointer-events:all;">Next →</button>
   </div>
-  <div style="text-align:center;margin-top:8px;">
-    <button onclick="tourSkip()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a3e30;cursor:pointer;pointer-events:all;text-decoration:underline;">Skip tour</button>
-  </div>
 </div>
 
 <div id="onboard-overlay" style="display:none;position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,0.6);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;">
@@ -3140,7 +3136,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <div id="onboard-progress" style="height:100%;background:var(--gold);transition:width 0.3s;border-radius:16px 16px 0 0;"></div>
     </div>
     <!-- Skip button -->
-    <button onclick="skipOnboarding()" style="position:absolute;top:14px;right:14px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#aaa;cursor:pointer;z-index:1;letter-spacing:1px;">SKIP</button>
+    <button onclick="skipOnboarding()" style="display:none;position:absolute;top:14px;right:14px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#aaa;cursor:pointer;z-index:1;letter-spacing:1px;">SKIP</button>
     <!-- Slide content — scrollable if tall -->
     <div id="onboard-slide" style="padding:36px 28px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;"></div>
     <!-- Navigation — always visible at bottom -->
@@ -11805,7 +11801,15 @@ function _resumeSession(uid, name, phone) {
     // Check phone/DOB confirmation for users who haven't done it yet
     setTimeout(function() { checkExistingUserConfirmation(); }, 60000);
   }
-  // NOTE: Do NOT fire onboarding or privacy here for existing users — handled by 60s flow
+  // ── Mandatory tour for ALL users — fires after entering app ──
+  // Check if this user has completed the tour — if not, start it
+  var tourDone = localStorage.getItem(ONBOARD_EXPENSES_KEY) === '1'
+              && localStorage.getItem(ONBOARD_INCOME_KEY)   === '1';
+  if (!tourDone) {
+    setTimeout(function() {
+      startTour('expenses', true, false);
+    }, 1200);
+  }
   // Fire sync in background — app is already usable
   loadIncomeFromFirebase(function(){});
   getDB(function() {
@@ -12739,7 +12743,7 @@ function _privacyKey() {
   return 'privacy_ok_' + (_userId || localStorage.getItem('expense_uid') || 'default');
 }
 var PRIVACY_VER = '2026-03-23'; // bumped — forces all existing users to re-sign
-var APP_VERSION = '2.3.1'; // bump this with every release to force privacy + onboarding re-run
+var APP_VERSION = '2.3.2'; // bump this with every release to force privacy + onboarding re-run
 var APP_VERSION_KEY = 'expense_app_version';
 
 // ── Sequential mandatory update flow ──
@@ -14119,7 +14123,7 @@ var _tourSteps = [];
 var _tourMode  = 'expenses';
 
 var TOUR_EXPENSES_STEPS = [
-  { target:null, tab:null, icon:'👋', title:'Welcome to My Expense Ledger!', body:'This guided tour highlights every button and tab with a golden spotlight. Follow the arrow to learn as you go. Tap <strong>Next</strong> to begin.', arrow:null },
+  { target:'#fixed-topbar', tab:null, icon:'👋', title:'Welcome to My Expense Ledger!', body:'This guided tour highlights every button and tab with a golden spotlight. Follow the arrow to learn as you go. Tap <strong>Next</strong> to begin.', arrow:'down' },
   { target:"button[onclick*=\"switchTab('import'\"]", tab:'import', icon:'📥', title:'Import Tab — Add Your Expenses', body:'Tap here to open the Import tab. This is where you type or paste your expense entries. Use the month navigator to move between months.', arrow:'down' },
   { target:'#raw-input', tab:'import', icon:'✍️', title:'The Notepad — Type Your Entries', body:'Type expenses here in plain text. Format: <em>date on one line</em>, then <em>Description: amount</em>. Press <strong>Alt+Enter</strong> to activate, <strong>Ctrl+Enter</strong> to parse.', arrow:'down' },
   { target:'#parse-btn', tab:'import', icon:'⚡', title:'Parse Button — Read Your Entries', body:'After typing entries, tap Parse (or Ctrl+Enter). The app reads each line, extracts dates, descriptions and amounts, then takes you to Categorize.', arrow:'up' },
@@ -14135,11 +14139,11 @@ var TOUR_EXPENSES_STEPS = [
   { target:'#trash-year-filter', tab:'manage', icon:'♻️', title:'Recycle Bin — Nothing is Lost Forever', body:'Every deleted entry lands here. Filter by year, month and day. Restore individual entries or entire groups, or permanently remove them.', arrow:'up' },
   { target:'#hdr-referral-btn', tab:null, icon:'🔗', title:'Referral Link — Invite Friends', body:'Tap the 🔗 icon in the header to get your personal referral link. Share it to invite friends and family.', arrow:'down' },
   { target:'#mode-switch-btn', tab:null, icon:'🔁', title:'Switch to Income Module', body:'Tap this button to switch between Expenses and Income. Each has its own separate ledger, dashboard, categorize and manage tab.', arrow:'down' },
-  { target:null, tab:null, icon:'🚀', title:"You're Ready!", body:'Start by going to <strong>Import</strong> and adding your first expenses. Everything syncs to the cloud automatically — access from any device anytime.', arrow:null, last:true }
+  { target:"button[onclick*=\"switchTab('import'\"]", tab:'import', icon:'🚀', title:"You're Ready — Start Here!", body:'Head to <strong>Import</strong> to add your first expenses. Everything syncs automatically. We will now take a quick tour of the Income module too!', arrow:'down', last:true }
 ];
 
 var TOUR_INCOME_STEPS = [
-  { target:null, tab:null, icon:'💰', title:'Income Module Tour', body:'This tour covers the Income module. It works just like Expenses but tracks your earnings. Follow the golden arrow.', arrow:null },
+  { target:'#mode-switch-btn', tab:null, icon:'💰', title:'Income Module Tour', body:'You switched to the Income module using this button. It works just like Expenses but tracks your earnings. Follow the golden arrow through each tab.', arrow:'down' },
   { target:"button[onclick*=\"switchIncomeTab('inc-import'\"]", tab:'inc-import', icon:'📥', title:'Income Import — Add Earnings', body:'Paste income entries here. Format: date, then <em>Description: amount</em>. Press Ctrl+Enter to parse. Use Y key to toggle between Month and Year mode.', arrow:'down' },
   { target:'#inc-raw-input', tab:'inc-import', icon:'✍️', title:'Income Notepad', body:'Type income here — salary, freelance, commissions, tips. One entry per line after the date.', arrow:'down' },
   { target:"button[onclick*=\"switchIncomeTab('inc-categorize'\"]", tab:'inc-categorize', icon:'🏷️', title:'Income Categorize', body:'Assign income categories — Salary, Freelance, Commission, Rental, Gift etc. The app remembers your patterns and suggests categories.', arrow:'down' },
@@ -14147,7 +14151,7 @@ var TOUR_INCOME_STEPS = [
   { target:"button[onclick*=\"switchIncomeTab('inc-monthly'\"]", tab:'inc-monthly', icon:'📅', title:'Monthly Income View', body:'See a month-by-month breakdown of all earnings. Compare months and track your income trend over time.', arrow:'down' },
   { target:"button[onclick*=\"switchIncomeTab('inc-dashboard'\"]", tab:'inc-dashboard', icon:'📊', title:'Income Dashboard', body:'Charts showing income by category, monthly totals and year-over-year growth. Filter by year, month and currency.', arrow:'down' },
   { target:"button[onclick*=\"switchIncomeTab('inc-manage'\"]", tab:'inc-manage', icon:'⚙️', title:'Income Manage', body:'Delete income data by year, month or day. Export to CSV, generate PDF reports and manage the income recycle bin.', arrow:'down' },
-  { target:null, tab:null, icon:'🚀', title:'Income Tour Complete!', body:'You now know both modules. Switch between them anytime using the 🔁 button in the header. Your data is always safe.', arrow:null, last:true }
+  { target:'#mode-switch-btn', tab:null, icon:'🚀', title:'Tour Complete — Both Modules!', body:'You now know the full app! Switch between Expenses and Income anytime using this button. Your data is always safe in the cloud. Enjoy! 🎉', arrow:'down', last:true }
 ];
 
 function startTour(mode, force, isReplay) {
@@ -14264,14 +14268,36 @@ function tourNav(dir) {
   if(newIdx>=_tourSteps.length){ tourFinish(); return; }
   _tourIndex=newIdx; _renderTourStep();
 }
-function tourSkip(){ tourFinish(); }
+function tourSkip(){ /* Tour is mandatory — cannot skip */ }
 function tourFinish() {
   var key=(_tourMode==='income')?ONBOARD_INCOME_KEY:ONBOARD_EXPENSES_KEY;
   localStorage.setItem(key,'1');
-  document.getElementById('tour-overlay').style.display='none';
-  document.getElementById('tour-tooltip').style.display='none';
-  _onboardIsReplay=false;
-  showToast('Tour complete! Replay anytime from Help → Onboarding 🎓');
+
+  if (_tourMode === 'expenses') {
+    // Expenses done — switch to income module and start income tour
+    document.getElementById('tour-overlay').style.display='none';
+    document.getElementById('tour-tooltip').style.display='none';
+    showToast('✅ Expenses tour done! Now let\'s see the Income module...');
+    // Switch to income mode then start income tour after a short pause
+    setTimeout(function() {
+      if (typeof switchMode === 'function') switchMode('income');
+      else { _appMode = 'income'; applyMode(); }
+      setTimeout(function() {
+        startTour('income', true, _onboardIsReplay);
+      }, 600);
+    }, 1200);
+  } else {
+    // Income tour done — fully complete
+    document.getElementById('tour-overlay').style.display='none';
+    document.getElementById('tour-tooltip').style.display='none';
+    _onboardIsReplay=false;
+    // Switch back to expenses mode
+    setTimeout(function(){
+      _appMode='expenses'; applyMode();
+      switchTab('import', null);
+    }, 300);
+    showToast('🎉 Full tour complete! Replay anytime from Help → Onboarding 🎓');
+  }
 }
 // Add bounce animation
 (function(){ var s=document.createElement('style'); s.textContent='@keyframes tour-bounce{from{transform:translateY(0)}to{transform:translateY(-8px)}}'; document.head.appendChild(s); })();
