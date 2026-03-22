@@ -11553,17 +11553,17 @@ function showFullVerifyStep() {
 // ── _resumeSession: enter app immediately, fire Firebase sync in background ──
 function _resumeSession(uid, name, phone) {
   _userId = uid; _userName = name; _userPhone = phone;
-  // Clear guest mode — a real registered user is logging in
+  // Clear any previous guest mode state
   _isGuestMode = false;
   localStorage.removeItem(GUEST_MODE_KEY);
   localStorage.removeItem('expense_guest_nickname');
   var guestBanner = document.getElementById('guest-banner');
   if (guestBanner) guestBanner.style.display = 'none';
-  // Clear cached tail so getInitials recalculates with correct first-2-digits logic
+  // Clear cached tail
   localStorage.removeItem(PHONE_TAIL_KEY);
   localStorage.setItem('last_active', String(Date.now()));
   sessionStorage.setItem('app_session', '1');
-  // Show app immediately — hide PIN overlay, reveal content
+  // Show app immediately
   var pinO = document.getElementById('pin-overlay');
   if (pinO) pinO.style.display = 'none';
   document.body.classList.add('app-ready');
@@ -11574,15 +11574,30 @@ function _resumeSession(uid, name, phone) {
   _appMode = savedMode;
   applyMode();
   adjustMainPadding();
-  setTimeout(function() {
-    if (_appMode === 'income') {
-      var savedIncTab = localStorage.getItem('expense_active_inc_tab');
-      if (savedIncTab) switchIncomeTab(savedIncTab, null);
-    } else {
-      var savedTab = localStorage.getItem('expense_active_tab');
-      if (savedTab) switchTab(savedTab, null);
-    }
-  }, 50);
+
+  // ── Age-based mode check ──
+  // If DOB confirmed and user is underage → apply guest mode immediately
+  var confirmedDob = localStorage.getItem('expense_user_dob');
+  if (confirmedDob && _isUnderage(confirmedDob)) {
+    _isGuestMode = true;
+    setTimeout(function() { _applyGuestMode(); }, 100);
+    // Force to import tab — guest can't use dashboard etc.
+    setTimeout(function() {
+      _appMode = 'expenses'; applyMode();
+      switchTab('import', null);
+    }, 150);
+  } else {
+    // Full mode — restore last tab
+    setTimeout(function() {
+      if (_appMode === 'income') {
+        var savedIncTab = localStorage.getItem('expense_active_inc_tab');
+        if (savedIncTab) switchIncomeTab(savedIncTab, null);
+      } else {
+        var savedTab = localStorage.getItem('expense_active_tab');
+        if (savedTab) switchTab(savedTab, null);
+      }
+    }, 50);
+  }
   setTimeout(function() { checkInactivity(); }, 500);
   setTimeout(checkBackupReminder, 3000);
   // Run mandatory sequential update flow 60 seconds after entering app
@@ -13677,10 +13692,20 @@ function submitDobOnly() {
   localStorage.setItem('expense_user_dob', dob);
   if(_db && _userId) userCol('settings').doc('profile').set({dob:dob, age:_calcAge(dob), updated:Date.now()},{merge:true}).catch(function(){});
   var o = document.getElementById('dob-only-overlay'); if(o) o.style.display='none';
-  showToast('✅ Age confirmed. Thank you!');
-  // Proceed to step 4
-  if (_updateFlowActive) {
-    setTimeout(function(){ _showUpdateFlowStep4(); }, 400);
+  // If underage registered user — switch to guest mode now
+  if (_isUnderage(dob)) {
+    _isGuestMode = true;
+    showToast('✅ Age saved. Guest Mode activated.');
+    setTimeout(function() {
+      _applyGuestMode();
+      _appMode = 'expenses'; applyMode();
+      switchTab('import', null);
+    }, 300);
+  } else {
+    showToast('✅ Age confirmed. Thank you!');
+    if (_updateFlowActive) {
+      setTimeout(function(){ _showUpdateFlowStep4(); }, 400);
+    }
   }
 }
 
@@ -13749,7 +13774,18 @@ function submitPhoneConfirm() {
   localStorage.setItem('expense_user_country',country); localStorage.setItem('expense_user_dial',dial);
   if(_db && _userId) userCol('settings').doc('profile').set({dob:dob,country:country,dial:dial,phone:dial+number,age:_calcAge(dob),updated:Date.now()},{merge:true}).catch(function(){});
   var o = document.getElementById('phone-confirm-overlay'); if(o) o.style.display='none';
-  showToast('✅ Details confirmed. Thank you!');
+  // Check age — if underage switch to guest mode immediately
+  if (_isUnderage(dob)) {
+    _isGuestMode = true;
+    showToast('✅ Details saved. Guest Mode activated.');
+    setTimeout(function() {
+      _applyGuestMode();
+      _appMode = 'expenses'; applyMode();
+      switchTab('import', null);
+    }, 300);
+  } else {
+    showToast('✅ Details confirmed. Thank you!');
+  }
   if (_updateFlowActive && typeof window._submitPhoneConfirmCallback === 'function') {
     setTimeout(function(){ window._submitPhoneConfirmCallback(); window._submitPhoneConfirmCallback = null; }, 400);
   }
@@ -13805,50 +13841,58 @@ function startGuestMode() {
 
 function _applyGuestMode() {
   _isGuestMode = true;
+  // Show guest banner
   var banner = document.getElementById('guest-banner');
   if (banner) banner.style.display = 'flex';
-  // Hide advanced tabs in expenses module — but KEEP manage for profile
-  ['dashboard','budget'].forEach(function(tab) {
-    var btns = document.querySelectorAll("button[onclick*=\"switchTab('"+tab+"'\"]");
-    btns.forEach(function(b){ b.style.display='none'; });
-  });
-  // Hide advanced tabs in income module
-  ['inc-dashboard','inc-monthly','inc-manage'].forEach(function(tab) {
-    var btns = document.querySelectorAll("button[onclick*=\"switchIncomeTab('"+tab+"'\"]");
-    btns.forEach(function(b){ b.style.display='none'; });
-  });
-  // In manage tab — hide everything except profile card and version footer
-  // by showing only the guest profile card and hiding full-user cards
-  setTimeout(function() {
-    var guestCard = document.getElementById('guest-profile-card');
-    if (guestCard) {
-      guestCard.style.display = 'block';
-      // Populate guest profile
-      var nn = localStorage.getItem('expense_guest_nickname') || 'Guest';
-      var nameEl = document.getElementById('guest-profile-name');
-      if (nameEl) nameEl.textContent = nn;
-    }
-    // Hide cards that guests don't need
-    var hideIds = [
-      'sync-setup-content','manage-month-list',
-      'currency-manager-content','current-fullname-display',
-      'current-username-display'
-    ];
-    // Hide all full-user cards in manage panel except profile card and version
-    var manageCards = document.querySelectorAll('#panel-manage .card:not(#guest-profile-card):not(.profile-card-main)');
-    manageCards.forEach(function(c){
-      // Keep the user profile card (first card) and guest profile card
-      if (!c.querySelector('#profile-avatar-emoji') && !c.querySelector('#guest-profile-name')) {
-        c.style.display = 'none';
-      }
-    });
-    // Also hide the manage-grid (data overview + delete by month)
-    var mg = document.querySelector('#panel-manage .manage-grid');
-    if (mg) mg.style.display = 'none';
-  }, 200);
   // Hide referral button
   var rb = document.getElementById('hdr-referral-btn');
   if (rb) rb.style.display = 'none';
+
+  // ── Expenses tabs: show ONLY import, categorize, ledger, manage ──
+  var EXP_SHOW = ['import','categorize','ledger','manage'];
+  var EXP_ALL  = ['import','categorize','daily','dashboard','ledger','budget','manage'];
+  EXP_ALL.forEach(function(tab) {
+    var btns = document.querySelectorAll("button[onclick*=\"switchTab('"+tab+"'\"]");
+    btns.forEach(function(b){ b.style.display = EXP_SHOW.indexOf(tab) >= 0 ? '' : 'none'; });
+  });
+
+  // ── Income tabs: show ONLY inc-import, inc-categorize, inc-ledger ──
+  var INC_SHOW = ['inc-import','inc-categorize','inc-ledger'];
+  var INC_ALL  = ['inc-import','inc-categorize','inc-monthly','inc-dashboard','inc-ledger','inc-manage'];
+  INC_ALL.forEach(function(tab) {
+    var btns = document.querySelectorAll("button[onclick*=\"switchIncomeTab('"+tab+"'\"]");
+    btns.forEach(function(b){ b.style.display = INC_SHOW.indexOf(tab) >= 0 ? '' : 'none'; });
+  });
+
+  // ── Manage tab: show only profile card + guest profile + version ──
+  setTimeout(function() {
+    // Hide all cards in manage except user profile card, guest profile card, version footer
+    var managePanel = document.getElementById('panel-manage');
+    if (!managePanel) return;
+    // Hide manage-grid (data overview + delete by month)
+    var mg = managePanel.querySelector('.manage-grid');
+    if (mg) mg.style.display = 'none';
+    // Hide sync content
+    var sc = document.getElementById('sync-setup-content');
+    if (sc) sc.style.display = 'none';
+    // Hide all cards except the first one (profile) and guest-profile-card
+    var allCards = managePanel.querySelectorAll('.card');
+    allCards.forEach(function(card) {
+      var isProfileCard = !!card.querySelector('#profile-avatar-emoji');
+      var isGuestCard   = card.id === 'guest-profile-card' || !!card.querySelector('#guest-profile-name');
+      if (!isProfileCard && !isGuestCard) card.style.display = 'none';
+    });
+    // Show guest profile card and populate it
+    var guestCard = document.getElementById('guest-profile-card');
+    if (guestCard) {
+      guestCard.style.display = 'block';
+      var nn = _userName || localStorage.getItem('expense_guest_nickname') || 'Guest';
+      var nameEl = document.getElementById('guest-profile-name');
+      if (nameEl) nameEl.textContent = nn;
+    }
+    // Render profile card
+    if (typeof renderUserProfileCard === 'function') renderUserProfileCard();
+  }, 300);
 }
 
 function showGuestUpgradePrompt() {
