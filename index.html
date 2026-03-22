@@ -7808,13 +7808,7 @@ function renderTrashPanel() {
   var years = [];
   trash.forEach(function(t){ if(t.date){ var y=t.date.substring(0,4); if(years.indexOf(y)<0) years.push(y); }});
   years.sort().reverse();
-  if(yearSel){
-    var cy=yearSel.value;
-    yearSel.innerHTML='<option value="none">— Year —</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join('');
-    // Auto-select most recent year so items show immediately without user picking
-    if(!cy||cy==='none'){ if(years.length>0) yearSel.value=years[0]; }
-    selYear=yearSel.value;
-  }
+  if(yearSel){ var cy=yearSel.value; yearSel.innerHTML='<option value="none">— Year —</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join(''); selYear=yearSel.value; }
 
   if(selYear==='none'){
     if(monthSel) monthSel.innerHTML='<option value="none">— Month —</option>';
@@ -11096,12 +11090,7 @@ function renderIncomeTrash() {
   var years=[];
   trash.forEach(function(t){ if(t.date){ var y=t.date.substring(0,4); if(years.indexOf(y)<0) years.push(y); }});
   years.sort().reverse();
-  if(yearSel){
-    var cy=yearSel.value;
-    yearSel.innerHTML='<option value="none">— Year —</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join('');
-    if(!cy||cy==='none'){ if(years.length>0) yearSel.value=years[0]; }
-    selYear=yearSel.value;
-  }
+  if(yearSel){ var cy=yearSel.value; yearSel.innerHTML='<option value="none">— Year —</option>'+years.map(function(y){ return '<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'</option>'; }).join(''); selYear=yearSel.value; }
 
   if(selYear==='none'){
     if(monthSel) monthSel.innerHTML='<option value="none">— Month —</option>';
@@ -11961,7 +11950,7 @@ async function _initFpBtn(wrap) {
   var ok = await _fpAvailable(); if(!ok) return;
   wrap.style.display = 'block';
   // Trigger immediately — no unnecessary delay
-  setTimeout(tryFingerprintFL, 100);
+  tryFingerprintFL();
 }
 
 async function tryFingerprintFL() {
