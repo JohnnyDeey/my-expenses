@@ -11950,7 +11950,7 @@ async function _initFpBtn(wrap) {
   var ok = await _fpAvailable(); if(!ok) return;
   wrap.style.display = 'block';
   // Trigger immediately — no unnecessary delay
-  tryFingerprintFL();
+  setTimeout(tryFingerprintFL, 100);
 }
 
 async function tryFingerprintFL() {
