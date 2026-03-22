@@ -660,15 +660,26 @@ document.addEventListener('keydown', function(e) {
   }
 });
 document.addEventListener('keydown', function(e) {
-  var ov = document.getElementById('onboard-overlay');
-  if (!ov || ov.style.display === 'none' || ov.style.display === '') return;
+  // Check if OLD onboard overlay OR new tour tooltip is visible
+  var ov  = document.getElementById('onboard-overlay');
+  var tt  = document.getElementById('tour-tooltip');
+  var oldVisible = ov && ov.style.display !== 'none' && ov.style.display !== '';
+  var tourVisible = tt && tt.style.display !== 'none' && tt.style.display !== '';
+  if (!oldVisible && !tourVisible) return;
   var tag = document.activeElement ? document.activeElement.tagName : '';
   if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); if (typeof onboardNav === 'function') onboardNav(1); }
-  if (e.key === 'b' || e.key === 'B') { e.preventDefault(); if (typeof onboardNav === 'function') onboardNav(-1); }
-  // S = skip ONLY during forced onboarding (new user/version), NOT during replay
+  if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
+    if (tourVisible && typeof tourNav === 'function') tourNav(1);
+    else if (oldVisible && typeof onboardNav === 'function') onboardNav(1);
+  }
+  if (e.key === 'b' || e.key === 'B') {
+    e.preventDefault();
+    if (tourVisible && typeof tourNav === 'function') tourNav(-1);
+    else if (oldVisible && typeof onboardNav === 'function') onboardNav(-1);
+  }
+  // S key — tour is mandatory, never skips
   if (e.key === 's' || e.key === 'S') {
-    // Tour is mandatory — S key never skips
     e.preventDefault();
     return;
   }
@@ -1658,7 +1669,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       </div>
 
       <div class="parse-actions">
-        <button class="btn btn-primary" onclick="parseInput()">&#9660; Parse Expenses</button>
+        <button id="exp-parse-btn" class="btn btn-primary" onclick="parseInput()">&#9660; Parse Expenses</button>
         <div id="parse-stats" style="display:none;">
           <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);padding:6px 0;">
             Parsed: <strong id="ps-count" style="color:var(--gold);">0</strong> items &nbsp;|&nbsp;
@@ -14126,9 +14137,9 @@ var TOUR_EXPENSES_STEPS = [
   { target:'#fixed-topbar', tab:null, icon:'👋', title:'Welcome to My Expense Ledger!', body:'This guided tour highlights every button and tab with a golden spotlight. Follow the arrow to learn as you go. Tap <strong>Next</strong> to begin.', arrow:'down' },
   { target:"button[onclick*=\"switchTab('import'\"]", tab:'import', icon:'📥', title:'Import Tab — Add Your Expenses', body:'Tap here to open the Import tab. This is where you type or paste your expense entries. Use the month navigator to move between months.', arrow:'down' },
   { target:'#raw-input', tab:'import', icon:'✍️', title:'The Notepad — Type Your Entries', body:'Type expenses here in plain text. Format: <em>date on one line</em>, then <em>Description: amount</em>. Press <strong>Alt+Enter</strong> to activate, <strong>Ctrl+Enter</strong> to parse.', arrow:'down' },
-  { target:'#parse-btn', tab:'import', icon:'⚡', title:'Parse Button — Read Your Entries', body:'After typing entries, tap Parse (or Ctrl+Enter). The app reads each line, extracts dates, descriptions and amounts, then takes you to Categorize.', arrow:'up' },
+  { target:'#exp-parse-btn', tab:'import', icon:'⚡', title:'Parse Button — Read Your Entries', body:'After typing entries, tap Parse (or Ctrl+Enter). The app reads each line, extracts dates, descriptions and amounts, then takes you to Categorize.', arrow:'up' },
   { target:"button[onclick*=\"switchTab('categorize'\"]", tab:'categorize', icon:'🏷️', title:'Categorize — Sort Your Spending', body:'Every parsed entry appears here. Assign a category to each one — Food, Transport, Bills etc. The app learns your patterns and auto-suggests over time.', arrow:'down' },
-  { target:'#assign-all-btn', tab:'categorize', icon:'💾', title:'Assign All — Save Everything at Once', body:'Once all entries have categories, tap Assign All (or Ctrl+Enter). All entries are saved to your Ledger in one click.', arrow:'up' },
+  { target:'#btn-save-pending', tab:'categorize', icon:'💾', title:'Assign All — Save Everything at Once', body:'Once all entries have categories, tap Assign All (or Ctrl+Enter). All entries are saved to your Ledger in one click.', arrow:'up' },
   { target:"button[onclick*=\"switchTab('ledger'\"]", tab:'ledger', icon:'📋', title:'Ledger — Your Complete Record', body:'The Ledger holds every entry you have saved. Filter by year, month, currency or category. Use ← → arrow keys on your keyboard to flip between pages.', arrow:'down' },
   { target:"button[onclick*=\"switchTab('daily'\"]", tab:'daily', icon:'📅', title:'Daily View — See Any Day', body:'The Daily tab shows a breakdown of spending for a specific date. Use the date picker to jump to any day and see exactly what was spent.', arrow:'down' },
   { target:"button[onclick*=\"switchTab('dashboard'\"]", tab:'dashboard', icon:'📊', title:'Dashboard — Charts & Totals', body:'See your spending by category, month and currency. One master filter controls all charts simultaneously — monthly trend, category breakdown, heatmap and year-over-year growth.', arrow:'down' },
@@ -14138,12 +14149,12 @@ var TOUR_EXPENSES_STEPS = [
   { target:'#manage-year-filter', tab:'manage', icon:'🔍', title:'Delete Filter — Select Year First', body:'Select a year → months populate. Select a month → days populate. Only matching entries appear. Then tap Delete to move them to the Recycle Bin.', arrow:'up' },
   { target:'#trash-year-filter', tab:'manage', icon:'♻️', title:'Recycle Bin — Nothing is Lost Forever', body:'Every deleted entry lands here. Filter by year, month and day. Restore individual entries or entire groups, or permanently remove them.', arrow:'up' },
   { target:'#hdr-referral-btn', tab:null, icon:'🔗', title:'Referral Link — Invite Friends', body:'Tap the 🔗 icon in the header to get your personal referral link. Share it to invite friends and family.', arrow:'down' },
-  { target:'#mode-switch-btn', tab:null, icon:'🔁', title:'Switch to Income Module', body:'Tap this button to switch between Expenses and Income. Each has its own separate ledger, dashboard, categorize and manage tab.', arrow:'down' },
+  { target:'#fixed-topbar', tab:null, icon:'🔁', title:'Switch to Income Module', body:'Tap this button to switch between Expenses and Income. Each has its own separate ledger, dashboard, categorize and manage tab.', arrow:'down' },
   { target:"button[onclick*=\"switchTab('import'\"]", tab:'import', icon:'🚀', title:"You're Ready — Start Here!", body:'Head to <strong>Import</strong> to add your first expenses. Everything syncs automatically. We will now take a quick tour of the Income module too!', arrow:'down', last:true }
 ];
 
 var TOUR_INCOME_STEPS = [
-  { target:'#mode-switch-btn', tab:null, icon:'💰', title:'Income Module Tour', body:'You switched to the Income module using this button. It works just like Expenses but tracks your earnings. Follow the golden arrow through each tab.', arrow:'down' },
+  { target:'#fixed-topbar', tab:null, icon:'💰', title:'Income Module Tour', body:'You switched to the Income module using this button. It works just like Expenses but tracks your earnings. Follow the golden arrow through each tab.', arrow:'down' },
   { target:"button[onclick*=\"switchIncomeTab('inc-import'\"]", tab:'inc-import', icon:'📥', title:'Income Import — Add Earnings', body:'Paste income entries here. Format: date, then <em>Description: amount</em>. Press Ctrl+Enter to parse. Use Y key to toggle between Month and Year mode.', arrow:'down' },
   { target:'#inc-raw-input', tab:'inc-import', icon:'✍️', title:'Income Notepad', body:'Type income here — salary, freelance, commissions, tips. One entry per line after the date.', arrow:'down' },
   { target:"button[onclick*=\"switchIncomeTab('inc-categorize'\"]", tab:'inc-categorize', icon:'🏷️', title:'Income Categorize', body:'Assign income categories — Salary, Freelance, Commission, Rental, Gift etc. The app remembers your patterns and suggests categories.', arrow:'down' },
@@ -14151,7 +14162,7 @@ var TOUR_INCOME_STEPS = [
   { target:"button[onclick*=\"switchIncomeTab('inc-monthly'\"]", tab:'inc-monthly', icon:'📅', title:'Monthly Income View', body:'See a month-by-month breakdown of all earnings. Compare months and track your income trend over time.', arrow:'down' },
   { target:"button[onclick*=\"switchIncomeTab('inc-dashboard'\"]", tab:'inc-dashboard', icon:'📊', title:'Income Dashboard', body:'Charts showing income by category, monthly totals and year-over-year growth. Filter by year, month and currency.', arrow:'down' },
   { target:"button[onclick*=\"switchIncomeTab('inc-manage'\"]", tab:'inc-manage', icon:'⚙️', title:'Income Manage', body:'Delete income data by year, month or day. Export to CSV, generate PDF reports and manage the income recycle bin.', arrow:'down' },
-  { target:'#mode-switch-btn', tab:null, icon:'🚀', title:'Tour Complete — Both Modules!', body:'You now know the full app! Switch between Expenses and Income anytime using this button. Your data is always safe in the cloud. Enjoy! 🎉', arrow:'down', last:true }
+  { target:'#fixed-topbar', tab:null, icon:'🚀', title:'Tour Complete — Both Modules!', body:'You now know the full app! Switch between Expenses and Income anytime using this button. Your data is always safe in the cloud. Enjoy! 🎉', arrow:'down', last:true }
 ];
 
 function startTour(mode, force, isReplay) {
@@ -14207,11 +14218,8 @@ function _positionTourStep(step) {
     spotlight.style.opacity='0'; arrow.style.display='none';
     var tw=Math.min(360,vw-32);
     var tx=Math.max(16,(vw-tw)/2);
-    // Always keep tooltip fully on screen — prefer centre vertically
-    var ty=Math.max(80,Math.min(vh-320,(vh-300)/2));
-    tooltip.style.left=tx+'px';
-    tooltip.style.top=ty+'px';
-    tooltip.style.bottom='auto'; tooltip.style.width=tw+'px';
+    var ty=Math.max(80,(vh-300)/2);
+    tooltip.style.cssText='display:block;position:fixed;z-index:100011;background:var(--ink);border:2px solid var(--gold);border-radius:10px;padding:18px 20px;width:'+tw+'px;left:'+tx+'px;top:'+ty+'px;bottom:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
   }
 
   if(!step.target){ centre(); return; }
@@ -14221,44 +14229,64 @@ function _positionTourStep(step) {
 
   setTimeout(function(){
     var rect=el.getBoundingClientRect();
+    // If element is off screen after scroll, use centre
+    if(rect.width === 0 || rect.height === 0){ centre(); return; }
+
     var sx=rect.left-pad, sy=rect.top-pad, sw=rect.width+pad*2, sh=rect.height+pad*2;
-    // Masks stay transparent — just move them (no colour)
-    maskTop.style.cssText='position:absolute;left:0;right:0;top:0;height:'+Math.max(0,sy)+'px;background:transparent;transition:all 0.3s;';
-    maskBottom.style.cssText='position:absolute;left:0;right:0;bottom:0;height:'+Math.max(0,vh-sy-sh)+'px;background:transparent;transition:all 0.3s;';
-    maskLeft.style.cssText='position:absolute;left:0;top:'+sy+'px;width:'+Math.max(0,sx)+'px;height:'+sh+'px;background:transparent;transition:all 0.3s;';
-    maskRight.style.cssText='position:absolute;right:0;top:'+sy+'px;width:'+Math.max(0,vw-sx-sw)+'px;height:'+sh+'px;background:transparent;transition:all 0.3s;';
-    spotlight.style.cssText='position:absolute;left:'+sx+'px;top:'+sy+'px;width:'+sw+'px;height:'+sh+'px;border:3px solid var(--gold);border-radius:8px;box-shadow:0 0 0 4px rgba(200,150,46,0.25);transition:all 0.3s;opacity:1;pointer-events:none;';
+
+    // Gold spotlight border around element
+    spotlight.style.cssText='position:absolute;left:'+sx+'px;top:'+sy+'px;width:'+sw+'px;height:'+sh+'px;border:3px solid var(--gold);border-radius:8px;box-shadow:0 0 0 6px rgba(200,150,46,0.2),0 0 20px rgba(200,150,46,0.4);transition:all 0.3s;opacity:1;pointer-events:none;';
+
+    // Transparent masks
+    maskTop.style.cssText='position:absolute;left:0;right:0;top:0;height:'+Math.max(0,sy)+'px;background:transparent;';
+    maskBottom.style.cssText='position:absolute;left:0;right:0;bottom:0;height:'+Math.max(0,vh-sy-sh)+'px;background:transparent;';
+    maskLeft.style.cssText='position:absolute;left:0;top:'+sy+'px;width:'+Math.max(0,sx)+'px;height:'+sh+'px;background:transparent;';
+    maskRight.style.cssText='position:absolute;right:0;top:'+sy+'px;width:'+Math.max(0,vw-sx-sw)+'px;height:'+sh+'px;background:transparent;';
+
+    // Arrow — always points FROM tooltip centre TOWARD element
+    // Calculate element centre
+    var elCX = sx + sw/2;
+    var elCY = sy + sh/2;
+
+    // Place arrow near element edge, pointing at it
     var aDir=step.arrow||'down', ax, ay;
-    if(aDir==='down'){  ax=sx+sw/2-16; ay=sy-44;      arrow.innerHTML='&#8595;'; }
-    else if(aDir==='up'){ ax=sx+sw/2-16; ay=sy+sh+8; arrow.innerHTML='&#8593;'; }
-    else if(aDir==='right'){ ax=sx-44; ay=sy+sh/2-16; arrow.innerHTML='&#8594;'; }
-    else{ ax=sx+sw+8; ay=sy+sh/2-16; arrow.innerHTML='&#8592;'; }
-    arrow.style.cssText='position:absolute;left:'+ax+'px;top:'+ay+'px;font-size:2rem;color:var(--gold);pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,0.8);animation:tour-bounce 0.7s ease-in-out infinite alternate;display:block;';
-
-    // ── Tooltip positioning — ALWAYS stay fully on screen ──
-    var tw=Math.min(360,vw-32);
-    var tx=Math.max(16,Math.min(vw-tw-16, sx+sw/2-tw/2));
-
-    // Estimate tooltip height (~220px)
-    var tooltipH = 240;
-    var spaceBelow = vh - (sy+sh);
-    var spaceAbove = sy;
-    var ty;
-
-    if(spaceBelow >= tooltipH + 16) {
-      // Enough room below spotlight
-      ty = sy + sh + 16;
-    } else if(spaceAbove >= tooltipH + 16) {
-      // Enough room above spotlight
-      ty = sy - tooltipH - 16;
+    if(aDir==='down'){
+      ax=elCX-16; ay=Math.max(4, sy-48);
+      arrow.innerHTML='&#8595;';
+    } else if(aDir==='up'){
+      ax=elCX-16; ay=Math.min(vh-40, sy+sh+8);
+      arrow.innerHTML='&#8593;';
+    } else if(aDir==='right'){
+      ax=Math.max(4, sx-48); ay=elCY-16;
+      arrow.innerHTML='&#8594;';
     } else {
-      // Not enough room either side — pin to bottom of screen with margin
-      ty = Math.max(8, vh - tooltipH - 16);
+      ax=Math.min(vw-40, sx+sw+8); ay=elCY-16;
+      arrow.innerHTML='&#8592;';
     }
-    // Final clamp — never go off screen top or bottom
-    ty = Math.max(8, Math.min(vh - tooltipH - 8, ty));
+    // Clamp arrow on screen
+    ax=Math.max(4,Math.min(vw-40,ax));
+    ay=Math.max(4,Math.min(vh-40,ay));
+    arrow.style.cssText='position:absolute;left:'+ax+'px;top:'+ay+'px;font-size:2.2rem;color:var(--gold);pointer-events:none;text-shadow:0 2px 12px rgba(0,0,0,0.9),0 0 20px rgba(200,150,46,0.6);animation:tour-bounce 0.6s ease-in-out infinite alternate;display:block;';
 
-    tooltip.style.cssText='display:block;position:fixed;z-index:100011;background:var(--ink);border:2px solid var(--gold);border-radius:10px;padding:18px 20px;width:'+tw+'px;left:'+tx+'px;top:'+ty+'px;bottom:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6);max-height:'+(vh-ty-16)+'px;overflow-y:auto;';
+    // ── Tooltip ALWAYS at centre of screen ──
+    var tw=Math.min(360,vw-32);
+    var tx=Math.max(16,(vw-tw)/2);
+    var tooltipH=260;
+    // Try to avoid covering the spotlight element
+    var ty;
+    var screenCentreY=(vh-tooltipH)/2;
+    // If element is in top half, show tooltip in bottom half and vice versa
+    if(elCY < vh/2){
+      // Element in top half — tooltip in bottom half
+      ty=Math.max(vh/2+20, screenCentreY+80);
+    } else {
+      // Element in bottom half — tooltip in top half
+      ty=Math.min(vh/2-tooltipH-20, screenCentreY-80);
+    }
+    // Final clamp
+    ty=Math.max(8, Math.min(vh-tooltipH-8, ty));
+
+    tooltip.style.cssText='display:block;position:fixed;z-index:100011;background:var(--ink);border:2px solid var(--gold);border-radius:10px;padding:18px 20px;width:'+tw+'px;left:'+tx+'px;top:'+ty+'px;bottom:auto;box-shadow:0 8px 32px rgba(0,0,0,0.8);';
   }, 80);
 }
 
