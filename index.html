@@ -1718,6 +1718,10 @@ input[type="password"]::-ms-clear { display:none !important; }
 <!-- ══ CATEGORIZE ══ -->
 <div class="panel" id="panel-categorize">
   <div class="section-title">Review &amp; Categorize</div>
+  <!-- Tour placeholder — shown only during tour when no real save button exists -->
+  <div id="tour-save-placeholder" style="display:none;margin-bottom:10px;padding:10px 14px;background:#f0fdf4;border:2px dashed var(--sage);border-radius:6px;text-align:center;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);">
+    ✓ Save to Ledger &nbsp;—&nbsp; appears here after you parse and categorize entries
+  </div>
 
   <!-- Filter bar for categorize -->
   <div class="cat-filter-bar">
@@ -1921,7 +1925,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div class="card" style="margin-bottom:18px;border-left:4px solid var(--gold);">
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
       <!-- Clickable Avatar -->
-      <div onclick="showAvatarPicker()" style="width:64px;height:64px;border-radius:50%;background:var(--ink);border:3px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;position:relative;" title="Tap to change avatar">
+      <div id="avatar-circle" onclick="showAvatarPicker()" style="width:64px;height:64px;border-radius:50%;background:var(--ink);border:3px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;position:relative;" title="Tap to change avatar">
         <span id="profile-avatar-emoji" style="font-size:2rem;line-height:1;">😊</span>
         <span style="position:absolute;bottom:-2px;right:-2px;background:var(--gold);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;">✏️</span>
       </div>
@@ -1995,7 +1999,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div class="card">
       <label>&#128465; Delete Data</label>
       <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Filter by year, month, or day. Deleted entries go to the Recycle Bin.</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+      <div id="manage-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
         <select id="manage-year-filter" onchange="onManageYearChange()" style="flex:1;min-width:90px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
           <option value="all">All Years</option>
         </select>
@@ -2110,7 +2114,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <span id="trash-count-badge" style="font-family:DM Mono,monospace;font-size:0.7rem;background:var(--rust);color:white;padding:2px 7px;border-radius:10px;"></span>
     </label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Deleted and skipped entries land here. Restore anytime or permanently delete.</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+    <div id="trash-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
       <select id="trash-year-filter" onchange="onTrashYearChange()" style="flex:1;min-width:90px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
         <option value="all">All Years</option>
       </select>
@@ -14139,30 +14143,33 @@ var TOUR_EXPENSES_STEPS = [
   { target:'#raw-input', tab:'import', icon:'✍️', title:'The Notepad — Type Your Entries', body:'Type expenses here in plain text. Format: <em>date on one line</em>, then <em>Description: amount</em>. Press <strong>Alt+Enter</strong> to activate, <strong>Ctrl+Enter</strong> to parse.', arrow:'down' },
   { target:'#exp-parse-btn', tab:'import', icon:'⚡', title:'Parse Button — Read Your Entries', body:'After typing entries, tap Parse (or Ctrl+Enter). The app reads each line, extracts dates, descriptions and amounts, then takes you to Categorize.', arrow:'up' },
   { target:"button[onclick*=\"switchTab('categorize'\"]", tab:'categorize', icon:'🏷️', title:'Categorize — Sort Your Spending', body:'Every parsed entry appears here. Assign a category to each one — Food, Transport, Bills etc. The app learns your patterns and auto-suggests over time.', arrow:'down' },
-  { target:'#btn-save-pending', tab:'categorize', icon:'💾', title:'Assign All — Save Everything at Once', body:'Once all entries have categories, tap Assign All (or Ctrl+Enter). All entries are saved to your Ledger in one click.', arrow:'up' },
+  { target:"button[onclick*=\"switchTab('categorize'\"]", tab:'categorize', icon:'💾', title:'Save to Ledger', body:'After assigning categories to all your entries, a <strong>Save to Ledger</strong> button appears at the top right. Tap it (or press Ctrl+Enter) to save everything in one click.', arrow:'down' },
   { target:"button[onclick*=\"switchTab('ledger'\"]", tab:'ledger', icon:'📋', title:'Ledger — Your Complete Record', body:'The Ledger holds every entry you have saved. Filter by year, month, currency or category. Use ← → arrow keys on your keyboard to flip between pages.', arrow:'down' },
   { target:"button[onclick*=\"switchTab('daily'\"]", tab:'daily', icon:'📅', title:'Daily View — See Any Day', body:'The Daily tab shows a breakdown of spending for a specific date. Use the date picker to jump to any day and see exactly what was spent.', arrow:'down' },
   { target:"button[onclick*=\"switchTab('dashboard'\"]", tab:'dashboard', icon:'📊', title:'Dashboard — Charts & Totals', body:'See your spending by category, month and currency. One master filter controls all charts simultaneously — monthly trend, category breakdown, heatmap and year-over-year growth.', arrow:'down' },
   { target:"button[onclick*=\"switchTab('budget'\"]", tab:'budget', icon:'🎯', title:'Budget — Set Monthly Limits', body:'Set a spending limit per category. Progress bars turn amber at 75% and red when exceeded. Set separate budgets per currency.', arrow:'down' },
   { target:"button[onclick*=\"switchTab('manage'\"]", tab:'manage', icon:'⚙️', title:'Manage Tab — Your Control Centre', body:'Everything important is here — profile, data deletion, recycle bin, currencies, PIN, CSV export. See the next steps for highlights.', arrow:'down' },
-  { target:'#profile-avatar-emoji', tab:'manage', icon:'😊', title:'Your Profile — Tap to Change Avatar', body:'Your profile shows name, username, country, DOB and age. Tap the avatar circle to pick from 6 categories of emoji — Happy, Animals, Cool, Nature, Food and Sports.', arrow:'right' },
-  { target:'#manage-year-filter', tab:'manage', icon:'🔍', title:'Delete Filter — Select Year First', body:'Select a year → months populate. Select a month → days populate. Only matching entries appear. Then tap Delete to move them to the Recycle Bin.', arrow:'up' },
-  { target:'#trash-year-filter', tab:'manage', icon:'♻️', title:'Recycle Bin — Nothing is Lost Forever', body:'Every deleted entry lands here. Filter by year, month and day. Restore individual entries or entire groups, or permanently remove them.', arrow:'up' },
+  { target:'#profile-avatar-emoji', tab:'manage', icon:'😊', title:'Your Avatar — Tap to Personalise', body:'Tap the emoji circle to open the avatar picker. Choose from 6 categories: Happy, Animals, Cool, Nature, Food and Sports. Your choice is saved and shown on your profile.', arrow:'right' },
+  { target:'#manage-filter-row', tab:'manage', icon:'🔍', title:'Delete Data — Year · Month · Day Filter', body:'These 3 filters work together. Select a <strong>Year</strong> first → months appear. Select a <strong>Month</strong> → days appear. Select a <strong>Day</strong> for a single day. Tap Delete on any group to move it to the Recycle Bin.', arrow:'up' },
+  { target:'#trash-filter-row', tab:'manage', icon:'♻️', title:'Recycle Bin — Filter to Find & Restore', body:'Every deleted entry lands here. Use these 3 filters to find entries by <strong>Year</strong>, <strong>Month</strong> or <strong>Day</strong>. Restore individual entries, restore entire groups, or permanently delete them.', arrow:'up' },
   { target:'#hdr-referral-btn', tab:null, icon:'🔗', title:'Referral Link — Invite Friends', body:'Tap the 🔗 icon in the header to get your personal referral link. Share it to invite friends and family.', arrow:'down' },
-  { target:'#fixed-topbar', tab:null, icon:'🔁', title:'Switch to Income Module', body:'Tap this button to switch between Expenses and Income. Each has its own separate ledger, dashboard, categorize and manage tab.', arrow:'down' },
+  { target:'#fixed-topbar', tab:null, icon:'🔁', title:'Switch to Income Module', body:'The 🔁 switch button is in the header bar above. Tap it to switch between Expenses and Income. Each module has its own separate tabs and data.', arrow:'up' },
   { target:"button[onclick*=\"switchTab('import'\"]", tab:'import', icon:'🚀', title:"You're Ready — Start Here!", body:'Head to <strong>Import</strong> to add your first expenses. Everything syncs automatically. We will now take a quick tour of the Income module too!', arrow:'down', last:true }
 ];
 
 var TOUR_INCOME_STEPS = [
-  { target:'#fixed-topbar', tab:null, icon:'💰', title:'Income Module Tour', body:'You switched to the Income module using this button. It works just like Expenses but tracks your earnings. Follow the golden arrow through each tab.', arrow:'down' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-import'\"]", tab:'inc-import', icon:'📥', title:'Income Import — Add Earnings', body:'Paste income entries here. Format: date, then <em>Description: amount</em>. Press Ctrl+Enter to parse. Use Y key to toggle between Month and Year mode.', arrow:'down' },
-  { target:'#inc-raw-input', tab:'inc-import', icon:'✍️', title:'Income Notepad', body:'Type income here — salary, freelance, commissions, tips. One entry per line after the date.', arrow:'down' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-categorize'\"]", tab:'inc-categorize', icon:'🏷️', title:'Income Categorize', body:'Assign income categories — Salary, Freelance, Commission, Rental, Gift etc. The app remembers your patterns and suggests categories.', arrow:'down' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-ledger'\"]", tab:'inc-ledger', icon:'📋', title:'Income Ledger', body:'All income entries in one place. Filter, search and edit categories. Use ← → arrow keys to navigate pages.', arrow:'down' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-monthly'\"]", tab:'inc-monthly', icon:'📅', title:'Monthly Income View', body:'See a month-by-month breakdown of all earnings. Compare months and track your income trend over time.', arrow:'down' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-dashboard'\"]", tab:'inc-dashboard', icon:'📊', title:'Income Dashboard', body:'Charts showing income by category, monthly totals and year-over-year growth. Filter by year, month and currency.', arrow:'down' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-manage'\"]", tab:'inc-manage', icon:'⚙️', title:'Income Manage', body:'Delete income data by year, month or day. Export to CSV, generate PDF reports and manage the income recycle bin.', arrow:'down' },
-  { target:'#fixed-topbar', tab:null, icon:'🚀', title:'Tour Complete — Both Modules!', body:'You now know the full app! Switch between Expenses and Income anytime using this button. Your data is always safe in the cloud. Enjoy! 🎉', arrow:'down', last:true }
+  { target:'#fixed-topbar', tab:null, icon:'💰', title:'Income Module Tour', body:'You are now in the Income module. It works just like Expenses but tracks your earnings. Follow the golden arrow through each tab.', arrow:'down' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-import'\"]", tab:'inc-import', icon:'📥', title:'Income Import Tab', body:'Tap here to open the Income Import tab. Paste your income records here. Use Y key to toggle between Month and Year mode.', arrow:'down' },
+  { target:'#inc-raw-input', tab:'inc-import', icon:'✍️', title:'Income Notepad — Type Earnings', body:'Type income entries here — salary, freelance, commissions, tips. Format: <em>date on one line</em>, then <em>Description: amount</em>. Press Ctrl+Enter to parse.', arrow:'down' },
+  { target:'#inc-parse-btn', tab:'inc-import', icon:'⚡', title:'Parse Income Button', body:'Tap Parse Income (or Ctrl+Enter) after typing entries. The app reads each line and takes you straight to Income Categorize.', arrow:'up' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-categorize'\"]", tab:'inc-categorize', icon:'🏷️', title:'Income Categorize Tab', body:'Every parsed income entry appears here. Assign categories — Salary, Freelance, Commission, Rental, Gift etc. The app learns your patterns.', arrow:'down' },
+  { target:'#inc-btn-save-pending', tab:'inc-categorize', icon:'💾', title:'Save Income to Ledger', body:'Once all entries have categories, tap Save to Ledger (or Ctrl+Enter). All income entries are saved in one click.', arrow:'up' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-ledger'\"]", tab:'inc-ledger', icon:'📋', title:'Income Ledger', body:'All your income entries in one place. Filter by year, month, currency or category. Use ← → arrow keys to navigate pages.', arrow:'down' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-monthly'\"]", tab:'inc-monthly', icon:'📅', title:'Monthly Income View', body:'See a full month-by-month breakdown of all earnings. Compare months and track your income trend over time.', arrow:'down' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-dashboard'\"]", tab:'inc-dashboard', icon:'📊', title:'Income Dashboard — Charts', body:'Visual charts showing income by category, monthly totals and year-over-year growth. Filter by year, month and currency.', arrow:'down' },
+  { target:"button[onclick*=\"switchIncomeTab('inc-manage'\"]", tab:'inc-manage', icon:'⚙️', title:'Income Manage Tab', body:'Delete income data by year, month or day using the cascading filter. Export to CSV, generate PDF reports and manage the income recycle bin.', arrow:'down' },
+  { target:'#inc-manage-year-filter', tab:'inc-manage', icon:'🔍', title:'Income Delete Filter', body:'Select a year first, then month, then day. Only matching entries appear. Tap Delete to move them to the Recycle Bin — always recoverable.', arrow:'up' },
+  { target:'#fixed-topbar', tab:null, icon:'🚀', title:'Tour Complete — Both Modules!', body:'You now know the full app! Switch between Expenses and Income anytime using the 🔁 button in the header. Your data is always safe in the cloud. Enjoy! 🎉', arrow:'up', last:true }
 ];
 
 function startTour(mode, force, isReplay) {
