@@ -1350,6 +1350,30 @@ nav.tabs{position:relative;}
 @keyframes ob-bounce-in  { 0% { opacity:0; transform:scale(0.3); } 60% { opacity:1; transform:scale(1.08); } 80% { transform:scale(0.96); } 100% { transform:scale(1); } }
 .ob-anim { animation-duration:0.42s; animation-timing-function:cubic-bezier(0.34,1.36,0.64,1); animation-fill-mode:both; }
 
+/* ── Fingerprint button ── */
+.fp-unlock-btn {
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px;
+  background: rgba(200,150,46,0.1);
+  border: 1.5px solid rgba(200,150,46,0.45);
+  border-radius: 4px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--gold);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: background 0.15s, border-color 0.15s;
+}
+.fp-unlock-btn:active { background: rgba(200,150,46,0.22); }
+.fp-unlock-btn .fp-icon { font-size: 1.3rem; line-height: 1; }
 @keyframes pin-shake {
   0%,100% { transform: translateX(0); }
   20%     { transform: translateX(-8px); }
@@ -2879,6 +2903,12 @@ input[type="password"]::-ms-clear { display:none !important; }
           <button onclick="pinPadClear()" class="pin-pad-btn" style="font-size:0.65rem;color:#6b5e50;">CLR</button>
           <button onclick="pinPadPress('0')" class="pin-pad-btn">0</button>
           <button onclick="pinPadDelete()" class="pin-pad-btn" style="font-size:1.1rem;">⌫</button>
+        </div>
+        <!-- FINGERPRINT button — shown only when registered -->
+        <div id="fp-btn-wrap" style="max-width:240px;margin:0 auto 6px;display:none;">
+          <button class="fp-unlock-btn" onclick="tryFingerprintFL()">
+            <span class="fp-icon">☝</span> Use Fingerprint
+          </button>
         </div>
         <!-- ENTER button — for PINs shorter than 6 digits -->
         <div style="max-width:240px;margin:0 auto 14px;">
@@ -11469,7 +11499,9 @@ function submitPinLogin() {
     });
   }
   showToast('Welcome back, ' + name + '!');
-  // NOTE: onboarding/privacy handled by 60s flow inside app — not at login
+  // Offer fingerprint — but only after ALL other prompts have had time to show and clear.
+  // Sequence starts from _resumeSession after Firebase data loads
+  // NOTE: onboarding/privacy handled by post-login sequence
 }
 
 // ── Full verify (username OR phone + PIN, against Firebase) ──
@@ -11720,6 +11752,8 @@ function showPinPadStep() {
   var nameEl = document.getElementById('pin-login-username-display');
   if (nameEl) { var n = localStorage.getItem(NAME_KEY); nameEl.textContent = n ? n.toUpperCase() : ''; }
   document.getElementById('pin-step-login').style.display = 'block';
+  // Show fingerprint button if registered, and auto-trigger scan
+  initFingerprintBtn();
   // Scroll to top so title is visible
   var o = document.getElementById('pin-overlay'); if(o) setTimeout(function(){ o.scrollTop = 0; }, 30);
 }
@@ -11792,39 +11826,36 @@ function _resumeSession(uid, name, phone) {
   }
   setTimeout(function() { checkInactivity(); }, 500);
   setTimeout(checkBackupReminder, 3000);
-  // Run mandatory sequential update flow 60 seconds after entering app
-  if (sessionStorage.getItem('run_update_flow') === '1') {
-    setTimeout(function() {
+
+  // ── POST-LOGIN SEQUENCE ───────────────────────────────────────────────────
+  // We wait for Firebase profile/onboarding data to load FIRST,
+  // then decide what still needs to run. This prevents re-triggering
+  // things the user has already completed on another device.
+  function _startSequenceAfterFirebase() {
+    var privacyNeeded  = localStorage.getItem(_privacyKey()) !== PRIVACY_VER;
+    var tourNeeded     = localStorage.getItem(_tourKey()) !== '1';
+    var confirmNeeded  = localStorage.getItem(PHONE_CONFIRM_KEY + '_' + (_userId || 'default')) !== '1';
+
+    // Handle forced update flow
+    if (sessionStorage.getItem('run_update_flow') === '1') {
       sessionStorage.removeItem('run_update_flow');
       localStorage.removeItem(_privacyKey());
-      _startUpdateFlow();
-    }, 60000);
-  } else if (sessionStorage.getItem('check_privacy_on_login') === '1') {
-    sessionStorage.removeItem('check_privacy_on_login');
-    // Check if this specific user has signed the current privacy version
-    var signedPrivacy = localStorage.getItem(_privacyKey()) === PRIVACY_VER;
-    if (!signedPrivacy) {
-      // User hasn't signed current privacy — trigger update flow after 60s
-      setTimeout(function() {
-        _startUpdateFlow();
-      }, 60000);
-    } else {
-      // Privacy signed — just check phone/DOB confirmation
-      setTimeout(function() { checkExistingUserConfirmation(); }, 60000);
+      privacyNeeded = true;
     }
-  } else {
-    // Check phone/DOB confirmation for users who haven't done it yet
-    setTimeout(function() { checkExistingUserConfirmation(); }, 60000);
+    if (sessionStorage.getItem('check_privacy_on_login') === '1') {
+      sessionStorage.removeItem('check_privacy_on_login');
+      if (localStorage.getItem(_privacyKey()) !== PRIVACY_VER) privacyNeeded = true;
+    }
+
+    sessionStorage.setItem('_seq_privacy',  privacyNeeded  ? '1' : '0');
+    sessionStorage.setItem('_seq_tour',     tourNeeded     ? '1' : '0');
+    sessionStorage.setItem('_seq_confirm',  confirmNeeded  ? '1' : '0');
+
+    _seqNext();
   }
-  // ── Mandatory tour for ALL users — fires after entering app ──
-  // Check if this user has completed the tour — if not, start it
-  var tourDone = localStorage.getItem(ONBOARD_EXPENSES_KEY) === '1'
-              && localStorage.getItem(ONBOARD_INCOME_KEY)   === '1';
-  if (!tourDone) {
-    setTimeout(function() {
-      startTour('expenses', true, false);
-    }, 1200);
-  }
+
+  // Give Firebase 2.5 seconds to restore profile/onboarding data, then start sequence
+  setTimeout(function() { _startSequenceAfterFirebase(); }, 2500);
   // Fire sync in background — app is already usable
   loadIncomeFromFirebase(function(){});
   getDB(function() {
@@ -11835,6 +11866,164 @@ function _resumeSession(uid, name, phone) {
     renderMonthPicker();
     populateFilters();
   });
+}
+
+// ── FINGERPRINT / WEBAUTHN ────────────────────────────────────────────────────
+var FL_CRED_KEY = 'fl_credId';
+
+// ── Check if WebAuthn / biometrics are available on this device ──
+async function _fpAvailable() {
+  if (!window.PublicKeyCredential) return false;
+  if (!window.crypto || !window.crypto.getRandomValues) return false;
+  try {
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  } catch(e) { return false; }
+}
+
+// ── Show fingerprint button if credential is stored + biometrics available ──
+async function initFingerprintBtn() {
+  var wrap = document.getElementById('fp-btn-wrap');
+  if (!wrap) return;
+  // Hide first — only show if everything checks out
+  wrap.style.display = 'none';
+  var storedId = localStorage.getItem(FL_CRED_KEY);
+  if (!storedId) return;                        // never registered — don't show
+  var ok = await _fpAvailable();
+  if (!ok) return;                              // device doesn't support it
+  wrap.style.display = 'block';
+  // Auto-trigger the scan after a short delay so UI is settled
+  setTimeout(tryFingerprintFL, 600);
+}
+
+// ── Authenticate with fingerprint ──
+async function tryFingerprintFL() {
+  var errEl = document.getElementById('login-error');
+  if (errEl) errEl.textContent = '';
+
+  var ok = await _fpAvailable();
+  if (!ok) {
+    if (errEl) errEl.textContent = 'Biometrics not available on this device.';
+    return;
+  }
+
+  var storedId = localStorage.getItem(FL_CRED_KEY);
+  if (!storedId) {
+    if (errEl) errEl.textContent = 'No fingerprint registered — use PIN below.';
+    return;
+  }
+
+  try {
+    var challenge = window.crypto.getRandomValues(new Uint8Array(32));
+    // Decode stored credential ID
+    var rawId = Uint8Array.from(atob(storedId), function(c){ return c.charCodeAt(0); });
+    var assertion = await navigator.credentials.get({ publicKey: {
+      challenge: challenge,
+      timeout: 30000,
+      userVerification: 'required',
+      rpId: location.hostname,
+      allowCredentials: [{ type: 'public-key', id: rawId, transports: ['internal'] }]
+    }});
+
+    if (!assertion) {
+      if (errEl) errEl.textContent = 'Fingerprint not recognised — try PIN.';
+      return;
+    }
+
+    // ── SUCCESS — log in ──
+    _loginAttempts = 0;
+    _pinBuffer = '';
+    updatePinDots();
+    var uid   = localStorage.getItem(UID_KEY);
+    var name  = localStorage.getItem(NAME_KEY);
+    var phone = localStorage.getItem(PHONE_KEY);
+    if (!uid || !name || !phone) { showFullVerifyStep(); return; }
+    _userId = uid; _userName = name; _userPhone = phone;
+    sessionStorage.setItem('app_session', '1');
+    localStorage.setItem('last_active', String(Date.now()));
+    var pinO = document.getElementById('pin-overlay');
+    if (pinO) pinO.style.display = 'none';
+    updateUserDisplay();
+    resetInactivityTimer();
+    if (_db && !_syncUnsubscribe) {
+      syncSetStatus('live'); syncStartListener(); updateHeaderContext(); renderMonthPicker(); populateFilters();
+    } else if (!_db) {
+      getDB(function() { syncSetStatus('live'); syncStartListener(); renderSyncSetupUI(); updateHeaderContext(); renderMonthPicker(); populateFilters(); });
+    }
+    showToast('Welcome back, ' + name + '! 👆');
+
+  } catch(e) {
+    var msg = '';
+    if (e.name === 'NotAllowedError')       msg = 'Fingerprint cancelled — enter PIN below';
+    else if (e.name === 'SecurityError')    msg = 'Security error — enter PIN below';
+    else if (e.name === 'InvalidStateError')msg = 'Invalid state — enter PIN below';
+    else                                    msg = 'Biometric error (' + e.name + ') — use PIN';
+    if (errEl) errEl.textContent = msg;
+  }
+}
+
+// ── Offer fingerprint registration after first successful PIN login ──
+async function offerFingerprintFL(name) {
+  // Already registered on this device — skip
+  if (localStorage.getItem(FL_CRED_KEY)) return;
+
+  var ok = await _fpAvailable();
+  if (!ok) return; // device doesn't support biometrics — silently skip
+
+  // Small delay so the welcome toast is visible first
+  await new Promise(function(r){ setTimeout(r, 800); });
+
+  var want = confirm(
+    '👆 Fingerprint Login\n\n' +
+    'Would you like to unlock "My Expense Ledger" with your fingerprint next time instead of typing your PIN?\n\n' +
+    'Tap OK then touch your fingerprint sensor.'
+  );
+  if (!want) return;
+
+  try {
+    var challenge = window.crypto.getRandomValues(new Uint8Array(32));
+    var userId    = window.crypto.getRandomValues(new Uint8Array(16));
+
+    var cred = await navigator.credentials.create({ publicKey: {
+      challenge: challenge,
+      rp: {
+        name: 'My Expense Ledger',
+        id: location.hostname          // must match exactly every time
+      },
+      user: {
+        id: userId,
+        name: (name || 'user').toLowerCase().replace(/\s+/g,''),
+        displayName: name || 'User'
+      },
+      pubKeyCredParams: [
+        { type: 'public-key', alg: -7   },  // ES256 (Android)
+        { type: 'public-key', alg: -257 }   // RS256 (fallback)
+      ],
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',  // phone sensor only, not USB keys
+        userVerification: 'required',
+        residentKey: 'preferred'
+      },
+      timeout: 60000
+    }});
+
+    if (cred) {
+      // Save credential ID as Base64
+      var arr = new Uint8Array(cred.rawId);
+      var b64 = btoa(String.fromCharCode.apply(null, arr));
+      localStorage.setItem(FL_CRED_KEY, b64);
+      showToast('✅ Fingerprint registered! Next time, just touch the sensor to log in.');
+    } else {
+      showToast('Fingerprint setup cancelled — PIN login still works fine.');
+    }
+
+  } catch(e) {
+    // Don't show error — user may have cancelled, or device had a hiccup
+    // PIN still works perfectly
+    if (e.name !== 'NotAllowedError') {
+      // Only log unexpected errors
+      console.warn('FL fingerprint register error:', e.name, e.message);
+    }
+  }
 }
 
 // ── syncInit: called on page load ──
@@ -11930,6 +12119,34 @@ function syncLoadFromFirebase(callback) {
         }
       }
     });
+    // ── Restore profile confirmation from Firebase ──
+    // This ensures phone/DOB/country confirmation never re-triggers on new devices
+    userCol('settings').doc('profile').get().then(function(doc) {
+      if (!doc.exists) return;
+      var d = doc.data();
+      var uid = _userId || localStorage.getItem(UID_KEY) || 'default';
+      if (d.phone_confirmed) {
+        localStorage.setItem(PHONE_CONFIRM_KEY + '_' + uid, '1');
+      }
+      if (d.dob) localStorage.setItem('expense_user_dob_' + uid, d.dob);
+      if (d.country) localStorage.setItem('expense_user_country_' + uid, d.country);
+      if (d.dial)    localStorage.setItem('expense_user_dial_' + uid, d.dial);
+    }).catch(function(){});
+    // ── Restore tour completion from Firebase ──
+    // This ensures tour never re-triggers unless TOUR_VER is bumped
+    userCol('settings').doc('onboarding').get().then(function(doc) {
+      if (!doc.exists) return;
+      var d = doc.data();
+      if (d.done && d.tour_ver) {
+        // Mark both old keys and new version key
+        localStorage.setItem(ONBOARD_EXPENSES_KEY, '1');
+        localStorage.setItem(ONBOARD_INCOME_KEY, '1');
+        // Only mark current version done if they completed this exact version
+        if (d.tour_ver === TOUR_VER) {
+          localStorage.setItem(_tourKey(), '1');
+        }
+      }
+    }).catch(function(){});
     syncSetStatus('live');
     if (callback) callback();
   }).catch(function(err) {
@@ -12757,9 +12974,15 @@ function changePin() {
 function _privacyKey() {
   return 'privacy_ok_' + (_userId || localStorage.getItem('expense_uid') || 'default');
 }
-var PRIVACY_VER = '2026-03-23'; // bumped — forces all existing users to re-sign
-var APP_VERSION = '2.3.2'; // bump this with every release to force privacy + onboarding re-run
+var PRIVACY_VER  = '2026-03-23'; // bump to force all users to re-sign privacy
+var TOUR_VER     = '2026-03-23'; // bump ONLY when new slides are added to the tour
+var APP_VERSION  = '2.3.2';
 var APP_VERSION_KEY = 'expense_app_version';
+
+function _tourKey() {
+  // Stores the tour version the user last completed — per user
+  return 'tour_done_' + TOUR_VER + '_' + (_userId || localStorage.getItem('expense_uid') || 'default');
+}
 
 // ── Sequential mandatory update flow ──
 // Step 1: Privacy Policy (must sign)
@@ -12969,16 +13192,62 @@ function acceptPrivacy() {
   }
   var ptc = document.getElementById('pin-tc-box');
   if (ptc) setTimeout(function(){ ptc.style.display = 'none'; }, 1200);
-  // If update flow is active — proceed to next step
+  // If update flow is active — proceed to that flow
   if (_updateFlowActive) {
     setTimeout(function(){ _onPrivacyAccepted(); }, 400);
     return;
   }
-  // Normal flow — fire onboarding if new version
-  if (_userId && sessionStorage.getItem('new_app_version') === '1') {
-    sessionStorage.removeItem('new_app_version');
-    setTimeout(function(){ startOnboarding(_appMode, true); }, 600);
+  // Event-driven sequence — fire next step immediately as privacy closes
+  setTimeout(function(){ _seqNext(); }, 400);
+}
+
+// ── EVENT-DRIVEN POST-LOGIN SEQUENCE ─────────────────────────────────────────
+// _seqNext() is called by each step when it CLOSES — not on a timer.
+// It checks what still needs to run and fires the next step immediately.
+function _seqNext() {
+  // Step 1: Privacy
+  if (sessionStorage.getItem('_seq_privacy') === '1') {
+    sessionStorage.setItem('_seq_privacy', '0'); // mark as launched
+    _showPrivacyOverlay();
+    // acceptPrivacy() will call _seqNext() when user taps I ACCEPT
+    return;
   }
+  // Step 2: Tour
+  if (sessionStorage.getItem('_seq_tour') === '1') {
+    sessionStorage.setItem('_seq_tour', '0'); // mark as launched
+    startTour('expenses', true, false);
+    // tourFinish() (income done) will call _seqNext() when tour completes
+    return;
+  }
+  // Step 3: Confirmation
+  if (sessionStorage.getItem('_seq_confirm') === '1') {
+    sessionStorage.setItem('_seq_confirm', '0'); // mark as launched
+    checkExistingUserConfirmation();
+    // submitPhoneConfirm() will call _seqNext() when user confirms
+    return;
+  }
+  // Step 4: Fingerprint — all previous steps done, offer now
+  if (!localStorage.getItem(FL_CRED_KEY)) {
+    offerFingerprintFL(localStorage.getItem(NAME_KEY));
+  }
+}
+
+// ── Chain: after privacy signed → tour → confirmation → fingerprint ──
+function _postPrivacyChainContinue() {
+  _seqNext(); // hand off to the sequence
+}
+
+function _maybeFingerprintOffer(name) {
+  // Kept for compatibility — offer directly if all steps done
+  if (!localStorage.getItem(FL_CRED_KEY)) offerFingerprintFL(name || localStorage.getItem(NAME_KEY));
+}
+
+// Stop the old poller if it was running
+var _fpPollTimer = null;
+var _fpLastOverlayClear = 0;
+function _startFingerprintPoller(name) {
+  // No longer used — sequence handles this now
+  if (!localStorage.getItem(FL_CRED_KEY)) offerFingerprintFL(name || localStorage.getItem(NAME_KEY));
 }
 
 // ════════════════════════
@@ -14083,9 +14352,20 @@ function submitPhoneConfirm() {
   if(errEl) errEl.textContent='';
   var country = '';
   if(typeof COUNTRY_CODES !== 'undefined') COUNTRY_CODES.forEach(function(c){ if(c.dial===dial) country=c.name; });
-  localStorage.setItem(PHONE_CONFIRM_KEY+'_'+(_userId||'default'),'1'); localStorage.setItem('expense_user_dob_'+(_userId||'default'),dob);
-  localStorage.setItem('expense_user_country_'+(_userId||'default'),country); localStorage.setItem('expense_user_dial_'+(_userId||'default'),dial);
-  if(_db && _userId) userCol('settings').doc('profile').set({dob:dob,country:country,dial:dial,phone:dial+number,age:_calcAge(dob),updated:Date.now()},{merge:true}).catch(function(){});
+  // Save locally
+  localStorage.setItem(PHONE_CONFIRM_KEY+'_'+(_userId||'default'),'1');
+  localStorage.setItem('expense_user_dob_'+(_userId||'default'),dob);
+  localStorage.setItem('expense_user_country_'+(_userId||'default'),country);
+  localStorage.setItem('expense_user_dial_'+(_userId||'default'),dial);
+  // Save to Firebase — this is the source of truth across devices & deployments
+  if(_db && _userId) {
+    userCol('settings').doc('profile').set({
+      dob: dob, country: country, dial: dial,
+      phone: dial+number, age: _calcAge(dob),
+      phone_confirmed: true,    // ← permanent flag — prevents re-triggering
+      updated: Date.now()
+    }, { merge: true }).catch(function(){});
+  }
   var o = document.getElementById('phone-confirm-overlay'); if(o) o.style.display='none';
   // Check age — if underage switch to guest mode immediately
   if (_isUnderage(dob)) {
@@ -14099,7 +14379,9 @@ function submitPhoneConfirm() {
     }, 300);
   } else {
     _unfreezeApp();
-  showToast('✅ Details confirmed. Thank you!');
+    showToast('✅ Details confirmed. Thank you!');
+    // Fire next step in sequence immediately as confirmation closes
+    setTimeout(function(){ _seqNext(); }, 400);
   }
   if (_updateFlowActive && typeof window._submitPhoneConfirmCallback === 'function') {
     setTimeout(function(){ window._submitPhoneConfirmCallback(); window._submitPhoneConfirmCallback = null; }, 400);
@@ -14138,38 +14420,96 @@ var _tourSteps = [];
 var _tourMode  = 'expenses';
 
 var TOUR_EXPENSES_STEPS = [
-  { target:'#fixed-topbar', tab:null, icon:'👋', title:'Welcome to My Expense Ledger!', body:'This guided tour highlights every button and tab with a golden spotlight. Follow the arrow to learn as you go. Tap <strong>Next</strong> to begin.', arrow:'down' },
-  { target:"button[onclick*=\"switchTab('import'\"]", tab:'import', icon:'📥', title:'Import Tab — Add Your Expenses', body:'Tap here to open the Import tab. This is where you type or paste your expense entries. Use the month navigator to move between months.', arrow:'down' },
-  { target:'#raw-input', tab:'import', icon:'✍️', title:'The Notepad — Type Your Entries', body:'Type expenses here in plain text. Format: <em>date on one line</em>, then <em>Description: amount</em>. Press <strong>Alt+Enter</strong> to activate, <strong>Ctrl+Enter</strong> to parse.', arrow:'down' },
-  { target:'#exp-parse-btn', tab:'import', icon:'⚡', title:'Parse Button — Read Your Entries', body:'After typing entries, tap Parse (or Ctrl+Enter). The app reads each line, extracts dates, descriptions and amounts, then takes you to Categorize.', arrow:'up' },
-  { target:"button[onclick*=\"switchTab('categorize'\"]", tab:'categorize', icon:'🏷️', title:'Categorize — Sort Your Spending', body:'Every parsed entry appears here. Assign a category to each one — Food, Transport, Bills etc. The app learns your patterns and auto-suggests over time.', arrow:'down' },
-  { target:"button[onclick*=\"switchTab('categorize'\"]", tab:'categorize', icon:'💾', title:'Save to Ledger', body:'After assigning categories to all your entries, a <strong>Save to Ledger</strong> button appears at the top right. Tap it (or press Ctrl+Enter) to save everything in one click.', arrow:'down' },
-  { target:"button[onclick*=\"switchTab('ledger'\"]", tab:'ledger', icon:'📋', title:'Ledger — Your Complete Record', body:'The Ledger holds every entry you have saved. Filter by year, month, currency or category. Use ← → arrow keys on your keyboard to flip between pages.', arrow:'down' },
-  { target:"button[onclick*=\"switchTab('daily'\"]", tab:'daily', icon:'📅', title:'Daily View — See Any Day', body:'The Daily tab shows a breakdown of spending for a specific date. Use the date picker to jump to any day and see exactly what was spent.', arrow:'down' },
-  { target:"button[onclick*=\"switchTab('dashboard'\"]", tab:'dashboard', icon:'📊', title:'Dashboard — Charts & Totals', body:'See your spending by category, month and currency. One master filter controls all charts simultaneously — monthly trend, category breakdown, heatmap and year-over-year growth.', arrow:'down' },
-  { target:"button[onclick*=\"switchTab('budget'\"]", tab:'budget', icon:'🎯', title:'Budget — Set Monthly Limits', body:'Set a spending limit per category. Progress bars turn amber at 75% and red when exceeded. Set separate budgets per currency.', arrow:'down' },
-  { target:"button[onclick*=\"switchTab('manage'\"]", tab:'manage', icon:'⚙️', title:'Manage Tab — Your Control Centre', body:'Everything important is here — profile, data deletion, recycle bin, currencies, PIN, CSV export. See the next steps for highlights.', arrow:'down' },
-  { target:'#profile-avatar-emoji', tab:'manage', icon:'😊', title:'Your Avatar — Tap to Personalise', body:'Tap the emoji circle to open the avatar picker. Choose from 6 categories: Happy, Animals, Cool, Nature, Food and Sports. Your choice is saved and shown on your profile.', arrow:'right' },
-  { target:'#manage-filter-row', tab:'manage', icon:'🔍', title:'Delete Data — Year · Month · Day Filter', body:'These 3 filters work together. Select a <strong>Year</strong> first → months appear. Select a <strong>Month</strong> → days appear. Select a <strong>Day</strong> for a single day. Tap Delete on any group to move it to the Recycle Bin.', arrow:'up' },
-  { target:'#trash-filter-row', tab:'manage', icon:'♻️', title:'Recycle Bin — Filter to Find & Restore', body:'Every deleted entry lands here. Use these 3 filters to find entries by <strong>Year</strong>, <strong>Month</strong> or <strong>Day</strong>. Restore individual entries, restore entire groups, or permanently delete them.', arrow:'up' },
-  { target:'#hdr-referral-btn', tab:null, icon:'🔗', title:'Referral Link — Invite Friends', body:'Tap the 🔗 icon in the header to get your personal referral link. Share it to invite friends and family.', arrow:'down' },
-  { target:'#fixed-topbar', tab:null, icon:'🔁', title:'Switch to Income Module', body:'The 🔁 switch button is in the header bar above. Tap it to switch between Expenses and Income. Each module has its own separate tabs and data.', arrow:'up' },
-  { target:"button[onclick*=\"switchTab('import'\"]", tab:'import', icon:'🚀', title:"You're Ready — Start Here!", body:'Head to <strong>Import</strong> to add your first expenses. Everything syncs automatically. We will now take a quick tour of the Income module too!', arrow:'down', last:true }
+  { target:null, tab:null, icon:'👋', title:'Welcome to My Expense Ledger!',
+    body:'This guided tour highlights every button with a golden spotlight and arrow. Tap <strong>Next →</strong> to move forward. You can skip at any time.',
+    arrow:null },
+  { target:'#main-nav button:nth-child(1)', tab:'import', icon:'📥', title:'Import — Add Your Expenses',
+    body:'This is where everything starts. Tap <strong>Import</strong> to open the notepad and type or paste your expense entries.',
+    arrow:'up' },
+  { target:'#raw-input', tab:'import', icon:'✍️', title:'The Notepad — Type Your Entries',
+    body:'Type expenses here in plain text. Format: <em>date on one line</em>, then <em>Description: amount</em>.<br>Example:<br><em>01/01/2026<br>Rice: 2500<br>Transport: 800</em>',
+    arrow:'down' },
+  { target:'#exp-parse-btn', tab:'import', icon:'⚡', title:'Parse — Read Your Entries',
+    body:'After typing your entries, tap <strong>Parse Expenses</strong> (or press Ctrl+Enter). The app reads each line and extracts dates, descriptions and amounts automatically.',
+    arrow:'up' },
+  { target:'#main-nav button:nth-child(2)', tab:'categorize', icon:'🏷️', title:'Categorize — Sort Your Spending',
+    body:'Every parsed entry appears here. Assign a category to each one — Food, Transport, Bills etc. The app learns your patterns and auto-suggests next time.',
+    arrow:'up' },
+  { target:'#btn-save-pending', tab:'categorize', icon:'💾', title:'Save to Ledger',
+    body:'Once all entries have categories assigned, tap <strong>✓ Save to Ledger</strong>. All entries are saved in one click. You can also press Ctrl+Enter.',
+    arrow:'up' },
+  { target:'#main-nav button:nth-child(5)', tab:'ledger', icon:'📋', title:'Ledger — Your Complete Record',
+    body:'The Ledger holds every entry you have saved. Filter by year, month, currency or category. Use <strong>← →</strong> keys to flip between pages.',
+    arrow:'up' },
+  { target:'#main-nav button:nth-child(3)', tab:'daily', icon:'📅', title:'Daily View — See Any Day',
+    body:'The Daily tab shows a full breakdown of spending for any specific date. Use the date picker to jump to any day instantly.',
+    arrow:'up' },
+  { target:'#main-nav button:nth-child(4)', tab:'dashboard', icon:'📊', title:'Dashboard — Charts & Totals',
+    body:'Visual charts: spending by category, monthly trend, heatmap and year-over-year growth. One master filter controls all charts simultaneously.',
+    arrow:'up' },
+  { target:'#main-nav button:nth-child(6)', tab:'budget', icon:'🎯', title:'Budget — Set Monthly Limits',
+    body:'Set a spending limit per category. Progress bars turn amber at 75% and red when exceeded. Works per currency too.',
+    arrow:'up' },
+  { target:'#main-nav button:nth-child(7)', tab:'manage', icon:'⚙️', title:'Manage — Your Control Centre',
+    body:'Profile, PIN change, data deletion, recycle bin, currencies, CSV export — all here. See the next steps for highlights.',
+    arrow:'up' },
+  { target:'#avatar-circle', tab:'manage', icon:'😊', title:'Your Avatar — Tap to Personalise',
+    body:'Tap your avatar circle to open the emoji picker. Choose from 6 categories: Happy, Animals, Cool, Nature, Food and Sports. Your choice syncs across devices.',
+    arrow:'down' },
+  { target:'#manage-filter-row', tab:'manage', icon:'🗑️', title:'Delete Data — Year · Month · Day Filter',
+    body:'Select <strong>Year</strong> first → months appear. Select <strong>Month</strong> → days appear. Tap <strong>Delete</strong> on any group to move it to the Recycle Bin.',
+    arrow:'down' },
+  { target:'#trash-filter-row', tab:'manage', icon:'♻️', title:'Recycle Bin — Restore or Delete',
+    body:'Every deleted entry lands here. Filter by Year, Month or Day. Restore entries individually, restore whole groups, or permanently delete them.',
+    arrow:'down' },
+  { target:'#hdr-referral-btn', tab:null, icon:'🔗', title:'Referral Link — Invite Friends',
+    body:'The <strong>🔗</strong> icon next to your name is your personal referral link. Tap it to get your link and share it. Every person who joins via your link is counted.',
+    arrow:'up', showHidden:true },
+  { target:'#mode-switch-btn', tab:null, icon:'🔁', title:'Switch to Income Module',
+    body:'Tap the <strong>🔁 switch</strong> button to move between Expenses and Income. Each module has its own separate tabs, data and charts.',
+    arrow:'up' },
+  { target:null, tab:'import', icon:'🚀', title:"You're Ready — Let's Go!",
+    body:'Head to <strong>Import</strong> to add your first expenses. Everything syncs to the cloud automatically.<br><br>We will now take a quick tour of the <strong>Income</strong> module too!',
+    arrow:null, last:true }
 ];
 
 var TOUR_INCOME_STEPS = [
-  { target:'#fixed-topbar', tab:null, icon:'💰', title:'Income Module Tour', body:'You are now in the Income module. It works just like Expenses but tracks your earnings. Follow the golden arrow through each tab.', arrow:'down' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-import'\"]", tab:'inc-import', icon:'📥', title:'Income Import Tab', body:'Tap here to open the Income Import tab. Paste your income records here. Use Y key to toggle between Month and Year mode.', arrow:'down' },
-  { target:'#inc-raw-input', tab:'inc-import', icon:'✍️', title:'Income Notepad — Type Earnings', body:'Type income entries here — salary, freelance, commissions, tips. Format: <em>date on one line</em>, then <em>Description: amount</em>. Press Ctrl+Enter to parse.', arrow:'down' },
-  { target:'#inc-parse-btn', tab:'inc-import', icon:'⚡', title:'Parse Income Button', body:'Tap Parse Income (or Ctrl+Enter) after typing entries. The app reads each line and takes you straight to Income Categorize.', arrow:'up' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-categorize'\"]", tab:'inc-categorize', icon:'🏷️', title:'Income Categorize Tab', body:'Every parsed income entry appears here. Assign categories — Salary, Freelance, Commission, Rental, Gift etc. The app learns your patterns.', arrow:'down' },
-  { target:'#inc-btn-save-pending', tab:'inc-categorize', icon:'💾', title:'Save Income to Ledger', body:'Once all entries have categories, tap Save to Ledger (or Ctrl+Enter). All income entries are saved in one click.', arrow:'up' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-ledger'\"]", tab:'inc-ledger', icon:'📋', title:'Income Ledger', body:'All your income entries in one place. Filter by year, month, currency or category. Use ← → arrow keys to navigate pages.', arrow:'down' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-monthly'\"]", tab:'inc-monthly', icon:'📅', title:'Monthly Income View', body:'See a full month-by-month breakdown of all earnings. Compare months and track your income trend over time.', arrow:'down' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-dashboard'\"]", tab:'inc-dashboard', icon:'📊', title:'Income Dashboard — Charts', body:'Visual charts showing income by category, monthly totals and year-over-year growth. Filter by year, month and currency.', arrow:'down' },
-  { target:"button[onclick*=\"switchIncomeTab('inc-manage'\"]", tab:'inc-manage', icon:'⚙️', title:'Income Manage Tab', body:'Delete income data by year, month or day using the cascading filter. Export to CSV, generate PDF reports and manage the income recycle bin.', arrow:'down' },
-  { target:'#inc-manage-year-filter', tab:'inc-manage', icon:'🔍', title:'Income Delete Filter', body:'Select a year first, then month, then day. Only matching entries appear. Tap Delete to move them to the Recycle Bin — always recoverable.', arrow:'up' },
-  { target:'#fixed-topbar', tab:null, icon:'🚀', title:'Tour Complete — Both Modules!', body:'You now know the full app! Switch between Expenses and Income anytime using the 🔁 button in the header. Your data is always safe in the cloud. Enjoy! 🎉', arrow:'up', last:true }
+  { target:null, tab:null, icon:'💰', title:'Income Module Tour',
+    body:'You are now in the Income module. It works just like Expenses but tracks your earnings — salary, freelance, commissions, gifts and more.',
+    arrow:null },
+  { target:'#income-nav button:nth-child(1)', tab:'inc-import', icon:'📥', title:'Income Import Tab',
+    body:'Tap <strong>Import</strong> to open the income notepad. Paste your income records here. Use the <strong>Y</strong> key to toggle between Month and Year mode.',
+    arrow:'up' },
+  { target:'#inc-raw-input', tab:'inc-import', icon:'✍️', title:'Income Notepad — Type Earnings',
+    body:'Type income entries here — salary, freelance, commissions, tips. Same format as expenses: date on one line, then <em>Description: amount</em>.',
+    arrow:'down' },
+  { target:'#inc-parse-btn', tab:'inc-import', icon:'⚡', title:'Parse Income',
+    body:'Tap <strong>Parse Income</strong> (or Ctrl+Enter) after typing entries. The app reads each line and takes you to Income Categorize.',
+    arrow:'up' },
+  { target:'#income-nav button:nth-child(2)', tab:'inc-categorize', icon:'🏷️', title:'Income Categorize Tab',
+    body:'Every parsed income entry appears here. Assign categories — Salary, Freelance, Commission, Rental, Gift etc.',
+    arrow:'up' },
+  { target:'#inc-btn-save-pending', tab:'inc-categorize', icon:'💾', title:'Save Income to Ledger',
+    body:'Once all income entries have categories, tap <strong>✓ Save to Ledger</strong>. All income is saved in one click.',
+    arrow:'up' },
+  { target:'#income-nav button:nth-child(5)', tab:'inc-ledger', icon:'📋', title:'Income Ledger',
+    body:'All your income entries in one place. Filter by year, month, currency or category. Use <strong>← →</strong> keys to navigate pages.',
+    arrow:'up' },
+  { target:'#income-nav button:nth-child(3)', tab:'inc-monthly', icon:'📅', title:'Monthly Income View',
+    body:'A full month-by-month breakdown of all earnings. Compare months side by side and track your income trend over time.',
+    arrow:'up' },
+  { target:'#income-nav button:nth-child(4)', tab:'inc-dashboard', icon:'📊', title:'Income Dashboard — Charts',
+    body:'Visual charts showing income by category, monthly totals and year-over-year growth. Filter by year, month and currency.',
+    arrow:'up' },
+  { target:'#income-nav button:nth-child(6)', tab:'inc-manage', icon:'⚙️', title:'Income Manage Tab',
+    body:'Delete income data by year, month or day. Export to CSV, generate PDF reports and manage the income recycle bin.',
+    arrow:'up' },
+  { target:'#inc-manage-year-filter', tab:'inc-manage', icon:'🔍', title:'Income Delete Filter',
+    body:'Select a <strong>Year</strong> first, then <strong>Month</strong>, then <strong>Day</strong>. Only matching entries appear. Tap <strong>Delete</strong> to move them to the Recycle Bin.',
+    arrow:'down' },
+  { target:null, tab:null, icon:'🎉', title:'Tour Complete — Both Modules!',
+    body:'You now know the full app! Switch between Expenses and Income anytime using the <strong>🔁</strong> button in the header.<br><br>Your data is always safe in the cloud. Enjoy! 🚀',
+    arrow:null, last:true }
 ];
 
 function startTour(mode, force, isReplay) {
@@ -14230,6 +14570,13 @@ function _positionTourStep(step) {
   }
 
   if(!step.target){ centre(); return; }
+
+  // If this step needs a hidden element — temporarily show it
+  if(step.showHidden) {
+    var hiddenEl = document.querySelector(step.target);
+    if(hiddenEl) hiddenEl.style.display = 'inline-block';
+  }
+
   var el=document.querySelector(step.target);
   if(!el){ centre(); return; }
   el.scrollIntoView({behavior:'smooth',block:'center'});
@@ -14298,12 +14645,18 @@ function _positionTourStep(step) {
 }
 
 function tourNav(dir) {
+  // If leaving a showHidden step — hide the element again
+  var prevStep = _tourSteps[_tourIndex];
+  if(prevStep && prevStep.showHidden && prevStep.target) {
+    var wasShown = document.querySelector(prevStep.target);
+    if(wasShown) wasShown.style.display = 'none';
+  }
   var newIdx=_tourIndex+dir;
   if(newIdx<0) return;
   if(newIdx>=_tourSteps.length){ tourFinish(); return; }
   _tourIndex=newIdx; _renderTourStep();
 }
-function tourSkip(){ /* Tour is mandatory — cannot skip */ }
+function tourSkip(){ tourFinish(); } // Tour is now optional — can skip
 function tourFinish() {
   var key=(_tourMode==='income')?ONBOARD_INCOME_KEY:ONBOARD_EXPENSES_KEY;
   localStorage.setItem(key,'1');
@@ -14332,6 +14685,18 @@ function tourFinish() {
       switchTab('import', null);
     }, 300);
     showToast('🎉 Full tour complete! Replay anytime from Help → Onboarding 🎓');
+    // Save tour completion against current TOUR_VER — won't re-trigger unless version bumps
+    localStorage.setItem(_tourKey(), '1');
+    localStorage.setItem(ONBOARD_EXPENSES_KEY, '1');
+    localStorage.setItem(ONBOARD_INCOME_KEY, '1');
+    // Save to Firebase so it survives new devices and deployments
+    if (_db && _userId) {
+      userCol('settings').doc('onboarding').set({
+        tour_ver: TOUR_VER, done: true, completed: Date.now()
+      }, { merge: true }).catch(function(){});
+    }
+    // Fire next step in sequence immediately as tour closes
+    setTimeout(function(){ _seqNext(); }, 600);
   }
 }
 // Add bounce animation
