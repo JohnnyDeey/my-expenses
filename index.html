@@ -3154,12 +3154,14 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 <!-- Tour tooltip card -->
 <div id="tour-tooltip" style="display:none;position:fixed;z-index:100011;background:var(--ink);border:2px solid var(--gold);border-radius:10px;padding:18px 20px;width:calc(100% - 32px);max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.6);">
-  <!-- Header -->
+  <!-- Header row: icon + step number + skip button -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
     <div style="display:flex;align-items:center;gap:8px;">
       <span id="tour-step-icon" style="font-size:1.4rem;"></span>
       <span id="tour-step-num"  style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--gold);letter-spacing:1px;"></span>
     </div>
+    <!-- Skip button — hidden for new users, shown for existing users -->
+    <button id="tour-skip-btn" onclick="tourSkip()" style="display:none;background:none;border:1px solid #3a3020;border-radius:4px;padding:3px 8px;font-family:'DM Mono',monospace;font-size:0.6rem;color:#6b5e50;cursor:pointer;pointer-events:all;letter-spacing:1px;">SKIP ✕</button>
   </div>
   <!-- Title -->
   <div id="tour-step-title" style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);margin-bottom:8px;line-height:1.3;"></div>
@@ -8996,7 +8998,17 @@ function loadIncomeCustomCats() {
 function saveIncomeCustomCat(cat) {
   if (!cat || INC_CATS.indexOf(cat) !== -1) return;
   var saved = loadIncomeCustomCats();
-  if (saved.indexOf(cat) === -1) { saved.push(cat); localStorage.setItem(getIncCatsKey(), JSON.stringify(saved)); }
+  if (saved.indexOf(cat) === -1) {
+    saved.push(cat);
+    var json = JSON.stringify(saved);
+    localStorage.setItem(getIncCatsKey(), json);
+    // Sync to Firebase so income categories are the same on all devices
+    if (_db && _userId) {
+      userCol('settings').doc('preferences').set(
+        { inc_custom_cats: json, updated: Date.now() }, { merge: true }
+      ).catch(function(){});
+    }
+  }
 }
 function getAllIncomeCats() {
   var saved = loadIncomeCustomCats();
@@ -11855,8 +11867,7 @@ function _resumeSession(uid, name, phone) {
     _seqNext();
   }
 
-  // Give Firebase 2.5 seconds to restore profile/onboarding data, then start sequence
-  setTimeout(function() { _startSequenceAfterFirebase(); }, 2500);
+  var _seqFallbackTimer = setTimeout(function() { _startSequenceAfterFirebase(); }, 2500);
   // Fire sync in background — app is already usable
   loadIncomeFromFirebase(function(){});
   getDB(function() {
@@ -11867,9 +11878,57 @@ function _resumeSession(uid, name, phone) {
     renderMonthPicker();
     populateFilters();
     // ── Restore recycle bins from Firebase on every login ──
-    // This ensures trash is never lost on new devices or after clearing localStorage
     if (!window._trashDeletePending)    fetchTrashFromFirebase();
     if (!window._incTrashDeletePending) fetchIncTrashFromFirebase();
+    // ── Restore profile, avatar, onboarding + income categories from Firebase ──
+    // We do ALL restores here, then start the sequence ONLY after they complete.
+    // This guarantees confirmNeeded/tourNeeded are accurate on any device.
+    var uid = _userId || localStorage.getItem(UID_KEY) || 'default';
+    var profileDone = false, onboardDone = false, prefsDone = false;
+    function _checkAllDone() {
+      if (!profileDone || !onboardDone || !prefsDone) return;
+      // Cancel the 2.5s timer fallback — we have real data now
+      clearTimeout(_seqFallbackTimer);
+      _startSequenceAfterFirebase();
+    }
+    // Profile: DOB, phone, country, phone_confirmed
+    userCol('settings').doc('profile').get().then(function(doc) {
+      if (doc.exists) {
+        var d = doc.data();
+        if (d.phone_confirmed) localStorage.setItem(PHONE_CONFIRM_KEY + '_' + uid, '1');
+        if (d.dob)     localStorage.setItem('expense_user_dob_'     + uid, d.dob);
+        if (d.country) localStorage.setItem('expense_user_country_' + uid, d.country);
+        if (d.dial)    localStorage.setItem('expense_user_dial_'    + uid, d.dial);
+      }
+      profileDone = true; _checkAllDone();
+    }).catch(function(){ profileDone = true; _checkAllDone(); });
+    // Onboarding: tour version completed
+    userCol('settings').doc('onboarding').get().then(function(doc) {
+      if (doc.exists) {
+        var d = doc.data();
+        if (d.done) {
+          localStorage.setItem(ONBOARD_EXPENSES_KEY, '1');
+          localStorage.setItem(ONBOARD_INCOME_KEY,   '1');
+          if (d.tour_ver === TOUR_VER) localStorage.setItem(_tourKey(), '1');
+        }
+        // Also restore privacy signature
+        if (d.privacy_ver) localStorage.setItem(_privacyKey(), d.privacy_ver);
+      }
+      onboardDone = true; _checkAllDone();
+    }).catch(function(){ onboardDone = true; _checkAllDone(); });
+    // Preferences: avatar, income categories
+    userCol('settings').doc('preferences').get().then(function(doc) {
+      if (doc.exists) {
+        var d = doc.data();
+        if (d.avatar) {
+          localStorage.setItem(AVATAR_KEY + '_' + uid, d.avatar);
+          var el = document.getElementById('profile-avatar-emoji'); if(el) el.textContent = d.avatar;
+          var hdr = document.getElementById('hdr-avatar-emoji'); if(hdr) hdr.textContent = d.avatar;
+        }
+        if (d.inc_custom_cats) localStorage.setItem(getIncCatsKey(), d.inc_custom_cats);
+      }
+      prefsDone = true; _checkAllDone();
+    }).catch(function(){ prefsDone = true; _checkAllDone(); });
   });
 }
 
@@ -13219,6 +13278,10 @@ function acceptPrivacy() {
       version: PRIVACY_VER, accepted: true,
       timestamp: Date.now(), date: new Date().toISOString()
     }).catch(function(){});
+    // Also save to onboarding doc so new devices restore privacy without re-asking
+    userCol('settings').doc('onboarding').set({
+      privacy_ver: PRIVACY_VER, updated: Date.now()
+    }, { merge: true }).catch(function(){});
   }
   var o = document.getElementById('privacy-overlay');
   if (o) o.style.display = 'none';
@@ -14278,10 +14341,14 @@ function _renderAvatarGrid(catIndex) {
 function saveAvatar() {
   if (!_selectedAvatarEmoji) return;
   localStorage.setItem(AVATAR_KEY+'_'+(_userId||'default'), _selectedAvatarEmoji);
-  // Update profile card immediately
+  // Sync to Firebase so avatar is the same on all devices
+  if (_db && _userId) {
+    userCol('settings').doc('preferences').set({
+      avatar: _selectedAvatarEmoji, updated: Date.now()
+    }, { merge: true }).catch(function(){});
+  }
   var el = document.getElementById('profile-avatar-emoji');
   if (el) el.textContent = _selectedAvatarEmoji;
-  // Update header avatar if present
   var hdrAvatar = document.getElementById('hdr-avatar-emoji');
   if (hdrAvatar) hdrAvatar.textContent = _selectedAvatarEmoji;
   closeAvatarPicker();
@@ -14586,6 +14653,13 @@ function _renderTourStep() {
   }
   var bb=document.getElementById('tour-back-btn'); if(bb) bb.style.visibility=_tourIndex===0?'hidden':'visible';
   var nb=document.getElementById('tour-next-btn'); if(nb) nb.textContent=step.last?"Let's go! 🚀":'Next →';
+  // Show skip button ONLY for existing users (tour already completed before = returning user)
+  // New users must watch the full tour
+  var skipBtn = document.getElementById('tour-skip-btn');
+  if (skipBtn) {
+    var isNewUser = localStorage.getItem(ONBOARD_EXPENSES_KEY) !== '1';
+    skipBtn.style.display = (isNewUser && !_onboardIsReplay) ? 'none' : 'block';
+  }
   setTimeout(function(){ _positionTourStep(step); }, 150);
 }
 
