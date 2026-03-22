@@ -6916,10 +6916,10 @@ function renderUserProfileCard() {
 
   var fullName = localStorage.getItem(FULL_NAME_KEY) || _userName || '?';
   var username = _userName || '—';
-  var country  = localStorage.getItem('expense_user_country') || '—';
-  var dob      = localStorage.getItem('expense_user_dob') || '';
-  var dial     = localStorage.getItem('expense_user_dial') || '';
-  var savedAvatar = localStorage.getItem(AVATAR_KEY) || '😊';
+  var country  = localStorage.getItem('expense_user_country_'+(_userId||'default')) || '—';
+  var dob      = localStorage.getItem('expense_user_dob_'+(_userId||'default')) || '';
+  var dial     = localStorage.getItem('expense_user_dial_'+(_userId||'default')) || '';
+  var savedAvatar = localStorage.getItem(AVATAR_KEY+'_'+(_userId||'default')) || '😊';
 
   if (initEl)   initEl.textContent  = savedAvatar;
   if (nameEl)   nameEl.textContent  = fullName;
@@ -11577,7 +11577,7 @@ function _resumeSession(uid, name, phone) {
 
   // ── Age-based mode check ──
   // If DOB confirmed and user is underage → apply guest mode immediately
-  var confirmedDob = localStorage.getItem('expense_user_dob');
+  var confirmedDob = localStorage.getItem('expense_user_dob_'+(_userId||'default'));
   if (confirmedDob && _isUnderage(confirmedDob)) {
     _isGuestMode = true;
     setTimeout(function() { _applyGuestMode(); }, 100);
@@ -11980,9 +11980,9 @@ function generateCode() {
   if (typeof COUNTRY_CODES !== 'undefined') {
     COUNTRY_CODES.forEach(function(c) { if (c.dial === dial) country = c.name; });
   }
-  localStorage.setItem('expense_user_dob',     dob);
-  localStorage.setItem('expense_user_country',  country);
-  localStorage.setItem('expense_user_dial',     dial);
+  localStorage.setItem('expense_user_dob_'+(_userId||'default'),     dob);
+  localStorage.setItem('expense_user_country_'+(_userId||'default'),  country);
+  localStorage.setItem('expense_user_dial_'+(_userId||'default'),     dial);
   localStorage.setItem(PHONE_CONFIRM_KEY, '1'); // mark confirmed at registration
 
   _pendingName  = _selectedUsername;
@@ -12516,10 +12516,39 @@ var APP_VERSION_KEY = 'expense_app_version';
 // Step 4: Onboarding (optional/dismissible)
 var _updateFlowActive = false;
 
+function _freezeApp() {
+  var existing = document.getElementById('update-flow-freeze');
+  if (existing) return;
+  var freeze = document.createElement('div');
+  freeze.id = 'update-flow-freeze';
+  freeze.style.cssText = 'position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,0);cursor:not-allowed;';
+  // Block all pointer and keyboard events on the app beneath
+  freeze.addEventListener('click',     function(e){ e.stopPropagation(); e.preventDefault(); });
+  freeze.addEventListener('touchstart', function(e){ e.stopPropagation(); }, {passive:false});
+  freeze.addEventListener('keydown',   function(e){ e.stopPropagation(); e.preventDefault(); });
+  document.body.appendChild(freeze);
+  // Also disable tab bar buttons directly
+  document.querySelectorAll('.tab-bar button, .tab-bar-income button').forEach(function(b){
+    b.setAttribute('data-frozen','1');
+    b.style.pointerEvents = 'none';
+  });
+}
+
+function _unfreezeApp() {
+  var freeze = document.getElementById('update-flow-freeze');
+  if (freeze) freeze.remove();
+  document.querySelectorAll('[data-frozen="1"]').forEach(function(b){
+    b.removeAttribute('data-frozen');
+    b.style.pointerEvents = '';
+  });
+}
+
 function _startUpdateFlow() {
   _updateFlowActive = true;
   sessionStorage.setItem('update_flow_step', '1');
-  // Step 1 — Privacy Policy
+  // Freeze the app — nothing works until flow completes
+  _freezeApp();
+  // Step 1 — Privacy Policy first
   setTimeout(function() {
     if (typeof _showPrivacyOverlay === 'function') _showPrivacyOverlay();
   }, 800);
@@ -12537,8 +12566,7 @@ function _onPrivacyAccepted() {
 
 // Step 2 — Phone + Country
 function _showUpdateFlowStep2() {
-  if (localStorage.getItem(PHONE_CONFIRM_KEY) === '1') {
-    // Already confirmed — skip to step 3
+  if (localStorage.getItem(PHONE_CONFIRM_KEY+'_'+(_userId||'default')) === '1') {
     sessionStorage.setItem('update_flow_step', '3');
     _showUpdateFlowStep3();
     return;
@@ -12546,36 +12574,30 @@ function _showUpdateFlowStep2() {
   if (typeof _populateCountrySelect === 'function') _populateCountrySelect('confirm-country-code', '+234');
   var o = document.getElementById('phone-confirm-overlay');
   if (o) o.style.display = 'flex';
-  // Remove close button — not dismissible
-  var closeBtn = o ? o.querySelector('button[onclick*="closeContact"]') : null;
-  // Override submit to proceed to step 3
   window._submitPhoneConfirmCallback = function() {
     sessionStorage.setItem('update_flow_step', '3');
     _showUpdateFlowStep3();
   };
 }
 
-// Step 3 — Date of Birth (if not already in step 2)
+// Step 3 — Date of Birth
 function _showUpdateFlowStep3() {
-  if (localStorage.getItem('expense_user_dob')) {
-    // Already have DOB — skip to step 4
+  if (localStorage.getItem('expense_user_dob_'+(_userId||'default'))) {
     sessionStorage.setItem('update_flow_step', '4');
     _showUpdateFlowStep4();
     return;
   }
-  // Show DOB overlay
   var o = document.getElementById('dob-only-overlay');
   if (o) o.style.display = 'flex';
 }
 
-// Step 4 — Optional onboarding
+// Step 4 — Optional onboarding — UNFREEZE first
 function _showUpdateFlowStep4() {
   _updateFlowActive = false;
   sessionStorage.removeItem('update_flow_step');
-  // Show dismissible onboarding prompt
-  setTimeout(function() {
-    showOnboardingPrompt();
-  }, 500);
+  // Unfreeze the app — all steps complete
+  _unfreezeApp();
+  setTimeout(function() { showOnboardingPrompt(); }, 500);
 }
 
 function showOnboardingPrompt() {
@@ -13608,7 +13630,7 @@ var _currentCategory = 0;
 function showAvatarPicker() {
   var o = document.getElementById('avatar-picker-overlay');
   if (!o) return;
-  _selectedAvatarEmoji = localStorage.getItem(AVATAR_KEY) || '';
+  _selectedAvatarEmoji = localStorage.getItem(AVATAR_KEY+'_'+(_userId||'default')) || '';
   _renderAvatarCategories();
   _renderAvatarGrid(0);
   o.style.display = 'flex';
@@ -13639,7 +13661,7 @@ function _renderAvatarGrid(catIndex) {
   var grid = document.getElementById('avatar-grid');
   if (!grid) return;
   grid.innerHTML = '';
-  var saved = localStorage.getItem(AVATAR_KEY) || '';
+  var saved = localStorage.getItem(AVATAR_KEY+'_'+(_userId||'default')) || '';
   AVATAR_CATEGORIES[catIndex].emojis.forEach(function(emoji) {
     var btn = document.createElement('button');
     var isSelected = emoji === _selectedAvatarEmoji || emoji === saved;
@@ -13659,7 +13681,7 @@ function _renderAvatarGrid(catIndex) {
 
 function saveAvatar() {
   if (!_selectedAvatarEmoji) return;
-  localStorage.setItem(AVATAR_KEY, _selectedAvatarEmoji);
+  localStorage.setItem(AVATAR_KEY+'_'+(_userId||'default'), _selectedAvatarEmoji);
   // Update profile card immediately
   var el = document.getElementById('profile-avatar-emoji');
   if (el) el.textContent = _selectedAvatarEmoji;
@@ -13689,12 +13711,13 @@ function submitDobOnly() {
     showUnderageScreen(); return;
   }
   if(errEl) errEl.textContent = '';
-  localStorage.setItem('expense_user_dob', dob);
+  localStorage.setItem('expense_user_dob_'+(_userId||'default'), dob);
   if(_db && _userId) userCol('settings').doc('profile').set({dob:dob, age:_calcAge(dob), updated:Date.now()},{merge:true}).catch(function(){});
   var o = document.getElementById('dob-only-overlay'); if(o) o.style.display='none';
   // If underage registered user — switch to guest mode now
   if (_isUnderage(dob)) {
     _isGuestMode = true;
+    _unfreezeApp();
     showToast('✅ Age saved. Guest Mode activated.');
     setTimeout(function() {
       _applyGuestMode();
@@ -13702,6 +13725,7 @@ function submitDobOnly() {
       switchTab('import', null);
     }, 300);
   } else {
+    _unfreezeApp();
     showToast('✅ Age confirmed. Thank you!');
     if (_updateFlowActive) {
       setTimeout(function(){ _showUpdateFlowStep4(); }, 400);
@@ -13741,8 +13765,10 @@ function showUnderageScreen() {
 }
 function checkExistingUserConfirmation() {
   if(!_userId || _isGuestMode) return;
-  if(localStorage.getItem(PHONE_CONFIRM_KEY) === '1') return;
+  if(localStorage.getItem(PHONE_CONFIRM_KEY+'_'+(_userId||'default')) === '1') return;
   var existing = document.getElementById('phone-confirm-notice'); if(existing) return;
+  // Freeze app — must complete before continuing
+  _freezeApp();
   var notice = document.createElement('div');
   notice.id = 'phone-confirm-notice';
   notice.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99993;background:var(--paper);border:2px solid var(--gold);border-radius:8px;padding:16px 18px;width:90%;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
@@ -13770,13 +13796,14 @@ function submitPhoneConfirm() {
   if(errEl) errEl.textContent='';
   var country = '';
   if(typeof COUNTRY_CODES !== 'undefined') COUNTRY_CODES.forEach(function(c){ if(c.dial===dial) country=c.name; });
-  localStorage.setItem(PHONE_CONFIRM_KEY,'1'); localStorage.setItem('expense_user_dob',dob);
-  localStorage.setItem('expense_user_country',country); localStorage.setItem('expense_user_dial',dial);
+  localStorage.setItem(PHONE_CONFIRM_KEY+'_'+(_userId||'default'),'1'); localStorage.setItem('expense_user_dob_'+(_userId||'default'),dob);
+  localStorage.setItem('expense_user_country_'+(_userId||'default'),country); localStorage.setItem('expense_user_dial_'+(_userId||'default'),dial);
   if(_db && _userId) userCol('settings').doc('profile').set({dob:dob,country:country,dial:dial,phone:dial+number,age:_calcAge(dob),updated:Date.now()},{merge:true}).catch(function(){});
   var o = document.getElementById('phone-confirm-overlay'); if(o) o.style.display='none';
   // Check age — if underage switch to guest mode immediately
   if (_isUnderage(dob)) {
     _isGuestMode = true;
+    _unfreezeApp();
     showToast('✅ Details saved. Guest Mode activated.');
     setTimeout(function() {
       _applyGuestMode();
@@ -13784,7 +13811,8 @@ function submitPhoneConfirm() {
       switchTab('import', null);
     }, 300);
   } else {
-    showToast('✅ Details confirmed. Thank you!');
+    _unfreezeApp();
+  showToast('✅ Details confirmed. Thank you!');
   }
   if (_updateFlowActive && typeof window._submitPhoneConfirmCallback === 'function') {
     setTimeout(function(){ window._submitPhoneConfirmCallback(); window._submitPhoneConfirmCallback = null; }, 400);
