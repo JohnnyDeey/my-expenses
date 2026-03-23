@@ -40,7 +40,22 @@
 <meta name="msapplication-navbutton-color" content="#1a1410">
 <meta name="msapplication-starturl" content="./">
 <!-- Prevent white flash on PWA launch — matches pin overlay color -->
-<style>html{background:#1a1410;}body{background:var(--paper,#f5f0e8);}</style>
+<style>
+/* Keep everything dark until JS decides what to show — prevents any flash */
+html{background:#1a1410;}
+body{background:#1a1410;}
+/* Once logged in, stay light permanently */
+body.app-ready{background:var(--paper)!important;}
+/* Prevent flash of app content before PIN overlay renders */
+body:not(.app-ready) main,
+body:not(.app-ready) #main-header,
+body:not(.app-ready) #sticky-topbar,
+body:not(.app-ready) #big-header-wrap,
+body:not(.app-ready) footer {
+  visibility:hidden!important;
+}
+/* No opacity tricks on panels — they just show/hide normally after login */
+</style>
 <title>My Expense Ledger</title>
 
 <!-- PWA: inline manifest with base64 icon — works on desktop Chrome + Android -->
@@ -973,7 +988,10 @@ var _notePadActive = false; // global — shared with Ctrl+Enter handlers
   --muted:#8a7d6b; --border:#d4c9b0; --shadow:rgba(26,20,16,0.12);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;}
+body{font-family:'DM Sans',sans-serif;background:#1a1410;color:var(--ink);min-height:100vh;}
+body.app-ready{background:var(--paper);}
+/* Ensure panels never show dark body through them */
+.panel.active{background:var(--paper);}
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.6;}
 
 /* HEADER */
@@ -1000,7 +1018,9 @@ nav.tabs button.active{color:var(--gold2);border-bottom-color:var(--gold);}
 #sticky-topbar{background:var(--ink);}
 /* Account for fixed nav bar */
 #sticky-topbar + main, main { margin-top: 0; }
-main{max-width:1300px;margin:0 auto;padding:20px 40px;}
+main{max-width:1300px;margin:0 auto;padding:20px 40px;background:var(--paper);}
+.panel{background:var(--paper);}
+.panel.active{background:var(--paper);}
 .panel{display:none;}.panel.active{display:block;}
 .section-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:12px;}
 
@@ -2793,7 +2813,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<div id="pin-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:center;justify-content:flex-start;flex-direction:column;padding:20px;padding-top:max(48px, env(safe-area-inset-top, 20px));overflow-y:auto;">
+<div id="pin-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#1a1410;align-items:center;justify-content:flex-start;flex-direction:column;padding:20px;padding-top:max(48px, env(safe-area-inset-top, 20px));overflow-y:auto;">
   <div style="text-align:center;max-width:400px;width:100%;margin:auto;padding:20px 0;">
     <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My <span style="color:var(--gold);">Expense</span> Ledger</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;letter-spacing:2px;margin-bottom:6px;">PERSONAL FINANCE TRACKER</div>
@@ -11835,11 +11855,20 @@ function _resumeSession(uid, name, phone) {
   // then decide what still needs to run. This prevents re-triggering
   // things the user has already completed on another device.
   function _startSequenceAfterFirebase() {
-    var privacyNeeded  = localStorage.getItem(_privacyKey()) !== PRIVACY_VER;
-    var tourNeeded     = localStorage.getItem(_tourKey()) !== '1';
-    var confirmNeeded  = localStorage.getItem(PHONE_CONFIRM_KEY + '_' + (_userId || 'default')) !== '1';
+    // If this user has been here before — they have a UID, name, and phone
+    // already confirmed — skip ALL prompts and just let them use the app.
+    // The sequence only runs for genuinely new users or when content is updated.
+    var isEstablishedUser = !!(
+      localStorage.getItem(UID_KEY) &&
+      localStorage.getItem(NAME_KEY) &&
+      localStorage.getItem(PHONE_CONFIRM_KEY + '_' + (_userId || localStorage.getItem(UID_KEY) || 'default')) === '1'
+    );
 
-    // Handle forced update flow
+    var privacyNeeded  = !isEstablishedUser && localStorage.getItem(_privacyKey()) !== PRIVACY_VER;
+    var tourNeeded     = !isEstablishedUser && localStorage.getItem(_tourKey()) !== '1';
+    var confirmNeeded  = !isEstablishedUser && localStorage.getItem(PHONE_CONFIRM_KEY + '_' + (_userId || 'default')) !== '1';
+
+    // Only force privacy if explicitly triggered (e.g. PRIVACY_VER bumped)
     if (sessionStorage.getItem('run_update_flow') === '1') {
       sessionStorage.removeItem('run_update_flow');
       localStorage.removeItem(_privacyKey());
@@ -11848,6 +11877,13 @@ function _resumeSession(uid, name, phone) {
     if (sessionStorage.getItem('check_privacy_on_login') === '1') {
       sessionStorage.removeItem('check_privacy_on_login');
       if (localStorage.getItem(_privacyKey()) !== PRIVACY_VER) privacyNeeded = true;
+    }
+
+    // If nothing to do — skip sequence entirely
+    if (!privacyNeeded && !tourNeeded && !confirmNeeded) {
+      // Offer fingerprint only if not yet registered — but only after delay
+      // (removed fingerprint — nothing to do here)
+      return;
     }
 
     sessionStorage.setItem('_seq_privacy',  privacyNeeded  ? '1' : '0');
@@ -12254,11 +12290,12 @@ function showPinScreen() {
   var o = document.getElementById('pin-overlay');
   if (o) {
     o.style.display = 'flex';
-    // Scroll to very top — multiple attempts for reliability
     o.scrollTop = 0;
     setTimeout(function(){ o.scrollTop = 0; }, 50);
     setTimeout(function(){ o.scrollTop = 0; }, 200);
   }
+  // Keep body dark while on PIN screen — no white flash
+  document.body.classList.remove('app-ready');
 }
 function hidePinScreen() {
   // Used by confirmCode and useResetCodeNow after first registration or reset
