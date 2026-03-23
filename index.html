@@ -1770,12 +1770,12 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="categorize-content" style="display:none;">
     <!-- Description search + bulk assign -->
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
-      <span class="filter-label">Search:</span>
+      <span class="filter-label" style="font-size:0.72rem;">Search:</span>
       <input type="text" id="cat-desc-search" placeholder="Filter by description..." oninput="applyCatDescSearch()"
         style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
       <span id="cat-desc-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
-      <span class="filter-label" style="margin-left:4px;">Assign all filtered to:</span>
-      <div class="cat-wrapper" id="bulk-cat-wrap" style="width:210px;">
+      <span class="filter-label" style="font-size:0.72rem;">Assign to:</span>
+      <div class="cat-wrapper" id="bulk-cat-wrap" style="width:160px;">
         <input type="text" class="cat-input" id="bulk-cat-input" placeholder="Pick or type..." autocomplete="off"
           onfocus="this.setAttribute('data-prev',this.value);this.value='';filterBulkCatDropdown()" oninput="filterBulkCatDropdown()">
         <span class="cat-input-arrow">&#9662;</span>
@@ -1794,8 +1794,8 @@ input[type="password"]::-ms-clear { display:none !important; }
       <button class="btn btn-primary" id="btn-save-pending" onclick="saveAllPending()">&#10003; Save to Ledger</button>
     </div>
     <div class="ledger-wrap">
-      <table>
-        <thead><tr><th style="padding:6px 8px;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;width:55%;">DESCRIPTION · DATE · AMOUNT</th><th style="padding:6px 8px;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;background:var(--ink);color:var(--paper);">CATEGORY</th></tr></thead>
+      <table style="table-layout:fixed;width:100%;">
+        <thead><tr><th style="padding:5px 8px;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;width:42%;white-space:nowrap;">DESC · DATE · AMT</th><th style="padding:5px 8px;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;">CATEGORY</th><th style="padding:5px 6px;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);width:28px;text-align:center;">☐</th></tr></thead>
         <tbody id="categorize-tbody"></tbody>
       </table>
     </div>
@@ -1898,38 +1898,49 @@ input[type="password"]::-ms-clear { display:none !important; }
     <span>Full Expense Ledger</span>
     <button class="btn btn-ghost" onclick="openRenameModal()" style="font-size:0.72rem;padding:7px 14px;display:flex;align-items:center;gap:6px;">&#9998; Rename Category</button>
   </div>
-  <div style="background:#fffbf0;border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:3px;padding:12px 16px;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.8;">
-    <strong style="color:var(--gold);">&#128161; How to use the Ledger:</strong>
-    Each row has a <strong>☐ checkbox</strong>. Use filters (Year / Month / Currency / Category) to narrow results, pick a category and click <strong>✓ Assign</strong> to bulk-assign everything visible — no keyword needed.
-    To assign only specific items: check those rows, then click <strong>✓ Assign</strong>.
-    Use <strong>— Hide</strong> to remove checked rows from view, <strong>✕ Delete</strong> to send them to the Recycle Bin, and <strong>☐ All</strong> to check/uncheck everything at once.
+  <!-- Collapsible tip -->
+  <div style="margin-bottom:10px;">
+    <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.tip-arrow').textContent=this.nextElementSibling.style.display==='none'?'▸':'▾';"
+      style="width:100%;text-align:left;background:#fffbf0;border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:3px;padding:8px 12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
+      <span class="tip-arrow">▸</span> &#128161; How to use the Ledger
+    </button>
+    <div style="display:none;background:#fffbf0;border:1px solid var(--gold);border-left:4px solid var(--gold);border-top:none;border-radius:0 0 3px 3px;padding:10px 14px;font-family:'DM Mono',monospace;font-size:0.71rem;color:var(--ink);line-height:1.8;">
+      Each row has a <strong>☐ checkbox</strong>. Filter by Year/Month/Currency/Category, pick a category and click <strong>✓ Assign</strong> to bulk-assign all visible — no keyword needed.
+      Check specific rows first to assign only those. Use <strong>— Hide</strong>, <strong>✕ Delete</strong>, and <strong>☐ All</strong> for bulk actions.
+    </div>
   </div>
-  <div class="filter-bar">
-    <span class="filter-label">Filter:</span>
-    <select id="led-year" onchange="renderLedger()"><option value="all">All Years</option></select>
-    <select id="led-month" onchange="renderLedger()"><option value="all">All Months</option></select>
-    <select id="led-currency" onchange="renderLedger()">
-      <option value="all">All Currencies</option>
-      <option value="EUR">EUR</option><option value="NGN">NGN</option>
-      <option value="USD">USD</option><option value="GBP">GBP</option>
-    </select>
-    <select id="led-cat" onchange="renderLedger()"><option value="all">All Categories</option></select>
-    <input type="text" id="led-search" placeholder="Search... commas=multiple: rice, water | minus=exclude: ice cream -rice -beatrice" oninput="debouncedLedgerSearch()">
-    <button class="btn btn-danger" onclick="clearLedgerFilters()">Clear All</button>
+  <!-- Collapsible filter bar -->
+  <div style="margin-bottom:10px;">
+    <button onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'flex':'none';this.querySelector('.fil-arrow').textContent=b.style.display==='none'?'▸':'▾';"
+      style="width:100%;text-align:left;background:var(--paper2);border:1px solid var(--border);border-radius:3px;padding:7px 12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
+      <span class="fil-arrow">▸</span> &#9660; Filters (Year · Month · Currency · Category)
+    </button>
+    <div class="filter-bar" style="display:none;border-top:none;border-radius:0 0 3px 3px;flex-wrap:wrap;gap:6px;padding:10px 12px;">
+      <select id="led-year" onchange="renderLedger()" style="font-size:0.75rem;padding:5px 8px;"><option value="all">All Years</option></select>
+      <select id="led-month" onchange="renderLedger()" style="font-size:0.75rem;padding:5px 8px;"><option value="all">All Months</option></select>
+      <select id="led-currency" onchange="renderLedger()" style="font-size:0.75rem;padding:5px 8px;">
+        <option value="all">All Currencies</option>
+        <option value="EUR">EUR</option><option value="NGN">NGN</option>
+        <option value="USD">USD</option><option value="GBP">GBP</option>
+      </select>
+      <select id="led-cat" onchange="renderLedger()" style="font-size:0.75rem;padding:5px 8px;"><option value="all">All Categories</option></select>
+      <input type="text" id="led-search" placeholder="Search… rice, water | -exclude" oninput="debouncedLedgerSearch()" style="flex:1;min-width:120px;font-size:0.78rem;padding:5px 8px;">
+      <button class="btn btn-danger" onclick="clearLedgerFilters()" style="padding:5px 10px;font-size:0.75rem;">Clear</button>
+    </div>
   </div>
 
   <!-- Ledger bulk assign bar -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
-    <span class="filter-label">Search desc:</span>
+    <span class="filter-label" style="font-size:0.72rem;">Desc:</span>
     <input type="text" id="led-bulk-search" placeholder="Filter by description... (commas=multiple, -minus=exclude)" oninput="debouncedLedgerSearch()"
       style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
     <span id="led-bulk-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
-    <span class="filter-label" style="margin-left:4px;">Filter by category:</span>
+    <span class="filter-label" style="font-size:0.72rem;">Category:</span>
     <select id="led-bulk-cat-filter" onchange="renderLedger()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;max-width:160px;">
       <option value="all">All Categories</option>
     </select>
-    <span class="filter-label" style="margin-left:4px;">Assign all filtered to:</span>
-    <div class="cat-wrapper" id="led-bulk-cat-wrap" style="width:210px;">
+    <span class="filter-label" style="font-size:0.72rem;">Assign to:</span>
+    <div class="cat-wrapper" id="led-bulk-cat-wrap" style="width:160px;">
       <input type="text" class="cat-input" id="led-bulk-cat-input" placeholder="Pick or type..." autocomplete="off"
         onfocus="this.setAttribute('data-prev',this.value);this.value='';filterLedgerBulkCatDropdown()" oninput="filterLedgerBulkCatDropdown()">
       <span class="cat-input-arrow">&#9662;</span>
@@ -2349,10 +2360,11 @@ input[type="password"]::-ms-clear { display:none !important; }
       <button class="btn btn-primary" id="inc-btn-save-pending" onclick="saveAllPendingIncome()">&#10003; Save to Ledger</button>
     </div>
     <div class="ledger-wrap">
-      <table>
+      <table style="table-layout:fixed;width:100%;">
         <thead><tr>
-          <th style="padding:6px 8px;font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;width:55%;">DESCRIPTION &middot; DATE &middot; AMOUNT</th>
-          <th style="padding:6px 8px;font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:1px;background:var(--ink);color:var(--paper);">CATEGORY</th>
+          <th style="padding:5px 8px;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;width:42%;white-space:nowrap;">DESC · DATE · AMT</th>
+          <th style="padding:5px 8px;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;">CATEGORY</th>
+          <th style="padding:5px 6px;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);width:28px;text-align:center;">☐</th>
         </tr></thead>
         <tbody id="inc-categorize-tbody"></tbody>
       </table>
@@ -2456,29 +2468,35 @@ input[type="password"]::-ms-clear { display:none !important; }
     <span style="display:flex;align-items:center;gap:12px;"><span style="display:inline-block;width:8px;height:28px;background:var(--sage);border-radius:2px;"></span>Full Income Ledger</span>
     <button class="btn btn-ghost" onclick="openIncomeRenameModal()" style="font-size:0.72rem;padding:7px 14px;display:flex;align-items:center;gap:6px;">&#9998; Rename Category</button>
   </div>
-  <div class="filter-bar">
-    <span class="filter-label">Filter:</span>
-    <select id="inc-led-year" onchange="renderIncomeLedger()"><option value="all">All Years</option></select>
-    <select id="inc-led-month" onchange="renderIncomeLedger()"><option value="all">All Months</option></select>
-    <select id="inc-led-currency" onchange="renderIncomeLedger()">
-      <option value="all">All Currencies</option>
-      <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
-    </select>
-    <select id="inc-led-cat" onchange="renderIncomeLedger()"><option value="all">All Categories</option></select>
-    <input type="text" id="inc-led-search" placeholder="Search... commas=multiple: salary, bonus | minus=exclude: salary -bonus" oninput="renderIncomeLedger()">
-    <button class="btn btn-danger" onclick="clearIncomeLedgerFilters()">Clear All</button>
+  <!-- Collapsible filter bar -->
+  <div style="margin-bottom:10px;">
+    <button onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'flex':'none';this.querySelector('.fil-arrow').textContent=b.style.display==='none'?'▸':'▾';"
+      style="width:100%;text-align:left;background:var(--paper2);border:1px solid var(--border);border-radius:3px;padding:7px 12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
+      <span class="fil-arrow">▸</span> ▼ Filters (Year · Month · Currency · Category)
+    </button>
+    <div class="filter-bar" style="display:none;border-top:none;border-radius:0 0 3px 3px;flex-wrap:wrap;gap:6px;padding:10px 12px;">
+      <select id="inc-led-year" onchange="renderIncomeLedger()" style="font-size:0.75rem;padding:5px 8px;"><option value="all">All Years</option></select>
+      <select id="inc-led-month" onchange="renderIncomeLedger()" style="font-size:0.75rem;padding:5px 8px;"><option value="all">All Months</option></select>
+      <select id="inc-led-currency" onchange="renderIncomeLedger()" style="font-size:0.75rem;padding:5px 8px;">
+        <option value="all">All Currencies</option>
+        <option value="NGN">NGN</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
+      </select>
+      <select id="inc-led-cat" onchange="renderIncomeLedger()" style="font-size:0.75rem;padding:5px 8px;"><option value="all">All Categories</option></select>
+      <input type="text" id="inc-led-search" placeholder="Search… salary, bonus | -exclude" oninput="renderIncomeLedger()" style="flex:1;min-width:120px;font-size:0.78rem;padding:5px 8px;">
+      <button class="btn btn-danger" onclick="clearIncomeLedgerFilters()" style="padding:5px 10px;font-size:0.75rem;">Clear</button>
+    </div>
   </div>
   <!-- Bulk assign bar -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
-    <span class="filter-label">Search desc:</span>
+    <span class="filter-label" style="font-size:0.72rem;">Desc:</span>
     <input type="text" id="inc-bulk-search" placeholder="Filter by description... (commas=multiple, -minus=exclude)" oninput="renderIncomeLedger()"
       style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
     <span id="inc-bulk-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
-    <span class="filter-label" style="margin-left:4px;">Filter by category:</span>
+    <span class="filter-label" style="font-size:0.72rem;">Category:</span>
     <select id="inc-bulk-cat-filter" onchange="renderIncomeLedger()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;max-width:160px;">
       <option value="all">All Categories</option>
     </select>
-    <span class="filter-label" style="margin-left:4px;">Assign all to:</span>
+    <span class="filter-label" style="font-size:0.72rem;">Assign to:</span>
     <select id="inc-bulk-cat-sel" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;min-width:160px;">
       <option value="">Pick category...</option>
     </select>
@@ -4491,7 +4509,33 @@ function renderCategorizeTable() {
     tr.style.borderBottom = '1px solid var(--border)';
     tr.setAttribute('data-cat-idx', idx);
 
-    // Checkbox cell
+    // DESC+AMOUNT cell
+    var mainTd = document.createElement('td');
+    mainTd.style.cssText = 'padding:4px 8px;border-right:1px solid #eee;width:42%;';
+    mainTd.innerHTML =
+      '<div style="font-size:0.75rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;margin-bottom:1px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'
+      +item.desc+' <span style="font-family:DM Mono,monospace;font-size:0.68rem;font-weight:700;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';">'+fmtAmt(item.amount,item.currency)+'</span></div>'
+      +'<div style="font-family:DM Mono,monospace;font-size:0.6rem;color:var(--muted);">'+item.date+'</div>';
+    tr.appendChild(mainTd);
+
+    // CATEGORY cell
+    var catTd = document.createElement('td');
+    catTd.style.cssText = 'padding:3px 5px;border-right:1px solid #eee;width:50%;';
+    var wrap = document.createElement('div');
+    wrap.className = 'cat-wrapper'; wrap.id = 'wrap-'+idx; wrap.style.cssText = 'width:100%;';
+    var inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'cat-input'; inp.id = 'catinput-'+idx;
+    inp.value = item.category; inp.setAttribute('autocomplete','off'); inp.setAttribute('placeholder','Category...');
+    inp.addEventListener('focus', function(){ inp.select(); openCatDropdown(idx); });
+    inp.addEventListener('input', function(){ filterCatDropdown(idx); });
+    inp.addEventListener('keydown', function(e){ catKeyNav(e,idx); });
+    var arrow = document.createElement('span'); arrow.className='cat-input-arrow'; arrow.textContent='▾';
+    var drop = document.createElement('div'); drop.className='cat-dropdown'; drop.id='catdrop-'+idx;
+    wrap.appendChild(inp); wrap.appendChild(arrow); wrap.appendChild(drop);
+    catTd.appendChild(wrap);
+    tr.appendChild(catTd);
+
+    // CHECKBOX cell — right side
     var cbTd = document.createElement('td');
     cbTd.className = 'cat-cb-td';
     var cb = document.createElement('input');
@@ -4504,30 +4548,6 @@ function renderCategorizeTable() {
     });
     cbTd.appendChild(cb);
     tr.appendChild(cbTd);
-
-    var catTd = document.createElement('td');
-    var wrap = document.createElement('div');
-    wrap.className = 'cat-wrapper'; wrap.id = 'wrap-'+idx;
-    var inp = document.createElement('input');
-    inp.type = 'text'; inp.className = 'cat-input'; inp.id = 'catinput-'+idx;
-    inp.value = item.category; inp.setAttribute('autocomplete','off'); inp.setAttribute('placeholder','Category...');
-    inp.addEventListener('focus', function(){ inp.select(); openCatDropdown(idx); });
-    inp.addEventListener('input', function(){ filterCatDropdown(idx); });
-    inp.addEventListener('keydown', function(e){ catKeyNav(e,idx); });
-    var arrow = document.createElement('span'); arrow.className='cat-input-arrow'; arrow.textContent='\u25be';
-    var drop = document.createElement('div'); drop.className='cat-dropdown'; drop.id='catdrop-'+idx;
-    wrap.appendChild(inp); wrap.appendChild(arrow); wrap.appendChild(drop);
-    catTd.appendChild(wrap);
-
-    // Single cell: 2-line layout — desc+meta on top, category dropdown below
-    var mainTd = document.createElement('td');
-    mainTd.style.cssText = 'padding:5px 8px;border-right:1px solid #eee;';
-    mainTd.innerHTML =
-      '<div style="font-size:0.75rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;margin-bottom:2px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+' <span style="font-family:DM Mono,monospace;font-size:0.68rem;font-weight:700;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';">'+fmtAmt(item.amount,item.currency)+'</span></div>'+
-      '<div style="font-family:DM Mono,monospace;font-size:0.6rem;color:var(--muted);">'+item.date+'</div>';
-    tr.appendChild(mainTd);
-    catTd.style.cssText = 'padding:4px 6px;';
-    tr.appendChild(catTd);
     tbody.appendChild(tr);
   });
 
@@ -10131,20 +10151,6 @@ function renderIncomeCatTable() {
     tr.style.borderBottom = '1px solid var(--border)';
     tr.setAttribute('data-cat-idx', idx);
 
-    // Checkbox cell
-    var incCbTd = document.createElement('td');
-    incCbTd.className = 'cat-cb-td';
-    var incCb = document.createElement('input');
-    incCb.type = 'checkbox'; incCb.className = 'cat-row-cb';
-    incCb.setAttribute('data-idx', idx);
-    incCb.addEventListener('change', function() {
-      if (incCb.checked) tr.classList.add('cat-row-selected');
-      else tr.classList.remove('cat-row-selected');
-      _updateIncCatSelAllBtn();
-    });
-    incCbTd.appendChild(incCb);
-    tr.appendChild(incCbTd);
-
     // Description + amount cell
     var mainTd = document.createElement('td');
     mainTd.style.cssText = 'padding:5px 8px;border-right:1px solid #eee;';
@@ -10156,7 +10162,7 @@ function renderIncomeCatTable() {
 
     // Category dropdown
     var catTd = document.createElement('td');
-    catTd.style.cssText = 'padding:4px 6px;';
+    catTd.style.cssText = 'padding:3px 5px;border-right:1px solid #eee;width:50%;';
     var sel = document.createElement('select');
     sel.style.cssText = 'font-family:DM Sans,sans-serif;font-size:0.78rem;padding:5px 8px;border:1.5px solid var(--border);border-radius:3px;background:white;width:100%;outline:none;cursor:pointer;';
     allCats.forEach(function(c) {
@@ -10181,6 +10187,20 @@ function renderIncomeCatTable() {
     });
     catTd.appendChild(sel);
     tr.appendChild(catTd);
+
+    // CHECKBOX cell — right side
+    var incCbTd = document.createElement('td');
+    incCbTd.className = 'cat-cb-td';
+    var incCb = document.createElement('input');
+    incCb.type = 'checkbox'; incCb.className = 'cat-row-cb';
+    incCb.setAttribute('data-idx', idx);
+    incCb.addEventListener('change', function() {
+      if (incCb.checked) tr.classList.add('cat-row-selected');
+      else tr.classList.remove('cat-row-selected');
+      _updateIncCatSelAllBtn();
+    });
+    incCbTd.appendChild(incCb);
+    tr.appendChild(incCbTd);
     tbody.appendChild(tr);
   });
 }
