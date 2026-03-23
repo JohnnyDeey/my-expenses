@@ -7073,11 +7073,11 @@ function renderLedger(){
   var thead = document.createElement('thead');
   thead.innerHTML =
     '<tr style="background:var(--ink);color:var(--paper);">'+
-      '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;white-space:nowrap;width:82px;min-width:82px;">DATE</th>'+
+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DESCRIPTION</th>'+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;white-space:nowrap;">AMOUNT</th>'+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">CATEGORY</th>'+
-      '<th style="padding:6px 4px;width:56px;"></th>'+
+      '<th style="padding:6px 4px;width:32px;"></th>'+
     '</tr>';
   tbl.appendChild(thead);
 
@@ -7087,10 +7087,10 @@ function renderLedger(){
     var tr = document.createElement('tr');
     tr.style.cssText = (idx2%2===0?'background:white;':'background:#f9f7f3;');
 
-    // Date
-    var dateTd = document.createElement('td');
-    dateTd.style.cssText = 'padding:4px 7px;font-family:DM Mono,monospace;font-size:0.7rem;color:#666;white-space:nowrap;width:82px;min-width:82px;border-right:1px solid #eee;';
-    dateTd.textContent = item.date;
+
+
+
+
 
     // Description — autofit
     var descTd = document.createElement('td');
@@ -7148,7 +7148,7 @@ function renderLedger(){
     });
     actTd.appendChild(cb);
 
-    tr.appendChild(dateTd); tr.appendChild(descTd); tr.appendChild(amtTd);
+    tr.appendChild(descTd); tr.appendChild(amtTd);
     tr.appendChild(catTd); tr.appendChild(actTd);
     tbody.appendChild(tr);
   });
@@ -10990,11 +10990,11 @@ function renderIncomeLedger() {
   var thead = document.createElement('thead');
   thead.innerHTML =
     '<tr style="background:var(--ink);color:var(--paper);">'+
-      '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;white-space:nowrap;width:82px;min-width:82px;">DATE</th>'+
+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">DESCRIPTION</th>'+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;white-space:nowrap;">AMOUNT</th>'+
       '<th style="padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;">CATEGORY</th>'+
-      '<th style="padding:6px 4px;width:56px;"></th>'+
+      '<th style="padding:6px 4px;width:32px;"></th>'+
     '</tr>';
   tbl.appendChild(thead);
 
@@ -11004,10 +11004,10 @@ function renderIncomeLedger() {
     var tr = document.createElement('tr');
     tr.style.cssText = 'border-bottom:1px solid #f0ece4;'+(idx%2===0?'background:white;':'background:#f9f7f3;');
 
-    // Date column
-    var dateTd = document.createElement('td');
-    dateTd.style.cssText = 'padding:4px 7px;font-family:DM Mono,monospace;font-size:0.7rem;color:#666;white-space:nowrap;width:82px;min-width:82px;border-right:1px solid #eee;';
-    dateTd.textContent = item.date;
+
+
+
+
 
     // Description column — autofit
     var descTd = document.createElement('td');
@@ -11060,7 +11060,7 @@ function renderIncomeLedger() {
     });
     actTd.appendChild(cb);
 
-    tr.appendChild(dateTd); tr.appendChild(descTd); tr.appendChild(amtTd);
+    tr.appendChild(descTd); tr.appendChild(amtTd);
     tr.appendChild(catTd); tr.appendChild(actTd);
     tbody.appendChild(tr);
   });
