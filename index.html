@@ -1862,27 +1862,41 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div class="section-title">Expense Dashboard</div>
   <div id="dash-empty" class="empty-state"><div class="big">&#9670;</div><p>No saved data yet.<br>Import, categorize and save your expenses first.</p></div>
   <div id="dash-content" style="display:none;">
-    <!-- Single master filter — controls ALL charts -->
-    <div class="filter-bar">
-      <span class="filter-label">Filter:</span>
-      <select id="dash-year" onchange="renderDashboard()"><option value="all">All Years</option></select>
-      <select id="dash-month" onchange="renderDashboard()"><option value="all">All Months</option></select>
-      <select id="dash-currency" onchange="renderDashboard()"><option value="all">All Currencies</option></select>
-      <button onclick="openPrintPicker('expenses')" style="margin-left:auto;padding:6px 14px;background:var(--ink);border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+      <button onclick="openPrintPicker('expenses')" style="padding:6px 14px;background:var(--ink);border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
     </div>
-    <!-- Hidden selectors kept for JS compatibility — always synced to master -->
-    <select id="monthly-currency"    style="display:none;"></select>
-    <select id="cat-dash-year"       style="display:none;"></select>
-    <select id="cat-dash-month"      style="display:none;"></select>
-    <select id="cat-dash-currency"   style="display:none;"></select>
-    <select id="yearly-currency"     style="display:none;"></select>
-    <select id="heatmap-currency"    style="display:none;"></select>
+    <!-- Hidden selectors for JS compatibility -->
+    <select id="dash-year"         style="display:none;"></select>
+    <select id="dash-month"        style="display:none;"></select>
+    <select id="dash-currency"     style="display:none;"></select>
+    <select id="monthly-currency"  style="display:none;"></select>
+    <select id="cat-dash-year"     style="display:none;"></select>
+    <select id="cat-dash-month"    style="display:none;"></select>
+    <select id="cat-dash-currency" style="display:none;"></select>
+    <select id="yearly-currency"   style="display:none;"></select>
+    <select id="heatmap-currency"  style="display:none;"></select>
     <div class="stats-row" id="stats-row"></div>
+
+    <!-- NEW: Daily Spending Flow -->
+    <div class="charts-grid wide" style="margin-bottom:20px;">
+      <div class="chart-card">
+        <h3>Daily Spending Flow</h3>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+          <select id="daily-flow-year"  onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="daily-flow-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="daily-flow-currency" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All Currencies</option></select>
+        </div>
+        <div class="chart-sub" id="daily-flow-sub"></div>
+        <div class="chart-wrap"><canvas id="chart-daily-flow"></canvas></div>
+      </div>
+    </div>
+
     <div class="charts-grid">
       <div class="chart-card">
         <h3>Monthly Spending Trend</h3>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
-          <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">FROM</span>
+          <select id="monthly-currency-sel" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All Currencies</option></select>
+          <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;margin-left:4px;">FROM</span>
           <select id="monthly-from-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
           <select id="monthly-from-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
           <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;margin-left:4px;">TO</span>
@@ -1896,6 +1910,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <div class="chart-card">
         <h3>Category Breakdown</h3>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">
+          <select id="cat-currency-sel" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All Currencies</option></select>
           <span>From</span>
           <select id="cat-from-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
           <select id="cat-from-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
@@ -1911,6 +1926,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <div class="chart-card">
         <h3>Yearly Total Spending</h3>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">
+          <select id="yearly-currency-sel" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All Currencies</option></select>
           <span>From</span>
           <select id="yearly-from-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
           <span>To</span>
@@ -1924,7 +1940,10 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div class="charts-grid wide">
       <div class="chart-card">
         <h3>Spending Heatmap</h3>
-        <div class="chart-sub">Annual &times; monthly intensity &mdash; darker = higher spend &mdash; hover for details</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+          <select id="heatmap-currency-sel" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All Currencies</option></select>
+          <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);">Annual × monthly intensity — darker = higher spend</span>
+        </div>
         <div id="heatmap-container"></div>
         <div id="yoy-growth-container" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);"></div>
       </div>
@@ -2448,25 +2467,39 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div class="section-title">Income Dashboard</div>
   <div id="inc-dash-empty" class="empty-state"><div class="big">&#128200;</div><p>No income data yet.</p></div>
   <div id="inc-dash-content" style="display:none;">
-    <!-- Single master filter — controls ALL charts -->
-    <div class="filter-bar">
-      <span class="filter-label">Filter:</span>
-      <select id="inc-dash-year"     onchange="renderIncomeDashboard()"><option value="all">All Years</option></select>
-      <select id="inc-dash-month"    onchange="renderIncomeDashboard()"><option value="all">All Months</option></select>
-      <select id="inc-dash-currency" onchange="renderIncomeDashboard()"><option value="all">All Currencies</option></select>
-      <button onclick="openPrintPicker('income')" style="margin-left:auto;padding:6px 14px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+      <button onclick="openPrintPicker('income')" style="padding:6px 14px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
     </div>
-    <!-- Hidden selectors kept for JS compatibility -->
+    <!-- Hidden selectors for JS compatibility -->
+    <select id="inc-dash-year"         style="display:none;"></select>
+    <select id="inc-dash-month"        style="display:none;"></select>
+    <select id="inc-dash-currency"     style="display:none;"></select>
     <select id="inc-monthly-currency"  style="display:none;"></select>
     <select id="inc-cat-dash-currency" style="display:none;"></select>
     <select id="inc-yearly-currency"   style="display:none;"></select>
     <select id="inc-heatmap-currency"  style="display:none;"></select>
     <div class="stats-row" id="inc-stats-row"></div>
+
+    <!-- NEW: Daily Income Flow -->
+    <div class="charts-grid wide" style="margin-bottom:20px;">
+      <div class="chart-card">
+        <h3>Daily Income Flow</h3>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+          <select id="inc-daily-flow-year"  onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="inc-daily-flow-month" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
+          <select id="inc-daily-flow-currency" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All Currencies</option></select>
+        </div>
+        <div class="chart-sub" id="inc-daily-flow-sub"></div>
+        <div class="chart-wrap"><canvas id="inc-chart-daily-flow"></canvas></div>
+      </div>
+    </div>
+
     <div class="charts-grid">
       <div class="chart-card">
         <h3>Monthly Income Trend</h3>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
-          <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">FROM</span>
+          <select id="inc-monthly-currency-sel" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All Currencies</option></select>
+          <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;margin-left:4px;">FROM</span>
           <select id="inc-monthly-from-year" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
           <select id="inc-monthly-from-month" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
           <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;margin-left:4px;">TO</span>
@@ -2480,6 +2513,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <div class="chart-card">
         <h3>Income by Category</h3>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">
+          <select id="inc-cat-currency-sel" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All Currencies</option></select>
           <span>From</span>
           <select id="inc-cat-from-year" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
           <select id="inc-cat-from-month" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
@@ -2495,6 +2529,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <div class="chart-card">
         <h3>Yearly Income</h3>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">
+          <select id="inc-yearly-currency-sel" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All Currencies</option></select>
           <span>From</span>
           <select id="inc-yearly-from-year" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
           <span>To</span>
@@ -2508,7 +2543,10 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div class="charts-grid wide">
       <div class="chart-card">
         <h3>Income Heatmap</h3>
-        <div class="chart-sub">Annual &times; monthly intensity</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+          <select id="inc-heatmap-currency-sel" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All Currencies</option></select>
+          <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);">Annual × monthly intensity</span>
+        </div>
         <div id="inc-heatmap-container"></div>
         <div id="inc-yoy-growth-container" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);"></div>
       </div>
@@ -5412,6 +5450,21 @@ function printDashboard(mode, selectedCurrencies) {
   setTimeout(function(){ printWin.print(); }, 1200);
 }
 
+function _populateChartCurrencySel(id, curs) {
+  var el = document.getElementById(id); if(!el) return;
+  var cur = el.value;
+  el.innerHTML = '<option value="all">All</option>' + curs.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+  if(curs.indexOf(cur)!==-1) el.value=cur; else el.value='all';
+}
+function _getChartCur(id, curs) {
+  var el = document.getElementById(id);
+  var v = el ? el.value : 'all';
+  return (v !== 'all') ? v : (curs[0] || 'NGN');
+}
+function _getChartCurRaw(id) {
+  var el = document.getElementById(id); return el ? el.value : 'all';
+}
+
 function renderDashboard(){
   var data = loadData();
   if(!data.length){
@@ -5422,91 +5475,69 @@ function renderDashboard(){
   document.getElementById('dash-empty').style.display='none';
   document.getElementById('dash-content').style.display='block';
 
-  // Populate year dropdown
-  var yrSel = document.getElementById('dash-year');
-  var savedYr = yrSel ? yrSel.value : 'all';
-  var years = [];
-  data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); });
-  years.sort().reverse();
-  if(yrSel) {
-    yrSel.innerHTML = '<option value="all">All Years</option>' +
-      years.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');
-    if(years.indexOf(savedYr)!==-1) yrSel.value = savedYr;
-  }
-
-  // Populate month dropdown
-  var moSel = document.getElementById('dash-month');
-  if(moSel && moSel.options.length < 13) {
-    var savedMo = moSel.value;
-    moSel.innerHTML = '<option value="all">All Months</option>' +
-      MONTHS.map(function(m,i){return '<option value="'+pad(i+1)+'">'+m+'</option>';}).join('');
-    if(savedMo) moSel.value = savedMo;
-  }
-
-  // Populate currency dropdown from actual data
-  var curSel = document.getElementById('dash-currency');
-  var savedCur = curSel ? curSel.value : 'all';
-  var dataCurs = [];
-  data.forEach(function(i){ if(i.currency && dataCurs.indexOf(i.currency)===-1) dataCurs.push(i.currency); });
-  dataCurs.sort();
-  if(curSel) {
-    curSel.innerHTML = '<option value="all">All Currencies</option>' +
-      dataCurs.map(function(c){return '<option value="'+c+'">'+c+' '+(SYMS[c]||'')+'</option>';}).join('');
-    if(dataCurs.indexOf(savedCur)!==-1) curSel.value = savedCur;
-    else curSel.value = 'all';
-  }
-
-  // Read master filter values
-  var year     = yrSel  ? yrSel.value  : 'all';
-  var month    = moSel  ? moSel.value  : 'all';
-  var currency = curSel ? curSel.value : 'all';
-
-  // Apply master filter to get the base filtered dataset
   var allPositive = data.filter(function(i){return i.amount>0;});
-  var filtered = allPositive.slice();
-  if(year     !== 'all') filtered = filtered.filter(function(i){return i.date.substring(0,4)===year;});
-  if(month    !== 'all') filtered = filtered.filter(function(i){return i.date.substring(5,7)===month;});
-  if(currency !== 'all') filtered = filtered.filter(function(i){return i.currency===currency;});
+  var dataCurs = [];
+  allPositive.forEach(function(i){ if(i.currency && dataCurs.indexOf(i.currency)===-1) dataCurs.push(i.currency); });
+  dataCurs.sort();
 
-  // Sync hidden sub-selectors (legacy JS compatibility)
-  ['monthly-currency','cat-dash-currency','yearly-currency','heatmap-currency'].forEach(function(id){
-    var el = document.getElementById(id); if(!el) return;
-    if(currency !== 'all') { el.innerHTML='<option value="'+currency+'">'+currency+'</option>'; el.value=currency; }
-    else if(dataCurs.length) { el.innerHTML=dataCurs.map(function(c){return'<option value="'+c+'">'+c+'</option>';}).join(''); el.value=dataCurs[0]; }
-  });
+  // Populate all per-chart currency selectors
+  ['monthly-currency-sel','cat-currency-sel','yearly-currency-sel','heatmap-currency-sel'].forEach(function(id){ _populateChartCurrencySel(id, dataCurs); });
+  // Populate daily flow selectors
+  var now = new Date(); var curYear = String(now.getFullYear()); var curMonth = pad(now.getMonth()+1);
+  var dfYr = document.getElementById('daily-flow-year');
+  var dfMo = document.getElementById('daily-flow-month');
+  var dfCur = document.getElementById('daily-flow-currency');
+  var allYears = []; allPositive.forEach(function(i){var y=i.date.substring(0,4);if(allYears.indexOf(y)===-1) allYears.push(y);}); allYears.sort().reverse();
+  if(dfYr){ var sv=dfYr.value; dfYr.innerHTML=allYears.map(function(y){return'<option value="'+y+'">'+y+'</option>';}).join(''); if(!dfYr.value||!dfYr.querySelector('option[value="'+sv+'"]')) dfYr.value=allYears[0]||curYear; }
+  if(dfMo && dfMo.options.length < 12){ dfMo.innerHTML=MONTHS.map(function(m,i){return'<option value="'+pad(i+1)+'">'+m+'</option>';}).join(''); dfMo.value=curMonth; }
+  if(dfCur){ _populateChartCurrencySel('daily-flow-currency', dataCurs); }
 
-  renderStats(filtered);
+  renderStats(allPositive);
 
-  // Monthly trend — use first currency in filtered if 'all'
-  var monthlyCur = currency !== 'all' ? currency : (dataCurs[0] || 'NGN');
-  var monthlyData = filtered.filter(function(i){return i.currency===monthlyCur;});
-  renderMonthlyChart(monthlyData, monthlyCur);
+  // -- DAILY FLOW CHART --
+  var dfY = dfYr ? dfYr.value : curYear;
+  var dfM = dfMo ? dfMo.value : curMonth;
+  var dfC = dfCur ? dfCur.value : 'all';
+  var dfData = allPositive.filter(function(i){ return i.date.substring(0,4)===dfY && i.date.substring(5,7)===dfM; });
+  if(dfC !== 'all') dfData = dfData.filter(function(i){return i.currency===dfC;});
+  renderDailyFlowChart(dfData, dfY, dfM, dfC !== 'all' ? dfC : (dataCurs[0]||'NGN'), 'chart-daily-flow', 'daily-flow-sub');
 
-  // Category bars — populate picker and apply range filter
-  var catKeys = [];
-  filtered.forEach(function(i){ var k=i.date.substring(0,7); if(catKeys.indexOf(k)===-1) catKeys.push(k); });
-  catKeys.sort();
+  // -- MONTHLY TREND --
+  var mCurSel = _getChartCurRaw('monthly-currency-sel');
+  var mBase = allPositive.slice();
+  if(mCurSel !== 'all') mBase = mBase.filter(function(i){return i.currency===mCurSel;});
+  var mKeys = []; mBase.forEach(function(i){var k=i.date.substring(0,7);if(mKeys.indexOf(k)===-1) mKeys.push(k);}); mKeys.sort();
+  _populateMonthRangePicker(mKeys, 'monthly-from-year','monthly-from-month','monthly-to-year','monthly-to-month');
+  var mFiltered = _applyChartRangeFilter(mBase,'monthly-from-year','monthly-from-month','monthly-to-year','monthly-to-month');
+  var monthlyCur = _getChartCur('monthly-currency-sel', dataCurs);
+  renderMonthlyChart(mFiltered.filter(function(i){return i.currency===monthlyCur;}), monthlyCur);
+
+  // -- CATEGORY BARS --
+  var catCurSel = _getChartCurRaw('cat-currency-sel');
+  var catBase = allPositive.slice();
+  if(catCurSel !== 'all') catBase = catBase.filter(function(i){return i.currency===catCurSel;});
+  var catKeys = []; catBase.forEach(function(i){var k=i.date.substring(0,7);if(catKeys.indexOf(k)===-1) catKeys.push(k);}); catKeys.sort();
   _populateCatRangePicker(catKeys, 'cat');
-  var catFiltered = _applyChartRangeFilter(filtered, 'cat-from-year', 'cat-from-month', 'cat-to-year', 'cat-to-month');
+  var catFiltered = _applyChartRangeFilter(catBase,'cat-from-year','cat-from-month','cat-to-year','cat-to-month');
   renderCategoryBars(catFiltered);
 
-  // Yearly chart — populate year picker and apply range filter
+  // -- YEARLY CHART --
+  var yearlyCurSel = _getChartCurRaw('yearly-currency-sel');
   var yearlyBase = allPositive.slice();
-  if(currency !== 'all') yearlyBase = yearlyBase.filter(function(i){return i.currency===currency;});
-  var allDataYears = [];
-  yearlyBase.forEach(function(i){ var y=i.date.substring(0,4); if(allDataYears.indexOf(y)===-1) allDataYears.push(y); });
-  allDataYears.sort();
-  _populateYearRangePicker(allDataYears, 'yearly-from-year', 'yearly-to-year');
-  var yearlyFiltered = _applyYearRangeFilter(yearlyBase, 'yearly-from-year', 'yearly-to-year');
-  var yearlyCur = currency !== 'all' ? currency : (dataCurs[0] || 'NGN');
+  if(yearlyCurSel !== 'all') yearlyBase = yearlyBase.filter(function(i){return i.currency===yearlyCurSel;});
+  var allDataYears = []; yearlyBase.forEach(function(i){var y=i.date.substring(0,4);if(allDataYears.indexOf(y)===-1) allDataYears.push(y);}); allDataYears.sort();
+  _populateYearRangePicker(allDataYears,'yearly-from-year','yearly-to-year');
+  var yearlyFiltered = _applyYearRangeFilter(yearlyBase,'yearly-from-year','yearly-to-year');
+  var yearlyCur = _getChartCur('yearly-currency-sel', dataCurs);
   renderYearlyChart(yearlyFiltered.filter(function(i){return i.currency===yearlyCur;}), yearlyCur);
 
-  // Heatmap + YoY — when 'all', show one block per currency stacked
+  // -- HEATMAP + YoY --
+  var hmCurSel = _getChartCurRaw('heatmap-currency-sel');
   var hmBase = allPositive.slice();
   var yoyContainer = document.getElementById('yoy-growth-container');
-  if (yoyContainer) yoyContainer.innerHTML = '';
+  if(yoyContainer) yoyContainer.innerHTML='';
 
-  if (currency === 'all' && dataCurs.length) {
+  if(hmCurSel === 'all' && dataCurs.length) {
     // Show heatmap + YoY for every currency
     var hContainer = document.getElementById('heatmap-container');
     if (hContainer) hContainer.innerHTML = '';
@@ -5530,11 +5561,55 @@ function renderDashboard(){
       if (yoyContainer) renderYoYStrip(yoyContainer, cByYM, cYears, SYMS[c]||c, c);
     });
   } else {
-    var hmCur = currency !== 'all' ? currency : (dataCurs[0] || 'NGN');
+    var hmCur = hmCurSel !== 'all' ? hmCurSel : (dataCurs[0]||'NGN');
     renderHeatmap(hmBase.filter(function(i){return i.currency===hmCur;}), hmCur);
   }
 }
 
+
+
+// ── Daily Spending / Income Flow Chart ───────────────────────────────────
+var _dailyFlowCharts = {};
+function renderDailyFlowChart(data, year, month, currency, canvasId, subId) {
+  var sym = SYMS[currency] || '';
+  var monthName = MONTHS_FULL[parseInt(month)-1] || month;
+  var daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
+  var byDay = {};
+  for(var d=1;d<=daysInMonth;d++) byDay[pad(d)]=0;
+  data.forEach(function(i){
+    var day = i.date.substring(8,10);
+    if(byDay[day]!==undefined) byDay[day]+=i.amount;
+  });
+  var labels = Object.keys(byDay).map(function(d){return parseInt(d)+'';});
+  var vals   = Object.keys(byDay).map(function(d){return +byDay[d].toFixed(2);});
+  var subEl = document.getElementById(subId);
+  if(subEl){ var total=vals.reduce(function(a,b){return a+b;},0); subEl.textContent=monthName+' '+year+' — '+sym+fmtNum(total)+' '+currency; }
+  if(_dailyFlowCharts[canvasId]) _dailyFlowCharts[canvasId].destroy();
+  var ctx = document.getElementById(canvasId);
+  if(!ctx) return;
+  _dailyFlowCharts[canvasId] = new Chart(ctx.getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:labels,
+      datasets:[{
+        label:currency,
+        data:vals,
+        backgroundColor:vals.map(function(v){return v>0?'rgba(200,150,46,0.7)':'rgba(200,200,200,0.3)';}),
+        borderColor:vals.map(function(v){return v>0?'#c8962e':'#ccc';}),
+        borderWidth:1,
+        borderRadius:3
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+sym+fmtNum(c.parsed.y)+' '+currency;}}}},
+      scales:{
+        y:{ticks:{callback:function(v){return sym+fmtCompact(v);}},grid:{color:'rgba(0,0,0,0.04)'}},
+        x:{grid:{display:false},ticks:{font:{size:10}}}
+      }
+    }
+  });
+}
 
 function renderStats(data){
   var byCur={};
@@ -10599,55 +10674,41 @@ function renderIncomeDashboard() {
   document.getElementById("inc-dash-empty").style.display = "none";
   document.getElementById("inc-dash-content").style.display = "block";
 
-  // Populate year dropdown
-  var yrSel = document.getElementById("inc-dash-year");
-  var savedYr = yrSel ? yrSel.value : "all";
-  var years = []; data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }); years.sort().reverse();
-  if(yrSel){ yrSel.innerHTML = "<option value=\"all\">All Years</option>" + years.map(function(y){return "<option value=\""+y+"\">"+y+"</option>";}).join(""); if(years.indexOf(savedYr)!==-1) yrSel.value=savedYr; }
-
-  // Populate month dropdown
-  var moSel = document.getElementById("inc-dash-month");
-  if(moSel && moSel.options.length < 13) { var savedMo=moSel.value; moSel.innerHTML="<option value=\"all\">All Months</option>"+MONTHS.map(function(m,i){return"<option value=\""+pad(i+1)+"\">"+m+"</option>";}).join(""); if(savedMo) moSel.value=savedMo; }
-
-  // Populate currency dropdown
-  var curSel = document.getElementById("inc-dash-currency");
-  var savedCur = curSel ? curSel.value : "all";
-  var incCurs = []; data.forEach(function(i){ if(i.currency && incCurs.indexOf(i.currency)===-1) incCurs.push(i.currency); }); incCurs.sort();
-  if(curSel){ curSel.innerHTML="<option value=\"all\">All Currencies</option>"+incCurs.map(function(c){return"<option value=\""+c+"\">"+c+" "+(SYMS[c]||"")+"</option>";}).join(""); if(incCurs.indexOf(savedCur)!==-1) curSel.value=savedCur; else curSel.value="all"; }
-  // Sync hidden sub-selectors
-  var incCur = curSel ? curSel.value : "all";
-  ["inc-monthly-currency","inc-cat-dash-currency","inc-yearly-currency","inc-heatmap-currency"].forEach(function(id){
-    var el=document.getElementById(id); if(!el) return;
-    if(incCur !== "all"){ el.innerHTML="<option value=\""+incCur+"\">"+incCur+"</option>"; el.value=incCur; }
-    else if(incCurs.length){ el.innerHTML=incCurs.map(function(c){return"<option value=\""+c+"\">"+c+"</option>";}).join(""); el.value=incCurs[0]; }
-  });
-  // Also update ledger currency filter
-  var ledCurSel = document.getElementById("inc-led-currency");
-  if(ledCurSel){ var lc=ledCurSel.value; ledCurSel.innerHTML="<option value=\"all\">All Currencies</option>"+incCurs.map(function(c){return"<option value=\""+c+"\">"+c+"</option>";}).join(""); if(lc&&ledCurSel.querySelector("option[value=\""+lc+"\"]")) ledCurSel.value=lc; }
-
-  // Read master filters
-  var year  = yrSel  ? yrSel.value  : "all";
-  var month = moSel  ? moSel.value  : "all";
-  var cur   = curSel ? curSel.value : "all";
-
-  // Apply master filter
   var allPositive = data.filter(function(i){return i.amount>0;});
-  var filtered = allPositive.slice();
-  if(year  !== "all") filtered = filtered.filter(function(i){return i.date.substring(0,4)===year;});
-  if(month !== "all") filtered = filtered.filter(function(i){return i.date.substring(5,7)===month;});
-  if(cur   !== "all") filtered = filtered.filter(function(i){return i.currency===cur;});
+  var incCurs = []; allPositive.forEach(function(i){ if(i.currency && incCurs.indexOf(i.currency)===-1) incCurs.push(i.currency); }); incCurs.sort();
 
-  // Stats
-  var byCur = {};
-  filtered.forEach(function(i){ byCur[i.currency]=(byCur[i.currency]||0)+i.amount; });
+  // Populate all per-chart currency selectors
+  ["inc-monthly-currency-sel","inc-cat-currency-sel","inc-yearly-currency-sel","inc-heatmap-currency-sel"].forEach(function(id){ _populateChartCurrencySel(id, incCurs); });
+
+  // Populate daily flow selectors
+  var now = new Date(); var curYear = String(now.getFullYear()); var curMonth = pad(now.getMonth()+1);
+  var idfYr = document.getElementById("inc-daily-flow-year");
+  var idfMo = document.getElementById("inc-daily-flow-month");
+  var idfCur = document.getElementById("inc-daily-flow-currency");
+  var iAllYears = []; allPositive.forEach(function(i){var y=i.date.substring(0,4);if(iAllYears.indexOf(y)===-1) iAllYears.push(y);}); iAllYears.sort().reverse();
+  if(idfYr){ var sv=idfYr.value||""; idfYr.innerHTML=iAllYears.map(function(y){return"<option value=\""+y+"\">"+y+"</option>";}).join(""); if(sv&&idfYr.querySelector("option[value=\""+sv+"\"]")) idfYr.value=sv; else idfYr.value=iAllYears[0]||curYear; }
+  if(idfMo && idfMo.options.length < 12){ idfMo.innerHTML=MONTHS.map(function(m,i){return"<option value=\""+pad(i+1)+"\">"+m+"</option>";}).join(""); idfMo.value=curMonth; }
+  _populateChartCurrencySel("inc-daily-flow-currency", incCurs);
+
+  // Stats — show all data
+  var byCurAll = {}; allPositive.forEach(function(i){ byCurAll[i.currency]=(byCurAll[i.currency]||0)+i.amount; });
   var statsRow = document.getElementById("inc-stats-row");
-  var statItems = [{label:"Total Entries",value:filtered.length,sym:"",isCur:false,cls:"total"}];
-  Object.keys(byCur).sort().forEach(function(c){ statItems.push({label:"Total "+c,value:byCur[c],sym:SYMS[c]||"",isCur:true,cls:"naira"}); });
-  statsRow.innerHTML = statItems.map(function(s){ return "<div class=\"stat-card "+s.cls+"\"><div class=\"stat-label\">"+s.label+"</div><div class=\"stat-value\" style=\"color:var(--sage);\">"+( s.isCur?s.sym+fmtNum(s.value):s.value)+"</div></div>"; }).join("");
+  var statItems = [{label:"Total Entries",value:allPositive.length,sym:"",isCur:false,cls:"total"}];
+  Object.keys(byCurAll).sort().forEach(function(c){ statItems.push({label:"Total "+c,value:byCurAll[c],sym:SYMS[c]||"",isCur:true,cls:"naira"}); });
+  if(statsRow) statsRow.innerHTML = statItems.map(function(s){ return "<div class=\"stat-card "+s.cls+"\"><div class=\"stat-label\">"+s.label+"</div><div class=\"stat-value\" style=\"color:var(--sage);\">"+(s.isCur?s.sym+fmtNum(s.value):s.value)+"</div></div>"; }).join("");
+
+  // -- DAILY FLOW --
+  var idfY = idfYr ? idfYr.value : curYear;
+  var idfM = idfMo ? idfMo.value : curMonth;
+  var idfC = idfCur ? idfCur.value : "all";
+  var idfData = allPositive.filter(function(i){ return i.date.substring(0,4)===idfY && i.date.substring(5,7)===idfM; });
+  if(idfC !== "all") idfData = idfData.filter(function(i){return i.currency===idfC;});
+  renderDailyFlowChart(idfData, idfY, idfM, idfC!=="all"?idfC:(incCurs[0]||"NGN"), "inc-chart-daily-flow", "inc-daily-flow-sub");
 
   // Monthly trend with range picker
-  var mCur = cur !== "all" ? cur : (incCurs[0]||"NGN");
-  var mData = filtered.filter(function(i){ return i.currency===mCur; });
+  var mCurSel = _getChartCurRaw("inc-monthly-currency-sel");
+  var mCur = mCurSel !== "all" ? mCurSel : (incCurs[0]||"NGN");
+  var mData = allPositive.filter(function(i){ return i.currency===mCur; });
   var byMonth = {}; mData.forEach(function(i){ var k=i.date.substring(0,7); byMonth[k]=(byMonth[k]||0)+i.amount; });
   var allMKeys = Object.keys(byMonth).sort();
 
@@ -10762,7 +10823,8 @@ function renderIncomeDashboard() {
   if (incYoyContainer) incYoyContainer.innerHTML = "";
   var incHContainer = document.getElementById("inc-heatmap-container");
 
-  if (cur === "all" && incCurs.length) {
+  var incHmCurSel = _getChartCurRaw("inc-heatmap-currency-sel");
+  if (incHmCurSel === "all" && incCurs.length) {
     if (incHContainer) incHContainer.innerHTML = "";
     incCurs.forEach(function(c) {
       var cData = allPositive.filter(function(i){return i.currency===c;});
