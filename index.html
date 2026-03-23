@@ -46,15 +46,7 @@ html{background:#1a1410;}
 body{background:#1a1410;}
 /* Once logged in, stay light permanently */
 body.app-ready{background:var(--paper)!important;}
-/* Prevent flash of app content before PIN overlay renders */
-body:not(.app-ready) main,
-body:not(.app-ready) #main-header,
-body:not(.app-ready) #sticky-topbar,
-body:not(.app-ready) #big-header-wrap,
-body:not(.app-ready) footer {
-  visibility:hidden!important;
-}
-/* No opacity tricks on panels — they just show/hide normally after login */
+/* PIN overlay covers all content — no need to hide main behind it */
 </style>
 <title>My Expense Ledger</title>
 
@@ -7516,7 +7508,7 @@ function lockApp() {
   if (!_userId) return;
   localStorage.removeItem('last_active');
   sessionStorage.removeItem('app_session');
-  document.body.classList.remove('app-ready');
+  // Don't remove app-ready — pin overlay covers everything, removing it causes black flash
   if (_syncUnsubscribe)   { _syncUnsubscribe();   _syncUnsubscribe   = null; }
   if (_incomeUnsubscribe) { _incomeUnsubscribe();  _incomeUnsubscribe = null; }
   showPinScreen();
@@ -11972,7 +11964,11 @@ function _resumeSession(uid, name, phone) {
 
 // ── syncInit: called on page load ──
 function syncInit() {
-  // Restore identity from IndexedDB first — survives localStorage clearing on laptop
+  // Show PIN screen immediately — no blank dark screen during async IDB read
+  showPinScreen();
+  showPinPadStep();
+
+  // Restore identity from IndexedDB in background (survives localStorage clear on laptop)
   _idbReadSession(function(session) {
     if (session && session.uid && session.name && session.phone) {
       if (!localStorage.getItem(UID_KEY))   localStorage.setItem(UID_KEY,   session.uid);
@@ -12005,8 +12001,7 @@ function _syncInitRun() {
     return;
   }
 
-  // Show PIN screen — just enter PIN, no privacy/confirmation for established users
-  showPinScreen();
+  // PIN screen already showing — just update the step if needed
   // Security check triggers: (1) random 1-2 week interval, OR (2) new deployment (once)
   var deploymentCheck = sessionStorage.getItem('run_security_check_once') === '1';
   if (deploymentCheck) sessionStorage.removeItem('run_security_check_once');
@@ -12313,8 +12308,6 @@ function showPinScreen() {
     setTimeout(function(){ o.scrollTop = 0; }, 50);
     setTimeout(function(){ o.scrollTop = 0; }, 200);
   }
-  // Keep body dark while on PIN screen — no white flash
-  document.body.classList.remove('app-ready');
 }
 function hidePinScreen() {
   // Used by confirmCode and useResetCodeNow after first registration or reset
@@ -12753,14 +12746,15 @@ function logOut() {
   if (yrSel) yrSel.innerHTML = '';
   if (moSel) moSel.innerHTML = '';
   _db = null; _userId = null;
-  localStorage.removeItem(UID_KEY);
-  localStorage.removeItem('last_active');
-  localStorage.removeItem('keep_login_pref');
+  // NOTE: UID_KEY is intentionally kept — removing it causes submitPinLogin to
+  // trigger a security check on every logout, since uid is required to verify PIN
   // NOTE: expense_pin_hash_local is intentionally kept so user can log back in
   // with their PIN without triggering a security check on every logout
-  localStorage.removeItem('expense_active_tab');
+  // NOTE: expense_active_tab and expense_active_inc_tab are kept so the app
+  // returns to the last used tab after re-login
+  localStorage.removeItem('last_active');
+  localStorage.removeItem('keep_login_pref');
   localStorage.removeItem(PHONE_TAIL_KEY);
-  localStorage.removeItem('expense_active_inc_tab');
   sessionStorage.removeItem('app_session');
   // Clear full verify fields so previous user's data is never visible
   var fvU = document.getElementById('fv-username'); if(fvU) fvU.value = '';
