@@ -1795,7 +1795,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
     <div class="ledger-wrap">
       <table style="table-layout:fixed;width:100%;">
-        <thead><tr><th style="padding:5px 8px;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;width:42%;white-space:nowrap;">DESC · DATE · AMT</th><th style="padding:5px 8px;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;">CATEGORY</th><th style="padding:5px 6px;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);width:28px;text-align:center;">☐</th></tr></thead>
+        <thead><tr><th style="padding:5px 8px;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;width:60%;white-space:nowrap;">DESC · DATE · AMT</th><th style="padding:5px 8px;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;">CATEGORY</th><th style="padding:5px 6px;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);width:28px;text-align:center;">☐</th></tr></thead>
         <tbody id="categorize-tbody"></tbody>
       </table>
     </div>
@@ -2362,7 +2362,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div class="ledger-wrap">
       <table style="table-layout:fixed;width:100%;">
         <thead><tr>
-          <th style="padding:5px 8px;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;width:42%;white-space:nowrap;">DESC · DATE · AMT</th>
+          <th style="padding:5px 8px;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;width:60%;white-space:nowrap;">DESC · DATE · AMT</th>
           <th style="padding:5px 8px;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;">CATEGORY</th>
           <th style="padding:5px 6px;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);width:28px;text-align:center;">☐</th>
         </tr></thead>
@@ -4511,7 +4511,7 @@ function renderCategorizeTable() {
 
     // DESC+AMOUNT cell
     var mainTd = document.createElement('td');
-    mainTd.style.cssText = 'padding:4px 8px;border-right:1px solid #eee;width:42%;';
+    mainTd.style.cssText = 'padding:4px 8px;border-right:1px solid #eee;width:60%;';
     mainTd.innerHTML =
       '<div style="font-size:0.75rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;margin-bottom:1px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'
       +item.desc+' <span style="font-family:DM Mono,monospace;font-size:0.68rem;font-weight:700;color:'+(item.amount<0?'var(--sage)':'var(--ink)')+';">'+fmtAmt(item.amount,item.currency)+'</span></div>'
@@ -4520,7 +4520,7 @@ function renderCategorizeTable() {
 
     // CATEGORY cell
     var catTd = document.createElement('td');
-    catTd.style.cssText = 'padding:3px 5px;border-right:1px solid #eee;width:50%;';
+    catTd.style.cssText = 'padding:3px 5px;border-right:1px solid #eee;width:32%;';
     var wrap = document.createElement('div');
     wrap.className = 'cat-wrapper'; wrap.id = 'wrap-'+idx; wrap.style.cssText = 'width:100%;';
     var inp = document.createElement('input');
@@ -10162,7 +10162,7 @@ function renderIncomeCatTable() {
 
     // Category dropdown
     var catTd = document.createElement('td');
-    catTd.style.cssText = 'padding:3px 5px;border-right:1px solid #eee;width:50%;';
+    catTd.style.cssText = 'padding:3px 5px;border-right:1px solid #eee;width:32%;';
     var sel = document.createElement('select');
     sel.style.cssText = 'font-family:DM Sans,sans-serif;font-size:0.78rem;padding:5px 8px;border:1.5px solid var(--border);border-radius:3px;background:white;width:100%;outline:none;cursor:pointer;';
     allCats.forEach(function(c) {
