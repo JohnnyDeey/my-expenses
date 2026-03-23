@@ -1676,7 +1676,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
       <!-- Find & Replace toolbar -->
 
-      <textarea id="raw-input" rows="18" placeholder="Select a year and month on the left, then paste your Google Keep expense text here...&#10;&#10;Format example:&#10;01-02-2026&#10;&#9;Monthly rent&#9;&#8364;350.00&#10;&#9;Groceries&#9;&#8358;15,000.00&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="fnrKeyShortcut(event);if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();expCtrlEnterAction();}"></textarea>
+      <textarea id="raw-input" rows="18" placeholder="Select a year and month on the left, then paste your Google Keep expense text here...&#10;&#10;Format example:&#10;01-02-2026&#10;&#9;Monthly rent&#9;&#8364;350.00&#10;&#9;Groceries&#9;&#8358;15,000.00&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="fnrKeyShortcut(event);"></textarea>
 
       <div class="import-tip">
         Supported: <strong>&#8364; Euro</strong> &nbsp;&#8226;&nbsp; <strong>&#8358; Naira</strong> &nbsp;&#8226;&nbsp; <strong>$ Dollar</strong> &nbsp;&#8226;&nbsp; <strong>&#163; Pound</strong>
@@ -2259,7 +2259,7 @@ input[type="password"]::-ms-clear { display:none !important; }
           <button class="btn btn-ghost" onclick="loadIncomeSample()">Sample</button>
         </div>
       </div>
-      <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();incCtrlEnterAction();}"></textarea>
+      <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" ></textarea>
       <div class="import-tip">
         Supported: <strong>&#8358; / # Naira</strong> &nbsp;&bull;&nbsp; <strong>$ Dollar</strong> &nbsp;&bull;&nbsp; <strong>&#8364; Euro</strong> &nbsp;&bull;&nbsp; <strong>&#163; Pound</strong>
         &nbsp;&nbsp;|&nbsp;&nbsp; Colon or tab before amount &nbsp;&nbsp;|&nbsp;&nbsp; No currency symbol = skipped to recycle bin
