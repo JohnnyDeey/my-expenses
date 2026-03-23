@@ -12,7 +12,7 @@
 <!-- EmailJS SDK — for sending support emails directly from the app -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
-  // ── EmailJS config — replace with your keys from emailjs.com ──
+  // -- EmailJS config — replace with your keys from emailjs.com --
   var EMAILJS_PUBLIC_KEY      = 'owbOhn03Jox8EHZ_y';  // EmailJS public key
   var EMAILJS_SERVICE_ID      = 'service_6a8t7as';     // Gmail service
   var EMAILJS_TEMPLATE_ID     = 'template_8m1w9rj';    // Contact Us template (to you)
@@ -99,9 +99,9 @@ if ('serviceWorker' in navigator) {
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
-// ════════════════════════════════
+// ================================
 //  FLOATING SCROLL BUTTONS
-// ════════════════════════════════
+// ================================
 function smoothScrollTo(y) {
   window.scrollTo({ top: y, behavior: 'smooth' });
 }
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-// ── Arrow key scroll — Up/Down arrows control the floating scroll buttons ──
+// -- Arrow key scroll — Up/Down arrows control the floating scroll buttons --
 // Registered after DOM is ready so all elements and functions exist
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // ── App shortcut keys ──
+  // -- App shortcut keys --
   // S = mode switcher, E = expenses, I = income, H = toggle header
   // L = log out, F1 = help, F2 = date lookup
   document.addEventListener('keydown', function(e) {
@@ -296,7 +296,7 @@ var FIREBASE_CONFIG = {
   appId:             "1:861155902560:web:f449bb515fb3e50b512f05"
 };
 
-// ── Hashing helpers ──
+// -- Hashing helpers --
 function hashStr(str) {
   var h = 0;
   for (var i = 0; i < str.length; i++) {
@@ -312,7 +312,7 @@ function hashPin(pin) {
   return 'pin_' + hashStr('pin:' + pin + ':xpns');
 }
 
-// ── Generate a random UUID for new users ──
+// -- Generate a random UUID for new users --
 function generateUUID() {
   var chars = '0123456789abcdefghijklmnopqrstuvwxyz';
   var uuid = '';
@@ -370,14 +370,14 @@ function getDB(callback) {
   });
 }
 
-// ── Data path uses UUID, not PIN ──
+// -- Data path uses UUID, not PIN --
 function userCol(name) {
   return _db.collection('users').doc(_userId).collection(name);
 }
 
-// ── Init: restore session from localStorage ──
+// -- Init: restore session from localStorage --
 
-// ══ DATE LOOKUP ══
+// == DATE LOOKUP ==
 function shiftLookupDate(delta) {
   var inp = document.getElementById('date-lookup-input');
   if (!inp) return;
@@ -570,7 +570,7 @@ document.addEventListener('keydown', function(e) {
   if (ho && ho.style.display === 'flex') { e.preventDefault(); ho.style.display = 'none'; }
 });
 
-// ── Help overlay keyboard navigation ──
+// -- Help overlay keyboard navigation --
 // Arrow keys navigate icons, Enter opens article, arrows scroll article, Escape/F1 close
 var _helpFocusIdx = -1;
 var _helpArticleOpen = false;
@@ -702,7 +702,7 @@ document.addEventListener('keydown', function(e) {
   if (!activePanel) return;
   var pid = activePanel.id;
 
-  // ── IMPORT tabs — Parse → Go to Categorize ──
+  // -- IMPORT tabs — Parse → Go to Categorize --
   if (pid === 'panel-import') {
     e.preventDefault();
     if (typeof expCtrlEnterAction === 'function') expCtrlEnterAction();
@@ -714,7 +714,7 @@ document.addEventListener('keydown', function(e) {
     return;
   }
 
-  // ── CATEGORIZE tabs ──
+  // -- CATEGORIZE tabs --
   // If bulk-cat-input has a value → Assign; else → Save to Ledger
   if (pid === 'panel-categorize') {
     e.preventDefault();
@@ -739,7 +739,7 @@ document.addEventListener('keydown', function(e) {
     return;
   }
 
-  // ── LEDGER tabs — Assign (bulk assign) ──
+  // -- LEDGER tabs — Assign (bulk assign) --
   if (pid === 'panel-ledger') {
     e.preventDefault();
     if (typeof ledgerBulkAssign === 'function') ledgerBulkAssign();
@@ -751,7 +751,7 @@ document.addEventListener('keydown', function(e) {
     return;
   }
 
-  // ── MANAGE tabs — click first visible Save button ──
+  // -- MANAGE tabs — click first visible Save button --
   if (pid === 'panel-manage' || pid === 'panel-inc-manage') {
     e.preventDefault();
     // Find the focused input's nearest Save button, or first visible Save button
@@ -863,7 +863,7 @@ var _notePadActive = false; // global — shared with Ctrl+Enter handlers
     unfreezeCard();
   });
 
-  // ── Notepad active state ──
+  // -- Notepad active state --
   // Alt+Enter toggles notepad on/off. When ON — cursor in textarea, all keys go to it.
   // When OFF — Alt+arrows navigate calendar, page arrows scroll normally.
 
@@ -1030,7 +1030,7 @@ main{max-width:1300px;margin:0 auto;padding:20px 40px;background:var(--paper);}
 .btn-ghost:hover{border-color:var(--ink);color:var(--ink);}
 .btn-warn{background:var(--gold);color:white;font-size:0.7rem;padding:6px 12px;}
 
-/* ── IMPORT PANEL ── */
+/* -- IMPORT PANEL -- */
 .import-layout{display:grid;grid-template-columns:280px 1fr;gap:28px;align-items:start;}
 .month-picker-card{position:sticky;top:20px;}
 .year-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
@@ -1227,9 +1227,9 @@ tbody td{padding:9px 12px;vertical-align:middle;}
 #toast{position:fixed;bottom:28px;right:28px;background:var(--ink);color:var(--gold2);font-family:'DM Mono',monospace;font-size:0.8rem;padding:12px 22px;border-radius:3px;border-left:4px solid var(--gold);transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:10000;box-shadow:4px 4px 12px rgba(0,0,0,0.3);}
 #toast.show{transform:translateY(0);opacity:1;}
 
-/* ═══════════════════════════════════════
+/* =======================================
    RESPONSIVE — TABLET (≤900px)
-═══════════════════════════════════════ */
+======================================= */
 @media(max-width:900px){
   header{padding:16px 20px;flex-wrap:wrap;gap:10px;}
   .header-center{order:3;flex-basis:100%;}
@@ -1242,33 +1242,33 @@ tbody td{padding:9px 12px;vertical-align:middle;}
   .stats-row{grid-template-columns:repeat(2,1fr);}
 }
 
-/* ═══════════════════════════════════════
+/* =======================================
    RESPONSIVE — MOBILE (≤600px)
-═══════════════════════════════════════ */
+======================================= */
 @media(max-width:600px){
-  /* ── Header ── */
+  /* -- Header -- */
   header{padding:12px 14px;gap:8px;}
   header h1{font-size:1.25rem;}
   .header-context{min-width:unset;width:100%;padding:8px 14px;}
   .header-meta{display:none;}
 
-  /* ── Tabs: icons + short labels, scrollable ── */
+  /* -- Tabs: icons + short labels, scrollable -- */
   nav.tabs{padding:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   nav.tabs::-webkit-scrollbar{display:none;}
   nav.tabs button{padding:11px 12px;font-size:0.62rem;letter-spacing:0.5px;white-space:nowrap;flex-shrink:0;}
 
-  /* ── Main layout ── */
+  /* -- Main layout -- */
   main{padding:14px 12px;}
   .section-title{font-size:1.15rem;margin-bottom:14px;}
 
-  /* ── Cards ── */
+  /* -- Cards -- */
   .card{padding:16px 14px;}
 
-  /* ── Buttons — bigger tap targets ── */
+  /* -- Buttons — bigger tap targets -- */
   .btn{padding:13px 16px;font-size:0.75rem;}
   .btn-danger,.btn-warn{padding:10px 14px;font-size:0.72rem;}
 
-  /* ── Import panel ── */
+  /* -- Import panel -- */
   .import-layout{grid-template-columns:1fr;gap:16px;}
   .month-picker-card{position:static;}
   .months-grid{grid-template-columns:repeat(4,1fr);gap:6px;}
@@ -1280,7 +1280,7 @@ tbody td{padding:9px 12px;vertical-align:middle;}
   #fnr-bar{flex-wrap:wrap;}
   #fnr-find,#fnr-replace{width:100% !important;}
 
-  /* ── Filter bars ── */
+  /* -- Filter bars -- */
   .filter-bar,.cat-filter-bar,.daily-filters,.dash-filter-bar{
     gap:8px;
   }
@@ -1293,15 +1293,15 @@ tbody td{padding:9px 12px;vertical-align:middle;}
   /* month-row hidden */
   .month-row{display:none;}
 
-  /* ── Category autocomplete ── */
+  /* -- Category autocomplete -- */
   .cat-wrapper{width:100%;min-width:unset;}
   .cat-dropdown{min-width:unset;width:100%;}
 
-  /* ── Categorize bulk assign bar ── */
+  /* -- Categorize bulk assign bar -- */
   #cat-bulk-bar,#led-bulk-bar{flex-wrap:wrap;}
   #cat-bulk-bar .cat-wrapper,#led-bulk-bar .cat-wrapper{width:100%;}
 
-  /* ── Dashboard ── */
+  /* -- Dashboard -- */
   .stats-row{grid-template-columns:1fr 1fr;gap:10px;}
   .stat-card{padding:14px 12px;}
   .stat-value{font-size:1.1rem;}
@@ -1311,7 +1311,7 @@ tbody td{padding:9px 12px;vertical-align:middle;}
   .chart-wrap.tall{height:240px;}
   #cat-bars-container, #inc-cat-bars-container{overflow:hidden;min-width:0;}
 
-  /* ── Daily view ── */
+  /* -- Daily view -- */
   .dv-stats-bar{flex-direction:column;gap:10px;}
   .dv-stat-group{min-width:unset;width:100%;}
   .day-header{padding:12px 14px;}
@@ -1319,19 +1319,19 @@ tbody td{padding:9px 12px;vertical-align:middle;}
   .day-item{padding:10px 14px 10px 46px;}
   .day-item-desc{font-size:0.82rem;}
 
-  /* ── Ledger ── */
+  /* -- Ledger -- */
   .ledger-wrap{padding-bottom:60px;}
 
-  /* ── Manage ── */
+  /* -- Manage -- */
   .manage-grid{grid-template-columns:1fr;gap:16px;}
   .manage-month-row{padding:12px 14px;}
   .manage-month-name{font-size:0.9rem;}
 
-  /* ── Toast ── */
+  /* -- Toast -- */
   #toast{right:50%;transform:translateX(50%) translateY(80px);bottom:20px;width:85%;text-align:center;}
   #toast.show{transform:translateX(50%) translateY(0);}
 
-  /* ── Misc ── */
+  /* -- Misc -- */
   .insights-grid{grid-template-columns:1fr;}
   .empty-state{padding:40px 16px;}
 }
@@ -1351,7 +1351,7 @@ nav.tabs{position:relative;}
   .tab-icon{font-size:1.1rem;}
 }
 
-/* ── Onboarding slide animations ── */
+/* -- Onboarding slide animations -- */
 @keyframes ob-fade-in    { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
 @keyframes ob-slide-down { from { opacity:0; transform:translateY(-40px); } to { opacity:1; transform:translateY(0); } }
 @keyframes ob-slide-up   { from { opacity:0; transform:translateY(40px); } to { opacity:1; transform:translateY(0); } }
@@ -1405,7 +1405,7 @@ nav.tabs{position:relative;}
 
 
 
-/* ── Collapsible category bars ── */
+/* -- Collapsible category bars -- */
 .cat-bars-preview{max-height:none;}
 .cat-bars-collapsed{max-height:260px;overflow:hidden;position:relative;}
 .cat-bars-collapsed::after{
@@ -1421,7 +1421,7 @@ nav.tabs{position:relative;}
 }
 .cat-collapse-btn:hover{border-color:var(--gold);color:var(--gold);}
 
-/* ── Spending Heatmap ── */
+/* -- Spending Heatmap -- */
 .heatmap-section{margin-bottom:20px;}
 .heatmap-cur-label{
   font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:2px;
@@ -1447,7 +1447,7 @@ nav.tabs{position:relative;}
 .heatmap-cell:hover{transform:scale(1.15);z-index:10;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
 .heatmap-cell.empty{background:#f0ece4;}
 
-/* ── YoY % Growth strip ── */
+/* -- YoY % Growth strip -- */
 .yoy-strip{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
 .yoy-year-block{
   background:var(--paper2);border:1px solid var(--border);border-radius:5px;
@@ -1464,7 +1464,7 @@ nav.tabs{position:relative;}
 .yoy-pct.first{background:transparent;color:var(--muted);}
 
 
-/* ── Collapsible header ── */
+/* -- Collapsible header -- */
 #main-header { background: var(--ink); }
 #big-header-wrap { transition: max-height 0.3s ease; border-bottom: 3px solid var(--gold); }
 
@@ -1488,7 +1488,7 @@ nav.tabs.header-hidden button {
   .mob-date-sub { display: block !important; }
 }
 
-/* ── Ledger + Trash: compact horizontal scroll on mobile ── */
+/* -- Ledger + Trash: compact horizontal scroll on mobile -- */
 @media (max-width: 600px) {
   #ledger-accordion, #inc-ledger-accordion, #trash-content {
     overflow-x: auto;
@@ -1528,7 +1528,7 @@ nav.tabs.header-hidden button {
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear { display:none !important; }
 
-/* ── Categorize checkbox selection ── */
+/* -- Categorize checkbox selection -- */
 .cat-row-cb { width:16px;height:16px;cursor:pointer;accent-color:var(--gold);flex-shrink:0; }
 .cat-cb-td  { padding:4px 6px;width:28px;vertical-align:middle; }
 .cat-row-selected { background:rgba(200,150,46,0.08)!important; }
@@ -1646,7 +1646,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 <main>
 
-<!-- ══ IMPORT ══ -->
+<!-- == IMPORT == -->
 <div class="panel active" id="panel-import">
   <div class="section-title">Import Monthly Data</div>
   <div class="import-layout">
@@ -1687,7 +1687,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
       <!-- Find & Replace toolbar -->
 
-      <textarea id="raw-input" rows="18" placeholder="Select a year and month on the left, then paste your Google Keep expense text here...&#10;&#10;Format example:&#10;01-02-2026&#10;&#9;Monthly rent&#9;&#8364;350.00&#10;&#9;Groceries&#9;&#8358;15,000.00&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="fnrKeyShortcut(event);if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();event.stopPropagation();expCtrlEnterAction();}"></textarea>
+      <textarea id="raw-input" rows="18" placeholder="Select a year and month on the left, then paste your Google Keep expense text here...&#10;&#10;Format example:&#10;01-02-2026&#10;&#9;Monthly rent&#9;&#8364;350.00&#10;&#9;Groceries&#9;&#8358;15,000.00&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="fnrKeyShortcut(event);"></textarea>
 
       <div class="import-tip">
         Supported: <strong>&#8364; Euro</strong> &nbsp;&#8226;&nbsp; <strong>&#8358; Naira</strong> &nbsp;&#8226;&nbsp; <strong>$ Dollar</strong> &nbsp;&#8226;&nbsp; <strong>&#163; Pound</strong>
@@ -1741,7 +1741,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ CATEGORIZE ══ -->
+<!-- == CATEGORIZE == -->
 <div class="panel" id="panel-categorize">
   <div class="section-title">Review &amp; Categorize</div>
   <!-- Tour placeholder — shown only during tour when no real save button exists -->
@@ -1769,8 +1769,8 @@ input[type="password"]::-ms-clear { display:none !important; }
         <option value="GBP">GBP</option>
       </select>
       <span class="filter-label" style="font-size:0.72rem;margin-left:4px;">Category:</span>
-      <select id="cat-cat-filter" onchange="applyCatFilter()" style="font-size:0.75rem;padding:5px 8px;max-width:130px;">
-        <option value="all">All Cats</option>
+      <select id="cat-cat-filter" onchange="applyCatFilter()" style="font-size:0.75rem;padding:5px 8px;">
+        <option value="all">All Categories</option>
         <option value="Other">Other only</option>
       </select>
       <button id="cat-sort-btn" onclick="toggleCatSort()" class="btn btn-ghost" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;display:flex;align-items:center;gap:5px;white-space:nowrap;margin-left:auto;">&#8645; Newest first</button>
@@ -1816,7 +1816,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ DAILY VIEW ══ -->
+<!-- == DAILY VIEW == -->
 <div class="panel" id="panel-daily">
   <div class="section-title">Daily Breakdown</div>
   <div class="daily-filters">
@@ -1831,7 +1831,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="daily-content"></div>
 </div>
 
-<!-- ══ DASHBOARD ══ -->
+<!-- == DASHBOARD == -->
 <div class="panel" id="panel-dashboard">
   <div class="section-title">Expense Dashboard</div>
   <div id="dash-empty" class="empty-state"><div class="big">&#9670;</div><p>No saved data yet.<br>Import, categorize and save your expenses first.</p></div>
@@ -1906,7 +1906,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ LEDGER ══ -->
+<!-- == LEDGER == -->
 <div class="panel" id="panel-ledger">
   <div class="section-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
     <span>Full Expense Ledger</span>
@@ -1973,12 +1973,12 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ MANAGE DATA ══ -->
+<!-- == MANAGE DATA == -->
 <div class="panel" id="panel-manage">
 
   <div class="section-title">Manage Data</div>
 
-  <!-- ── USER PROFILE CARD ── -->
+  <!-- -- USER PROFILE CARD -- -->
   <div class="card" style="margin-bottom:18px;border-left:4px solid var(--gold);">
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
       <!-- Clickable Avatar -->
@@ -2015,7 +2015,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
   <div id="sync-setup-content" style="display:none;"></div>
 
-  <!-- ── 2. DATA OVERVIEW + ACTIONS ── -->
+  <!-- -- 2. DATA OVERVIEW + ACTIONS -- -->
   <div class="manage-grid" style="margin-bottom:14px;">
     <div class="card">
       <label>Data Overview</label>
@@ -2052,7 +2052,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       </div>
     </div>
 
-    <!-- ── 3. DELETE BY FILTER ── -->
+    <!-- -- 3. DELETE BY FILTER -- -->
     <div class="card">
       <label>&#128465; Delete Data</label>
       <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Filter by year, month, or day. Deleted entries go to the Recycle Bin.</p>
@@ -2075,7 +2075,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
   </div>
 
-  <!-- ── CURRENCY MANAGER ── -->
+  <!-- -- CURRENCY MANAGER -- -->
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--slate);">
     <label>&#128177; Currencies</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Choose the currencies you use. They will appear in all dropdowns, charts, and reports across the whole app.</p>
@@ -2096,7 +2096,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
   </div>
 
-  <!-- ── 3a. EDIT FULL NAME ── -->
+  <!-- -- 3a. EDIT FULL NAME -- -->
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold);">
     <label>&#9999; Your Full Name (used in PDF reports)</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">This name appears at the top of your printed reports.</p>
@@ -2107,7 +2107,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
   </div>
 
-  <!-- ── 3a2. CHANGE USERNAME ── -->
+  <!-- -- 3a2. CHANGE USERNAME -- -->
   <div class="card" style="margin-bottom:14px;">
     <label>&#128100; Change Username</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Change your username to a new one of your choice.</p>
@@ -2120,7 +2120,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 
 
-  <!-- ── 3b. CHANGE ACCESS CODE ── -->
+  <!-- -- 3b. CHANGE ACCESS CODE -- -->
   <div class="card" style="margin-bottom:14px;">
     <label>&#128274; Change Access Code</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Change your login access code. Make sure to remember the new one.</p>
@@ -2139,7 +2139,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 
 
-  <!-- ── 4. DANGER ZONE ── -->
+  <!-- -- 4. DANGER ZONE -- -->
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Delete ALL data moves everything to the Recycle Bin first — you can still restore from there.</p>
@@ -2164,7 +2164,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
   </div>
 
-  <!-- ── 5. RECYCLE BIN (last) ── -->
+  <!-- -- 5. RECYCLE BIN (last) -- -->
   <div class="card" style="border-color:var(--rust);">
     <label style="display:flex;align-items:center;gap:8px;">
       &#128465; Recycle Bin
@@ -2185,21 +2185,21 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div id="trash-content"></div>
   </div>
 
-  <!-- ── Privacy Policy ── -->
+  <!-- -- Privacy Policy -- -->
   <div class="card" style="border-color:var(--slate);">
     <label style="display:flex;align-items:center;gap:8px;">&#128220; Privacy Policy &amp; Terms</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Read the full Terms &amp; Conditions and Privacy Policy for My Expense Ledger.</p>
     <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="_showPrivacyOverlay()">&#128220; View Terms &amp; Conditions</button>
   </div>
 
-  <!-- ── Delete Account ── -->
+  <!-- -- Delete Account -- -->
   <div class="card" style="border-color:var(--rust);margin-top:8px;">
     <label style="display:flex;align-items:center;gap:8px;color:var(--rust);">&#9888; Delete My Account &amp; All Data</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Permanently delete your account and all associated data from our servers. This cannot be undone.</p>
     <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="showDeleteAccountOverlay()">&#128465; Delete My Account</button>
   </div>
 
-  <!-- ── Guest Profile (only visible in guest mode) ── -->
+  <!-- -- Guest Profile (only visible in guest mode) -- -->
   <div id="guest-profile-card" style="display:none;margin-top:8px;">
     <div class="card" style="border-left:4px solid var(--gold);">
       <label>&#127891; Guest Profile</label>
@@ -2227,7 +2227,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
   </div>
 
-  <!-- ── App Version & Copyright ── -->
+  <!-- -- App Version & Copyright -- -->
   <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.3.2</div>
@@ -2237,7 +2237,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 </div>
 
-<!-- ══ BUDGET ══ -->
+<!-- == BUDGET == -->
 <div class="panel" id="panel-budget">
   <div class="section-title">Budget Targets</div>
   <div style="background:#fffbf0;border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:3px;padding:12px 16px;margin-bottom:20px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.8;">
@@ -2271,7 +2271,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="budget-content"></div>
 </div>
 
-<!-- ══ INCOME MODULE ══ -->
+<!-- == INCOME MODULE == -->
 <div id="income-main" style="display:none;">
 
 <!-- INCOME IMPORT -->
@@ -2301,7 +2301,7 @@ input[type="password"]::-ms-clear { display:none !important; }
           <button class="btn btn-ghost" onclick="loadIncomeSample()">Sample</button>
         </div>
       </div>
-      <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();event.stopPropagation();incCtrlEnterAction();}"></textarea>
+      <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="fnrKeyShortcut(event);"></textarea>
       <div class="import-tip">
         Supported: <strong>&#8358; / # Naira</strong> &nbsp;&bull;&nbsp; <strong>$ Dollar</strong> &nbsp;&bull;&nbsp; <strong>&#8364; Euro</strong> &nbsp;&bull;&nbsp; <strong>&#163; Pound</strong>
         &nbsp;&nbsp;|&nbsp;&nbsp; Colon or tab before amount &nbsp;&nbsp;|&nbsp;&nbsp; No currency symbol = skipped to recycle bin
@@ -2359,8 +2359,8 @@ input[type="password"]::-ms-clear { display:none !important; }
         <option value="GBP">GBP</option>
       </select>
       <span class="filter-label" style="font-size:0.72rem;margin-left:4px;">Category:</span>
-      <select id="inc-cat-cat-filter" onchange="applyIncomeCatFilter()" style="font-size:0.75rem;padding:5px 8px;max-width:130px;">
-        <option value="all">All Cats</option>
+      <select id="inc-cat-cat-filter" onchange="applyIncomeCatFilter()" style="font-size:0.75rem;padding:5px 8px;">
+        <option value="all">All Categories</option>
         <option value="Other">Other only</option>
       </select>
       <button id="inc-cat-sort-btn" onclick="toggleIncCatSort()" class="btn btn-ghost" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;display:flex;align-items:center;gap:5px;white-space:nowrap;margin-left:auto;">&#8645; Newest first</button>
@@ -2580,7 +2580,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 
 
-  <!-- ── EDIT FULL NAME ── -->
+  <!-- -- EDIT FULL NAME -- -->
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--sage);">
     <label>&#9999; Your Full Name (used in PDF reports)</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">This name appears at the top of your printed reports. Enter your real full name here.</p>
@@ -2612,21 +2612,21 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div id="inc-trash-content"></div>
   </div>
 
-  <!-- ── Privacy Policy ── -->
+  <!-- -- Privacy Policy -- -->
   <div class="card" style="border-color:var(--slate);">
     <label style="display:flex;align-items:center;gap:8px;">&#128220; Privacy Policy &amp; Terms</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Read the full Terms &amp; Conditions and Privacy Policy for My Expense Ledger.</p>
     <button class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;" onclick="_showPrivacyOverlay()">&#128220; View Terms &amp; Conditions</button>
   </div>
 
-  <!-- ── Delete Account ── -->
+  <!-- -- Delete Account -- -->
   <div class="card" style="border-color:var(--rust);margin-top:8px;">
     <label style="display:flex;align-items:center;gap:8px;color:var(--rust);">&#9888; Delete My Account &amp; All Data</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">Permanently delete your account and all associated data from our servers. This cannot be undone.</p>
     <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="showDeleteAccountOverlay()">&#128465; Delete My Account</button>
   </div>
 
-  <!-- ── App Version & Copyright ── -->
+  <!-- -- App Version & Copyright -- -->
   <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.3.2</div>
@@ -2684,8 +2684,8 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 
 
-<!-- ══ PIN LOGIN OVERLAY ══ -->
-<!-- ══ MODE SELECTION OVERLAY ══ -->
+<!-- == PIN LOGIN OVERLAY == -->
+<!-- == MODE SELECTION OVERLAY == -->
 <div id="mode-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
   <div style="text-align:center;max-width:500px;width:100%;">
     <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My <span style="color:var(--gold);">Finance</span> Ledger</div>
@@ -2705,7 +2705,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ DELETE ACCOUNT OVERLAY ══ -->
+<!-- == DELETE ACCOUNT OVERLAY == -->
 <div id="delete-account-overlay" style="display:none;position:fixed;inset:0;z-index:99993;background:rgba(26,20,16,0.95);align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--paper);border:2px solid var(--rust);border-radius:8px;width:100%;max-width:420px;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--rust);border-radius:6px 6px 0 0;">
@@ -2746,7 +2746,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ UNDERAGE OVERLAY ══ -->
+<!-- == UNDERAGE OVERLAY == -->
 <div id="underage-overlay" style="display:none;position:fixed;inset:0;z-index:999999;background:#1a1410;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
   <div style="background:rgba(255,255,255,0.04);border:2px solid var(--gold);border-radius:12px;width:100%;max-width:400px;padding:32px 24px;text-align:center;margin:auto;">
     <div style="font-size:2.5rem;margin-bottom:12px;">📚</div>
@@ -2780,7 +2780,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ AVATAR PICKER OVERLAY ══ -->
+<!-- == AVATAR PICKER OVERLAY == -->
 <div id="avatar-picker-overlay" style="display:none;position:fixed;inset:0;z-index:99995;background:rgba(26,20,16,0.92);align-items:flex-end;justify-content:center;padding:0;">
   <div style="background:var(--paper);border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:24px 20px 32px;max-height:85vh;overflow-y:auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
@@ -2799,7 +2799,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ DOB ONLY OVERLAY (Update flow step 3) ══ -->
+<!-- == DOB ONLY OVERLAY (Update flow step 3) == -->
 <div id="dob-only-overlay" style="display:none;position:fixed;inset:0;z-index:99996;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:400px;padding:28px 24px;">
     <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:6px;">&#127874; One Last Thing</div>
@@ -2814,7 +2814,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ PHONE CONFIRM OVERLAY (existing users) ══ -->
+<!-- == PHONE CONFIRM OVERLAY (existing users) == -->
 <div id="phone-confirm-overlay" style="display:none;position:fixed;inset:0;z-index:99996;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:420px;padding:28px 24px;">
     <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:6px;">&#128241; Confirm Your Details</div>
@@ -2836,7 +2836,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ REFERRAL PANEL ══ -->
+<!-- == REFERRAL PANEL == -->
 <div id="referral-overlay" style="display:none;position:fixed;inset:0;z-index:99995;background:rgba(26,20,16,0.92);align-items:flex-end;justify-content:center;padding:0;">
   <div style="background:var(--paper);border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:24px 20px 32px;box-shadow:0 -8px 32px rgba(0,0,0,0.4);">
     <!-- Handle bar -->
@@ -3018,7 +3018,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ PASSWORD RESET OVERLAY ══ -->
+<!-- == PASSWORD RESET OVERLAY == -->
 <div id="reset-overlay" style="display:none;position:fixed;inset:0;z-index:100001;background:rgba(26,20,16,0.97);align-items:center;justify-content:center;padding:20px;">
   <div style="background:#1e1812;border:2px solid var(--gold);border-radius:10px;width:100%;max-width:400px;padding:28px;">
     <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">&#128274; Reset Access Code</div>
@@ -3044,7 +3044,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 </div>
 
 
-<!-- ══ PRINT PICKER OVERLAY ══ -->
+<!-- == PRINT PICKER OVERLAY == -->
 <div id="print-picker-overlay" style="display:none;position:fixed;inset:0;z-index:100010;background:rgba(26,20,16,0.85);align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--paper);border:2px solid var(--gold);border-radius:10px;width:100%;max-width:380px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,0.5);">
     <div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:900;color:var(--ink);margin-bottom:4px;">&#128438; Select Currencies to Print</div>
@@ -3057,7 +3057,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ INACTIVITY WARNING ══ -->
+<!-- == INACTIVITY WARNING == -->
 <div id="inactivity-warning" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99998;background:var(--ink);border:2px solid var(--gold);border-radius:8px;padding:20px 28px;min-width:300px;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.4);flex-direction:column;align-items:center;gap:12px;">
   <div style="font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);">Still there?</div>
   <div style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--paper);text-align:center;line-height:1.5;">
@@ -3192,8 +3192,8 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ ONBOARDING TOUR OVERLAY ══ -->
-<!-- ══ SPOTLIGHT TOUR ══ -->
+<!-- == ONBOARDING TOUR OVERLAY == -->
+<!-- == SPOTLIGHT TOUR == -->
 <div id="tour-overlay" style="display:none;position:fixed;inset:0;z-index:100010;pointer-events:none;">
   <!-- Dark mask - 4 rectangles around spotlight -->
   <div id="tour-mask-top"    style="position:absolute;left:0;right:0;top:0;background:transparent;transition:all 0.35s ease;"></div>
@@ -3295,7 +3295,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 <div id="toast"></div>
 
-<!-- ══ DATE LOOKUP OVERLAY ══ -->
+<!-- == DATE LOOKUP OVERLAY == -->
 <div id="date-lookup-overlay" style="display:none;position:fixed;inset:0;z-index:99990;background:rgba(26,20,16,0.7);align-items:flex-start;justify-content:center;padding:20px;padding-top:80px;overflow-y:auto;">
   <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:600px;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
     <!-- Header -->
@@ -3323,7 +3323,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
-<!-- ══ RENAME CATEGORY MODAL ══ -->
+<!-- == RENAME CATEGORY MODAL == -->
 <div id="rename-modal" style="display:none;position:fixed;inset:0;background:rgba(26,20,16,0.6);z-index:10000;align-items:center;justify-content:center;">
   <div style="background:var(--paper);border:2px solid var(--gold);border-radius:6px;padding:32px;min-width:380px;max-width:480px;box-shadow:8px 8px 0 rgba(26,20,16,0.2);">
     <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-bottom:6px;">Rename Category</div>
@@ -3385,7 +3385,7 @@ var CAT_COLORS_FB = [
   '#2e8b4a','#8b7a2e','#4a2e8b','#8b2e8b','#2e4a8b','#8b5a3d','#3d8b4a','#8b3d8b','#2e8b3d','#8b2e6b',
   '#5a8b3d','#3d2e8b','#8b4a5a','#2e5a8b','#8b8b2e','#6b3d8b','#3d8b8b','#8b2e3d','#4a8b8b','#8b6b3d'
 ];
-// ── Currency system — dynamic, user-configurable ──
+// -- Currency system — dynamic, user-configurable --
 var CURRENCY_STORAGE_KEY = 'expense_user_currencies';
 
 // Master list of world currencies available to pick from
@@ -3661,7 +3661,7 @@ function loadData() {
   try { return JSON.parse(localStorage.getItem('expense_ledger') || '[]'); } catch(e) { return []; }
 }
 
-// ── Search filter helper — supports exclusions with minus prefix ──
+// -- Search filter helper — supports exclusions with minus prefix --
 // e.g. "ice cream -rice -beatrice" → include "ice cream", exclude anything with "rice" or "beatrice"
 // Commas also work: "ice, cream, -rice, -beatrice"
 function applySearchFilter(data, query) {
@@ -3710,9 +3710,9 @@ function saveCustomCategory(cat) {
   if (saved.indexOf(cat)===-1) { saved.push(cat); localStorage.setItem('custom_categories', JSON.stringify(saved)); }
 }
 
-// ════════════════════════════════
+// ================================
 //  FIND & REPLACE (NOTEPAD)
-// ════════════════════════════════
+// ================================
 var fnrMatches = [];
 var fnrCurrent = -1;
 
@@ -3847,9 +3847,9 @@ function fnrReplaceAll() {
   showToast('Replaced ' + count + ' occurrence' + (count===1?'':'s'));
 }
 
-// ════════════════════════════════
+// ================================
 //  SAVE HTML WITH DATA EMBEDDED
-// ════════════════════════════════
+// ================================
 function saveHtmlWithData() {
   var ledger      = localStorage.getItem('expense_ledger')      || '[]';
   var customCats  = localStorage.getItem('custom_categories')   || '[]';
@@ -3914,9 +3914,9 @@ function changeYear(delta) {
 }
 
 
-// ════════════════════════════════
+// ================================
 //  HEADER COLLAPSE
-// ════════════════════════════════
+// ================================
 var _headerCollapsed = false;
 var HDR_STATE_KEY = 'expense_hdr_collapsed';
 
@@ -4120,9 +4120,9 @@ function loadSample() {
   updateHeaderContext();
 }
 
-// ════════════════════════════════
+// ================================
 //  PARSE
-// ════════════════════════════════
+// ================================
 var pendingItems = [];
 var skippedLines = [];   // lines that had numbers but failed to parse
 
@@ -4175,7 +4175,7 @@ function parseInput() {
   lines.forEach(function(rawLine) {
     var line = cleanLine(rawLine);
 
-    // ── Date detection ──
+    // -- Date detection --
     var dm = line.match(dateRe);
     if (dm) {
       var parts = dm[1].split(/[-\/]/);
@@ -4316,9 +4316,9 @@ function parseInput() {
 }
 
 
-// ════════════════════════════════
+// ================================
 //  HEADER CONTEXT
-// ════════════════════════════════
+// ================================
 function updateHeaderContext() {
   var data = loadData();
   // Update right-side totals
@@ -4475,9 +4475,9 @@ function updateMonthFilterPill() {
 }
 
 
-// ════════════════════════════════
+// ================================
 //  CATEGORIZE
-// ════════════════════════════════
+// ================================
 var catViewMode = 'pending'; // 'pending' or 'YYYY-MM'
 var catEditItems = []; // items currently shown in categorize tab
 
@@ -4744,9 +4744,9 @@ function saveAllPending() {
   renderMonthPicker();
 }
 
-// ════════════════════════════════
+// ================================
 //  DAILY VIEW
-// ════════════════════════════════
+// ================================
 var openDayKey = null;
 
 function populateDailyFilters() {
@@ -4778,7 +4778,7 @@ function renderDailyView() {
   }
   document.getElementById('daily-empty').style.display='none';
 
-  // ── Period stats ──
+  // -- Period stats --
   var positiveData = data.filter(function(i){return i.amount>0;});
   var statsHtml = '';
   if(positiveData.length){
@@ -4812,7 +4812,7 @@ function renderDailyView() {
     statsHtml = '<div class="dv-stats-bar">'+statParts.join('')+'</div>';
   }
 
-  // ── Group by year → month → date ──
+  // -- Group by year → month → date --
   var byYear = {};
   data.forEach(function(i){
     var y = i.date.substring(0,4);
@@ -4979,11 +4979,11 @@ function renderDailyView() {
 
 function toggleDay(date){openDayKey=(openDayKey===date)?null:date;renderDailyView();}
 
-// ════════════════════════════════
+// ================================
 //  DASHBOARD
-// ════════════════════════════════
+// ================================
 var charts={};
-// ── Master currency selector — syncs all charts at once ──
+// -- Master currency selector — syncs all charts at once --
 function dashMasterCurrencyChange() {
   renderDashboard();
 }
@@ -4991,8 +4991,8 @@ function incDashMasterCurrencyChange() {
   renderIncomeDashboard();
 }
 
-// ── Print Dashboard ──
-// ── Print Currency Picker ──
+// -- Print Dashboard --
+// -- Print Currency Picker --
 var _printPickerMode = 'expenses';
 
 function openPrintPicker(mode) {
@@ -5081,7 +5081,7 @@ function printDashboard(mode, selectedCurrencies) {
     : ['#fdf6e3','#f5d98b','#e8a825','#c8962e','#7a5a10'];
   var isGold = !isIncome;
 
-  // ── Currency colors — match the dashboard pill palette exactly ──
+  // -- Currency colors — match the dashboard pill palette exactly --
   var CUR_BORDER_COLORS = {
     EUR: '#4a7ca8',  // blue
     NGN: '#4a7c59',  // green
@@ -5108,7 +5108,7 @@ function printDashboard(mode, selectedCurrencies) {
     });
   }
 
-  // ── CSS ──
+  // -- CSS --
   var css =
     '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
     'body{font-family:Georgia,serif;margin:0;padding:16px 24px;color:#1a1410;background:#fff;font-size:13px;}' +
@@ -5151,7 +5151,7 @@ function printDashboard(mode, selectedCurrencies) {
     '@page{margin:10mm;size:A4 portrait;}' +
     '@media print{body{padding:0;}}';
 
-  // ── Helper: stats for one currency ──
+  // -- Helper: stats for one currency --
   function buildStatCards(data, cur, yr, mo) {
     var d = data.filter(function(i){return i.amount>0 && i.currency===cur;});
     if(yr!=='all') d=d.filter(function(i){return i.date.substring(0,4)===yr;});
@@ -5164,7 +5164,7 @@ function printDashboard(mode, selectedCurrencies) {
       '</div>';
   }
 
-  // ── Helper: category bars ──
+  // -- Helper: category bars --
   function buildCatBarsHtml(data, cur, yr, mo, colorFn, fromKey, toKey) {
     var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
     if(fromKey && toKey) {
@@ -5191,7 +5191,7 @@ function printDashboard(mode, selectedCurrencies) {
     }).join('');
   }
 
-  // ── Helper: heatmap ──
+  // -- Helper: heatmap --
   function buildHeatmapHtml(data, cur) {
     var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
     var byYM={};
@@ -5224,7 +5224,7 @@ function printDashboard(mode, selectedCurrencies) {
     return out;
   }
 
-  // ── Helper: YoY ──
+  // -- Helper: YoY --
   function buildYoYHtml(data, cur) {
     var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
     var byY={};
@@ -5244,7 +5244,7 @@ function printDashboard(mode, selectedCurrencies) {
     return out+'</div>';
   }
 
-  // ── Helper: monthly chart as canvas image (renders offscreen) ──
+  // -- Helper: monthly chart as canvas image (renders offscreen) --
   function buildMonthlyChartImg(data, cur, yr, mo) {
     var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
     if(yr!=='all') d=d.filter(function(i){return i.date.substring(0,4)===yr;});
@@ -5276,7 +5276,7 @@ function printDashboard(mode, selectedCurrencies) {
     return '<img src="'+src+'" style="width:100%;height:auto;">';
   }
 
-  // ── Helper: yearly chart as canvas image ──
+  // -- Helper: yearly chart as canvas image --
   function buildYearlyChartImg(data, cur, fromYear, toYear) {
     var d=data.filter(function(i){return i.amount>0 && i.currency===cur;});
     if(fromYear) d=d.filter(function(i){return i.date.substring(0,4)>=fromYear;});
@@ -5299,7 +5299,7 @@ function printDashboard(mode, selectedCurrencies) {
     ? function(cat){ return INC_CAT_COLORS[cat] || '#6b5e50'; }
     : function(cat,idx){ return CAT_COLORS[cat] || CAT_COLORS_FB[idx % CAT_COLORS_FB.length]; };
 
-  // ── Build one section per selected currency ──
+  // -- Build one section per selected currency --
   var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+title+'</title>'+
     '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"><\/script>'+
     '<style>'+css+'</style></head><body>';
@@ -5674,7 +5674,7 @@ function renderYearlyChart(data, cur) {
   });
 }
 
-// ── Smart X-axis label skip for monthly charts ──
+// -- Smart X-axis label skip for monthly charts --
 function monthlyTickConfig(count) {
   var step = count <= 12 ? 1 : count <= 24 ? 2 : count <= 72 ? 6 : count <= 144 ? 12 : 24;
   var fontSize = count <= 24 ? 10 : count <= 72 ? 9 : 8;
@@ -5703,7 +5703,7 @@ function monthlyTickConfig(count) {
   };
 }
 
-// ── Chart Range Pickers for Category Breakdown & Yearly Total ──
+// -- Chart Range Pickers for Category Breakdown & Yearly Total --
 function _populateYearRangePicker(years, fromId, toId) {
   var fromEl = document.getElementById(fromId);
   var toEl   = document.getElementById(toId);
@@ -6085,12 +6085,12 @@ function renderHeatmap(data, cur){
   legend.innerHTML += '<span>High</span>';
   hContainer.appendChild(legend);
 
-  // ── YoY % Growth cards ──
+  // -- YoY % Growth cards --
   yoyContainer.innerHTML = '';
   renderYoYStrip(yoyContainer, byYM, years, sym, cur);
 }
 
-// ── Shared YoY strip renderer (used by both expenses and income heatmaps) ──
+// -- Shared YoY strip renderer (used by both expenses and income heatmaps) --
 function renderYoYStrip(container, byYM, years, sym, cur) {
   if (!container) return;
   if (!years.length) return;
@@ -6138,9 +6138,9 @@ function renderYoYStrip(container, byYM, years, sym, cur) {
 function chartOpts(){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{family:'DM Mono',size:10},boxWidth:12}},tooltip:{callbacks:{label:function(ctx){return' '+fmtNum(ctx.parsed.y!=null?ctx.parsed.y:ctx.parsed);}}}},scales:{x:{ticks:{font:{family:'DM Mono',size:10}},grid:{color:'#e8e0d0'}},y:{ticks:{font:{family:'DM Mono',size:10}},grid:{color:'#e8e0d0'}}}};}
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
-// ════════════════════════════════
+// ================================
 //  PARSE DATE VALIDATION
-// ════════════════════════════════
+// ================================
 function expSendSkippedToTrashAndGo() {
   // Send skipped lines to recycle bin NOW (user chose to proceed)
   if (skippedLines && skippedLines.length) {
@@ -6162,7 +6162,7 @@ function expSendSkippedToTrashAndGo() {
   switchTab('categorize', null);
 }
 
-// ── Ctrl+Enter actions for Import textareas ──
+// -- Ctrl+Enter actions for Import textareas --
 function expCtrlEnterAction() {
   _notePadActive = false; // ensure notepad state is reset
   var okRow = document.getElementById('ps-ok-row');
@@ -6183,9 +6183,9 @@ function incCtrlEnterAction() {
 }
 
 
-// ══════════════════════════════════════════════════════════════════
-// ── CATEGORIZE CHECKBOX SELECTION — Expenses ─────────────────────
-// ══════════════════════════════════════════════════════════════════
+// ==================================================================
+// -- CATEGORIZE CHECKBOX SELECTION — Expenses --------------------─
+// ==================================================================
 
 function _getCatCheckedItems() {
   // Returns array of item objects that are currently checked
@@ -6266,9 +6266,9 @@ function _updateCatSelAllBtn() {
   btn.title = _catAllSelected ? 'Deselect all' : 'Select all';
 }
 
-// ══════════════════════════════════════════════════════════════════
-// ── CATEGORIZE CHECKBOX SELECTION — Income ───────────────────────
-// ══════════════════════════════════════════════════════════════════
+// ==================================================================
+// -- CATEGORIZE CHECKBOX SELECTION — Income ----------------------─
+// ==================================================================
 
 function _getIncCatCheckedItemObjects() {
   var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
@@ -6328,7 +6328,7 @@ function _updateIncCatSelAllBtn() {
   btn.title = _incCatAllSelected ? 'Deselect all' : 'Select all';
 }
 
-// ── Sort toggle for Expenses Categorize ──
+// -- Sort toggle for Expenses Categorize --
 var _catSortNewest = true; // default: newest first
 function toggleCatSort() {
   _catSortNewest = !_catSortNewest;
@@ -6337,7 +6337,7 @@ function toggleCatSort() {
   renderCategorizeTable();
 }
 
-// ── Sort toggle for Income Categorize ──
+// -- Sort toggle for Income Categorize --
 var _incCatSortNewest = true; // default: newest first
 function toggleIncCatSort() {
   _incCatSortNewest = !_incCatSortNewest;
@@ -6350,7 +6350,7 @@ function validateParsedDates() {
   var statsDiv = document.getElementById('parse-stats');
   statsDiv.style.display = 'block';
 
-  // ── Skipped lines panel ──
+  // -- Skipped lines panel --
   var skippedDiv   = document.getElementById('ps-skipped');
   var skippedList  = document.getElementById('ps-skipped-list');
   var skippedCount = document.getElementById('ps-skipped-count');
@@ -6373,7 +6373,7 @@ function validateParsedDates() {
     skippedDiv.style.display = 'none';
   }
 
-  // ── No more yellow mismatch panel — wrong dates go to recycle bin at parse time ──
+  // -- No more yellow mismatch panel — wrong dates go to recycle bin at parse time --
   // Show ok-row always (skipped lines are warnings, not blockers)
   var okRow = document.getElementById('ps-ok-row');
   var mismatchDiv = document.getElementById('ps-mismatch');
@@ -6443,9 +6443,9 @@ function proceedWithAll() {
   switchTab('categorize', null);
 }
 
-// ════════════════════════════════
+// ================================
 //  CATEGORIZE — DESC SEARCH + BULK ASSIGN
-// ════════════════════════════════
+// ================================
 var catDescFilter = '';
 
 function applyCatDescSearch() {
@@ -6532,9 +6532,9 @@ function bulkAssignFiltered() {
   renderCategorizeTable();
 }
 
-// ════════════════════════════════
+// ================================
 //  CATEGORIZE — CATEGORY FILTER
-// ════════════════════════════════
+// ================================
 function populateCatCategoryFilter() {
   var sel = document.getElementById('cat-cat-filter');
   if (!sel) return;
@@ -6557,9 +6557,9 @@ function getCatCategoryFilter() {
   return sel ? sel.value : 'all';
 }
 
-// ════════════════════════════════
+// ================================
 //  DAILY VIEW — SORT TOGGLE
-// ════════════════════════════════
+// ================================
 var dailySortAsc = true;
 function toggleDailySort() {
   dailySortAsc = !dailySortAsc;
@@ -6568,9 +6568,9 @@ function toggleDailySort() {
   renderDailyView();
 }
 
-// ════════════════════════════════
+// ================================
 //  LEDGER — BULK ASSIGN
-// ════════════════════════════════
+// ================================
 var ledgerBulkFilter = '';
 var _ledSearchTimer = null;
 var _ledExcludedIds = {}; // IDs excluded from current expense search view
@@ -6729,12 +6729,12 @@ function ledgerBulkAssign() {
   renderLedger();
 }
 
-// ════════════════════════════════
+// ================================
 //  RENAME CATEGORY MODAL
-// ════════════════════════════════
-// ══════════════════════════════════════════════════════════════
-// ── LEDGER CHECKBOX ACTIONS ───────────────────────────────────
-// ══════════════════════════════════════════════════════════════
+// ================================
+// ==============================================================
+// -- LEDGER CHECKBOX ACTIONS ----------------------------------─
+// ==============================================================
 var _ledAllSelected = false;
 
 function _updateLedSelAllBtn() {
@@ -6893,7 +6893,7 @@ document.addEventListener('click', function(e) {
   if (incModal && incModal.style.display === 'flex' && e.target === incModal) closeIncomeRenameModal();
 });
 
-// ── Income Rename Category ──
+// -- Income Rename Category --
 function openIncomeRenameModal() {
   var sel = document.getElementById('inc-rename-from');
   sel.innerHTML = '';
@@ -6950,13 +6950,13 @@ function deleteIncCategoryFromModal() {
   incPopulateFilters();
 }
 
-// ════════════════════════════════
+// ================================
 //  LEDGER
-// ════════════════════════════════
+// ================================
 
-// ════════════════════════════════
+// ================================
 //  LEDGER EXPAND / COLLAPSE ALL
-// ════════════════════════════════
+// ================================
 var _ledAllExpanded = false;
 function ledgerExpandAll() { /* no longer needed — flat table */ }
 
@@ -7050,7 +7050,7 @@ function renderLedger(){
 
   acc.innerHTML = '';
 
-  // ── Summary bar ──
+  // -- Summary bar --
   var sumBar = document.createElement('div');
   sumBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--paper2);border:1px solid var(--border);border-radius:4px 4px 0 0;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);flex-wrap:wrap;gap:6px;';
   var totals = {};
@@ -7065,7 +7065,7 @@ function renderLedger(){
     '<span style="display:flex;gap:6px;flex-wrap:wrap;">'+totStr+'</span>';
   acc.appendChild(sumBar);
 
-  // ── Table ──
+  // -- Table --
   var tbl = document.createElement('table');
   tbl.style.cssText = 'width:100%;border-collapse:collapse;background:white;border:1px solid var(--border);border-top:none;';
 
@@ -7155,7 +7155,7 @@ function renderLedger(){
   tbl.appendChild(tbody);
   acc.appendChild(tbl);
 
-  // ── Pagination bar ──
+  // -- Pagination bar --
   if (data.length > PAGE) {
     var totalPages = Math.ceil(data.length / PAGE);
     var pagBar = document.createElement('div');
@@ -7312,9 +7312,9 @@ function clearAllCancel(){
   if (conf) conf.style.display = 'none';
 }
 
-// ════════════════════════════════
+// ================================
 //  MANAGE
-// ════════════════════════════════
+// ================================
 
 function renderUserProfileCard() {
   var initEl  = document.getElementById('profile-avatar-emoji');
@@ -7608,9 +7608,9 @@ function exportCSV(){
   showToast('Exported expenses.csv');
 }
 
-// ════════════════════════════════
+// ================================
 //  UTILS
-// ════════════════════════════════
+// ================================
 function importCSV(event) {
   var file = event.target.files[0];
   if (!file) return;
@@ -7812,9 +7812,9 @@ function populateFilters(){
 }
 
 
-// ════════════════════════════════
+// ================================
 //  INACTIVITY AUTO-LOCK — silent, timestamp-based
-// ════════════════════════════════
+// ================================
 var INACTIVE_MS      = 10 * 60 * 1000; // 10 minutes — silent lock, no countdown
 var _inactivityTimer = null; // unused but kept for compatibility
 
@@ -7853,7 +7853,7 @@ function checkInactivity() {
   }, { passive: true });
 });
 
-// ── 1-second ticker — this is what reliably drives the lock ──
+// -- 1-second ticker — this is what reliably drives the lock --
 // Runs every second so it fires promptly at exactly 10 minutes.
 // Browser throttling only affects tabs in background — but visibilitychange
 // handles that case by checking elapsed time on return.
@@ -7862,9 +7862,9 @@ setInterval(function() {
 }, 1000);
 
 
-// ════════════════════════════════
+// ================================
 //  RECYCLE BIN
-// ════════════════════════════════
+// ================================
 var TRASH_KEY = 'expense_trash'; // base key, actual key is per-user
 
 function pushTrashToFirebase() {
@@ -7901,7 +7901,7 @@ function fetchTrashFromFirebase() {
   });
 }
 
-// ── Income trash Firebase sync ──
+// -- Income trash Firebase sync --
 function pushIncTrashToFirebase() {
   if (!_db || !_userId) return;
   window._incTrashDeletePending = true;
@@ -8154,17 +8154,35 @@ function renderTrashPanel() {
   // Summary
   var sumDiv = document.createElement('div');
   sumDiv.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--paper2);border:1px solid var(--border);border-radius:4px 4px 0 0;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);flex-wrap:wrap;gap:6px;';
-  sumDiv.innerHTML = '<span>'+filtered.length+' of '+trash.length+' items</span>';
-  if (trash.length > 0) {
-    var emptyBtn = document.createElement('button');
-    emptyBtn.className = 'btn btn-danger';
-    emptyBtn.style.cssText = 'padding:4px 10px;font-size:0.7rem;';
-    emptyBtn.textContent = '🗑 Empty bin';
-    emptyBtn.addEventListener('click', function(){
-      if (trash.length > 0) clearAllTrash();
-    });
-    sumDiv.appendChild(emptyBtn);
-  }
+  sumDiv.innerHTML = '<span>'+filtered.length+' of '+trash.length+' items &nbsp;<span id="trash-sel-count" style="color:var(--gold);"></span></span>';
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+  var selAllBtn = document.createElement('button');
+  selAllBtn.id = 'trash-selall-btn';
+  selAllBtn.className = 'cb-action-btn cb-sel-btn';
+  selAllBtn.style.cssText = 'padding:4px 10px;font-size:0.7rem;';
+  selAllBtn.textContent = '☐ All';
+  selAllBtn.addEventListener('click', _trashToggleAll);
+  var restSelBtn = document.createElement('button');
+  restSelBtn.className = 'btn btn-ghost';
+  restSelBtn.style.cssText = 'padding:4px 10px;font-size:0.7rem;color:var(--sage);border-color:var(--sage);';
+  restSelBtn.textContent = '↩ Restore';
+  restSelBtn.addEventListener('click', _trashRestoreSelected);
+  var delSelBtn = document.createElement('button');
+  delSelBtn.className = 'btn btn-danger';
+  delSelBtn.style.cssText = 'padding:4px 10px;font-size:0.7rem;';
+  delSelBtn.textContent = '✕ Delete';
+  delSelBtn.addEventListener('click', _trashDeleteSelected);
+  var emptyBtn = document.createElement('button');
+  emptyBtn.className = 'btn btn-danger';
+  emptyBtn.style.cssText = 'padding:4px 10px;font-size:0.7rem;opacity:0.7;';
+  emptyBtn.textContent = '🗑 Empty bin';
+  emptyBtn.addEventListener('click', function(){ if (trash.length > 0) clearAllTrash(); });
+  btnRow.appendChild(selAllBtn);
+  btnRow.appendChild(restSelBtn);
+  btnRow.appendChild(delSelBtn);
+  btnRow.appendChild(emptyBtn);
+  sumDiv.appendChild(btnRow);
   el.appendChild(sumDiv);
 
   // Table
@@ -8176,7 +8194,7 @@ function renderTrashPanel() {
       '<th style="padding:4px 6px;text-align:left;font-family:Arial,sans-serif;font-size:0.68rem;font-weight:600;border-right:1px solid #4a3e35;">DESCRIPTION</th>'+
       '<th style="padding:4px 6px;text-align:right;font-family:Arial,sans-serif;font-size:0.68rem;font-weight:600;border-right:1px solid #4a3e35;">AMOUNT</th>'+
       '<th style="padding:4px 6px;text-align:left;font-family:Arial,sans-serif;font-size:0.68rem;font-weight:600;border-right:1px solid #4a3e35;">SOURCE</th>'+
-      '<th style="padding:4px 6px;font-family:Arial,sans-serif;font-size:0.68rem;font-weight:600;">ACTION</th>'+
+      '<th style="padding:4px 6px;font-family:Arial,sans-serif;font-size:0.68rem;font-weight:600;text-align:center;width:28px;">☐</th>'+
     '</tr></thead>';
 
   var tbody = document.createElement('tbody');
@@ -8244,23 +8262,13 @@ function renderTrashPanel() {
     srcTd.appendChild(srcBadge);
 
     var actionTd = document.createElement('td');
-    actionTd.style.cssText = 'padding:2px 4px;white-space:nowrap;';
-    var rb = document.createElement('button');
-    if (isSkipped) {
-      rb.style.cssText = 'padding:1px 5px;font-size:0.65rem;color:var(--slate);border:1px solid var(--slate);border-radius:2px;background:none;cursor:pointer;margin-right:3px;font-weight:700;';
-      rb.textContent = '↩'; rb.title = 'Send back to Import notepad to fix';
-    } else {
-      rb.style.cssText = 'padding:1px 5px;font-size:0.65rem;color:var(--sage);border:1px solid var(--sage);border-radius:2px;background:none;cursor:pointer;margin-right:3px;font-weight:700;';
-      rb.textContent = '↩'; rb.title = 'Restore to ledger';
-    }
-    rb.addEventListener('click', function(){ restoreFromTrash(item._trash_id); });
-    actionTd.appendChild(rb);
-    var pb = document.createElement('button');
-    pb.style.cssText = 'padding:1px 6px;font-size:0.65rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;';
-    pb.textContent = 'DEL';
-    pb.addEventListener('click', function(){ permanentDelete(item._trash_id); });
-    actionTd.appendChild(pb);
-
+    actionTd.style.cssText = 'padding:2px 6px;text-align:center;';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.className = 'trash-row-cb';
+    cb.setAttribute('data-trash-id', item._trash_id);
+    cb.style.cssText = 'width:15px;height:15px;cursor:pointer;accent-color:var(--rust);';
+    cb.addEventListener('change', _trashUpdateSelCount);
+    actionTd.appendChild(cb);
     tr.appendChild(dateTd); tr.appendChild(descTd); tr.appendChild(amtTd);
     tr.appendChild(srcTd); tr.appendChild(actionTd);
     tbody.appendChild(tr);
@@ -8270,9 +8278,9 @@ function renderTrashPanel() {
 }
 
 
-// ════════════════════════════════════════════════════
+// ====================================================
 //  HEADER SEARCH
-// ════════════════════════════════════════════════════
+// ====================================================
 var _hdrSearchTimer = null;
 
 function hdrSearchInput(val) {
@@ -8362,9 +8370,9 @@ function hdrSearchViewAll() {
 }
 
 
-// ════════════════════════════════════════════════════
+// ====================================================
 //  BUDGET TARGETS
-// ════════════════════════════════════════════════════
+// ====================================================
 var _budgets = {}; // { 'YYYY-MM|currency': { category: amount } }
 
 function loadBudgets() {
@@ -8662,9 +8670,9 @@ function setBudget(key, category, value) {
 }
 
 
-// ════════════════════════════════════════════════════
+// ====================================================
 //  PDF MONTHLY REPORT
-// ════════════════════════════════════════════════════
+// ====================================================
 
 function generateIncomePDFReport() {
   var data = loadIncomeData();
@@ -8892,9 +8900,9 @@ function generatePDFReport() {
 
 
 
-// ════════════════════════════════
+// ================================
 //  USERNAME GENERATION
-// ════════════════════════════════
+// ================================
 var _selectedUsername = '';
 
 function generateUsernameOptions(fullName) {
@@ -9035,9 +9043,9 @@ function selectCustomUsername() {
   errEl.style.color = '#4a7c59';
 }
 
-// ════════════════════════════════
+// ================================
 //  CHANGE USERNAME IN MANAGE
-// ════════════════════════════════
+// ================================
 function saveFullName() {
   var expInp = document.getElementById('change-fullname-input');
   var incInp = document.getElementById('inc-change-fullname-input');
@@ -9058,9 +9066,9 @@ function saveFullName() {
 function onTitleSelectChange() {} // no-op — title removed
 function populateTitleSelector() {} // no-op — title removed
 
-// ════════════════════════════════
+// ================================
 //  CURRENCY MANAGER
-// ════════════════════════════════
+// ================================
 function renderCurrencyManager() {
   var el = document.getElementById('currency-manager-content');
   if (!el) return;
@@ -9176,9 +9184,9 @@ function changeUsername() {
 }
 
 
-// ════════════════════════════════
+// ================================
 //  CSV BACKUP REMINDER
-// ════════════════════════════════
+// ================================
 var BACKUP_FREQ_KEY      = 'expense_backup_frequency';
 var BACKUP_LAST_KEY      = 'expense_backup_last';
 
@@ -9244,9 +9252,9 @@ function dismissBackupPrompt() {
 var _origExportCSV = null;
 
 
-// ════════════════════════════════════════════════════
+// ====================================================
 //  INCOME MODULE
-// ════════════════════════════════════════════════════
+// ====================================================
 
 var _appMode = 'expenses'; // 'expenses' | 'income'
 var APP_MODE_KEY = 'expense_app_mode';
@@ -9275,7 +9283,7 @@ var incPickerYear  = new Date().getFullYear();
 var incPickerMonth = new Date().getMonth() + 1;
 var incPendingItems = [];
 
-// ── Storage ──
+// -- Storage --
 var INC_LEDGER_KEY = 'income_ledger'; // base key - made user-specific via getIncKey()
 var INC_TRASH_KEY  = 'income_trash';
 var INC_CATS_KEY   = 'income_custom_categories';
@@ -9324,7 +9332,7 @@ function getIncCatColor(cat) {
   return CAT_COLORS_FB[_hashStr(cat) % CAT_COLORS_FB.length];
 }
 
-// ── Firebase sync for income ──
+// -- Firebase sync for income --
 function syncIncomeToFirebase() {
   if (!_db || !_userId) return;
   // Set pending flag to block listener from restoring during our own push
@@ -9390,7 +9398,7 @@ function loadIncomeFromFirebase(cb) {
   }).catch(function(){ if(cb) cb(); });
 }
 
-// ── Mode switching ──
+// -- Mode switching --
 function showModeOverlay() {
   var o = document.getElementById('mode-overlay');
   if (o) o.style.display = 'flex';
@@ -9409,7 +9417,7 @@ function selectMode(mode) {
   setTimeout(function(){ startOnboarding(mode, false); }, 400);
 }
 
-// ── Inline switch prompt ──
+// -- Inline switch prompt --
 function showModeSwitchPrompt() {
   var existing = document.getElementById('mode-switch-prompt');
   if (existing) { existing.remove(); return; } // toggle off
@@ -9449,7 +9457,7 @@ function showModeSwitchPrompt() {
     if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); hideSwitchPrompt(); }
   });
 
-  // ── Dedicated Escape listener — capture phase on document ──
+  // -- Dedicated Escape listener — capture phase on document --
   function onEscape(ev) {
     if (ev.key === 'Escape') {
       ev.preventDefault();
@@ -9587,7 +9595,7 @@ function updateIncomeHeaderContext(selYearParam, selMonthParam) {
   }
 }
 
-// ── Income tab switching ──
+// -- Income tab switching --
 function switchIncomeTab(name, btn) {
   document.querySelectorAll('#income-main .panel').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('#income-nav button').forEach(function(b){ b.classList.remove('active'); });
@@ -9613,7 +9621,7 @@ function switchIncomeTab(name, btn) {
   }
 }
 
-// ── Income month picker ──
+// -- Income month picker --
 function incChangeYear(delta) {
   incPickerYear += delta;
   document.getElementById('inc-picker-year-display').textContent = incPickerYear;
@@ -9708,7 +9716,7 @@ function loadIncomeSample() {
   document.getElementById('inc-import-period-label').textContent = 'March 2026';
 }
 
-// ── Income auto-category ──
+// -- Income auto-category --
 function autoCategoryIncome(desc) {
   var d = desc.toLowerCase();
   // Check custom rules first
@@ -9723,7 +9731,7 @@ function autoCategoryIncome(desc) {
   return 'Other';
 }
 
-// ── Income parser ── supports both : and tab separators
+// -- Income parser -- supports both : and tab separators
 // Income F&R
 var incFnrMatches = [];
 var incFnrCurrent = -1;
@@ -10125,7 +10133,7 @@ function parseIncomeInput() {
   renderIncomeCatTable();
 }
 
-// ── Income categorize ──
+// -- Income categorize --
 var incCatViewMode = 'pending';
 var incCatEditItems = [];
 
@@ -10347,7 +10355,7 @@ function saveAllPendingIncome() {
   incPopulateFilters();
 }
 
-// ── Income Monthly View ──
+// -- Income Monthly View --
 function incPopulateDailyFilters() {
   var data = loadIncomeData();
   var years = []; data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }); years.sort().reverse();
@@ -10549,7 +10557,7 @@ function renderIncomeMonthly() {
 }
 
 
-// ── Income Dashboard ──
+// -- Income Dashboard --
 var incCharts = {};
 function renderIncomeDashboard() {
   var data = loadIncomeData();
@@ -10867,7 +10875,7 @@ function renderIncomeHeatmap(data, cur, skipYoY) {
   leg.innerHTML='<span>Low</span>'; pal.forEach(function(c){ leg.innerHTML+='<span style="display:inline-block;width:20px;height:10px;border-radius:2px;background:'+c+';"></span>'; }); leg.innerHTML+='<span>High</span>';
   hc.appendChild(leg);
 
-  // ── YoY growth for income (skipped when called from multi-currency loop) ──
+  // -- YoY growth for income (skipped when called from multi-currency loop) --
   if (!skipYoY) {
     var incYoyContainer = document.getElementById('inc-yoy-growth-container');
     if (incYoyContainer) {
@@ -10878,7 +10886,7 @@ function renderIncomeHeatmap(data, cur, skipYoY) {
 }
 
 
-// ── Income Ledger ──
+// -- Income Ledger --
 function incPopulateFilters() {
   var data = loadIncomeData();
   var years = []; data.forEach(function(i){ var y=i.date.substring(0,4); if(years.indexOf(y)===-1) years.push(y); }); years.sort().reverse();
@@ -11148,9 +11156,9 @@ function incomeBulkAssign() {
   showToast(count + ' income entr'+(count===1?'y':'ies')+' assigned to "'+newCat+'"');
 }
 
-// ══════════════════════════════════════════════════════════════
-// ── INCOME LEDGER CHECKBOX ACTIONS ───────────────────────────
-// ══════════════════════════════════════════════════════════════
+// ==============================================================
+// -- INCOME LEDGER CHECKBOX ACTIONS --------------------------─
+// ==============================================================
 var _incLedAllSelected = false;
 
 function _updateIncLedSelAllBtn() {
@@ -11231,7 +11239,7 @@ function clearIncomeLedgerFilters() {
   renderIncomeLedger();
 }
 
-// ── Income Manage ──
+// -- Income Manage --
 function renderIncomeManage() {
   var data = loadIncomeData();
   var totalEl = document.getElementById('inc-manage-total');
@@ -11543,7 +11551,20 @@ function renderIncomeTrash() {
 
   var tbl = document.createElement('table');
   tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:0.72rem;background:white;border:1px solid #c0c0c0;';
-  tbl.innerHTML = '<thead><tr style="background:var(--ink);color:var(--paper);"><th style="padding:5px 7px;font-size:0.65rem;">DATE</th><th style="padding:5px 7px;font-size:0.65rem;">DESCRIPTION</th><th style="padding:5px 7px;font-size:0.65rem;text-align:right;">AMOUNT</th><th style="padding:5px 7px;font-size:0.65rem;">ACTION</th></tr></thead>';
+  // Summary bar with bulk action buttons
+  var incSumDiv = document.createElement('div');
+  incSumDiv.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--paper2);border:1px solid var(--border);border-radius:4px 4px 0 0;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);flex-wrap:wrap;gap:6px;';
+  incSumDiv.innerHTML = '<span>'+filtered.length+' items &nbsp;<span id="inc-trash-sel-count" style="color:var(--gold);"></span></span>';
+  var incBtnRow = document.createElement('div'); incBtnRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+  var iSelAllBtn = document.createElement('button'); iSelAllBtn.id='inc-trash-selall-btn'; iSelAllBtn.className='cb-action-btn cb-sel-btn'; iSelAllBtn.style.cssText='padding:4px 10px;font-size:0.7rem;'; iSelAllBtn.textContent='☐ All'; iSelAllBtn.addEventListener('click',_incTrashToggleAll);
+  var iRestBtn = document.createElement('button'); iRestBtn.className='btn btn-ghost'; iRestBtn.style.cssText='padding:4px 10px;font-size:0.7rem;color:var(--sage);border-color:var(--sage);'; iRestBtn.textContent='↩ Restore'; iRestBtn.addEventListener('click',_incTrashRestoreSelected);
+  var iDelBtn = document.createElement('button'); iDelBtn.className='btn btn-danger'; iDelBtn.style.cssText='padding:4px 10px;font-size:0.7rem;'; iDelBtn.textContent='✕ Delete'; iDelBtn.addEventListener('click',_incTrashDeleteSelected);
+  var iEmptyBtn = document.createElement('button'); iEmptyBtn.className='btn btn-danger'; iEmptyBtn.style.cssText='padding:4px 10px;font-size:0.7rem;opacity:0.7;'; iEmptyBtn.textContent='🗑 Empty bin'; iEmptyBtn.addEventListener('click',function(){ if(confirm('Empty income recycle bin?')){ localStorage.setItem(getIncTrashKey(),'[]'); pushIncTrashToFirebase(); renderIncomeTrash(); }});
+  incBtnRow.appendChild(iSelAllBtn); incBtnRow.appendChild(iRestBtn); incBtnRow.appendChild(iDelBtn); incBtnRow.appendChild(iEmptyBtn);
+  incSumDiv.appendChild(incBtnRow);
+  el.appendChild(incSumDiv);
+
+  tbl.innerHTML = '<thead><tr style="background:var(--ink);color:var(--paper);"><th style="padding:5px 7px;font-size:0.65rem;">DATE</th><th style="padding:5px 7px;font-size:0.65rem;">DESCRIPTION</th><th style="padding:5px 7px;font-size:0.65rem;text-align:right;">AMOUNT</th><th style="padding:5px 7px;font-size:0.65rem;text-align:center;width:28px;">☐</th></tr></thead>';
   var tbody = document.createElement('tbody');
 
   // Group rows
@@ -11599,20 +11620,79 @@ function renderIncomeTrash() {
         restoreIncomeItem(t._trash_id);
       }
     }); })(item);
-    actTd.appendChild(rb2);
-    var pb = document.createElement('button'); pb.style.cssText = 'padding:1px 6px;font-size:0.65rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;'; pb.textContent = 'DEL';
-    (function(t){ pb.addEventListener('click', function(){
-      var tr2 = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
-      localStorage.setItem(getIncTrashKey(), JSON.stringify(tr2));
-      pushIncTrashToFirebase();
-      renderIncomeTrash();
-    }); })(item);
-    actTd.appendChild(pb);
+    var incCb = document.createElement('input');
+    incCb.type = 'checkbox'; incCb.className = 'inc-trash-row-cb';
+    incCb.setAttribute('data-trash-id', item._trash_id);
+    incCb.style.cssText = 'width:15px;height:15px;cursor:pointer;accent-color:var(--sage);';
+    incCb.addEventListener('change', _incTrashUpdateSelCount);
+    actTd.innerHTML = '';
+    actTd.style.cssText = 'padding:2px 6px;text-align:center;';
+    actTd.appendChild(incCb);
     tr.appendChild(dateTd); tr.appendChild(descTd); tr.appendChild(amtTd); tr.appendChild(actTd);
     tbody.appendChild(tr);
   });
   tbl.appendChild(tbody);
   el.appendChild(tbl);
+}
+
+
+// ==============================================================
+// -- TRASH CHECKBOX HELPERS — Expenses ------------------------
+// ==============================================================
+var _trashAllSel = false;
+function _trashUpdateSelCount() {
+  var cbs   = document.querySelectorAll('#trash-content .trash-row-cb');
+  var checked = document.querySelectorAll('#trash-content .trash-row-cb:checked');
+  var el = document.getElementById('trash-sel-count');
+  if (el) el.textContent = checked.length > 0 ? checked.length + ' selected' : '';
+  var btn = document.getElementById('trash-selall-btn');
+  if (btn) { _trashAllSel = checked.length === cbs.length && cbs.length > 0; btn.textContent = _trashAllSel ? '☑ None' : '☐ All'; }
+}
+function _trashToggleAll() {
+  _trashAllSel = !_trashAllSel;
+  document.querySelectorAll('#trash-content .trash-row-cb').forEach(function(cb){ cb.checked = _trashAllSel; });
+  _trashUpdateSelCount();
+}
+function _trashRestoreSelected() {
+  var ids = Array.from(document.querySelectorAll('#trash-content .trash-row-cb:checked')).map(function(cb){ return cb.getAttribute('data-trash-id'); });
+  if (!ids.length) { showToast('Check some items first'); return; }
+  ids.forEach(function(id){ restoreFromTrash(id); });
+}
+function _trashDeleteSelected() {
+  var ids = Array.from(document.querySelectorAll('#trash-content .trash-row-cb:checked')).map(function(cb){ return cb.getAttribute('data-trash-id'); });
+  if (!ids.length) { showToast('Check some items first'); return; }
+  if (!confirm('Permanently delete ' + ids.length + ' item' + (ids.length===1?'':'s') + '?')) return;
+  ids.forEach(function(id){ permanentDelete(id); });
+}
+
+// -- TRASH CHECKBOX HELPERS — Income --------------------------
+var _incTrashAllSel = false;
+function _incTrashUpdateSelCount() {
+  var cbs = document.querySelectorAll('#inc-trash-content .inc-trash-row-cb');
+  var checked = document.querySelectorAll('#inc-trash-content .inc-trash-row-cb:checked');
+  var el = document.getElementById('inc-trash-sel-count');
+  if (el) el.textContent = checked.length > 0 ? checked.length + ' selected' : '';
+  var btn = document.getElementById('inc-trash-selall-btn');
+  if (btn) { _incTrashAllSel = checked.length === cbs.length && cbs.length > 0; btn.textContent = _incTrashAllSel ? '☑ None' : '☐ All'; }
+}
+function _incTrashToggleAll() {
+  _incTrashAllSel = !_incTrashAllSel;
+  document.querySelectorAll('#inc-trash-content .inc-trash-row-cb').forEach(function(cb){ cb.checked = _incTrashAllSel; });
+  _incTrashUpdateSelCount();
+}
+function _incTrashRestoreSelected() {
+  var ids = Array.from(document.querySelectorAll('#inc-trash-content .inc-trash-row-cb:checked')).map(function(cb){ return cb.getAttribute('data-trash-id'); });
+  if (!ids.length) { showToast('Check some items first'); return; }
+  ids.forEach(function(id){ restoreIncomeItem(id); });
+}
+function _incTrashDeleteSelected() {
+  var ids = Array.from(document.querySelectorAll('#inc-trash-content .inc-trash-row-cb:checked')).map(function(cb){ return cb.getAttribute('data-trash-id'); });
+  if (!ids.length) { showToast('Check some items first'); return; }
+  if (!confirm('Permanently delete ' + ids.length + ' item' + (ids.length===1?'':'s') + '?')) return;
+  var trash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(t){ return ids.indexOf(String(t._trash_id)) === -1; });
+  localStorage.setItem(getIncTrashKey(), JSON.stringify(trash));
+  pushIncTrashToFirebase();
+  renderIncomeTrash();
 }
 
 function restoreIncomeItem(trashId) {
@@ -11661,7 +11741,7 @@ function deleteIncomeGroup(gid) {
 }
 
 
-// ── GitHub Pages update notifier ──
+// -- GitHub Pages update notifier --
 var _appVersion = document.documentElement.innerHTML.length; // simple hash
 function checkForAppUpdate() {
   if (!_userId) return;
@@ -11735,20 +11815,20 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 
-// ── Get full name for reports ──
+// -- Get full name for reports --
 function getReportName() {
   return localStorage.getItem(FULL_NAME_KEY) || _userName || 'Account Holder';
 }
 
 
-// ════════════════════════════════════════════════
+// ================================================
 //  PIN PAD + LOGIN SYSTEM
-// ════════════════════════════════════════════════
+// ================================================
 
 var _pinBuffer = '';   // digits entered so far on the PIN pad
 var FULL_VERIFY_KEY = 'expense_last_full_verify'; // localStorage key
 
-// ── IndexedDB session store — survives localStorage clearing on laptop ──
+// -- IndexedDB session store — survives localStorage clearing on laptop --
 var _FL_IDB = 'fl_session_db';
 var _FL_STORE = 'session';
 function _idbOpen(cb){try{var r=indexedDB.open(_FL_IDB,1);r.onupgradeneeded=function(e){e.target.result.createObjectStore(_FL_STORE)};r.onsuccess=function(e){cb(null,e.target.result)};r.onerror=function(e){cb(e,null)}}catch(e){cb(e,null)}}
@@ -11811,7 +11891,7 @@ function recordFullVerify() {
   }
 }
 
-// ── PIN pad button handlers ──
+// -- PIN pad button handlers --
 function pinPadPress(digit) {
   if (_pinBuffer.length >= 8) return;
   _pinBuffer += digit;
@@ -11837,7 +11917,7 @@ function pinPadClear() {
   var er = document.getElementById('login-error'); if(er) er.textContent = '';
 }
 
-// ── Keyboard support for PIN pad ──
+// -- Keyboard support for PIN pad --
 document.addEventListener('keydown', function(e) {
   var overlay = document.getElementById('pin-overlay');
   var loginStep = document.getElementById('pin-step-login');
@@ -11873,7 +11953,7 @@ function updatePinDots() {
   }
 }
 
-// ── PIN-only login (local hash check — instant) ──
+// -- PIN-only login (local hash check — instant) --
 function submitPinLogin() {
   // Established users (have UID + PIN hash) skip T&C check — they already signed it
   var isEstablished = !!(localStorage.getItem(UID_KEY) && localStorage.getItem('expense_pin_hash_local'));
@@ -11947,8 +12027,8 @@ function submitPinLogin() {
   // NOTE: onboarding/privacy handled by post-login sequence
 }
 
-// ── Full verify (username OR phone + PIN, against Firebase) ──
-// ── PIN eye icon — hold to reveal, release to hide ──
+// -- Full verify (username OR phone + PIN, against Firebase) --
+// -- PIN eye icon — hold to reveal, release to hide --
 function showPin(inputId, btnId) {
   var inp = document.getElementById(inputId);
   var btn = document.getElementById(btnId);
@@ -11962,7 +12042,7 @@ function hidePin(inputId, btnId) {
   if (btn) btn.style.color = '#6b5e50';
 }
 
-// ── Full verify PIN — custom dot display (no digits ever shown while typing) ──
+// -- Full verify PIN — custom dot display (no digits ever shown while typing) --
 function fvPinInput() { /* no-op — direct password input now used */ }
 
 function fvPinReveal(show) {
@@ -12039,7 +12119,7 @@ function submitFullVerify() {
     return true;
   }
 
-  // ── Offline fallback: if we have local PIN hash, verify without Firebase ──
+  // -- Offline fallback: if we have local PIN hash, verify without Firebase --
   var localPinHash = localStorage.getItem('expense_pin_hash_local');
   var localUid     = localStorage.getItem(UID_KEY);
   var localName    = localStorage.getItem(NAME_KEY);
@@ -12112,7 +12192,7 @@ function autoRetryFullVerify(errEl) {
   }
 }
 
-// ── showLoginStep: show PIN pad or full-verify depending on check ──
+// -- showLoginStep: show PIN pad or full-verify depending on check --
 function showLoginStep() {
   document.getElementById('pin-step-register').style.display   = 'none';
   document.getElementById('pin-step-code').style.display       = 'none';
@@ -12213,7 +12293,7 @@ function showFullVerifyStep() {
   setTimeout(function(){ var u = document.getElementById('fv-username'); if(u) u.focus(); }, 80);
 }
 
-// ── _resumeSession: enter app immediately, fire Firebase sync in background ──
+// -- _resumeSession: enter app immediately, fire Firebase sync in background --
 function _resumeSession(uid, name, phone) {
   _userId = uid; _userName = name; _userPhone = phone;
   // Clear any previous guest mode state
@@ -12244,7 +12324,7 @@ function _resumeSession(uid, name, phone) {
   _isGuestMode = false;
   _restoreFullTabs();
 
-  // ── Age-based mode check ──
+  // -- Age-based mode check --
   // If DOB confirmed and user is underage → apply guest mode immediately
   var confirmedDob = localStorage.getItem('expense_user_dob_'+(_userId||'default'));
   if (confirmedDob && _isUnderage(confirmedDob)) {
@@ -12270,7 +12350,7 @@ function _resumeSession(uid, name, phone) {
   setTimeout(function() { checkInactivity(); }, 500);
   setTimeout(checkBackupReminder, 3000);
 
-  // ── POST-LOGIN SEQUENCE ───────────────────────────────────────────────────
+  // -- POST-LOGIN SEQUENCE --------------------------------------------------─
   // We wait for Firebase profile/onboarding data to load FIRST,
   // then decide what still needs to run. This prevents re-triggering
   // things the user has already completed on another device.
@@ -12315,10 +12395,10 @@ function _resumeSession(uid, name, phone) {
     updateHeaderContext();
     renderMonthPicker();
     populateFilters();
-    // ── Restore recycle bins from Firebase on every login ──
+    // -- Restore recycle bins from Firebase on every login --
     if (!window._trashDeletePending)    fetchTrashFromFirebase();
     if (!window._incTrashDeletePending) fetchIncTrashFromFirebase();
-    // ── Restore profile, avatar, onboarding + income categories from Firebase ──
+    // -- Restore profile, avatar, onboarding + income categories from Firebase --
     // We do ALL restores here, then start the sequence ONLY after they complete.
     // This guarantees confirmNeeded/tourNeeded are accurate on any device.
     var uid = _userId || localStorage.getItem(UID_KEY) || 'default';
@@ -12378,7 +12458,7 @@ function _resumeSession(uid, name, phone) {
 // IndexedDB survives in a separate partition — so uid/name/phone/credId
 // to fully restore the session without asking for PIN again.
 
-// ── syncInit: called on page load ──
+// -- syncInit: called on page load --
 function syncInit() {
   // Show PIN screen immediately — no blank dark screen during async IDB read
   showPinScreen();
@@ -12489,7 +12569,7 @@ function syncLoadFromFirebase(callback) {
         }
       }
     });
-    // ── Restore profile confirmation from Firebase ──
+    // -- Restore profile confirmation from Firebase --
     // This ensures phone/DOB/country confirmation never re-triggers on new devices
     userCol('settings').doc('profile').get().then(function(doc) {
       if (!doc.exists) return;
@@ -12502,7 +12582,7 @@ function syncLoadFromFirebase(callback) {
       if (d.country) localStorage.setItem('expense_user_country_' + uid, d.country);
       if (d.dial)    localStorage.setItem('expense_user_dial_' + uid, d.dial);
     }).catch(function(){});
-    // ── Restore tour completion from Firebase ──
+    // -- Restore tour completion from Firebase --
     // This ensures tour never re-triggers unless TOUR_VER is bumped
     userCol('settings').doc('onboarding').get().then(function(doc) {
       if (!doc.exists) return;
@@ -12629,13 +12709,13 @@ function syncPush() {
   }, 1500);
 }
 
-// ── Real-time listeners (onSnapshot) ──
+// -- Real-time listeners (onSnapshot) --
 var _incomeUnsubscribe = null;
 
 function syncStartListener() {
   if (!_db || !_userId) return;
 
-  // ── EXPENSES: real-time listener ──
+  // -- EXPENSES: real-time listener --
   if (_syncUnsubscribe) { _syncUnsubscribe(); _syncUnsubscribe = null; }
   if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
   _syncUnsubscribe = userCol('expense_months').onSnapshot(function(snapshot) {
@@ -12674,7 +12754,7 @@ function syncStartListener() {
     syncSetStatus('error');
   });
 
-  // ── INCOME: real-time listener ──
+  // -- INCOME: real-time listener --
   if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
   _incomeUnsubscribe = userCol('income_months').onSnapshot(function(snapshot) {
     // Block if we just pushed income data (avoids restoring our own deletions)
@@ -12710,7 +12790,7 @@ function syncStartListener() {
   syncSetStatus('live');
 }
 
-// ── Registration ──
+// -- Registration --
 var _pendingName     = '';
 var _pendingFullName = '';
 var _pendingPhone = '';
@@ -12857,7 +12937,7 @@ function confirmCode() {
   sessionStorage.setItem('new_app_version', '1');
 }
 
-// ── Wrong attempt tracker & password reset ──
+// -- Wrong attempt tracker & password reset --
 var _loginAttempts = 0;
 var _resetCode = null;
 var _resetCodeExpiry = 0;
@@ -12984,7 +13064,7 @@ function useResetCodeNow() {
   }, 1200);
 }
 
-// ── Login: validate phone + PIN, get UUID from registry ──
+// -- Login: validate phone + PIN, get UUID from registry --
 function submitLogin() {
   var phoneEl = document.getElementById('login-phone');
   var codeEl  = document.getElementById('login-code');
@@ -13337,9 +13417,9 @@ function changePin() {
     .catch(function(e) { showToast('Error: ' + e.message); });
 }
 
-// ════════════════════════
+// ========================
 //  PRIVACY POLICY
-// ════════════════════════
+// ========================
 
 function _privacyKey() {
   return 'privacy_ok_' + (_userId || localStorage.getItem('expense_uid') || 'default');
@@ -13354,7 +13434,7 @@ function _tourKey() {
   return 'tour_done_' + TOUR_VER + '_' + (_userId || localStorage.getItem('expense_uid') || 'default');
 }
 
-// ── Sequential mandatory update flow ──
+// -- Sequential mandatory update flow --
 // Step 1: Privacy Policy (must sign)
 // Step 2: Phone + Country (must complete)
 // Step 3: Date of Birth (must complete)
@@ -13458,7 +13538,7 @@ function showOnboardingPrompt() {
   document.body.appendChild(notice);
 }
 
-// ── On every page load: detect new version (runs after IDB restore) ──
+// -- On every page load: detect new version (runs after IDB restore) --
 function _checkAppVersion() {
   var stored = localStorage.getItem(APP_VERSION_KEY);
   var isReturningUser = !!(localStorage.getItem(UID_KEY) || localStorage.getItem('expense_pin_hash_local'));
@@ -13568,7 +13648,7 @@ function acceptPrivacy() {
   setTimeout(function(){ _seqNext(); }, 400);
 }
 
-// ── EVENT-DRIVEN POST-LOGIN SEQUENCE ─────────────────────────────────────────
+// -- EVENT-DRIVEN POST-LOGIN SEQUENCE ----------------------------------------─
 // _seqNext() is called by each step when it CLOSES — not on a timer.
 // It checks what still needs to run and fires the next step immediately.
 function _seqNext() {
@@ -13596,7 +13676,7 @@ function _seqNext() {
   // All steps done
 }
 
-// ── Chain: after privacy signed → tour → confirmation ──
+// -- Chain: after privacy signed → tour → confirmation --
 function _postPrivacyChainContinue() {
   _seqNext(); // hand off to the sequence
 }
@@ -13606,9 +13686,9 @@ function _postPrivacyChainContinue() {
 // Stop the old poller if it was running
 
 
-// ════════════════════════
+// ========================
 //  HELP SYSTEM
-// ════════════════════════
+// ========================
 var HELP_ITEMS = [
   {icon:'&#128221;', label:'Import',     tag:'import'},
   {icon:'&#128278;', label:'Categorize', tag:'categorize'},
@@ -13961,9 +14041,9 @@ var HELP_DATA = {
   }
 };
 
-// ════════════════════════════════════════════════
+// ================================================
 //  ONBOARDING TOUR
-// ════════════════════════════════════════════════
+// ================================================
 var ONBOARD_EXPENSES_KEY = 'expense_onboard_expenses_done';
 var ONBOARD_INCOME_KEY   = 'expense_onboard_income_done';
 var _onboardSlides = [];
@@ -14467,7 +14547,7 @@ renderMonthPicker();
 updateHeader();
 populateFilters();
 
-// ── Tab key navigation ──
+// -- Tab key navigation --
 var EXP_TABS = ['import','categorize','daily','dashboard','ledger','budget','manage'];
 var INC_TABS = ['inc-import','inc-categorize','inc-monthly','inc-dashboard','inc-ledger','inc-manage'];
 
@@ -14502,7 +14582,7 @@ try {
   });
 } catch(err) { /* fail silently */ }
 
-// ── Ctrl+1–7 direct tab jump ──
+// -- Ctrl+1–7 direct tab jump --
 // Expenses: Ctrl+1=Import, 2=Categorize, 3=Daily, 4=Dashboard, 5=Ledger, 6=Budget, 7=Manage
 // Income:   Ctrl+1=Import, 2=Categorize, 3=Monthly, 4=Dashboard, 5=Ledger, 6=Manage
 try {
@@ -14533,9 +14613,9 @@ try {
   });
 } catch(err) { /* fail silently */ }
 
-// ════════════════════════════════
+// ================================
 //  AVATAR PICKER
-// ════════════════════════════════
+// ================================
 var AVATAR_KEY = 'expense_user_avatar';
 var _selectedAvatarEmoji = '';
 
@@ -14625,9 +14705,9 @@ document.addEventListener('click', function(e) {
   if (o && o.style.display === 'flex' && e.target === o) closeAvatarPicker();
 });
 
-// ════════════════════════════════
-// ════════════════════════════════
-// ── Gentle update notice ──
+// ================================
+// ================================
+// -- Gentle update notice --
 function submitDobOnly() {
   var dob   = (document.getElementById('dob-only-input') || {}).value;
   var errEl = document.getElementById('dob-only-error');
@@ -14675,7 +14755,7 @@ function showUpdateDetails() {
   if(typeof _showPrivacyOverlay === 'function') _showPrivacyOverlay();
 }
 
-// ── Country codes & age helpers ──
+// -- Country codes & age helpers --
 var PHONE_CONFIRM_KEY = 'expense_phone_confirmed';
 var MIN_AGE = 16;
 function _calcAge(dobStr) {
@@ -14783,9 +14863,9 @@ setTimeout(_initCountrySelects, 500);
 document.addEventListener('DOMContentLoaded', _initCountrySelects);
 setTimeout(_initCountrySelects, 500);
 
-// ════════════════════════════════
+// ================================
 //  SPOTLIGHT GUIDED TOUR
-// ════════════════════════════════
+// ================================
 var _tourIndex = 0;
 var _tourSteps = [];
 var _tourMode  = 'expenses';
@@ -14794,92 +14874,144 @@ var TOUR_EXPENSES_STEPS = [
   { target:null, tab:null, icon:'👋', title:'Welcome to My Expense Ledger!',
     body:'This guided tour highlights every button with a golden spotlight and arrow. Tap <strong>Next →</strong> to move forward. You can skip at any time.',
     arrow:null },
+
+  // -- IMPORT --
   { target:'#main-nav button:nth-child(1)', tab:'import', icon:'📥', title:'Import — Add Your Expenses',
-    body:'This is where everything starts. Tap <strong>Import</strong> to open the notepad and type or paste your expense entries.',
+    body:'This is where everything starts. Tap <strong>Import</strong> to open the notepad and paste or type your expense entries.',
     arrow:'up' },
   { target:'#raw-input', tab:'import', icon:'✍️', title:'The Notepad — Type Your Entries',
-    body:'Type expenses here in plain text. Format: <em>date on one line</em>, then <em>Description: amount</em>.<br>Example:<br><em>01/01/2026<br>Rice: 2500<br>Transport: 800</em>',
+    body:'Type expenses here — date on one line, then <em>Description: amount</em>.<br>Example:<br><em>01/01/2026<br>Rice: 2500<br>Transport: 800</em><br><br>Press <strong>Ctrl+Enter</strong> to parse instantly.',
     arrow:'down' },
   { target:'#exp-parse-btn', tab:'import', icon:'⚡', title:'Parse — Read Your Entries',
-    body:'After typing your entries, tap <strong>Parse Expenses</strong> (or press Ctrl+Enter). The app reads each line and extracts dates, descriptions and amounts automatically.',
+    body:'Tap <strong>Parse Expenses</strong> (or press <strong>Ctrl+Enter</strong>). The app extracts dates, descriptions and amounts automatically.<br>Press <strong>Ctrl+Enter again</strong> to go straight to Categorize.',
     arrow:'up' },
+
+  // -- CATEGORIZE --
   { target:'#main-nav button:nth-child(2)', tab:'categorize', icon:'🏷️', title:'Categorize — Sort Your Spending',
-    body:'Every parsed entry appears here. Assign a category to each one — Food, Transport, Bills etc. The app learns your patterns and auto-suggests next time.',
+    body:'Every parsed entry appears here with a category dropdown. The app auto-suggests based on your history.',
     arrow:'up' },
+  { target:'#cat-selall-btn', tab:'categorize', icon:'☐', title:'Categorize — Checkbox Actions',
+    body:'Each row has a <strong>☐ checkbox</strong> on the right. Use <strong>☐ All</strong> to select everything, then:<br>• <strong>✓ Assign</strong> — set category for all checked<br>• <strong>— Hide</strong> — remove from view<br>• <strong>✕ Delete</strong> — send to recycle bin',
+    arrow:'down' },
+  { target:'#bulk-cat-input', tab:'categorize', icon:'⚡', title:'Bulk Assign — One Category to Many',
+    body:'Type or pick a category here, then tap <strong>✓ Assign</strong>. With nothing checked → assigns to <em>all visible items</em>. With rows checked → assigns only to <em>those rows</em>.',
+    arrow:'down' },
   { target:'#btn-save-pending', tab:'categorize', icon:'💾', title:'Save to Ledger',
-    body:'Once all entries have categories assigned, tap <strong>✓ Save to Ledger</strong>. All entries are saved in one click. You can also press Ctrl+Enter.',
+    body:'Once all entries have categories, tap <strong>✓ Save to Ledger</strong> (or press <strong>Ctrl+Enter</strong>).',
     arrow:'up' },
+
+  // -- LEDGER --
   { target:'#main-nav button:nth-child(5)', tab:'ledger', icon:'📋', title:'Ledger — Your Complete Record',
-    body:'The Ledger holds every entry you have saved. Filter by year, month, currency or category. Each row has a <strong>☐ checkbox</strong> — check rows and use <strong>Hide</strong>, <strong>Delete</strong> or <strong>✓ Assign</strong> on them. Or filter and Assign with nothing checked to bulk-update everything visible.',
+    body:'Every saved entry lives here. Use the <strong>▼ Filters</strong> button to expand Year, Month, Currency and Category filters.',
     arrow:'up' },
+  { target:'#led-selall-btn', tab:'ledger', icon:'☐', title:'Ledger — Checkbox Bulk Actions',
+    body:'Each row has a <strong>☐ checkbox</strong>. Check any rows then:<br>• <strong>↩ Restore</strong> — bring them back<br>• <strong>— Hide</strong> — remove from view<br>• <strong>✕ Delete</strong> — send to bin<br>• <strong>✓ Assign</strong> — set category for selected only',
+    arrow:'down' },
+  { target:'#led-bulk-cat-input', tab:'ledger', icon:'🏷️', title:'Ledger — Assign All Visible',
+    body:'Filter by Year + Month + Currency, pick a category and tap <strong>✓ Assign</strong> with <em>nothing checked</em> to bulk-assign everything visible at once — no keyword needed.',
+    arrow:'down' },
+
+  // -- DAILY / DASHBOARD --
   { target:'#main-nav button:nth-child(3)', tab:'daily', icon:'📅', title:'Daily View — See Any Day',
-    body:'The Daily tab shows a full breakdown of spending for any specific date. Use the date picker to jump to any day instantly.',
+    body:'Full spending breakdown for any date. Use the date picker to jump instantly.',
     arrow:'up' },
   { target:'#main-nav button:nth-child(4)', tab:'dashboard', icon:'📊', title:'Dashboard — Charts & Totals',
-    body:'Visual charts: spending by category, monthly trend, heatmap and year-over-year growth. One master filter controls all charts simultaneously.',
+    body:'Visual charts: <strong>Category Breakdown</strong> shows each category\'s % share of total spending. Monthly trend, heatmap and year-over-year growth included.',
     arrow:'up' },
+
+  // -- BUDGET --
   { target:'#main-nav button:nth-child(6)', tab:'budget', icon:'🎯', title:'Budget — Set Monthly Limits',
-    body:'Set a spending limit per category. Progress bars turn amber at 75% and red when exceeded. Works per currency too.',
+    body:'Set a spending limit per category. Progress bars turn amber at 75% and red when exceeded. Each category gets its own unique colour.',
     arrow:'up' },
+
+  // -- MANAGE / RECYCLE BIN --
   { target:'#main-nav button:nth-child(7)', tab:'manage', icon:'⚙️', title:'Manage — Your Control Centre',
-    body:'Profile, PIN change, data deletion, recycle bin, currencies, CSV export — all here. See the next steps for highlights.',
+    body:'Profile, PIN change, data deletion, recycle bin, currencies, CSV export — all here.',
     arrow:'up' },
   { target:'#avatar-circle', tab:'manage', icon:'😊', title:'Your Avatar — Tap to Personalise',
-    body:'Tap your avatar circle to open the emoji picker. Choose from 6 categories: Happy, Animals, Cool, Nature, Food and Sports. Your choice syncs across devices.',
+    body:'Tap your avatar to open the emoji picker. Your choice syncs across all devices.',
     arrow:'down' },
-  { target:'#manage-filter-row', tab:'manage', icon:'🗑️', title:'Delete Data — Year · Month · Day Filter',
-    body:'Select <strong>Year</strong> first → months appear. Select <strong>Month</strong> → days appear. Tap <strong>Delete</strong> on any group to move it to the Recycle Bin.',
+  { target:'#manage-filter-row', tab:'manage', icon:'🗑️', title:'Delete Data — Year · Month · Day',
+    body:'Select Year → months appear. Select Month → days appear. Tap <strong>Delete</strong> to move entries to the Recycle Bin.',
     arrow:'down' },
-  { target:'#trash-filter-row', tab:'manage', icon:'♻️', title:'Recycle Bin — Restore or Delete',
-    body:'Every deleted entry lands here. Filter by Year, Month or Day. Restore entries individually, restore whole groups, or permanently delete them.',
+  { target:'#trash-filter-row', tab:'manage', icon:'♻️', title:'Recycle Bin — Checkbox Bulk Actions',
+    body:'Deleted entries land here. Each row has a <strong>☐ checkbox</strong>. Use <strong>☐ All</strong> to select everything, then tap <strong>↩ Restore</strong> to bring them back or <strong>✕ Delete</strong> to permanently remove them.',
     arrow:'down' },
+
+  // -- HEADER --
   { target:'#hdr-referral-btn', tab:null, icon:'🔗', title:'Referral Link — Invite Friends',
-    body:'The <strong>🔗</strong> icon next to your name is your personal referral link. Tap it to get your link and share it. Every person who joins via your link is counted.',
+    body:'The <strong>🔗</strong> icon is your personal referral link. Share it — everyone who joins via your link is counted.',
     arrow:'up', showHidden:true },
   { target:'#mode-switch-btn', tab:null, icon:'🔁', title:'Switch to Income Module',
-    body:'Tap the <strong>🔁 switch</strong> button to move between Expenses and Income. Each module has its own separate tabs, data and charts.',
+    body:'Tap <strong>🔁</strong> to switch between Expenses and Income. Each module has its own tabs, data and charts.',
     arrow:'up' },
   { target:null, tab:'import', icon:'🚀', title:"You're Ready — Let's Go!",
-    body:'Head to <strong>Import</strong> to add your first expenses. Everything syncs to the cloud automatically.<br><br>We will now take a quick tour of the <strong>Income</strong> module too!',
+    body:'Head to <strong>Import</strong> to add your first expenses. Everything syncs automatically.<br><br>We will now take a quick tour of the <strong>Income</strong> module!',
     arrow:null, last:true }
 ];
 
 var TOUR_INCOME_STEPS = [
   { target:null, tab:null, icon:'💰', title:'Income Module Tour',
-    body:'You are now in the Income module. It works just like Expenses but tracks your earnings — salary, freelance, commissions, gifts and more.',
+    body:'You are now in the Income module. It works exactly like Expenses but tracks your earnings — salary, freelance, commissions, gifts and more.',
     arrow:null },
+
+  // -- IMPORT --
   { target:'#income-nav button:nth-child(1)', tab:'inc-import', icon:'📥', title:'Income Import Tab',
-    body:'Tap <strong>Import</strong> to open the income notepad. Paste your income records here. Use the <strong>Y</strong> key to toggle between Month and Year mode.',
+    body:'Tap <strong>Import</strong> to open the income notepad. Toggle between <strong>Month mode</strong> and <strong>Year mode</strong> (paste a full year at once).',
     arrow:'up' },
   { target:'#inc-raw-input', tab:'inc-import', icon:'✍️', title:'Income Notepad — Type Earnings',
-    body:'Type income entries here — salary, freelance, commissions, tips. Same format as expenses: date on one line, then <em>Description: amount</em>.',
+    body:'Type income entries — salary, freelance, tips. Format: date on one line, then <em>Description: amount</em>.<br><br>Press <strong>Ctrl+Enter</strong> to parse. Press <strong>Ctrl+Enter again</strong> to jump to Categorize.',
     arrow:'down' },
   { target:'#inc-parse-btn', tab:'inc-import', icon:'⚡', title:'Parse Income',
-    body:'Tap <strong>Parse Income</strong> (or Ctrl+Enter) after typing entries. The app reads each line and takes you to Income Categorize.',
+    body:'Tap <strong>Parse Income</strong> (or <strong>Ctrl+Enter</strong>) to extract all entries. The app reads each line automatically.',
     arrow:'up' },
+
+  // -- CATEGORIZE --
   { target:'#income-nav button:nth-child(2)', tab:'inc-categorize', icon:'🏷️', title:'Income Categorize Tab',
-    body:'Every parsed income entry appears here. Assign categories — Salary, Freelance, Commission, Rental, Gift etc.',
+    body:'Every parsed income entry appears here. Use the <strong>▼ Filters</strong> to filter by Period, Currency and Category before assigning.',
     arrow:'up' },
+  { target:'#inc-cat-selall-btn', tab:'inc-categorize', icon:'☐', title:'Income Categorize — Checkbox Actions',
+    body:'Each row has a <strong>☐ checkbox</strong> on the right. Use <strong>☐ All</strong> to select everything, then:<br>• <strong>✓ Assign</strong> — set category for all checked<br>• <strong>— Hide</strong> — remove from view<br>• <strong>✕ Delete</strong> — send to recycle bin',
+    arrow:'down' },
+  { target:'#inc-cat-bulk-sel', tab:'inc-categorize', icon:'⚡', title:'Income Bulk Assign',
+    body:'Pick a category and tap <strong>✓ Assign All</strong>. With nothing checked → assigns to all visible. With rows checked → assigns to those rows only.',
+    arrow:'down' },
   { target:'#inc-btn-save-pending', tab:'inc-categorize', icon:'💾', title:'Save Income to Ledger',
-    body:'Once all income entries have categories, tap <strong>✓ Save to Ledger</strong>. All income is saved in one click.',
+    body:'Once all entries have categories, tap <strong>✓ Save to Ledger</strong> (or press <strong>Ctrl+Enter</strong>).',
     arrow:'up' },
+
+  // -- LEDGER --
   { target:'#income-nav button:nth-child(5)', tab:'inc-ledger', icon:'📋', title:'Income Ledger',
-    body:'All your income entries in one place. Filter by year, month, currency or category. Use <strong>← →</strong> keys to navigate pages.',
+    body:'All income entries in one place. Tap <strong>▼ Filters</strong> to expand Year, Month, Currency and Category filters.',
     arrow:'up' },
+  { target:'#inc-led-selall-btn', tab:'inc-ledger', icon:'☐', title:'Income Ledger — Checkbox Bulk Actions',
+    body:'Each row has a <strong>☐ checkbox</strong>. Check any rows then:<br>• <strong>↩ Restore</strong> — bring back<br>• <strong>— Hide</strong> — remove from view<br>• <strong>✕ Delete</strong> — send to bin<br>• <strong>✓ Assign</strong> — set category for selected only',
+    arrow:'down' },
+  { target:'#inc-assign-btn', tab:'inc-ledger', icon:'🏷️', title:'Income Ledger — Assign All Visible',
+    body:'Filter by Year + Month + Currency, pick a category and tap <strong>✓ Assign</strong> with <em>nothing checked</em> to bulk-assign all visible income entries at once.',
+    arrow:'down' },
+
+  // -- MONTHLY / DASHBOARD --
   { target:'#income-nav button:nth-child(3)', tab:'inc-monthly', icon:'📅', title:'Monthly Income View',
-    body:'A full month-by-month breakdown of all earnings. Compare months side by side and track your income trend over time.',
+    body:'Month-by-month breakdown of all earnings. Compare months side by side and track trends over time.',
     arrow:'up' },
   { target:'#income-nav button:nth-child(4)', tab:'inc-dashboard', icon:'📊', title:'Income Dashboard — Charts',
-    body:'Visual charts showing income by category, monthly totals and year-over-year growth. Filter by year, month and currency.',
+    body:'Income by category with <strong>% share</strong> of total shown next to each bar. Monthly totals, heatmap and year-over-year growth included.',
     arrow:'up' },
+
+  // -- MANAGE / RECYCLE BIN --
   { target:'#income-nav button:nth-child(6)', tab:'inc-manage', icon:'⚙️', title:'Income Manage Tab',
-    body:'Delete income data by year, month or day. Export to CSV, generate PDF reports and manage the income recycle bin.',
+    body:'Delete income data by year, month or day. Export to CSV, print PDF reports and manage the income recycle bin.',
     arrow:'up' },
   { target:'#inc-manage-year-filter', tab:'inc-manage', icon:'🔍', title:'Income Delete Filter',
-    body:'Select a <strong>Year</strong> first, then <strong>Month</strong>, then <strong>Day</strong>. Only matching entries appear. Tap <strong>Delete</strong> to move them to the Recycle Bin.',
+    body:'Select <strong>Year</strong> → months appear. Select <strong>Month</strong> → days appear. Tap <strong>Delete</strong> to move entries to the Recycle Bin.',
     arrow:'down' },
+  { target:'#inc-trash-filter-row', tab:'inc-manage', icon:'♻️', title:'Income Recycle Bin — Checkbox Actions',
+    body:'Deleted income entries land here. Each row has a <strong>☐ checkbox</strong>. Use <strong>☐ All</strong> to select all, then <strong>↩ Restore</strong> or <strong>✕ Delete</strong> to act on all selected at once.',
+    arrow:'down' },
+
   { target:null, tab:null, icon:'🎉', title:'Tour Complete — Both Modules!',
-    body:'You now know the full app! Switch between Expenses and Income anytime using the <strong>🔁</strong> button in the header.<br><br>Your data is always safe in the cloud. Enjoy! 🚀',
+    body:'You now know the full app! Switch between Expenses and Income anytime with the <strong>🔁</strong> button.<br><br>Your data is always safe in the cloud. Enjoy! 🚀',
     arrow:null, last:true }
 ];
 
@@ -15000,7 +15132,7 @@ function _positionTourStep(step) {
     ay=Math.max(4,Math.min(vh-40,ay));
     arrow.style.cssText='position:absolute;left:'+ax+'px;top:'+ay+'px;font-size:2.2rem;color:var(--gold);pointer-events:none;text-shadow:0 2px 12px rgba(0,0,0,0.9),0 0 20px rgba(200,150,46,0.6);animation:tour-bounce 0.6s ease-in-out infinite alternate;display:block;';
 
-    // ── Tooltip ALWAYS at centre of screen ──
+    // -- Tooltip ALWAYS at centre of screen --
     var tw=Math.min(360,vw-32);
     var tx=Math.max(16,(vw-tw)/2);
     var tooltipH=260;
@@ -15080,7 +15212,7 @@ function tourFinish() {
 // Add bounce animation
 (function(){ var s=document.createElement('style'); s.textContent='@keyframes tour-bounce{from{transform:translateY(0)}to{transform:translateY(-8px)}}'; document.head.appendChild(s); })();
 
-// ════════════════════════════════
+// ================================
 var GUEST_MODE_KEY = 'expense_guest_mode';
 var _isGuestMode = false;
 
@@ -15116,7 +15248,7 @@ function _applyGuestMode() {
   var rb = document.getElementById('hdr-referral-btn');
   if (rb) rb.style.display = 'none';
 
-  // ── Expenses tabs: show ONLY import, categorize, ledger, manage ──
+  // -- Expenses tabs: show ONLY import, categorize, ledger, manage --
   var EXP_SHOW = ['import','categorize','ledger','manage'];
   var EXP_ALL  = ['import','categorize','daily','dashboard','ledger','budget','manage'];
   EXP_ALL.forEach(function(tab) {
@@ -15124,7 +15256,7 @@ function _applyGuestMode() {
     btns.forEach(function(b){ b.style.display = EXP_SHOW.indexOf(tab) >= 0 ? '' : 'none'; });
   });
 
-  // ── Income tabs: show ONLY inc-import, inc-categorize, inc-ledger ──
+  // -- Income tabs: show ONLY inc-import, inc-categorize, inc-ledger --
   var INC_SHOW = ['inc-import','inc-categorize','inc-ledger'];
   var INC_ALL  = ['inc-import','inc-categorize','inc-monthly','inc-dashboard','inc-ledger','inc-manage'];
   INC_ALL.forEach(function(tab) {
@@ -15132,7 +15264,7 @@ function _applyGuestMode() {
     btns.forEach(function(b){ b.style.display = INC_SHOW.indexOf(tab) >= 0 ? '' : 'none'; });
   });
 
-  // ── Manage tab: show only profile card + guest profile + version ──
+  // -- Manage tab: show only profile card + guest profile + version --
   setTimeout(function() {
     // Hide all cards in manage except user profile card, guest profile card, version footer
     var managePanel = document.getElementById('panel-manage');
@@ -15184,9 +15316,9 @@ function showGuestUpgradePrompt() {
   }, 200);
 })();
 
-// ════════════════════════════════
+// ================================
 //  DELETE ACCOUNT
-// ════════════════════════════════
+// ================================
 function showDeleteAccountOverlay() {
   var o = document.getElementById('delete-account-overlay');
   if (!o) return;
@@ -15273,8 +15405,8 @@ document.addEventListener('click', function(e) {
   if (o && o.style.display === 'flex' && e.target === o) closeDeleteAccountOverlay();
 });
 
-// ════════════════════════════════
-// ════════════════════════════════
+// ================================
+// ================================
 var APP_BASE_URL = 'https://johnnydeey.github.io/my-expenses/';
 
 function getReferralCode() {
@@ -15348,7 +15480,7 @@ function shareReferralLink() {
   }
 }
 
-// ── Track referral on page load ──
+// -- Track referral on page load --
 // If ?ref=CODE is in the URL, save it silently to Firebase
 (function trackIncomingReferral() {
   try {
@@ -15380,20 +15512,20 @@ function saveReferralToFirebase(newUserId) {
   } catch(e) {}
 }
 
-// ── Close referral panel on backdrop tap ──
+// -- Close referral panel on backdrop tap --
 document.addEventListener('click', function(e) {
   var o = document.getElementById('referral-overlay');
   if (o && o.style.display === 'flex' && e.target === o) closeReferralPanel();
 });
 
-// ── Escape closes referral panel ──
+// -- Escape closes referral panel --
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'Escape') return;
   var o = document.getElementById('referral-overlay');
   if (o && o.style.display === 'flex') { e.preventDefault(); closeReferralPanel(); }
 });
 
-// ── Ledger tab: ← → arrow keys navigate pages ──
+// -- Ledger tab: ← → arrow keys navigate pages --
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
   if (e.altKey || e.ctrlKey || e.metaKey) return;
