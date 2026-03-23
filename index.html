@@ -5517,10 +5517,12 @@ function renderCategoryBars(data){
   if(!cats.length){ container.innerHTML='<p style="color:var(--muted);">No data</p>'; return; }
 
   var maxByCur = {};
+  var grandByCur = {}; // total per currency across ALL categories
   cats.forEach(function(cat){
     Object.keys(byCat[cat].totals).forEach(function(cur){
       var v = byCat[cat].totals[cur];
       if(!maxByCur[cur] || v > maxByCur[cur]) maxByCur[cur] = v;
+      grandByCur[cur] = (grandByCur[cur] || 0) + v;
     });
   });
 
@@ -5534,7 +5536,6 @@ function renderCategoryBars(data){
     catRow.style.cssText = 'margin-bottom:14px;min-width:0;';
 
     var labelRow = document.createElement('div');
-    // flex-wrap:wrap so amounts fall below the name on narrow screens
     labelRow.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:2px 8px;margin-bottom:5px;min-width:0;';
     var amtSpans = curs.map(function(c){
       return '<span style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:600;white-space:nowrap;">'+(SYMS[c]||'')+fmtNum(curTotals[c])+'<span style="font-size:0.6rem;opacity:0.7;margin-left:2px;">'+c+'</span></span>';
@@ -5549,14 +5550,16 @@ function renderCategoryBars(data){
 
     curs.forEach(function(c){
       var val = curTotals[c];
-      var pct = maxByCur[c]>0 ? (val/maxByCur[c]*100) : 0;
+      var barPct  = maxByCur[c]>0 ? (val/maxByCur[c]*100) : 0;
+      var sharePct = grandByCur[c]>0 ? (val/grandByCur[c]*100).toFixed(2) : '0.00';
       var trackRow = document.createElement('div');
       trackRow.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:3px;min-width:0;';
       trackRow.innerHTML =
         '<span style="font-family:DM Mono,monospace;font-size:0.58rem;color:var(--muted);width:26px;text-align:right;flex-shrink:0;">'+c+'</span>'+
         '<div style="flex:1;min-width:0;height:8px;background:#ede7d9;border-radius:4px;overflow:hidden;">'+
-          '<div style="width:'+pct.toFixed(1)+'%;height:100%;background:'+color+';border-radius:4px;transition:width 0.5s ease;"></div>'+
-        '</div>';
+          '<div style="width:'+barPct.toFixed(1)+'%;height:100%;background:'+color+';border-radius:4px;transition:width 0.5s ease;"></div>'+
+        '</div>'+
+        '<span style="font-family:DM Mono,monospace;font-size:0.65rem;font-weight:600;color:'+color+';width:44px;text-align:right;flex-shrink:0;">'+sharePct+'%</span>';
       catRow.appendChild(trackRow);
     });
 
@@ -10606,10 +10609,12 @@ function renderIncomeDashboard() {
   });
   var incCatsSorted = Object.keys(byCat).sort(function(a,b){return byCat[b].grand-byCat[a].grand;});
   var maxByCurInc = {};
+  var grandByCurInc = {}; // total per currency across ALL income categories
   incCatsSorted.forEach(function(cat){
     Object.keys(byCat[cat].totals).forEach(function(c){
       var v = byCat[cat].totals[c];
       if(!maxByCurInc[c] || v > maxByCurInc[c]) maxByCurInc[c] = v;
+      grandByCurInc[c] = (grandByCurInc[c] || 0) + v;
     });
   });
   incCatsSorted.forEach(function(cat){
@@ -10632,14 +10637,16 @@ function renderIncomeDashboard() {
     catRow.appendChild(labelRow);
     curs.forEach(function(c){
       var val = curTotals[c];
-      var pct = maxByCurInc[c]>0 ? (val/maxByCurInc[c]*100) : 0;
+      var barPct   = maxByCurInc[c]>0 ? (val/maxByCurInc[c]*100) : 0;
+      var sharePct = grandByCurInc[c]>0 ? (val/grandByCurInc[c]*100).toFixed(2) : "0.00";
       var trackRow = document.createElement("div");
       trackRow.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:3px;min-width:0;";
       trackRow.innerHTML =
         "<span style=\"font-family:DM Mono,monospace;font-size:0.58rem;color:var(--muted);width:26px;text-align:right;flex-shrink:0;\">"+c+"</span>"+
         "<div style=\"flex:1;min-width:0;height:8px;background:#ede7d9;border-radius:4px;overflow:hidden;\">"+
-          "<div style=\"width:"+pct.toFixed(1)+"%;height:100%;background:"+color+";border-radius:4px;transition:width 0.5s ease;\"></div>"+
-        "</div>";
+          "<div style=\"width:"+barPct.toFixed(1)+"%;height:100%;background:"+color+";border-radius:4px;transition:width 0.5s ease;\"></div>"+
+        "</div>"+
+        "<span style=\"font-family:DM Mono,monospace;font-size:0.65rem;font-weight:600;color:"+color+";width:44px;text-align:right;flex-shrink:0;\">"+sharePct+"%</span>";
       catRow.appendChild(trackRow);
     });
     catCont.appendChild(catRow);
