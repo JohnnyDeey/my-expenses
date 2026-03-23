@@ -3350,7 +3350,13 @@ var CATS = ['Food & Groceries','Rent & Utilities','Transport','Health & Pharmacy
 var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 var CAT_COLORS = {'Food & Groceries':'#4a7c59','Rent & Utilities':'#3d5a73','Transport':'#8b5e3c','Health & Pharmacy':'#b5451b','Subscriptions':'#6b3d8c','Family Support (Nigeria)':'#2e7d8a','Loans & Fees':'#c8962e','Personal Care':'#7c4a4a','Documents & Legal':'#5a6b3d','Other':'#6b5e50'};
-var CAT_COLORS_FB = ['#3d5a73','#4a7c59','#c8962e','#b5451b','#8b5e3c','#6b3d8c','#2e7d8a','#7c4a4a','#5a6b3d','#6b5e50'];
+var CAT_COLORS_FB = [
+  '#3d5a73','#4a7c59','#c8962e','#b5451b','#8b5e3c','#6b3d8c','#2e7d8a','#7c4a4a','#5a6b3d','#6b5e50',
+  '#1a6b8a','#7a3d6b','#4a8b3d','#c85a2e','#3d6b8b','#8b4a6b','#2e8b5a','#c8782e','#4a5a8b','#8b2e4a',
+  '#3d8b7a','#6b8b2e','#8b3d5a','#2e6b8b','#8b6b2e','#5a3d8b','#2e8b8b','#8b4a2e','#3d4a8b','#6b2e8b',
+  '#2e8b4a','#8b7a2e','#4a2e8b','#8b2e8b','#2e4a8b','#8b5a3d','#3d8b4a','#8b3d8b','#2e8b3d','#8b2e6b',
+  '#5a8b3d','#3d2e8b','#8b4a5a','#2e5a8b','#8b8b2e','#6b3d8b','#3d8b8b','#8b2e3d','#4a8b8b','#8b6b3d'
+];
 // ── Currency system — dynamic, user-configurable ──
 var CURRENCY_STORAGE_KEY = 'expense_user_currencies';
 
@@ -3603,7 +3609,16 @@ function learnKeywordsFromEntry(desc, cat) {
   localStorage.setItem('custom_cat_rules', JSON.stringify(rules));
 }
 
-function getCatColor(cat, idx) { return CAT_COLORS[cat] || CAT_COLORS_FB[idx % CAT_COLORS_FB.length]; }
+function _hashStr(s) {
+  var h = 0;
+  for (var i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+  return Math.abs(h);
+}
+function getCatColor(cat, idx) {
+  if (CAT_COLORS[cat]) return CAT_COLORS[cat];
+  // Use hash of category name so same cat always gets same colour
+  return CAT_COLORS_FB[_hashStr(cat) % CAT_COLORS_FB.length];
+}
 
 function saveData(data) {
   window._deletePending = true;
@@ -9210,7 +9225,10 @@ var INC_CATS = ['Salary','Stipends/Allowance','Commission','Tips','Gift','Loan R
 var INC_CAT_COLORS = {
   'Salary':'#3d5a73','Stipends/Allowance':'#4a7c59','Commission':'#c8962e',
   'Tips':'#2e7d8a','Gift':'#6b3d8c','Loan Received':'#b5451b',
-  'Refund':'#5a6b3d','Business/Freelance':'#7c4a4a','Other':'#6b5e50'
+  'Refund':'#5a6b3d','Business/Freelance':'#7c4a4a','Other':'#6b5e50',
+  'Investment':'#1a6b8a','Rental Income':'#7a3d6b','Pension':'#4a8b3d',
+  'Dividend':'#c85a2e','Bonus':'#3d6b8b','Support':'#8b4a6b',
+  'Insurance':'#2e8b5a','Grant':'#c8782e','Side Hustle':'#4a5a8b'
 };
 var INC_CAT_RULES = [
   {cat:'Salary', kw:['salary','fbn insurance','first bank salary','fbni salary','monthly pay']},
@@ -9271,7 +9289,9 @@ function getAllIncomeCats() {
   return all.filter(function(c,i,a){ return a.indexOf(c)===i; }).sort();
 }
 function getIncCatColor(cat) {
-  return INC_CAT_COLORS[cat] || '#6b5e50';
+  if (INC_CAT_COLORS[cat]) return INC_CAT_COLORS[cat];
+  // Use same expanded palette with hash so custom income cats get unique colours
+  return CAT_COLORS_FB[_hashStr(cat) % CAT_COLORS_FB.length];
 }
 
 // ── Firebase sync for income ──
