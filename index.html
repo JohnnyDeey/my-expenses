@@ -11340,6 +11340,14 @@ function getReportName() {
 var _pinBuffer = '';   // digits entered so far on the PIN pad
 var FULL_VERIFY_KEY = 'expense_last_full_verify'; // localStorage key
 
+// ── IndexedDB session store — survives localStorage clearing on laptop ──
+var _FL_IDB = 'fl_session_db';
+var _FL_STORE = 'session';
+function _idbOpen(cb){try{var r=indexedDB.open(_FL_IDB,1);r.onupgradeneeded=function(e){e.target.result.createObjectStore(_FL_STORE)};r.onsuccess=function(e){cb(null,e.target.result)};r.onerror=function(e){cb(e,null)}}catch(e){cb(e,null)}}
+function _idbSaveSession(data){_idbOpen(function(err,db){if(err||!db)return;try{db.transaction(_FL_STORE,'readwrite').objectStore(_FL_STORE).put(JSON.stringify(data),'s')}catch(e){}})}
+function _idbReadSession(cb){_idbOpen(function(err,db){if(err||!db){cb(null);return}try{var r=db.transaction(_FL_STORE,'readonly').objectStore(_FL_STORE).get('s');r.onsuccess=function(e){try{cb(e.target.result?JSON.parse(e.target.result):null)}catch(e2){cb(null)}};r.onerror=function(){cb(null)}}catch(e){cb(null)}})}
+function _idbClearSession(){_idbOpen(function(err,db){if(err||!db)return;try{db.transaction(_FL_STORE,'readwrite').objectStore(_FL_STORE).delete('s')}catch(e){}})}
+
 // How often to require full verify: random between 7–14 days
 function getNextFullVerifyInterval() {
   return (7 + Math.floor(Math.random() * 8)) * 24 * 60 * 60 * 1000;
@@ -11459,7 +11467,9 @@ function updatePinDots() {
 
 // ── PIN-only login (local hash check — instant) ──
 function submitPinLogin() {
-  if (!_checkTc('pin-tc-check')) return;
+  // Established users (have UID + PIN hash) skip T&C check — they already signed it
+  var isEstablished = !!(localStorage.getItem(UID_KEY) && localStorage.getItem('expense_pin_hash_local'));
+  if (!isEstablished && !_checkTc('pin-tc-check')) return;
   if (_pinBuffer.length < 4) {
     var er = document.getElementById('login-error');
     if (er) er.textContent = 'PIN must be at least 4 digits';
@@ -11470,7 +11480,7 @@ function submitPinLogin() {
   var phone = localStorage.getItem(PHONE_KEY);
   var savedHash = localStorage.getItem('expense_pin_hash_local');
   if (!uid || !name || !phone || !savedHash) {
-    // No local session at all — need full verify to set up this device
+    // No local session — truly new device, need full verify
     showFullVerifyStep();
     return;
   }
@@ -11808,6 +11818,8 @@ function _resumeSession(uid, name, phone) {
   localStorage.removeItem(PHONE_TAIL_KEY);
   localStorage.setItem('last_active', String(Date.now()));
   sessionStorage.setItem('app_session', '1');
+  // Persist identity to IndexedDB — survives localStorage clearing on laptop/Chrome
+  _idbSaveSession({ uid: uid, name: name, phone: phone, pinHash: localStorage.getItem('expense_pin_hash_local'), saved: Date.now() });
   // Show app immediately
   var pinO = document.getElementById('pin-overlay');
   if (pinO) pinO.style.display = 'none';
@@ -11855,41 +11867,33 @@ function _resumeSession(uid, name, phone) {
   // then decide what still needs to run. This prevents re-triggering
   // things the user has already completed on another device.
   function _startSequenceAfterFirebase() {
-    // If this user has been here before — they have a UID, name, and phone
-    // already confirmed — skip ALL prompts and just let them use the app.
-    // The sequence only runs for genuinely new users or when content is updated.
+    // Established users skip privacy/tour/confirm UNLESS PRIVACY_VER was bumped.
+    // Security check (full verify) is handled separately by needsFullVerify()
+    // and run_security_check_once — NOT by this sequence.
     var isEstablishedUser = !!(
       localStorage.getItem(UID_KEY) &&
       localStorage.getItem(NAME_KEY) &&
       localStorage.getItem(PHONE_CONFIRM_KEY + '_' + (_userId || localStorage.getItem(UID_KEY) || 'default')) === '1'
     );
 
-    var privacyNeeded  = !isEstablishedUser && localStorage.getItem(_privacyKey()) !== PRIVACY_VER;
-    var tourNeeded     = !isEstablishedUser && localStorage.getItem(_tourKey()) !== '1';
-    var confirmNeeded  = !isEstablishedUser && localStorage.getItem(PHONE_CONFIRM_KEY + '_' + (_userId || 'default')) !== '1';
-
-    // Only force privacy if explicitly triggered (e.g. PRIVACY_VER bumped)
+    // Privacy: only if PRIVACY_VER bumped (run_update_flow set manually in code)
+    var privacyNeeded = false;
     if (sessionStorage.getItem('run_update_flow') === '1') {
       sessionStorage.removeItem('run_update_flow');
       localStorage.removeItem(_privacyKey());
       privacyNeeded = true;
-    }
-    if (sessionStorage.getItem('check_privacy_on_login') === '1') {
-      sessionStorage.removeItem('check_privacy_on_login');
-      if (localStorage.getItem(_privacyKey()) !== PRIVACY_VER) privacyNeeded = true;
+    } else if (!isEstablishedUser && localStorage.getItem(_privacyKey()) !== PRIVACY_VER) {
+      privacyNeeded = true; // brand new user who hasn't signed yet
     }
 
-    // If nothing to do — skip sequence entirely
-    if (!privacyNeeded && !tourNeeded && !confirmNeeded) {
-      // Offer fingerprint only if not yet registered — but only after delay
-      // (removed fingerprint — nothing to do here)
-      return;
-    }
+    var tourNeeded    = !isEstablishedUser && localStorage.getItem(_tourKey()) !== '1';
+    var confirmNeeded = !isEstablishedUser && localStorage.getItem(PHONE_CONFIRM_KEY + '_' + (_userId || 'default')) !== '1';
+
+    if (!privacyNeeded && !tourNeeded && !confirmNeeded) return; // nothing to do
 
     sessionStorage.setItem('_seq_privacy',  privacyNeeded  ? '1' : '0');
     sessionStorage.setItem('_seq_tour',     tourNeeded     ? '1' : '0');
     sessionStorage.setItem('_seq_confirm',  confirmNeeded  ? '1' : '0');
-
     _seqNext();
   }
 
@@ -11968,30 +11972,45 @@ function _resumeSession(uid, name, phone) {
 
 // ── syncInit: called on page load ──
 function syncInit() {
-  var uid   = localStorage.getItem(UID_KEY);
-  var name  = localStorage.getItem(NAME_KEY);
-  var phone = localStorage.getItem(PHONE_KEY);
+  // Restore identity from IndexedDB first — survives localStorage clearing on laptop
+  _idbReadSession(function(session) {
+    if (session && session.uid && session.name && session.phone) {
+      if (!localStorage.getItem(UID_KEY))   localStorage.setItem(UID_KEY,   session.uid);
+      if (!localStorage.getItem(NAME_KEY))  localStorage.setItem(NAME_KEY,  session.name);
+      if (!localStorage.getItem(PHONE_KEY)) localStorage.setItem(PHONE_KEY, session.phone);
+      if (!localStorage.getItem('expense_pin_hash_local') && session.pinHash)
+        localStorage.setItem('expense_pin_hash_local', session.pinHash);
+    }
+    _syncInitRun();
+  });
+}
+
+function _syncInitRun() {
+  // Check app version NOW — after IDB has restored uid/name/phone
+  _checkAppVersion();
+
+  var uid     = localStorage.getItem(UID_KEY);
+  var name    = localStorage.getItem(NAME_KEY);
+  var phone   = localStorage.getItem(PHONE_KEY);
   var pinHash = localStorage.getItem('expense_pin_hash_local');
   var lastActive = parseInt(localStorage.getItem('last_active') || '0', 10);
 
-  // If we have a full local session AND were active recently → resume without PIN
-  // "Recently" = within the inactivity window (10 min)
-  var isActiveSession = sessionStorage.getItem('app_session') === '1';
+  var isActiveSession   = sessionStorage.getItem('app_session') === '1';
   var wasRecentlyActive = lastActive > 0 && (Date.now() - lastActive) < INACTIVE_MS;
 
   if (uid && name && phone && pinHash && (isActiveSession || wasRecentlyActive)) {
-    // Hide pin-overlay IMMEDIATELY — session is valid, no need to show lock screen
     var pinOv = document.getElementById('pin-overlay');
     if (pinOv) pinOv.style.display = 'none';
-    // Resume silently — no PIN needed for a fresh page load within 10 min
     _resumeSession(uid, name, phone);
     return;
   }
 
-  // Show login screen — always show PIN pad first
-  // New users tap the SIGN UP button on the PIN pad
+  // Show PIN screen — just enter PIN, no privacy/confirmation for established users
   showPinScreen();
-  if (uid && needsFullVerify()) {
+  // Security check triggers: (1) random 1-2 week interval, OR (2) new deployment (once)
+  var deploymentCheck = sessionStorage.getItem('run_security_check_once') === '1';
+  if (deploymentCheck) sessionStorage.removeItem('run_security_check_once');
+  if (uid && (needsFullVerify() || deploymentCheck)) {
     showFullVerifyStep();
   } else {
     showPinPadStep();
@@ -12917,7 +12936,7 @@ function _privacyKey() {
 }
 var PRIVACY_VER  = '2026-03-23'; // bump to force all users to re-sign privacy
 var TOUR_VER     = '2026-03-23'; // bump ONLY when new slides are added to the tour
-var APP_VERSION  = '2.3.2';
+var APP_VERSION  = '2.3.3';
 var APP_VERSION_KEY = 'expense_app_version';
 
 function _tourKey() {
@@ -13029,35 +13048,28 @@ function showOnboardingPrompt() {
   document.body.appendChild(notice);
 }
 
-// ── On every page load: detect new version ──
-(function checkAppVersion() {
+// ── On every page load: detect new version (runs after IDB restore) ──
+function _checkAppVersion() {
   var stored = localStorage.getItem(APP_VERSION_KEY);
-  var isExistingUser = !!localStorage.getItem(UID_KEY);
-  var hasPinHash = !!localStorage.getItem('expense_pin_hash_local');
-  var isReturningUser = isExistingUser || hasPinHash;
+  var isReturningUser = !!(localStorage.getItem(UID_KEY) || localStorage.getItem('expense_pin_hash_local'));
 
-  if (stored !== APP_VERSION) {
-    // New app version detected
-    sessionStorage.setItem('new_app_version', '1');
-    localStorage.removeItem('expense_onboard_expenses_done');
-    localStorage.removeItem('expense_onboard_income_done');
-    if (isReturningUser) {
-      localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
-      sessionStorage.setItem('run_update_flow', '1');
-    }
-    // New users: T&C shown during Sign Up — no auto-flash
+  // If no stored key but user exists — localStorage was just cleared (laptop)
+  // Don't treat as new version — just restore the key silently
+  if (!stored && isReturningUser) {
+    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
     return;
   }
 
-  // Same version — but check if existing user hasn't signed this privacy version yet
-  // This catches users who were already on 2.3.0 but haven't signed the new policy
-  if (isReturningUser && !sessionStorage.getItem('privacy_check_done')) {
-    sessionStorage.setItem('privacy_check_done', '1');
-    // Will be checked after login in _resumeSession via checkExistingUserConfirmation
-    // We defer to _resumeSession so we have the UID to check the right privacy key
-    sessionStorage.setItem('check_privacy_on_login', '1');
+  if (stored !== APP_VERSION) {
+    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
+    localStorage.removeItem('expense_onboard_expenses_done');
+    localStorage.removeItem('expense_onboard_income_done');
+    if (isReturningUser) {
+      // Flag: show security check once after this login
+      sessionStorage.setItem('run_security_check_once', '1');
+    }
   }
-})();
+}
 
 // Called after login — checks Firebase first, then localStorage as fallback
 function checkPrivacy() {
