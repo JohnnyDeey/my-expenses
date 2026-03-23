@@ -10982,7 +10982,7 @@ function renderIncomeLedger() {
   var allCats = getAllIncomeCats();
 
   var tbl = document.createElement('table');
-  tbl.style.cssText = 'width:100%;border-collapse:collapse;background:white;border:1px solid var(--border);border-top:none;';
+  tbl.style.cssText = 'width:100%;border-collapse:collapse;background:white;border:1px solid var(--border);border-top:none;table-layout:fixed;';
   var thead = document.createElement('thead');
   thead.innerHTML =
     '<tr style="background:var(--ink);color:var(--paper);">'+
@@ -11018,7 +11018,7 @@ function renderIncomeLedger() {
     var catTd = document.createElement('td');
     catTd.style.cssText = 'padding:4px 7px;border-right:1px solid #eee;';
     var pill = document.createElement('span');
-    pill.style.cssText = 'font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+color+'15;color:'+color+';border:1px solid '+color+'30;cursor:pointer;white-space:nowrap;';
+    pill.style.cssText = 'font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+color+'15;color:'+color+';border:1px solid '+color+'30;cursor:pointer;white-space:nowrap;display:inline-block;max-width:130px;overflow:hidden;text-overflow:ellipsis;';
     pill.textContent = item.category;
     pill.addEventListener('click', function() {
       var sel = document.createElement('select');
