@@ -7731,6 +7731,8 @@ function switchTab(name,btn){
   if(btn)btn.classList.add('active');
   // Save active tab so refresh restores it
   localStorage.setItem('expense_active_tab', name);
+  // Record in tab history for back button
+  if (typeof _pushTabHistory === 'function') _pushTabHistory('expenses', name);
   // Scroll to top only on manual tab switch (btn provided) so section title is visible
   if (btn) window.scrollTo({ top: 0, behavior: 'instant' });
   // Release any Alt scroll lock when switching tabs
@@ -9604,6 +9606,8 @@ function switchIncomeTab(name, btn) {
   if (btn)   btn.classList.add('active');
   // Save active income tab so refresh restores it
   localStorage.setItem('expense_active_inc_tab', name);
+  // Record in tab history for back button
+  if (typeof _pushTabHistory === 'function') _pushTabHistory('income', name);
   // Scroll to top only on manual tab switch (btn provided) so section title is visible
   if (btn) window.scrollTo({ top: 0, behavior: 'instant' });
   // Release any Alt scroll lock when switching tabs
@@ -15561,12 +15565,130 @@ document.addEventListener('keydown', function(e) {
     }
   }
 });
-try {
-  history.replaceState({ noback: true }, '', window.location.pathname);
-  window.addEventListener('popstate', function() {
-    try { history.pushState({ noback: true }, '', window.location.pathname); } catch(e) {}
+// ── Back button & Escape key navigation ──────────────────────────────
+// Tab history — records last 10 tab switches so back can retrace steps
+var _tabHistory = []; // [{mode, tab}]
+var _navLocked  = false; // prevent double-fire
+
+// Called by switchTab and switchIncomeTab after every tab change
+function _pushTabHistory(mode, tab) {
+  var last = _tabHistory[_tabHistory.length - 1];
+  if (last && last.mode === mode && last.tab === tab) return; // no duplicate
+  _tabHistory.push({ mode: mode, tab: tab });
+  if (_tabHistory.length > 15) _tabHistory.shift();
+  // Push a real history state so Android back fires popstate
+  try { history.pushState({ appNav: true, mode: mode, tab: tab }, ''); } catch(e) {}
+}
+
+// Returns true if any overlay/modal/drawer is currently visible
+function _getTopOverlay() {
+  var candidates = [
+    'onboard-overlay','tour-overlay','contact-overlay','help-overlay',
+    'date-lookup-overlay','print-picker-overlay','rename-modal',
+    'avatar-picker-overlay','referral-overlay','mode-overlay',
+    'delete-account-overlay','dob-only-overlay','phone-confirm-overlay',
+    'reset-overlay','privacy-overlay'
+  ];
+  // Check in reverse z-index order — highest z wins
+  var visible = candidates.filter(function(id) {
+    var el = document.getElementById(id);
+    return el && el.style.display !== 'none' && el.style.display !== '';
   });
-} catch(e) { /* iframe preview — ignore */ }
+  // Return the one with highest z-index
+  if (!visible.length) return null;
+  return visible.reduce(function(best, id) {
+    var el = document.getElementById(id);
+    var z = parseInt(el.style.zIndex) || 0;
+    var bestZ = best ? (parseInt(document.getElementById(best).style.zIndex) || 0) : -1;
+    return z >= bestZ ? id : best;
+  }, null);
+}
+
+// Close whatever overlay/modal is on top
+function _closeTopOverlay() {
+  var id = _getTopOverlay();
+  if (!id) return false;
+  switch(id) {
+    case 'help-overlay':         if (typeof closeHelp         === 'function') closeHelp();         break;
+    case 'date-lookup-overlay':  if (typeof closeDateLookup   === 'function') closeDateLookup();   break;
+    case 'print-picker-overlay': if (typeof closePrintPicker  === 'function') closePrintPicker();  break;
+    case 'rename-modal':         if (typeof closeRenameModal  === 'function') closeRenameModal();  break;
+    case 'contact-overlay':      if (typeof closeContact      === 'function') closeContact();      break;
+    case 'avatar-picker-overlay':if (typeof closeAvatarPicker === 'function') closeAvatarPicker(); break;
+    case 'referral-overlay':     if (typeof closeReferralPanel=== 'function') closeReferralPanel();break;
+    case 'mode-overlay':         { var o=document.getElementById('mode-overlay'); if(o) o.style.display='none'; break; }
+    case 'onboard-overlay':
+    case 'tour-overlay':         if (typeof tourSkip          === 'function') tourSkip();          break;
+    default: {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    }
+  }
+  return true;
+}
+
+// Escape key — close top overlay or close fnr bar
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  // Don't interfere with pin overlay
+  var pin = document.getElementById('pin-overlay');
+  if (pin && pin.style.display !== 'none') return;
+  // Close fnr bar first if open
+  var fnrBar = document.getElementById('fnr-bar');
+  if (fnrBar && fnrBar.style.display !== 'none') { if (typeof closeFnr === 'function') closeFnr(); return; }
+  // Close top overlay
+  if (_closeTopOverlay()) return;
+  // Close any open cat dropdowns
+  document.querySelectorAll('.cat-dropdown').forEach(function(d){ d.innerHTML=''; d.style.display='none'; });
+}, true);
+
+// Back button (Android/browser back)
+try {
+  history.replaceState({ appNav: true }, '');
+  window.addEventListener('popstate', function(e) {
+    if (_navLocked) return;
+    _navLocked = true;
+    setTimeout(function(){ _navLocked = false; }, 300);
+
+    // 1. Close any open overlay first
+    if (_closeTopOverlay()) {
+      // Re-push state so back still works after closing overlay
+      try { history.pushState({ appNav: true }, ''); } catch(ex) {}
+      return;
+    }
+
+    // 2. Close fnr bar if open
+    var fnrBar = document.getElementById('fnr-bar');
+    if (fnrBar && fnrBar.style.display !== 'none') {
+      if (typeof closeFnr === 'function') closeFnr();
+      try { history.pushState({ appNav: true }, ''); } catch(ex) {}
+      return;
+    }
+
+    // 3. Go to previous tab in history
+    if (_tabHistory.length > 1) {
+      _tabHistory.pop(); // remove current
+      var prev = _tabHistory.pop(); // get previous (will be re-pushed by switchTab)
+      if (prev) {
+        if (prev.mode !== _appMode) {
+          // Switch module first
+          _appMode = prev.mode;
+          if (typeof applyMode === 'function') applyMode();
+        }
+        if (prev.mode === 'income') {
+          if (typeof switchIncomeTab === 'function') switchIncomeTab(prev.tab, null);
+        } else {
+          if (typeof switchTab === 'function') switchTab(prev.tab, null);
+        }
+        try { history.pushState({ appNav: true }, ''); } catch(ex) {}
+        return;
+      }
+    }
+
+    // 4. Nothing to go back to — re-push state to prevent app exit
+    try { history.pushState({ appNav: true }, ''); } catch(ex) {}
+  });
+} catch(e) { /* iframe/local file — ignore */ }
 
 syncInit();
 </script>
