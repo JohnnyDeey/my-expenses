@@ -1507,21 +1507,47 @@ nav.tabs.header-hidden button {
     font-size: 0.68rem !important;
     white-space: nowrap;
   }
-  /* Hide date column on mobile — save space */
-  #ledger-accordion table th:first-child,
-  #ledger-accordion table td:first-child {
-    display: none;
+  /* Table fills container but never shrinks below 480px — scrolls horizontally if needed */
+  #ledger-accordion table,
+  #inc-ledger-accordion table {
+    min-width: 480px;
+    width: 100%;
+    table-layout: fixed;
+    font-size: 0.66rem !important;
   }
-  /* Keep desc column but allow wrap */
-  #ledger-accordion table td:nth-child(2) {
-    white-space: normal !important;
-    max-width: 130px;
-    font-size: 0.72rem !important;
+  /* DESCRIPTION — takes remaining space, truncates */
+  #ledger-accordion table th:nth-child(1),
+  #ledger-accordion table td:nth-child(1),
+  #inc-ledger-accordion table th:nth-child(1),
+  #inc-ledger-accordion table td:nth-child(1) {
+    width: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  /* Compact category pill on mobile */
-  #ledger-accordion .cat-pill-mob {
-    font-size: 0.6rem !important;
-    padding: 1px 4px !important;
+  /* AMOUNT — fixed */
+  #ledger-accordion table th:nth-child(2),
+  #ledger-accordion table td:nth-child(2),
+  #inc-ledger-accordion table th:nth-child(2),
+  #inc-ledger-accordion table td:nth-child(2) {
+    width: 88px;
+  }
+  /* CATEGORY — fixed, enough for pill */
+  #ledger-accordion table th:nth-child(3),
+  #ledger-accordion table td:nth-child(3),
+  #inc-ledger-accordion table th:nth-child(3),
+  #inc-ledger-accordion table td:nth-child(3) {
+    width: 110px;
+  }
+  /* CHECKBOX — fixed, isolated, never overlaps */
+  #ledger-accordion table th:nth-child(4),
+  #ledger-accordion table td:nth-child(4),
+  #inc-ledger-accordion table th:nth-child(4),
+  #inc-ledger-accordion table td:nth-child(4) {
+    width: 36px;
+    min-width: 36px;
+    text-align: center;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
   }
 }
 /* Suppress browser native password reveal icon — we have our own eye button */
@@ -7095,7 +7121,7 @@ function renderLedger(){
     // Description — autofit
     var descTd = document.createElement('td');
     descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;';
-    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
+    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
 
     // Amount — autofit
     var amtTd = document.createElement('td');
@@ -7107,7 +7133,7 @@ function renderLedger(){
     catTd.setAttribute('data-label','Category');
     catTd.style.cssText = 'padding:5px 8px;border-right:1px solid #eee;';
     var pill = document.createElement('span');
-    pill.style.cssText = 'font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+color+'15;color:'+color+';border:1px solid '+color+'30;cursor:pointer;white-space:nowrap;display:inline-block;max-width:130px;overflow:hidden;text-overflow:ellipsis;';
+    pill.style.cssText = 'font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+color+'15;color:'+color+';border:1px solid '+color+'30;cursor:pointer;white-space:nowrap;display:inline-block;max-width:100px;overflow:hidden;text-overflow:ellipsis;';
     pill.title = 'Tap to change';
     pill.textContent = item.category;
     pill.addEventListener('click', function(){
@@ -10986,7 +11012,7 @@ function renderIncomeLedger() {
   var allCats = getAllIncomeCats();
 
   var tbl = document.createElement('table');
-  tbl.style.cssText = 'width:100%;border-collapse:collapse;background:white;border:1px solid var(--border);border-top:none;table-layout:fixed;';
+  tbl.style.cssText = 'width:100%;border-collapse:collapse;background:white;border:1px solid var(--border);border-top:none;';
   var thead = document.createElement('thead');
   thead.innerHTML =
     '<tr style="background:var(--ink);color:var(--paper);">'+
@@ -11012,7 +11038,7 @@ function renderIncomeLedger() {
     // Description column — autofit
     var descTd = document.createElement('td');
     descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;';
-    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
+    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
 
     // Amount column - LEFT aligned to match expenses
     var amtTd = document.createElement('td');
@@ -11022,7 +11048,7 @@ function renderIncomeLedger() {
     var catTd = document.createElement('td');
     catTd.style.cssText = 'padding:4px 7px;border-right:1px solid #eee;';
     var pill = document.createElement('span');
-    pill.style.cssText = 'font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+color+'15;color:'+color+';border:1px solid '+color+'30;cursor:pointer;white-space:nowrap;display:inline-block;max-width:130px;overflow:hidden;text-overflow:ellipsis;';
+    pill.style.cssText = 'font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+color+'15;color:'+color+';border:1px solid '+color+'30;cursor:pointer;white-space:nowrap;display:inline-block;max-width:100px;overflow:hidden;text-overflow:ellipsis;';
     pill.textContent = item.category;
     pill.addEventListener('click', function() {
       var sel = document.createElement('select');
