@@ -1527,6 +1527,17 @@ nav.tabs.header-hidden button {
 /* Suppress browser native password reveal icon — we have our own eye button */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear { display:none !important; }
+
+/* ── Categorize checkbox selection ── */
+.cat-row-cb { width:16px;height:16px;cursor:pointer;accent-color:var(--gold);flex-shrink:0; }
+.cat-cb-td  { padding:4px 6px;width:28px;vertical-align:middle; }
+.cat-row-selected { background:rgba(200,150,46,0.08)!important; }
+.led-row-selected { background:rgba(200,150,46,0.10)!important; }
+.cb-action-btn { padding:7px 12px;border-radius:3px;border:none;font-size:0.78rem;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap; }
+.cb-hide-btn  { background:#f0b429;color:#1a1410; }
+.cb-del-btn   { background:#c0392b;color:#fff; }
+.cb-sel-btn   { background:#2980b9;color:#fff; }
+.cb-action-btn:active { opacity:.8; }
 </style>
 </head>
 <body>
@@ -1771,6 +1782,9 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div class="cat-dropdown" id="bulk-cat-drop"></div>
       </div>
       <button class="btn btn-success" style="padding:8px 16px;font-size:0.8rem;white-space:nowrap;" onclick="bulkAssignFiltered()">&#10003; Assign</button>
+      <button class="cb-action-btn cb-hide-btn" title="Hide selected rows" onclick="catHideSelected()">&#8212; Hide</button>
+      <button class="cb-action-btn cb-del-btn" title="Delete selected rows" onclick="catDeleteSelected()">&#10005; Delete</button>
+      <button class="cb-action-btn cb-sel-btn" id="cat-selall-btn" title="Select / deselect all" onclick="catToggleSelectAll()">&#9634; All</button>
       <button class="btn btn-ghost" style="padding:8px 10px;font-size:0.8rem;" onclick="clearCatDescSearch()">&#10005;</button>
     </div>
 
@@ -1886,9 +1900,9 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
   <div style="background:#fffbf0;border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:3px;padding:12px 16px;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.8;">
     <strong style="color:var(--gold);">&#128161; How to use the Ledger:</strong>
-    Use <strong>Search Desc</strong> to find all entries with a keyword (e.g. "water" or "bread") — it shows all matches as a flat list across all years.
-    Pick a category and click <strong>✓ Assign</strong> to categorize all matches at once.
-    Use <strong>⇅ Expand All</strong> to browse all entries by year and month when no search is active.
+    Each row has a <strong>☐ checkbox</strong>. Use filters (Year / Month / Currency / Category) to narrow results, pick a category and click <strong>✓ Assign</strong> to bulk-assign everything visible — no keyword needed.
+    To assign only specific items: check those rows, then click <strong>✓ Assign</strong>.
+    Use <strong>— Hide</strong> to remove checked rows from view, <strong>✕ Delete</strong> to send them to the Recycle Bin, and <strong>☐ All</strong> to check/uncheck everything at once.
   </div>
   <div class="filter-bar">
     <span class="filter-label">Filter:</span>
@@ -1921,7 +1935,10 @@ input[type="password"]::-ms-clear { display:none !important; }
       <span class="cat-input-arrow">&#9662;</span>
       <div class="cat-dropdown" id="led-bulk-cat-drop"></div>
     </div>
-    <button class="btn btn-success" style="padding:8px 16px;font-size:0.8rem;white-space:nowrap;" onclick="ledgerBulkAssign()">&#10003; Assign</button>
+    <button class="btn btn-success" id="led-assign-btn" style="padding:8px 16px;font-size:0.8rem;white-space:nowrap;" onclick="ledgerBulkAssign()">&#10003; Assign</button>
+    <button class="cb-action-btn cb-hide-btn" title="Hide selected rows from view" onclick="ledHideSelected()">&#8212; Hide</button>
+    <button class="cb-action-btn cb-del-btn" title="Delete selected rows to recycle bin" onclick="ledDeleteSelected()">&#10005; Delete</button>
+    <button class="cb-action-btn cb-sel-btn" id="led-selall-btn" title="Select all / deselect all" onclick="ledToggleSelectAll()">&#9634; All</button>
     <button class="btn btn-ghost" style="padding:8px 10px;font-size:0.8rem;" onclick="clearLedgerBulkSearch()">&#10005;</button>
   </div>
 
@@ -2319,6 +2336,9 @@ input[type="password"]::-ms-clear { display:none !important; }
       <option value="">Assign all to...</option>
     </select>
     <button class="btn btn-success" style="padding:8px 14px;" onclick="incBulkAssignCat()">&#10003; Assign All</button>
+    <button class="cb-action-btn cb-hide-btn" title="Hide selected rows" onclick="incCatHideSelected()">&#8212; Hide</button>
+    <button class="cb-action-btn cb-del-btn" title="Delete selected rows" onclick="incCatDeleteSelected()">&#10005; Delete</button>
+    <button class="cb-action-btn cb-sel-btn" id="inc-cat-selall-btn" title="Select / deselect all" onclick="incCatToggleSelectAll()">&#9634; All</button>
     <button class="btn btn-ghost" style="padding:8px 10px;" onclick="incCatDescSearch('');document.getElementById('inc-cat-desc-search').value='';">&#10005;</button>
   </div>
   <div id="inc-categorize-empty" class="empty-state"><div class="big">&#9645;</div><p>No income items to categorize.</p></div>
@@ -2462,7 +2482,10 @@ input[type="password"]::-ms-clear { display:none !important; }
     <select id="inc-bulk-cat-sel" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;min-width:160px;">
       <option value="">Pick category...</option>
     </select>
-    <button class="btn btn-success" style="padding:8px 16px;font-size:0.8rem;" onclick="incomeBulkAssign()">&#10003; Assign</button>
+    <button class="btn btn-success" id="inc-assign-btn" style="padding:8px 16px;font-size:0.8rem;" onclick="incomeBulkAssign()">&#10003; Assign</button>
+    <button class="cb-action-btn cb-hide-btn" title="Hide selected rows from view" onclick="incLedHideSelected()">&#8212; Hide</button>
+    <button class="cb-action-btn cb-del-btn" title="Delete selected rows to recycle bin" onclick="incLedDeleteSelected()">&#10005; Delete</button>
+    <button class="cb-action-btn cb-sel-btn" id="inc-led-selall-btn" title="Select all / deselect all" onclick="incLedToggleSelectAll()">&#9634; All</button>
     <button class="btn btn-ghost" style="padding:8px 10px;" onclick="_incExcludedIds={};document.getElementById('inc-bulk-search').value='';renderIncomeLedger();">&#10005;</button>
   </div>
   <div id="inc-ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No income entries yet.</p></div>
@@ -4466,6 +4489,21 @@ function renderCategorizeTable() {
   filteredItems.forEach(function(item, idx) {
     var tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--border)';
+    tr.setAttribute('data-cat-idx', idx);
+
+    // Checkbox cell
+    var cbTd = document.createElement('td');
+    cbTd.className = 'cat-cb-td';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.className = 'cat-row-cb';
+    cb.setAttribute('data-idx', idx);
+    cb.addEventListener('change', function() {
+      if (cb.checked) tr.classList.add('cat-row-selected');
+      else tr.classList.remove('cat-row-selected');
+      _updateCatSelAllBtn();
+    });
+    cbTd.appendChild(cb);
+    tr.appendChild(cbTd);
 
     var catTd = document.createElement('td');
     var wrap = document.createElement('div');
@@ -6076,6 +6114,152 @@ function incCtrlEnterAction() {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════════
+// ── CATEGORIZE CHECKBOX SELECTION — Expenses ─────────────────────
+// ══════════════════════════════════════════════════════════════════
+
+function _getCatCheckedItems() {
+  // Returns array of item objects that are currently checked
+  var items = (catViewMode === 'pending') ? pendingItems : catEditItems;
+  var checked = [];
+  document.querySelectorAll('#categorize-tbody .cat-row-cb:checked').forEach(function(cb) {
+    var idx = parseInt(cb.getAttribute('data-idx'));
+    // idx is position in filteredItems — need to match by data-cat-idx on tr
+    var tr = cb.closest('tr');
+    if (!tr) return;
+    // Find matching item by traversing filtered list in same order as render
+    checked.push({ cb: cb, tr: tr, idx: idx });
+  });
+  return checked;
+}
+
+function _getCatCheckedItemObjects() {
+  // Get actual item objects for checked rows — match by rendered order
+  var items = (catViewMode === 'pending') ? pendingItems : catEditItems;
+  var catFilter = getCatCategoryFilter ? getCatCategoryFilter() : 'all';
+  var filtered = catFilter === 'all' ? items.slice() : items.filter(function(i){ return i.category === catFilter; });
+  if (catDescFilter) filtered = filtered.filter(function(i){ return i.desc.toLowerCase().indexOf(catDescFilter) !== -1; });
+  filtered = filtered.slice().sort(function(a,b){ return _catSortNewest ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date); });
+  var result = [];
+  document.querySelectorAll('#categorize-tbody .cat-row-cb:checked').forEach(function(cb) {
+    var idx = parseInt(cb.getAttribute('data-idx'));
+    if (filtered[idx]) result.push(filtered[idx]);
+  });
+  return result;
+}
+
+function catHideSelected() {
+  var selected = _getCatCheckedItemObjects();
+  if (!selected.length) { showToast('Check some items first'); return; }
+  var items = (catViewMode === 'pending') ? pendingItems : catEditItems;
+  selected.forEach(function(item) {
+    var i = items.indexOf(item);
+    if (i !== -1) items.splice(i, 1);
+  });
+  showToast(selected.length + ' item'+(selected.length===1?'':'s')+' hidden');
+  renderCategorizeTable();
+}
+
+function catDeleteSelected() {
+  var selected = _getCatCheckedItemObjects();
+  if (!selected.length) { showToast('Check some items first'); return; }
+  if (!confirm('Delete ' + selected.length + ' item'+(selected.length===1?'':'s')+' to recycle bin?')) return;
+  var items = (catViewMode === 'pending') ? pendingItems : catEditItems;
+  var trashItems = selected.map(function(item) {
+    return { _raw_line: item.desc, _reason: 'Manually deleted', date: item.date, desc: item.desc, amount: item.amount, currency: item.currency, category: item.category };
+  });
+  addToTrash(trashItems, 'deleted');
+  selected.forEach(function(item) {
+    var i = items.indexOf(item);
+    if (i !== -1) items.splice(i, 1);
+  });
+  showToast(selected.length + ' item'+(selected.length===1?'':'s')+' moved to recycle bin');
+  renderCategorizeTable();
+}
+
+var _catAllSelected = false;
+function catToggleSelectAll() {
+  _catAllSelected = !_catAllSelected;
+  document.querySelectorAll('#categorize-tbody .cat-row-cb').forEach(function(cb) {
+    cb.checked = _catAllSelected;
+    var tr = cb.closest('tr');
+    if (tr) { if (_catAllSelected) tr.classList.add('cat-row-selected'); else tr.classList.remove('cat-row-selected'); }
+  });
+  _updateCatSelAllBtn();
+}
+function _updateCatSelAllBtn() {
+  var total = document.querySelectorAll('#categorize-tbody .cat-row-cb').length;
+  var checked = document.querySelectorAll('#categorize-tbody .cat-row-cb:checked').length;
+  var btn = document.getElementById('cat-selall-btn');
+  if (!btn) return;
+  _catAllSelected = (total > 0 && checked === total);
+  btn.textContent = _catAllSelected ? '☑ None' : '☐ All';
+  btn.title = _catAllSelected ? 'Deselect all' : 'Select all';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── CATEGORIZE CHECKBOX SELECTION — Income ───────────────────────
+// ══════════════════════════════════════════════════════════════════
+
+function _getIncCatCheckedItemObjects() {
+  var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
+  var catFilterVal = document.getElementById('inc-cat-cat-filter') ? document.getElementById('inc-cat-cat-filter').value : 'all';
+  var filtered = catFilterVal === 'all' ? items.slice() : items.filter(function(i){ return i.category === catFilterVal; });
+  if (_incCatDescFilter) filtered = filtered.filter(function(i){ return i.desc.toLowerCase().indexOf(_incCatDescFilter) !== -1; });
+  filtered = filtered.slice().sort(function(a,b){ return _incCatSortNewest ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date); });
+  var result = [];
+  document.querySelectorAll('#inc-categorize-tbody .cat-row-cb:checked').forEach(function(cb) {
+    var idx = parseInt(cb.getAttribute('data-idx'));
+    if (filtered[idx]) result.push(filtered[idx]);
+  });
+  return result;
+}
+
+function incCatHideSelected() {
+  var selected = _getIncCatCheckedItemObjects();
+  if (!selected.length) { showToast('Check some items first'); return; }
+  var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
+  selected.forEach(function(item) { var i = items.indexOf(item); if (i !== -1) items.splice(i, 1); });
+  showToast(selected.length + ' item'+(selected.length===1?'':'s')+' hidden');
+  renderIncomeCatTable();
+}
+
+function incCatDeleteSelected() {
+  var selected = _getIncCatCheckedItemObjects();
+  if (!selected.length) { showToast('Check some items first'); return; }
+  if (!confirm('Delete ' + selected.length + ' item'+(selected.length===1?'':'s')+' to recycle bin?')) return;
+  var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
+  var trashItems = selected.map(function(item) {
+    return { _raw_line: item.desc, _reason: 'Manually deleted', date: item.date, desc: item.desc, amount: item.amount, currency: item.currency, category: item.category };
+  });
+  if (typeof addToIncTrash === 'function') addToIncTrash(trashItems, 'deleted');
+  else if (typeof addToTrash === 'function') addToTrash(trashItems, 'deleted');
+  selected.forEach(function(item) { var i = items.indexOf(item); if (i !== -1) items.splice(i, 1); });
+  showToast(selected.length + ' item'+(selected.length===1?'':'s')+' moved to recycle bin');
+  renderIncomeCatTable();
+}
+
+var _incCatAllSelected = false;
+function incCatToggleSelectAll() {
+  _incCatAllSelected = !_incCatAllSelected;
+  document.querySelectorAll('#inc-categorize-tbody .cat-row-cb').forEach(function(cb) {
+    cb.checked = _incCatAllSelected;
+    var tr = cb.closest('tr');
+    if (tr) { if (_incCatAllSelected) tr.classList.add('cat-row-selected'); else tr.classList.remove('cat-row-selected'); }
+  });
+  _updateIncCatSelAllBtn();
+}
+function _updateIncCatSelAllBtn() {
+  var total = document.querySelectorAll('#inc-categorize-tbody .cat-row-cb').length;
+  var checked = document.querySelectorAll('#inc-categorize-tbody .cat-row-cb:checked').length;
+  var btn = document.getElementById('inc-cat-selall-btn');
+  if (!btn) return;
+  _incCatAllSelected = (total > 0 && checked === total);
+  btn.textContent = _incCatAllSelected ? '☑ None' : '☐ All';
+  btn.title = _incCatAllSelected ? 'Deselect all' : 'Select all';
+}
+
 // ── Sort toggle for Expenses Categorize ──
 var _catSortNewest = true; // default: newest first
 function toggleCatSort() {
@@ -6259,11 +6443,17 @@ function bulkAssignFiltered() {
   var cat = document.getElementById('bulk-cat-input').value.trim();
   if (!cat) { showToast('Pick a category first'); return; }
   var items = (catViewMode === 'pending') ? pendingItems : catEditItems;
-  var toUpdate = catDescFilter
-    ? items.filter(function(i){ return i.desc.toLowerCase().indexOf(catDescFilter) !== -1; })
-    : items;
+  // Priority: if any checkboxes are checked → assign to those only
+  var checked = _getCatCheckedItemObjects ? _getCatCheckedItemObjects() : [];
+  var toUpdate;
+  if (checked.length > 0) {
+    toUpdate = checked;
+  } else if (catDescFilter) {
+    toUpdate = items.filter(function(i){ return i.desc.toLowerCase().indexOf(catDescFilter) !== -1; });
+  } else {
+    toUpdate = items;
+  }
   if (!toUpdate.length) { showToast('No items to assign'); return; }
-  // Save new category if custom
   saveCustomCategory(cat);
   toUpdate.forEach(function(item) {
     item.category = cat;
@@ -6415,61 +6605,118 @@ function filterLedgerBulkCatDropdown() {
 function ledgerBulkAssign() {
   var newCat = document.getElementById('led-bulk-cat-input').value.trim();
   if (!newCat) { showToast('Pick a category first'); return; }
-  if (!ledgerBulkFilter) { showToast('Enter a description keyword to filter first'); return; }
 
   var data = loadData();
-  // Apply current ledger filters first (so bulk only affects what you can see)
+  var matchingIds = {};
+
+  // Check if any rows are checked — if so, assign only to those
+  var checkedCbs = document.querySelectorAll('#ledger-accordion .led-row-cb:checked');
+  if (checkedCbs.length > 0) {
+    checkedCbs.forEach(function(cb) { matchingIds[cb.getAttribute('data-id')] = true; });
+    var count = 0;
+    saveCustomCategory(newCat);
+    data.forEach(function(item) {
+      if (matchingIds[String(item.id)]) { item.category = newCat; learnKeywordsFromEntry(item.desc, newCat); count++; }
+    });
+    localStorage.setItem('expense_ledger', JSON.stringify(data));
+    document.getElementById('led-bulk-cat-input').value = '';
+    showToast(count + ' selected item'+(count===1?'':'s')+' assigned to "'+newCat+'"');
+    _ledAllSelected = false;
+    renderLedger();
+    return;
+  }
+
+  // No checkboxes selected — assign to ALL currently visible filtered items
   var year = document.getElementById('led-year').value;
   var month = document.getElementById('led-month').value;
   var currency = document.getElementById('led-currency').value;
   var cat = document.getElementById('led-cat').value;
   var search = document.getElementById('led-search').value.trim().toLowerCase();
-  var matchingIds = {};
   var filtered = data.slice();
   if (year !== 'all') filtered = filtered.filter(function(i){ return i.date.indexOf(year) === 0; });
   if (month !== 'all') filtered = filtered.filter(function(i){ return i.date.substring(5,7) === month; });
   if (currency !== 'all') filtered = filtered.filter(function(i){ return i.currency === currency; });
   if (cat !== 'all') filtered = filtered.filter(function(i){ return i.category === cat; });
-  if (search) {
-    filtered = applySearchFilter(filtered, search);
-  }
-  // Apply bulk filter — respects exclusion syntax (e.g. ice cream -rice)
-  filtered = applySearchFilter(filtered, ledgerBulkFilter);
-  // Apply bulk category filter
+  if (search) filtered = applySearchFilter(filtered, search);
+  if (ledgerBulkFilter) filtered = applySearchFilter(filtered, ledgerBulkFilter);
   var bulkCatFilterEl = document.getElementById('led-bulk-cat-filter');
-  var bulkCatFilterVal = bulkCatFilterEl ? bulkCatFilterEl.value : 'all';
-  if (bulkCatFilterVal !== 'all') {
-    filtered = filtered.filter(function(i){ return i.category === bulkCatFilterVal; });
+  if (bulkCatFilterEl && bulkCatFilterEl.value !== 'all') {
+    filtered = filtered.filter(function(i){ return i.category === bulkCatFilterEl.value; });
   }
-  // IMPORTANT: exclude items the user has hidden with the − button
   if (Object.keys(_ledExcludedIds).length) {
     filtered = filtered.filter(function(i){ return !_ledExcludedIds[String(i.id)]; });
   }
+  if (!filtered.length) { showToast('No visible entries to assign'); return; }
   filtered.forEach(function(i){ matchingIds[i.id] = true; });
-  var excludedCount = Object.keys(_ledExcludedIds).length;
-
-  if (!filtered.length) { showToast('No matching entries found' + (excludedCount ? ' ('+excludedCount+' hidden/excluded)' : '')); return; }
 
   saveCustomCategory(newCat);
   var count = 0;
   data.forEach(function(item) {
-    if (matchingIds[item.id]) {
-      item.category = newCat;
-      learnKeywordsFromEntry(item.desc, newCat);
-      count++;
-    }
+    if (matchingIds[item.id]) { item.category = newCat; learnKeywordsFromEntry(item.desc, newCat); count++; }
   });
   localStorage.setItem('expense_ledger', JSON.stringify(data));
   document.getElementById('led-bulk-cat-input').value = '';
-  var excludedMsg = excludedCount ? ' · ' + excludedCount + ' excluded item' + (excludedCount===1?'':'s') + ' skipped' : '';
   clearLedgerBulkSearch();
-  showToast(count + ' entr'+(count===1?'y':'ies')+' assigned to "'+newCat+'"' + excludedMsg);
+  showToast(count + ' entr'+(count===1?'y':'ies')+' assigned to "'+newCat+'"');
   renderLedger();
 }
 
 // ════════════════════════════════
 //  RENAME CATEGORY MODAL
 // ════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// ── LEDGER CHECKBOX ACTIONS ───────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+var _ledAllSelected = false;
+
+function _updateLedSelAllBtn() {
+  var total   = document.querySelectorAll('#ledger-accordion .led-row-cb').length;
+  var checked = document.querySelectorAll('#ledger-accordion .led-row-cb:checked').length;
+  var btn = document.getElementById('led-selall-btn');
+  if (!btn) return;
+  _ledAllSelected = (total > 0 && checked === total);
+  btn.innerHTML = _ledAllSelected ? '&#9745; None' : '&#9634; All';
+  btn.title = _ledAllSelected ? 'Deselect all' : 'Select all';
+}
+
+function ledToggleSelectAll() {
+  _ledAllSelected = !_ledAllSelected;
+  document.querySelectorAll('#ledger-accordion .led-row-cb').forEach(function(cb) {
+    cb.checked = _ledAllSelected;
+    var tr = cb.closest('tr');
+    if (tr) { if (_ledAllSelected) tr.classList.add('led-row-selected'); else tr.classList.remove('led-row-selected'); }
+  });
+  _updateLedSelAllBtn();
+}
+
+function ledHideSelected() {
+  var checked = document.querySelectorAll('#ledger-accordion .led-row-cb:checked');
+  if (!checked.length) { showToast('Check some items first'); return; }
+  checked.forEach(function(cb) { _ledExcludedIds[cb.getAttribute('data-id')] = true; });
+  showToast(checked.length + ' item'+(checked.length===1?'':'s')+' hidden from view');
+  _ledAllSelected = false;
+  renderLedger();
+}
+
+function ledDeleteSelected() {
+  var checked = document.querySelectorAll('#ledger-accordion .led-row-cb:checked');
+  if (!checked.length) { showToast('Check some items first'); return; }
+  if (!confirm('Move ' + checked.length + ' item'+(checked.length===1?'':'s')+' to recycle bin?')) return;
+  var ids = {};
+  checked.forEach(function(cb) { ids[cb.getAttribute('data-id')] = true; });
+  var data = loadData();
+  var toTrash = data.filter(function(i){ return ids[String(i.id)]; });
+  var trashItems = toTrash.map(function(item) {
+    return { _raw_line: item.desc, _reason: 'Manually deleted', date: item.date, desc: item.desc, amount: item.amount, currency: item.currency, category: item.category };
+  });
+  addToTrash(trashItems, 'deleted');
+  var remaining = data.filter(function(i){ return !ids[String(i.id)]; });
+  saveData(remaining);
+  showToast(toTrash.length + ' item'+(toTrash.length===1?'':'s')+' moved to recycle bin');
+  _ledAllSelected = false;
+  renderLedger();
+}
+
 function openRenameModal() {
   var sel = document.getElementById('rename-from');
   sel.innerHTML = '';
@@ -6819,20 +7066,19 @@ function renderLedger(){
     });
     catTd.appendChild(pill);
 
-    // Actions
+    // Checkbox cell
     var actTd = document.createElement('td');
-    actTd.style.cssText = 'padding:3px 6px;text-align:center;white-space:nowrap;';
-    var minusBtn = document.createElement('button');
-    minusBtn.style.cssText = 'padding:2px 6px;font-size:0.8rem;color:#aaa;margin-right:3px;font-weight:700;background:none;border:1px solid #ddd;border-radius:2px;cursor:pointer;';
-    minusBtn.textContent = '−';
-    minusBtn.title = 'Hide from view & protect from bulk assign';
-    minusBtn.addEventListener('click', function(){ _ledExcludedIds[String(item.id)]=true; renderLedger(); });
-    var delBtn = document.createElement('button');
-    delBtn.style.cssText = 'padding:2px 7px;font-size:0.7rem;font-weight:700;color:white;background:#b5451b;border:none;border-radius:2px;cursor:pointer;';
-    delBtn.textContent = '×';
-    delBtn.addEventListener('click', function(){ deleteEntry(String(item.id)); });
-    actTd.appendChild(minusBtn);
-    actTd.appendChild(delBtn);
+    actTd.style.cssText = 'padding:3px 8px;text-align:center;';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.className = 'led-row-cb';
+    cb.setAttribute('data-id', item.id);
+    cb.style.cssText = 'width:16px;height:16px;cursor:pointer;accent-color:var(--gold);';
+    cb.addEventListener('change', function() {
+      if (cb.checked) tr.classList.add('led-row-selected');
+      else tr.classList.remove('led-row-selected');
+      _updateLedSelAllBtn();
+    });
+    actTd.appendChild(cb);
 
     tr.appendChild(dateTd); tr.appendChild(descTd); tr.appendChild(amtTd);
     tr.appendChild(catTd); tr.appendChild(actTd);
@@ -9883,6 +10129,21 @@ function renderIncomeCatTable() {
   filteredItems.forEach(function(item, idx) {
     var tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--border)';
+    tr.setAttribute('data-cat-idx', idx);
+
+    // Checkbox cell
+    var incCbTd = document.createElement('td');
+    incCbTd.className = 'cat-cb-td';
+    var incCb = document.createElement('input');
+    incCb.type = 'checkbox'; incCb.className = 'cat-row-cb';
+    incCb.setAttribute('data-idx', idx);
+    incCb.addEventListener('change', function() {
+      if (incCb.checked) tr.classList.add('cat-row-selected');
+      else tr.classList.remove('cat-row-selected');
+      _updateIncCatSelAllBtn();
+    });
+    incCbTd.appendChild(incCb);
+    tr.appendChild(incCbTd);
 
     // Description + amount cell
     var mainTd = document.createElement('td');
@@ -9930,16 +10191,22 @@ function incCatDescSearch(val) {
   renderIncomeCatTable();
 }
 function incBulkAssignCat() {
-  var cat = document.getElementById('inc-cat-bulk-sel').value;
-  if (!cat) { showToast('Select a category first'); return; }
   var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
-  var toUpdate = _incCatDescFilter
-    ? items.filter(function(i){ return i.desc.toLowerCase().indexOf(_incCatDescFilter) !== -1; })
-    : items;
+  var cat = document.getElementById('inc-cat-bulk-sel') ? document.getElementById('inc-cat-bulk-sel').value : '';
+  if (!cat) { showToast('Pick a category first'); return; }
+  var checked = typeof _getIncCatCheckedItemObjects === 'function' ? _getIncCatCheckedItemObjects() : [];
+  var toUpdate;
+  if (checked.length > 0) {
+    toUpdate = checked;
+  } else if (_incCatDescFilter) {
+    toUpdate = items.filter(function(i){ return i.desc.toLowerCase().indexOf(_incCatDescFilter) !== -1; });
+  } else {
+    toUpdate = items;
+  }
   if (!toUpdate.length) { showToast('No items to assign'); return; }
-  saveIncomeCustomCat(cat);
-  toUpdate.forEach(function(i){ i.category = cat; });
-  showToast(toUpdate.length + ' items assigned to "' + cat + '"');
+  if (typeof saveIncomeCustomCat === 'function') saveIncomeCustomCat(cat);
+  toUpdate.forEach(function(item) { item.category = cat; });
+  showToast(toUpdate.length + ' item'+(toUpdate.length===1?'':'s')+' assigned to "'+cat+'"');
   renderIncomeCatTable();
 }
 function populateIncCatBulkSel() {
@@ -10690,31 +10957,17 @@ function renderIncomeLedger() {
     catTd.appendChild(pill);
 
     var actTd = document.createElement('td');
-    actTd.style.cssText = 'padding:3px 6px;text-align:center;white-space:nowrap;';
-    var minusBtn = document.createElement('button');
-    minusBtn.style.cssText = 'padding:2px 6px;font-size:0.8rem;color:#aaa;margin-right:3px;font-weight:700;background:none;border:1px solid #ddd;border-radius:2px;cursor:pointer;';
-    minusBtn.textContent = '−';
-    minusBtn.title = 'Hide from view & protect from bulk assign';
-    minusBtn.addEventListener('click', function(){ _incExcludedIds[String(item.id)]=true; renderIncomeLedger(); });
-    actTd.appendChild(minusBtn);
-    var delBtn = document.createElement('button');
-    delBtn.style.cssText = 'padding:2px 7px;font-size:0.7rem;font-weight:700;color:white;background:var(--rust);border:none;border-radius:2px;cursor:pointer;';
-    delBtn.textContent = '×';
-    delBtn.addEventListener('click', function() {
-      var d3 = loadIncomeData();
-      var toTrash = d3.filter(function(i){ return String(i.id)===String(item.id); });
-      if (toTrash.length) {
-        var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
-        var now = new Date().toISOString().substring(0,10);
-        toTrash.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random()})); });
-        localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
-        pushIncTrashToFirebase();
-      }
-      saveIncomeData(d3.filter(function(i){ return String(i.id)!==String(item.id); }));
-      renderIncomeLedger();
-      showToast('Moved to income recycle bin');
+    actTd.style.cssText = 'padding:3px 8px;text-align:center;';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.className = 'inc-led-row-cb';
+    cb.setAttribute('data-id', item.id);
+    cb.style.cssText = 'width:16px;height:16px;cursor:pointer;accent-color:var(--sage);';
+    cb.addEventListener('change', function() {
+      if (cb.checked) tr.classList.add('led-row-selected');
+      else tr.classList.remove('led-row-selected');
+      _updateIncLedSelAllBtn();
     });
-    actTd.appendChild(delBtn);
+    actTd.appendChild(cb);
 
     tr.appendChild(dateTd); tr.appendChild(descTd); tr.appendChild(amtTd);
     tr.appendChild(catTd); tr.appendChild(actTd);
@@ -10759,32 +11012,116 @@ function renderIncomeLedger() {
 }
 
 function incomeBulkAssign() {
-  var search = (document.getElementById('inc-bulk-search').value||'').trim().toLowerCase();
-  var newCat  = document.getElementById('inc-bulk-cat-sel').value;
-  if (!newCat)   { showToast('Select a category first'); return; }
-  if (!search)   { showToast('Enter a keyword to filter first'); return; }
+  var newCat = document.getElementById('inc-bulk-cat-sel').value;
+  if (!newCat) { showToast('Select a category first'); return; }
+
   var data = loadIncomeData();
-  // Apply exclusion-aware filter
-  var matching = applySearchFilter(data, search).filter(function(i){
-    return !_incExcludedIds[String(i.id)];
-  });
-  // Apply bulk category filter
+  var matchingIds = {};
+
+  // If any rows are checked — assign only to those
+  var checkedCbs = document.querySelectorAll('#inc-ledger-accordion .inc-led-row-cb:checked');
+  if (checkedCbs.length > 0) {
+    checkedCbs.forEach(function(cb) { matchingIds[cb.getAttribute('data-id')] = true; });
+    var count = 0;
+    data.forEach(function(i) {
+      if (matchingIds[String(i.id)]) { i.category = newCat; count++; }
+    });
+    if (!count) { showToast('No matching entries'); return; }
+    saveIncomeData(data);
+    _incLedAllSelected = false;
+    renderIncomeLedger();
+    showToast(count + ' selected item'+(count===1?'':'s')+' assigned to "'+newCat+'"');
+    return;
+  }
+
+  // No checkboxes — assign to ALL currently visible filtered items
+  var year     = document.getElementById('inc-led-year').value;
+  var month    = document.getElementById('inc-led-month').value;
+  var currency = document.getElementById('inc-led-currency').value;
+  var cat      = document.getElementById('inc-led-cat').value;
+  var search   = (document.getElementById('inc-led-search').value||'').toLowerCase().trim();
+  var bulkSearch = (document.getElementById('inc-bulk-search').value||'').trim().toLowerCase();
+
+  var filtered = data.slice();
+  if (year !== 'all') filtered = filtered.filter(function(i){ return i.date.indexOf(year) === 0; });
+  if (month !== 'all') filtered = filtered.filter(function(i){ return i.date.substring(5,7) === month; });
+  if (currency !== 'all') filtered = filtered.filter(function(i){ return i.currency === currency; });
+  if (cat !== 'all') filtered = filtered.filter(function(i){ return i.category === cat; });
+  if (search) filtered = applySearchFilter(filtered, search);
+  if (bulkSearch) filtered = applySearchFilter(filtered, bulkSearch);
   var incBCatF = document.getElementById('inc-bulk-cat-filter');
   if (incBCatF && incBCatF.value !== 'all') {
-    var filterCat = incBCatF.value;
-    matching = matching.filter(function(i){ return i.category === filterCat; });
+    filtered = filtered.filter(function(i){ return i.category === incBCatF.value; });
   }
-  var matchingIds = {};
-  matching.forEach(function(i){ matchingIds[i.id] = true; });
+  if (Object.keys(_incExcludedIds).length) {
+    filtered = filtered.filter(function(i){ return !_incExcludedIds[String(i.id)]; });
+  }
+  if (!filtered.length) { showToast('No visible entries to assign'); return; }
+  filtered.forEach(function(i){ matchingIds[i.id] = true; });
+
   var count = 0;
-  data.forEach(function(i){
+  data.forEach(function(i) {
     if (matchingIds[i.id]) { i.category = newCat; count++; }
   });
-  if (!count) { showToast('No matching entries'); return; }
   saveIncomeData(data);
-  document.getElementById('inc-bulk-search').value='';
+  document.getElementById('inc-bulk-search').value = '';
   renderIncomeLedger();
-  showToast(count+' income entries assigned to "'+newCat+'"');
+  showToast(count + ' income entr'+(count===1?'y':'ies')+' assigned to "'+newCat+'"');
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── INCOME LEDGER CHECKBOX ACTIONS ───────────────────────────
+// ══════════════════════════════════════════════════════════════
+var _incLedAllSelected = false;
+
+function _updateIncLedSelAllBtn() {
+  var total   = document.querySelectorAll('#inc-ledger-accordion .inc-led-row-cb').length;
+  var checked = document.querySelectorAll('#inc-ledger-accordion .inc-led-row-cb:checked').length;
+  var btn = document.getElementById('inc-led-selall-btn');
+  if (!btn) return;
+  _incLedAllSelected = (total > 0 && checked === total);
+  btn.innerHTML = _incLedAllSelected ? '&#9745; None' : '&#9634; All';
+  btn.title = _incLedAllSelected ? 'Deselect all' : 'Select all';
+}
+
+function incLedToggleSelectAll() {
+  _incLedAllSelected = !_incLedAllSelected;
+  document.querySelectorAll('#inc-ledger-accordion .inc-led-row-cb').forEach(function(cb) {
+    cb.checked = _incLedAllSelected;
+    var tr = cb.closest('tr');
+    if (tr) { if (_incLedAllSelected) tr.classList.add('led-row-selected'); else tr.classList.remove('led-row-selected'); }
+  });
+  _updateIncLedSelAllBtn();
+}
+
+function incLedHideSelected() {
+  var checked = document.querySelectorAll('#inc-ledger-accordion .inc-led-row-cb:checked');
+  if (!checked.length) { showToast('Check some items first'); return; }
+  checked.forEach(function(cb) { _incExcludedIds[cb.getAttribute('data-id')] = true; });
+  showToast(checked.length + ' item'+(checked.length===1?'':'s')+' hidden from view');
+  _incLedAllSelected = false;
+  renderIncomeLedger();
+}
+
+function incLedDeleteSelected() {
+  var checked = document.querySelectorAll('#inc-ledger-accordion .inc-led-row-cb:checked');
+  if (!checked.length) { showToast('Check some items first'); return; }
+  if (!confirm('Move ' + checked.length + ' item'+(checked.length===1?'':'s')+' to recycle bin?')) return;
+  var ids = {};
+  checked.forEach(function(cb) { ids[cb.getAttribute('data-id')] = true; });
+  var data = loadIncomeData();
+  var toTrash = data.filter(function(i){ return ids[String(i.id)]; });
+  var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
+  var now = new Date().toISOString().substring(0,10);
+  toTrash.forEach(function(t){
+    incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random()}));
+  });
+  localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
+  pushIncTrashToFirebase();
+  saveIncomeData(data.filter(function(i){ return !ids[String(i.id)]; }));
+  showToast(toTrash.length + ' item'+(toTrash.length===1?'':'s')+' moved to recycle bin');
+  _incLedAllSelected = false;
+  renderIncomeLedger();
 }
 
 function populateIncBulkCatSel() {
@@ -13258,9 +13595,20 @@ var HELP_DATA = {
   },
   'ledger': {
     title: '📜 Ledger — Full Transaction List',
-    steps: ['Use filters (Year, Month, Currency, Category) to narrow results.','Use Search to find entries by keyword — or search multiple words at once using commas e.g. rice, water, fleet.','Use Search Desc + Assign to bulk-change categories — multi-word search works here too.','Tap a category pill on any row to change it.','Tap × to delete — goes to Recycle Bin.','Tap − to temporarily hide from current view.'],
-    example: 'User sa0819 searched water and found 23 entries across 8 months. She bulk-assigned all to Utilities in one click.\n\nUser jd0292 typed: rice, water, fleet — and instantly saw all 3 household item types together in one list.',
-    tip: 'Multi-word search works in both the top Search bar and the Search Desc bulk-assign bar. Use it in Expenses Ledger and Income Ledger.'
+    steps: [
+      'Use filters (Year, Month, Currency, Category) to narrow results.',
+      'Use Search to find entries by keyword — commas = multiple: rice, water, fleet.',
+      'Each row now has a ☐ checkbox on the right.',
+      'ASSIGN ALL VISIBLE: pick a category and tap ✓ Assign with no boxes checked — assigns to everything you can see (all active filters apply).',
+      'ASSIGN SELECTED: check specific rows, then tap ✓ Assign — only those items get the category.',
+      '☐ All / ☑ None button — checks or unchecks all visible rows at once.',
+      '— Hide button — hides checked rows from the current view (they come back when filters are cleared).',
+      '✕ Delete button — moves checked rows to the Recycle Bin.',
+      'Tap any category pill on a row to change it inline.',
+      'Use Search Desc + Assign to bulk-change categories by keyword too.'
+    ],
+    example: 'Filtered by Year=2025, Month=Jan, Currency=NGN — 13 entries visible, all with category "Other".\nPicked "Family Support" and tapped ✓ Assign with no boxes checked → all 13 assigned instantly.\n\nOr: checked 5 specific rows → tapped ✓ Assign → only those 5 changed.',
+    tip: 'No keyword needed to bulk assign. Filter by year/month/currency/category, then Assign with nothing checked to update everything visible in one tap.'
   },
   'multisearch': {
     title: '🔍 Search — Multi-Word & Exclusion Search',
@@ -13646,7 +13994,7 @@ var ONBOARD_INCOME_SLIDES = [
   {
     icon: '📋',
     title: 'Income Ledger',
-    body: 'View all income entries, filter by year, month, currency, or category. The minus (−) button hides an entry from bulk operations without deleting it.',
+    body: 'View all income entries, filter by year, month, currency, or category. Each row has a <strong>☐ checkbox</strong>. Check rows and use <strong>— Hide</strong> (removes from view), <strong>✕ Delete</strong> (recycle bin), or <strong>✓ Assign</strong> (category). Assign with nothing checked updates all visible filtered items at once.',
     color: '#8b5e3c'
   },
   {
@@ -14383,7 +14731,7 @@ var TOUR_EXPENSES_STEPS = [
     body:'Once all entries have categories assigned, tap <strong>✓ Save to Ledger</strong>. All entries are saved in one click. You can also press Ctrl+Enter.',
     arrow:'up' },
   { target:'#main-nav button:nth-child(5)', tab:'ledger', icon:'📋', title:'Ledger — Your Complete Record',
-    body:'The Ledger holds every entry you have saved. Filter by year, month, currency or category. Use <strong>← →</strong> keys to flip between pages.',
+    body:'The Ledger holds every entry you have saved. Filter by year, month, currency or category. Each row has a <strong>☐ checkbox</strong> — check rows and use <strong>Hide</strong>, <strong>Delete</strong> or <strong>✓ Assign</strong> on them. Or filter and Assign with nothing checked to bulk-update everything visible.',
     arrow:'up' },
   { target:'#main-nav button:nth-child(3)', tab:'daily', icon:'📅', title:'Daily View — See Any Day',
     body:'The Daily tab shows a full breakdown of spending for any specific date. Use the date picker to jump to any day instantly.',
