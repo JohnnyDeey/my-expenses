@@ -3264,6 +3264,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Select an icon above or type to search</div>
     </div>
     <div style="padding:14px 20px;border-top:1px solid var(--border);background:#fffbf0;">
+      <button onclick="openUserManual()" style="width:100%;padding:11px;background:var(--ink);border:2px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;">📖 User Manual</button>
       <button onclick="startOnboarding(_appMode, true, true)" style="width:100%;padding:10px;background:none;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;color:var(--gold);cursor:pointer;margin-bottom:8px;">&#127916; Replay App Tour</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:8px;">Still need help? Send us a message.</div>
       <button onclick="openContact()" style="width:100%;padding:11px;background:var(--ink);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;">&#9993; Contact Support</button>
@@ -14396,6 +14397,325 @@ function skipOnboarding() {
   finishOnboarding();
 }
 
+
+// ═══════════════════════════════════════════════════════════
+// USER MANUAL
+// ═══════════════════════════════════════════════════════════
+function openUserManual() {
+  var hb = document.getElementById('help-body');
+  if (!hb) return;
+  // Scroll help overlay to top
+  var overlay = document.getElementById('help-overlay');
+  if (overlay) overlay.scrollTop = 0;
+
+  var S = 'font-family:DM Mono,monospace;';
+  var GOLD = 'color:var(--gold);';
+  var INK  = 'color:var(--ink);';
+  var MUTED= 'color:var(--muted);';
+  var SAGE = 'color:var(--sage);';
+  var RUST = 'color:var(--rust);';
+
+  function h1(t)  { return '<div style="font-family:Playfair Display,serif;font-size:1.15rem;font-weight:900;'+INK+'margin:0 0 4px;">'+t+'</div>'; }
+  function h2(t)  { return '<div style="'+S+'font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;'+GOLD+'font-weight:700;margin:18px 0 8px;border-bottom:1px solid var(--border);padding-bottom:4px;">'+t+'</div>'; }
+  function h3(t,icon) { return '<div style="font-family:Playfair Display,serif;font-size:0.95rem;font-weight:700;'+INK+'margin:14px 0 6px;">'+( icon?icon+' ':'')+t+'</div>'; }
+  function p(t)   { return '<p style="font-size:0.82rem;line-height:1.8;margin:0 0 8px;">'+t+'</p>'; }
+  function tip(t) { return '<div style="background:#fffbf0;border-left:3px solid var(--gold);border-radius:3px;padding:10px 12px;'+S+'font-size:0.72rem;line-height:1.7;margin:8px 0;">💡 <strong>Tip:</strong> '+t+'</div>'; }
+  function warn(t){ return '<div style="background:#fff8f0;border-left:3px solid var(--rust);border-radius:3px;padding:10px 12px;'+S+'font-size:0.72rem;line-height:1.7;margin:8px 0;">⚠️ '+t+'</div>'; }
+  function note(t){ return '<div style="background:var(--paper2);border-left:3px solid var(--sage);border-radius:3px;padding:10px 12px;'+S+'font-size:0.72rem;line-height:1.7;margin:8px 0;">📌 '+t+'</div>'; }
+  function step(n,t){ return '<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start;"><span style="'+S+'font-size:0.72rem;'+GOLD+'font-weight:700;min-width:22px;padding-top:2px;">'+n+'.</span><span style="font-size:0.82rem;line-height:1.7;">'+t+'</span></div>'; }
+  function badge(t,col){ col=col||'var(--gold)'; return '<span style="display:inline-block;'+S+'font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:10px;background:'+col+'18;color:'+col+';border:1px solid '+col+'30;white-space:nowrap;">'+t+'</span>'; }
+  function kbd(t) { return '<code style="background:var(--ink);color:var(--gold2);padding:1px 6px;border-radius:3px;font-size:0.75rem;font-family:DM Mono,monospace;">'+t+'</code>'; }
+  function mockDisplay(expr,result){
+    return '<div style="background:var(--ink);border-radius:6px;padding:10px 14px;margin:8px 0;font-family:DM Mono,monospace;">'+
+      '<div style="font-size:0.65rem;color:rgba(255,255,255,0.4);margin-bottom:2px;">'+expr+'</div>'+
+      '<div style="font-size:1.3rem;font-weight:700;color:var(--gold2);text-align:right;">'+result+'</div>'+
+      '</div>';
+  }
+  function mockRow(icon,desc,amt,cat,cur){
+    cur=cur||'NGN';
+    var col = cur==='EUR'?'var(--slate)':(cur==='USD'?'var(--dollar)':'var(--sage)');
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:white;border:1px solid var(--border);border-radius:4px;margin-bottom:4px;font-size:0.78rem;">'+
+      '<span style="font-size:1rem;">'+icon+'</span>'+
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+desc+'</span>'+
+      '<span style="'+S+'font-weight:700;'+MUTED+'font-size:0.7rem;white-space:nowrap;">'+amt+'</span>'+
+      '<span style="'+S+'font-size:0.62rem;padding:1px 6px;border-radius:8px;background:'+col+'15;color:'+col+';border:1px solid '+col+'30;white-space:nowrap;">'+cat+'</span>'+
+      '</div>';
+  }
+  function mockInput(val){
+    return '<div style="background:white;border:1.5px solid var(--gold);border-radius:4px;padding:8px 12px;'+S+'font-size:0.8rem;color:var(--ink);margin:6px 0;">'+val+'<span style="background:var(--gold);display:inline-block;width:2px;height:14px;margin-left:2px;vertical-align:middle;"></span></div>';
+  }
+  function tabRow(tabs, active){
+    return '<div style="display:flex;gap:4px;margin:8px 0;">'+tabs.map(function(t){
+      var on = t===active;
+      return '<div style="'+S+'font-size:0.62rem;letter-spacing:1px;padding:4px 10px;border-radius:4px;background:'+(on?'var(--ink)':'var(--paper2)')+';color:'+(on?'var(--gold)':'var(--muted)')+';border:1px solid '+(on?'var(--gold)':'var(--border)')+';">'+t+'</div>';
+    }).join('')+'</div>';
+  }
+  function catBar(name,pct,col,share){
+    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'+
+      '<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0;"></div>'+
+      '<div style="font-size:0.72rem;width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+name+'</div>'+
+      '<div style="flex:1;background:#ede7d9;border-radius:4px;height:8px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+col+';border-radius:4px;"></div></div>'+
+      '<div style="'+S+'font-size:0.65rem;font-weight:700;color:'+col+';width:44px;text-align:right;">'+share+'%</div>'+
+      '</div>';
+  }
+
+  var out = '<div style="font-family:DM Sans,sans-serif;">';
+
+  // ── Cover ──────────────────────────────────────────────────
+  out += '<div style="background:var(--ink);border-radius:8px;padding:20px;margin-bottom:16px;text-align:center;">';
+  out += '<div style="font-size:2.5rem;margin-bottom:8px;">💰</div>';
+  out += '<div style="font-family:Playfair Display,serif;font-size:1.3rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">My Expense Ledger</div>';
+  out += '<div style="'+S+'font-size:0.65rem;letter-spacing:3px;color:rgba(255,255,255,0.4);">USER MANUAL · 2026 EDITION</div>';
+  out += '<div style="display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap;">';
+  out += badge('Expenses','var(--gold)')+' '+badge('Income','var(--sage)')+' '+badge('Dashboard','var(--slate)')+' '+badge('Budgets','var(--rust)');
+  out += '</div></div>';
+
+  // ── Introduction ────────────────────────────────────────────
+  out += h2('Introduction');
+  out += p('<strong>My Expense Ledger</strong> is a personal finance tracker that lets you record, categorise and analyse your spending and income across multiple currencies. Data syncs securely to the cloud via Firebase so you can access it from any device.');
+  out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;">';
+  out += '<div style="padding:10px;background:var(--paper2);border-radius:6px;border:1px solid var(--border);text-align:center;"><div style="font-size:1.4rem;">📱</div><div style="'+S+'font-size:0.62rem;'+MUTED+'margin-top:4px;">Mobile first</div></div>';
+  out += '<div style="padding:10px;background:var(--paper2);border-radius:6px;border:1px solid var(--border);text-align:center;"><div style="font-size:1.4rem;">☁️</div><div style="'+S+'font-size:0.62rem;'+MUTED+'margin-top:4px;">Cloud sync</div></div>';
+  out += '<div style="padding:10px;background:var(--paper2);border-radius:6px;border:1px solid var(--border);text-align:center;"><div style="font-size:1.4rem;">💱</div><div style="'+S+'font-size:0.62rem;'+MUTED+'margin-top:4px;">Multi-currency</div></div>';
+  out += '<div style="padding:10px;background:var(--paper2);border-radius:6px;border:1px solid var(--border);text-align:center;"><div style="font-size:1.4rem;">🔒</div><div style="'+S+'font-size:0.62rem;'+MUTED+'margin-top:4px;">PIN protected</div></div>';
+  out += '</div>';
+  out += note('The app has two independent modules: <strong>Expenses</strong> and <strong>Income</strong>. Switch between them using the 🔁 button in the top header.');
+
+  // ── Module Overview ──────────────────────────────────────────
+  out += h2('App Modules — Quick Overview');
+  out += tabRow(['📥 Import','🏷️ Categorize','📅 Daily','📊 Dashboard','📋 Ledger','🎯 Budget','⚙️ Manage'], '📥 Import');
+  out += '<div style="'+S+'font-size:0.72rem;line-height:1.8;margin:8px 0;">';
+  out += '<div>'+badge('📥 Import','var(--gold)')+' &nbsp;Paste or type your transactions in plain text</div>';
+  out += '<div>'+badge('🏷️ Categorize','var(--gold)')+' &nbsp;Assign categories to each parsed entry</div>';
+  out += '<div>'+badge('📅 Daily','var(--gold)')+' &nbsp;Browse spending by day</div>';
+  out += '<div>'+badge('📊 Dashboard','var(--gold)')+' &nbsp;Charts: daily flow, monthly trend, category breakdown, heatmap</div>';
+  out += '<div>'+badge('📋 Ledger','var(--gold)')+' &nbsp;Full searchable list of all entries</div>';
+  out += '<div>'+badge('🎯 Budget','var(--gold)')+' &nbsp;Set monthly limits per category</div>';
+  out += '<div>'+badge('⚙️ Manage','var(--gold)')+' &nbsp;Delete, export, recycle bin, account settings</div>';
+  out += '</div>';
+
+  // ── STEP 1: Import ───────────────────────────────────────────
+  out += h2('Step 1 — Import Your Transactions');
+  out += h3('Writing entries','✍️');
+  out += p('Go to the <strong>📥 Import</strong> tab. You will see a large notepad. Each entry follows this format:');
+  out += '<div style="background:var(--paper2);border-radius:6px;padding:12px 14px;'+S+'font-size:0.78rem;line-height:2;margin:8px 0;border:1px solid var(--border);">';
+  out += '<span style="'+GOLD+'font-weight:700;">01-01-2026</span> &larr; date line (DD-MM-YYYY)<br>';
+  out += '&nbsp;&nbsp;&nbsp;&nbsp;<span style="'+SAGE+'">Groceries &nbsp;&nbsp; ₦15,000</span> &larr; description TAB amount<br>';
+  out += '&nbsp;&nbsp;&nbsp;&nbsp;<span style="'+SAGE+'">Transport &nbsp;&nbsp; ₦800</span><br>';
+  out += '<span style="'+GOLD+'font-weight:700;">02-01-2026</span><br>';
+  out += '&nbsp;&nbsp;&nbsp;&nbsp;<span style="'+SAGE+'">Coffee &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; €3.50</span>';
+  out += '</div>';
+  out += mockInput('01-01-2026');
+  out += tip('You can also use <strong>Google Keep</strong> to jot expenses on your phone and paste the full text here. Use a colon separator too: <code>Rice: ₦5,000</code>');
+  out += h3('Supported currencies','💱');
+  out += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">';
+  ['₦ NGN','€ EUR','$ USD','£ GBP','₵ GHS','KSh KES','R ZAR'].forEach(function(c){
+    out += '<span style="'+S+'font-size:0.7rem;padding:3px 10px;background:var(--paper2);border:1px solid var(--border);border-radius:10px;">'+c+'</span>';
+  });
+  out += '</div>';
+  out += h3('Parsing','⚡');
+  out += step(1,'Tap <strong>▼ Parse Expenses</strong> button (or press <kbd>Ctrl+Enter</kbd> on laptop)');
+  out += step(2,'The app reads each line, extracts dates, descriptions and amounts');
+  out += step(3,'A summary appears showing how many items were parsed per currency');
+  out += step(4,'Press <kbd>Ctrl+Enter</kbd> again to jump straight to Categorize');
+  out += note('The app auto-detects the month from dates. You can parse a full year at once in <strong>Year Mode</strong> — toggle with the Y button.');
+
+  // ── STEP 2: Categorize ───────────────────────────────────────
+  out += h2('Step 2 — Categorize Your Entries');
+  out += p('After parsing, go to <strong>🏷️ Categorize</strong>. Each entry appears in a table with a category dropdown.');
+  out += '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:8px 0;">';
+  out += '<div style="background:var(--ink);color:var(--paper);'+S+'font-size:0.62rem;letter-spacing:1px;padding:5px 8px;display:grid;grid-template-columns:1fr auto auto;gap:8px;">DESCRIPTION · DATE · AMOUNT<span>CATEGORY</span><span>☐</span></div>';
+  out += mockRow('🛒','Groceries — ₦15,000','₦15,000','Food','NGN');
+  out += mockRow('🚌','Transport — ₦800','₦800','Other','NGN');
+  out += mockRow('☕','Coffee — €3.50','€3.50','Food','EUR');
+  out += '</div>';
+  out += h3('Bulk Assign','⚡');
+  out += p('Instead of editing one by one, use <strong>Bulk Assign</strong>:');
+  out += step(1,'Use the <strong>▼ Filters</strong> to narrow by year, month, currency or category');
+  out += step(2,'Type a category in the <em>Assign to:</em> box');
+  out += step(3,'Tap <strong>✓ Assign</strong> — assigns to ALL visible rows if nothing is checked');
+  out += tip('Check specific rows first with the ☐ checkboxes to assign only those rows.');
+  out += h3('Checkbox Actions','☐');
+  out += '<div style="'+S+'font-size:0.75rem;line-height:2;">';
+  out += '<div>'+badge('— Hide','var(--gold)')+' &nbsp;Remove checked rows from view (not deleted)</div>';
+  out += '<div>'+badge('✕ Delete','var(--rust)')+' &nbsp;Send checked rows to Recycle Bin</div>';
+  out += '<div>'+badge('☐ All','var(--slate)')+' &nbsp;Check / uncheck all visible rows at once</div>';
+  out += '</div>';
+  out += h3('Save to Ledger','💾');
+  out += p('Once all entries have categories, tap <strong>✓ Save to Ledger</strong> (or '+kbd('Ctrl+Enter')+').');
+  out += warn('You must save before switching tabs — unsaved entries stay in the pending list until saved.');
+
+  // ── STEP 3: Ledger ───────────────────────────────────────────
+  out += h2('Step 3 — The Full Ledger');
+  out += p('The <strong>📋 Ledger</strong> is your complete record of every saved entry. It supports powerful filtering and bulk operations.');
+  out += h3('Filters','🔍');
+  out += p('Tap <strong>▼ Filters</strong> to expand. Filter by:');
+  out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;'+S+'font-size:0.72rem;">';
+  out += '<div style="padding:6px 10px;background:var(--paper2);border-radius:4px;">📅 <strong>Year</strong></div>';
+  out += '<div style="padding:6px 10px;background:var(--paper2);border-radius:4px;">🗓️ <strong>Month</strong></div>';
+  out += '<div style="padding:6px 10px;background:var(--paper2);border-radius:4px;">💱 <strong>Currency</strong></div>';
+  out += '<div style="padding:6px 10px;background:var(--paper2);border-radius:4px;">🏷️ <strong>Category</strong></div>';
+  out += '</div>';
+  out += h3('Search','🔎');
+  out += mockInput('groceries, transport -beatrice');
+  out += '<div style="'+S+'font-size:0.72rem;line-height:1.8;">';
+  out += '<div>'+kbd('rice, water')+' &rarr; matches entries containing <em>rice</em> <strong>OR</strong> <em>water</em></div>';
+  out += '<div>'+kbd('-beatrice')+' &rarr; <strong>excludes</strong> entries containing <em>beatrice</em></div>';
+  out += '<div>'+kbd('rice -Beatrice -SUNDAY')+' &rarr; rice but not those two names</div>';
+  out += '</div>';
+  out += h3('Bulk Assign from Ledger','⚡');
+  out += p('You can re-assign categories directly from the Ledger — great for fixing miscategorised entries:');
+  out += step(1,'Filter to narrow results (e.g. Year=2026, Month=Jan, Category=Other)');
+  out += step(2,'Type a category in <em>Assign to:</em>');
+  out += step(3,'Tap <strong>✓ Assign</strong> — updates everything visible');
+  out += tip('Check specific rows first to assign only those, leaving the rest unchanged.');
+
+  // ── STEP 4: Dashboard ────────────────────────────────────────
+  out += h2('Step 4 — Dashboard & Charts');
+  out += p('The <strong>📊 Dashboard</strong> has 5 independent chart sections, each with its own currency and time range selector:');
+  out += '<div style="margin:8px 0;">';
+  out += '<div style="padding:10px 12px;background:white;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;">';
+  out += '<div style="'+S+'font-size:0.72rem;font-weight:700;'+GOLD+'margin-bottom:4px;">📊 Daily Flow</div>';
+  out += '<div style="'+S+'font-size:0.7rem;'+MUTED+'margin-bottom:6px;">Bar chart of spending per day in a selected month. Defaults to current month.</div>';
+  out += '<div style="display:flex;gap:8px;height:32px;align-items:flex-end;">';
+  [3,8,15,2,22,18,5,1,30,12,4,9,25].forEach(function(h){
+    out += '<div style="background:var(--gold);border-radius:2px;width:8px;height:'+Math.max(4,h*1.2)+'px;opacity:0.8;"></div>';
+  });
+  out += '</div></div>';
+  out += '<div style="padding:10px 12px;background:white;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;">';
+  out += '<div style="'+S+'font-size:0.72rem;font-weight:700;'+GOLD+'margin-bottom:4px;">📈 Monthly Trend</div>';
+  out += '<div style="'+S+'font-size:0.7rem;'+MUTED+'">Smooth line chart of monthly totals over your selected date range.</div>';
+  out += '</div>';
+  out += '<div style="padding:10px 12px;background:white;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;">';
+  out += '<div style="'+S+'font-size:0.72rem;font-weight:700;'+GOLD+'margin-bottom:6px;">🏷️ Category Breakdown</div>';
+  out += catBar('Food & Groceries',85,'#4a7c59','34.2');
+  out += catBar('Transport',60,'#8b5e3c','21.8');
+  out += catBar('Family Support',45,'#2e7d8a','16.3');
+  out += catBar('Subscriptions',20,'#6b3d8c','7.1');
+  out += '</div>';
+  out += '<div style="padding:10px 12px;background:white;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;">';
+  out += '<div style="'+S+'font-size:0.72rem;font-weight:700;'+GOLD+'margin-bottom:4px;">📅 Yearly Total</div>';
+  out += '<div style="'+S+'font-size:0.7rem;'+MUTED+'">Annual line chart. Each currency has its own independently scaled chart.</div>';
+  out += '</div>';
+  out += '<div style="padding:10px 12px;background:white;border:1px solid var(--border);border-radius:6px;">';
+  out += '<div style="'+S+'font-size:0.72rem;font-weight:700;'+GOLD+'margin-bottom:4px;">🌡️ Heatmap + YoY</div>';
+  out += '<div style="'+S+'font-size:0.7rem;'+MUTED+'margin-bottom:6px;">Year × month grid — darker = more spending. Year-over-year % growth shown per year.</div>';
+  out += '<div style="display:grid;grid-template-columns:repeat(13,1fr);gap:2px;'+S+'font-size:0.5rem;">';
+  out += '<div style="color:var(--muted);">Year</div>';
+  ['J','F','M','A','M','J','J','A','S','O','N','D'].forEach(function(m){
+    out += '<div style="text-align:center;color:var(--muted);">'+m+'</div>';
+  });
+  out += '<div style="'+MUTED+'">2024</div>';
+  [[2,5,8,12,15,18,14,10,7,4,3,6]].forEach(function(row){
+    row.forEach(function(v){
+      var op = (v/18*0.8+0.1).toFixed(2);
+      out += '<div style="background:rgba(74,124,89,'+op+');border-radius:1px;height:10px;"></div>';
+    });
+  });
+  out += '</div></div></div>';
+  out += tip('Each chart has its own <strong>All / NGN / EUR</strong> currency selector at the top left. Selecting a specific currency scales that chart independently — perfect for comparing NGN trends without EUR distorting the axis.');
+
+  // ── STEP 5: Budget ───────────────────────────────────────────
+  out += h2('Step 5 — Budget Tracker');
+  out += p('The <strong>🎯 Budget</strong> tab lets you set monthly spending limits per category.');
+  out += step(1,'Select year, month and currency');
+  out += step(2,'Use the <em>Add Category</em> dropdown to add a category to track');
+  out += step(3,'Type a limit amount next to each category');
+  out += step(4,'Progress bars fill as you spend during the month');
+  out += '<div style="margin:10px 0;">';
+  [['Food & Groceries',72,'#c8962e'],['Transport',45,'#4a7c59'],['Subscriptions',91,'#b5451b']].forEach(function(r){
+    var pct=r[1], col=pct>90?'var(--rust)':pct>70?'var(--gold)':r[2];
+    out += '<div style="padding:8px 12px;background:white;border:1px solid var(--border);border-radius:4px;margin-bottom:6px;">';
+    out += '<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:0.78rem;">'+r[0]+'</span><span style="'+S+'font-size:0.72rem;font-weight:700;">'+pct+'% used</span></div>';
+    out += '<div style="background:#ede7d9;border-radius:4px;height:8px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+col+';border-radius:4px;"></div></div>';
+    out += '</div>';
+  });
+  out += '</div>';
+  out += note('Bars turn <strong style="color:var(--gold);">amber</strong> at 75% and <strong style="color:var(--rust);">red</strong> at 90% to warn you before going over budget.');
+
+  // ── STEP 6: Manage ───────────────────────────────────────────
+  out += h2('Step 6 — Manage & Settings');
+  out += h3('Delete data','🗑️');
+  out += step(1,'Go to <strong>⚙️ Manage</strong> tab');
+  out += step(2,'Select <strong>Year</strong> → then <strong>Month</strong> → then <strong>Day</strong> (optional)');
+  out += step(3,'Tap <strong>Delete</strong> on a group to move those entries to the Recycle Bin');
+  out += h3('Recycle Bin','♻️');
+  out += p('Deleted entries are held in the Recycle Bin for safety. You can:');
+  out += '<div style="'+S+'font-size:0.75rem;line-height:2;">';
+  out += '<div>'+badge('☐ checkboxes','var(--muted)')+' &nbsp;Select individual entries</div>';
+  out += '<div>'+badge('↩ Restore','var(--sage)')+' &nbsp;Bring selected entries back to the Ledger</div>';
+  out += '<div>'+badge('✕ Delete','var(--rust)')+' &nbsp;Permanently remove selected entries</div>';
+  out += '<div>'+badge('🗑 Empty bin','var(--rust)')+' &nbsp;Permanently remove everything in the bin</div>';
+  out += '</div>';
+  out += h3('Export & Reports','📄');
+  out += '<div style="'+S+'font-size:0.75rem;line-height:2;">';
+  out += '<div>📊 <strong>PDF Report</strong> — prints all charts (daily flow, monthly, category, heatmap, YoY) for each selected currency</div>';
+  out += '<div>📋 <strong>CSV Export</strong> — downloads all entries as a spreadsheet</div>';
+  out += '</div>';
+  out += h3('Security','🔒');
+  out += p('The app locks automatically after <strong>10 minutes</strong> of inactivity. You can also lock it manually anytime by pressing the 🔒 icon in the header.');
+  out += tip('Change your PIN anytime from Manage → Change PIN. You will need to confirm with your old PIN first.');
+
+  // ── Income Module ────────────────────────────────────────────
+  out += h2('Income Module');
+  out += p('The <strong>Income Module</strong> works identically to Expenses — same tabs, same workflow, same charts — but tracks your earnings instead of spending.');
+  out += '<div style="background:var(--paper2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin:8px 0;">';
+  out += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:1.2rem;">🔁</span><strong>Switch between modules</strong></div>';
+  out += '<div style="'+S+'font-size:0.75rem;'+MUTED+'">Tap the <strong>🔁</strong> button in the header to switch between Expenses and Income. Each module has completely separate data, categories and charts.</div>';
+  out += '</div>';
+  out += '<div style="'+S+'font-size:0.72rem;line-height:2;margin:8px 0;">';
+  out += '<div>'+badge('Salary','var(--sage)')+' '+badge('Freelance','var(--sage)')+' '+badge('Stipend','var(--sage)')+' '+badge('Commission','var(--sage)')+' '+badge('Gift','var(--sage)')+' '+badge('Refund','var(--sage)')+'</div>';
+  out += '</div>';
+  out += note('Income categories are separate from expense categories. You can rename or add custom income categories from <strong>Manage → Rename Category</strong>.');
+
+  // ── Tips & Tricks ────────────────────────────────────────────
+  out += h2('Tips & Shortcuts');
+  out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;">';
+  [
+    ['⌨️', 'Ctrl+Enter','Parse on Import, then go to Categorize on second press'],
+    ['🔍', 'Search -word','Exclude entries matching a word'],
+    ['📊', 'All Currency','Dashboard shows each currency stacked separately'],
+    ['🗓️', '⇅ Sort','Toggle newest/oldest in Categorize'],
+    ['☐', 'Bulk select','Check rows → assign, hide or delete in one tap'],
+    ['📖', 'Tour','Replay the guided tour anytime from Help'],
+  ].forEach(function(r){
+    out += '<div style="padding:8px 10px;background:white;border:1px solid var(--border);border-radius:6px;">';
+    out += '<div style="font-size:1.1rem;margin-bottom:3px;">'+r[0]+'</div>';
+    out += '<div style="'+S+'font-size:0.65rem;font-weight:700;'+GOLD+'margin-bottom:2px;">'+r[1]+'</div>';
+    out += '<div style="'+S+'font-size:0.65rem;'+MUTED+'">'+r[2]+'</div>';
+    out += '</div>';
+  });
+  out += '</div>';
+
+  // ── Troubleshooting ──────────────────────────────────────────
+  out += h2('Troubleshooting');
+  [
+    ['Data not showing after parsing','Make sure you tapped <strong>✓ Save to Ledger</strong> in the Categorize tab. Parsed entries are only saved when you confirm.'],
+    ['Wrong month selected','Check the Year / Month pickers in the filter bar at the top of Import. They must match your entry dates.'],
+    ['Entries disappeared','Go to <strong>⚙️ Manage → Recycle Bin</strong> — deleted entries are held there for 30 days.'],
+    ['Sync not working','Sign out and sign back in. Your data is stored on Firebase and will restore automatically.'],
+    ['Duplicate entries','Parse and save only once. If you see duplicates, go to Ledger, search for them, and delete the extras.'],
+    ['Amount not parsing','Make sure the amount follows the description on the <em>same line</em>, separated by a tab, colon or spaces.'],
+  ].forEach(function(r){
+    out += '<div style="padding:10px 12px;background:white;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;">';
+    out += '<div style="font-size:0.82rem;font-weight:700;margin-bottom:4px;">❓ '+r[0]+'</div>';
+    out += '<div style="'+S+'font-size:0.72rem;'+MUTED+'line-height:1.7;">'+r[1]+'</div>';
+    out += '</div>';
+  });
+
+  // ── Footer ──────────────────────────────────────────────────
+  out += '<div style="text-align:center;padding:16px;background:var(--ink);border-radius:6px;margin-top:12px;">';
+  out += '<div style="font-size:1.5rem;margin-bottom:6px;">💰</div>';
+  out += '<div style="'+S+'font-size:0.65rem;letter-spacing:2px;color:rgba(255,255,255,0.4);">MY EXPENSE LEDGER · 2026</div>';
+  out += '<div style="'+S+'font-size:0.62rem;color:var(--gold);margin-top:4px;">Built by John-de-Scholar</div>';
+  out += '<div style="'+S+'font-size:0.6rem;color:rgba(255,255,255,0.2);margin-top:6px;">Still have questions? Use Contact Support below ↓</div>';
+  out += '</div>';
+
+  out += '</div>'; // end font-family wrapper
+  hb.innerHTML = out;
+  // Scroll to top of help overlay
+  setTimeout(function(){ if(overlay) overlay.scrollTop=0; }, 50);
+}
 function openHelp() {
   var o = document.getElementById('help-overlay');
   if (o) o.style.display = 'flex';
