@@ -2073,6 +2073,15 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div id="profile-phone" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);">—</div>
       </div>
     </div>
+    <!-- Email row — full width -->
+    <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">EMAIL</div>
+        <div id="profile-email" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);">—</div>
+      </div>
+      <div id="profile-email-badge" style="display:none;"></div>
+      <button id="profile-email-btn" onclick="openEmailVerifyOverlay()" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:4px 10px;border-radius:4px;border:1px solid var(--gold);background:none;color:var(--gold);cursor:pointer;white-space:nowrap;flex-shrink:0;"></button>
+    </div>
   </div>
 
   <div id="sync-setup-content" style="display:none;"></div>
@@ -2978,10 +2987,26 @@ input[type="password"]::-ms-clear { display:none !important; }
           <div style="margin-bottom:20px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number <span style="color:#b5451b;">*</span></label>
             <div style="display:flex;gap:6px;box-sizing:border-box;width:100%;">
-              <select id="reg-country-code" style="width:105px;min-width:105px;max-width:105px;flex-shrink:0;padding:12px 4px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--paper);outline:none;box-sizing:border-box;"></select>
-              <input id="reg-phone-number" type="tel" placeholder="e.g. 8012345678" style="flex:1;min-width:0;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')showUsernameStep()">
+              <div style="position:relative;width:105px;min-width:105px;max-width:105px;flex-shrink:0;">
+                <input id="reg-country-code-input" type="text" placeholder="+234" autocomplete="off"
+                  style="width:100%;padding:12px 4px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--paper);outline:none;box-sizing:border-box;cursor:pointer;"
+                  oninput="_filterCountryDrop('reg',this.value)" onfocus="_openCountryDrop('reg')" onblur="_closeCountryDropDelay('reg')">
+                <input id="reg-country-code" type="hidden" value="+234">
+                <div id="reg-country-drop" style="display:none;position:absolute;top:100%;left:0;width:220px;max-height:200px;overflow-y:auto;background:#1a1410;border:1.5px solid #c8962e;border-radius:4px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.5);margin-top:2px;"></div>
+              </div>
+              <input id="reg-phone-number" type="tel" placeholder="e.g. 8012345678" style="flex:1;min-width:0;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')showUsernameStep()" onblur="_realtimePhoneCheck()">
+              <div id="reg-phone-status" style="font-family:'DM Mono',monospace;font-size:0.65rem;margin-top:4px;min-height:16px;"></div>
             </div>
             <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:4px;">Select your country code then enter your number.</div>
+          </div>
+          <!-- Email -->
+          <div style="margin-bottom:20px;">
+            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Email address <span style="color:#b5451b;">*</span></label>
+            <input id="reg-email" type="email" placeholder="e.g. john@gmail.com" autocomplete="email"
+              style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.88rem;color:var(--paper);outline:none;box-sizing:border-box;"
+              oninput="_realtimeEmailCheck(this.value)" onkeydown="if(event.key==='Enter')showUsernameStep()">
+            <div id="reg-email-status" style="font-family:'DM Mono',monospace;font-size:0.65rem;margin-top:4px;min-height:16px;"></div>
+            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:2px;">Used for account recovery. Will be verified after registration.</div>
           </div>
           <div id="reg-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
           <!-- T&C -->
@@ -2997,7 +3022,7 @@ input[type="password"]::-ms-clear { display:none !important; }
           <div style="border-top:1px solid #3a3020;padding-top:14px;margin-bottom:12px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Or enter your own (4–10 chars, letters+numbers)</label>
             <div style="display:flex;gap:8px;">
-              <input id="reg-custom-username" type="text" maxlength="10" placeholder="e.g. jd0292" style="flex:1;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;letter-spacing:2px;" oninput="validateCustomUsername(this)">
+              <input id="reg-custom-username" type="text" maxlength="10" placeholder="e.g. jd0292" style="flex:1;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;letter-spacing:2px;" oninput="validateCustomUsername(this)" onblur="_realtimeUsernameCheck(this.value)">
               <button onclick="selectCustomUsername()" style="padding:10px 14px;background:#3a3020;border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;">Use this</button>
             </div>
             <div id="reg-username-error" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#b5451b;margin-top:6px;min-height:16px;"></div>
@@ -3104,9 +3129,9 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">&#128274; Reset Access Code</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;margin-bottom:20px;">Verify your identity to get a new code</div>
     <div id="reset-step-phone">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:14px;line-height:1.7;">Enter the phone number you registered with. We will verify your account and show you a temporary reset code.</div>
-      <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number</label>
-      <input id="reset-phone-input" type="tel" placeholder="e.g. 07012345678" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;margin-bottom:10px;" onkeydown="if(event.key==='Enter')submitResetRequest()">
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:14px;line-height:1.7;">Enter the phone number or email address you registered with. We will verify your account and show you a temporary reset code.</div>
+      <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number or Email</label>
+      <input id="reset-phone-input" type="text" placeholder="e.g. 07012345678 or email@domain.com" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;margin-bottom:10px;" onkeydown="if(event.key==='Enter')submitResetRequest()">
       <div id="reset-phone-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:16px;"></div>
       <button onclick="submitResetRequest()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:10px;">Verify My Account</button>
       <button onclick="closeResetOverlay()" style="width:100%;padding:10px;background:none;border:1px solid rgba(200,150,46,0.25);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">&#8592; Back to Sign In</button>
@@ -3309,6 +3334,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     <button id="tour-back-btn" onclick="tourNav(-1)" style="flex:1;padding:9px;background:none;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;pointer-events:all;">← Back</button>
     <button id="tour-next-btn" onclick="tourNav(1)"  style="flex:2;padding:9px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--ink);cursor:pointer;pointer-events:all;">Next →</button>
   </div>
+  <div id="tour-kb-hint" style="text-align:center;margin-top:8px;font-family:'DM Mono',monospace;font-size:0.58rem;color:#3a3020;letter-spacing:1px;">⌨️ <kbd style="background:#2a2010;color:#c8962e;padding:1px 5px;border-radius:2px;font-size:0.6rem;">N</kbd> Next &nbsp;·&nbsp; <kbd style="background:#2a2010;color:#c8962e;padding:1px 5px;border-radius:2px;font-size:0.6rem;">B</kbd> Back</div>
 </div>
 
 <div id="onboard-overlay" style="display:none;position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,0.6);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;">
@@ -4238,16 +4264,34 @@ function parseInput() {
     return /[\u2705\u2713\u2714\u2611\u2714\ufe0f\*]+\s*$/.test(s.trim());
   }
 
+  // Build dynamic symbol→code map from all active currencies
+  function buildSymMap() {
+    var map = {};
+    // Always include all world currencies
+    ALL_WORLD_CURRENCIES.forEach(function(c){ map[c.sym] = c.code; });
+    // Also include active SYMS (covers custom added currencies)
+    Object.keys(SYMS).forEach(function(code){ map[SYMS[code]] = code; });
+    // Legacy fallbacks
+    map['#'] = 'NGN';
+    return map;
+  }
+  var SYM_MAP = buildSymMap();
+  // Build regex from all known symbols (escape special chars)
+  var symList = Object.keys(SYM_MAP).map(function(s){
+    return s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+  }).join('|');
+  var curAmtRe = new RegExp('^(.*?)\\s*[:\\.\\u2026;]?\\s*('+symList+')\\s*([\\d,]+\\.?\\d*)\\s*$');
+
   // Extract currency+amount from the END of a string
   // Returns {desc, amtStr, currency} or null
   function extractCurAmt(s) {
-    var m = s.match(/^(.*?)\s*[:\.\u2026;]?\s*([€₦$£#])\s*([\d,]+\.?\d*)\s*$/);
+    var m = s.match(curAmtRe);
     if (m) {
       var sym = m[2];
       return {
         desc: m[1].trim().replace(/[:\s;]+$/, '').trim(),
         amtStr: m[3].replace(/,/g, ''),
-        currency: (sym==='€')?'EUR':(sym==='₦'||sym==='#')?'NGN':(sym==='$')?'USD':'GBP'
+        currency: SYM_MAP[sym] || 'NGN'
       };
     }
     return null;
@@ -4278,7 +4322,7 @@ function parseInput() {
     // Catch *** lines that had decorator stripped — they had no price
     if (hasDecorator(rawLine) && currentDate) {
       var strippedLine = cleanLine(rawLine.replace(/^[\t ]+/, ''));
-      if (strippedLine && !/[€₦$£#]/.test(strippedLine) && !/\d/.test(strippedLine)) {
+      if (strippedLine && !/[€₦$£₵₨₩₫₪฿₴₺₼₾¥R]/.test(strippedLine) && !/\d/.test(strippedLine)) {
         skippedLines.push({ line: rawLine.trim(), reason: 'No amount recorded' });
         return;
       }
@@ -4302,7 +4346,7 @@ function parseInput() {
       if (!caseA) {
         var plainNum = rightPart.replace(/,/g,'');
         if (/^-?[\d.]+$/.test(plainNum)) {
-          skippedLines.push({ line: rawLine.trim(), reason: 'No currency symbol — unclear if EUR/NGN/USD/GBP' });
+          skippedLines.push({ line: rawLine.trim(), reason: 'No currency symbol — add ₵ ₦ € $ £ or your currency symbol before the amount' });
           return;
         }
       }
@@ -4343,7 +4387,7 @@ function parseInput() {
         // Strategy 3: plain number at end but NO currency symbol → skip
         var m3 = cleaned.match(/^(.+?)\s+(mon)?(-?[\d,]+\.?\d*)\s*$/);
         if (m3) {
-          skippedLines.push({ line: rawLine.trim(), reason: 'No currency symbol — unclear if EUR/NGN/USD/GBP' });
+          skippedLines.push({ line: rawLine.trim(), reason: 'No currency symbol — add ₵ ₦ € $ £ or your currency symbol before the amount' });
           return;
         } else {
           // Has digits but didn't parse? Flag it
@@ -7453,6 +7497,7 @@ function renderUserProfileCard() {
       sinceEl.textContent = 'Member since ' + d.toLocaleDateString('en-GB', {month:'long', year:'numeric'});
     }
   }
+  _renderProfileEmail();
 }
 
 function renderManageUserBar() {
@@ -9045,7 +9090,7 @@ function generateUsernameOptions(fullName) {
 function showUsernameStep() {
   var name   = (document.getElementById('reg-name')  ||{}).value.trim();
   var dob    = (document.getElementById('reg-dob')   ||{}).value;
-  var dial   = (document.getElementById('reg-country-code') ||{}).value || '';
+  var dial   = (document.getElementById('reg-country-code') ||{}).value || (document.getElementById('reg-country-code-input')||{}).value || '';
   var number = (document.getElementById('reg-phone-number') ||{}).value.trim();
   var phone  = dial + number;
   var errEl  = document.getElementById('reg-error');
@@ -9067,6 +9112,38 @@ function showUsernameStep() {
     if(errEl) errEl.textContent='Please enter a valid phone number'; return;
   }
 
+  // Duplicate phone check — check Firebase registry
+  var fullPhone = dial + number;
+  if (_db) {
+    if(errEl) errEl.textContent = 'Checking...';
+    _db.collection('user_registry').doc(fullPhone).get().then(function(doc) {
+      if (doc.exists) {
+        if(errEl) { errEl.textContent = '⚠ This phone number is already registered. Please sign in instead.'; errEl.style.color='#b5451b'; }
+        return;
+      }
+      // Check similar names — warn but don't block
+      _db.collection('user_registry').where('name','==',name).get().then(function(snap){
+        if(errEl) errEl.textContent = '';
+        if (!snap.empty) {
+          // Warn user but allow to proceed
+          if(errEl) { errEl.textContent = '⚠ A similar name already exists. Make sure this is your account.'; errEl.style.color='#c8962e'; }
+        }
+        _proceedToUsernameStep(name, dob, dial, number, phone, errEl);
+      }).catch(function() {
+        _proceedToUsernameStep(name, dob, dial, number, phone, errEl);
+      });
+    }).catch(function() {
+      // Offline — proceed without check
+      _proceedToUsernameStep(name, dob, dial, number, phone, errEl);
+    });
+    return; // async — don't fall through
+  }
+
+  // If not checking Firebase, proceed directly
+  _proceedToUsernameStep(name, dob, dial, number, phone, errEl);
+}
+
+function _proceedToUsernameStep(name, dob, dial, number, phone, errEl) {
   // T&C must be accepted before proceeding
   var regTc = document.getElementById('reg-tc-check');
   var tcAccepted = localStorage.getItem(_privacyKey()) === PRIVACY_VER
@@ -12306,10 +12383,11 @@ function showLoginStep() {
   _loginAttempts = 0;
   var hint = document.getElementById('reset-attempt-hint'); if(hint) hint.style.display = 'none';
   var uid = localStorage.getItem(UID_KEY);
-  if (uid && needsFullVerify()) {
+  // Skip full verify for users who just registered this session
+  var justReg = sessionStorage.getItem('just_registered') === '1';
+  if (uid && needsFullVerify() && !justReg) {
     showFullVerifyStep();
   } else {
-    // Always show PIN pad — new users tap SIGN UP button
     showPinPadStep();
   }
 }
@@ -12910,6 +12988,51 @@ function showPinScreen() {
     setTimeout(function(){ o.scrollTop = 0; }, 200);
   }
 }
+
+// ── Prompt existing users to add email on next login ─────────────────────
+function _dismissEmailPrompt() {
+  var n = document.getElementById('email-prompt-notice');
+  if (n) n.remove();
+}
+var EMAIL_PROMPT_KEY = 'expense_email_prompt_done';
+function _promptEmailIfMissing() {
+  // Skip for brand new registrations
+  if (sessionStorage.getItem('just_registered') === '1') return;
+  // Skip if already prompted before
+  var uid = _userId || 'default';
+  if (localStorage.getItem(EMAIL_PROMPT_KEY + '_' + uid) === '1') return;
+  // Skip if email already saved
+  if (localStorage.getItem(EMAIL_KEY + '_' + uid)) return;
+  // Mark as prompted so it only shows once
+  localStorage.setItem(EMAIL_PROMPT_KEY + '_' + uid, '1');
+  // Show prompt after a short delay so the app finishes loading first
+  setTimeout(function() {
+    var notice = document.createElement('div');
+    notice.id = 'email-prompt-notice';
+    notice.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99993;background:var(--paper);border:2px solid var(--gold);border-radius:8px;padding:16px 18px;width:90%;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
+    notice.innerHTML =
+      '<div style="display:flex;align-items:flex-start;gap:12px;">' +
+        '<div style="font-size:1.6rem;flex-shrink:0;">📧</div>' +
+        '<div style="flex:1;">' +
+          '<div style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Add your email address</div>' +
+          '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);line-height:1.6;margin-bottom:12px;">Protect your account — use your email to recover access if you ever forget your PIN or phone number.</div>' +
+          '<div style="display:flex;gap:8px;">' +
+            '<button onclick="_dismissEmailPrompt();switchTab(\'manage\');setTimeout(function(){openEmailVerifyOverlay();},400);" style="flex:2;padding:9px;background:var(--gold);border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--ink);cursor:pointer;">+ Add Email</button>' +
+              'style="flex:2;padding:9px;background:var(--gold);border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--ink);cursor:pointer;">+ Add Email</button>' +
+            '<button onclick="_dismissEmailPrompt();" style="flex:1;padding:9px;background:none;border:1px solid var(--border);border-radius:4px;font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);cursor:pointer;">Later</button>' +
+              'style="flex:1;padding:9px;background:none;border:1px solid var(--border);border-radius:4px;font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);cursor:pointer;">Later</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(notice);
+    // Auto-dismiss after 12 seconds
+    setTimeout(function(){
+      var n = document.getElementById('email-prompt-notice');
+      if (n) n.remove();
+    }, 12000);
+  }, 2500);
+}
+
 function hidePinScreen() {
   // Used by confirmCode and useResetCodeNow after first registration or reset
   // _userId/_userName/_userPhone must be set before calling
@@ -12945,10 +13068,369 @@ function showCodeStep() {
   document.getElementById('pin-step-login').style.display   = 'none';
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════
+// REAL-TIME REGISTRATION CHECKS + VERIFICATION OVERLAY
+// ═══════════════════════════════════════════════════════════════════════
+var _rvProceedCallback = null;
+var _phoneVerified   = false;  // set to true once phone passes check
+var _usernameVerified = false; // set to true once username passes check
+
+// ── Real-time phone check on blur ────────────────────────────────────────
+function _realtimePhoneCheck() {
+  var dial    = (document.getElementById('reg-country-code')||{}).value || '+234';
+  var number  = (document.getElementById('reg-phone-number')||{}).value.trim();
+  var statusEl = document.getElementById('reg-phone-status');
+  if (!number || number.replace(/[^0-9]/g,'').length < 5) return;
+  var phone = dial + number;
+  var hash  = hashPhone(phone);
+  if (!_db) return;
+  if (statusEl) { statusEl.textContent = '⏳ Checking...'; statusEl.style.color = '#6b5e50'; }
+  _phoneVerified = false;
+  _db.collection('user_registry').doc(hash).get().then(function(doc) {
+    if (doc.exists) {
+      if (statusEl) { statusEl.textContent = '✕ This phone number is already registered. Please sign in.'; statusEl.style.color = '#b5451b'; }
+      _phoneVerified = false;
+      var phoneInp = document.getElementById('reg-phone-number');
+      if (phoneInp) { phoneInp.style.borderColor = '#b5451b'; }
+    } else {
+      if (statusEl) { statusEl.textContent = '✓ Phone number is available'; statusEl.style.color = '#4a7c59'; }
+      _phoneVerified = true;
+      var phoneInp = document.getElementById('reg-phone-number');
+      if (phoneInp) { phoneInp.style.borderColor = '#4a7c59'; }
+    }
+  }).catch(function() {
+    if (statusEl) { statusEl.textContent = ''; }
+    _phoneVerified = true; // offline — allow to proceed
+  });
+}
+
+// ── Real-time username check on blur ─────────────────────────────────────
+function _realtimeUsernameCheck(val) {
+  val = (val||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  var errEl = document.getElementById('reg-username-error');
+  if (val.length < 4 || val.length > 10) return;
+  if (!_db) return;
+  if (errEl) { errEl.textContent = '⏳ Checking username...'; errEl.style.color = '#6b5e50'; }
+  _usernameVerified = false;
+  _db.collection('user_registry').where('name','==',val).get().then(function(snap) {
+    if (!snap.empty) {
+      if (errEl) { errEl.textContent = '✕ Username already taken. Please choose another.'; errEl.style.color = '#b5451b'; }
+      _usernameVerified = false;
+      var inp = document.getElementById('reg-custom-username');
+      if (inp) inp.style.borderColor = '#b5451b';
+    } else {
+      if (errEl) { errEl.textContent = '✓ Username is available!'; errEl.style.color = '#4a7c59'; }
+      _usernameVerified = true;
+      var inp = document.getElementById('reg-custom-username');
+      if (inp) inp.style.borderColor = '#4a7c59';
+    }
+  }).catch(function() {
+    _usernameVerified = true; // offline — allow
+  });
+}
+
+// ── Verification overlay controller ──────────────────────────────────────
+function _showVerifyOverlay(phoneHash, username, callback, email) {
+  _rvProceedCallback = callback;
+  var overlay = document.getElementById('reg-verify-overlay');
+  if (!overlay) { if(callback) callback(); return; }
+  // Reset state
+  document.getElementById('rv-icon').textContent = '🔍';
+  document.getElementById('rv-title').textContent = 'Verifying Your Details';
+  document.getElementById('rv-msg').textContent = 'Please wait while we verify your information...';
+  document.getElementById('rv-progress-bar').style.width = '0%';
+  document.getElementById('rv-pct').textContent = '0%';
+  document.getElementById('rv-steps').innerHTML = '';
+  document.getElementById('rv-proceed-btn').style.display = 'none';
+  document.getElementById('rv-cancel-btn').style.display = 'block';
+  document.getElementById('rv-cancel-btn').textContent = '✕ Cancel';
+  overlay.style.display = 'flex';
+
+  var steps = document.getElementById('rv-steps');
+  var bar   = document.getElementById('rv-progress-bar');
+  var pct   = document.getElementById('rv-pct');
+  var icon  = document.getElementById('rv-icon');
+  var title = document.getElementById('rv-title');
+  var msg   = document.getElementById('rv-msg');
+
+  function setProgress(p, stepText, stepOk) {
+    bar.style.width = p + '%';
+    pct.textContent = p + '%';
+    if (stepText) {
+      var el = document.createElement('div');
+      el.style.cssText = 'color:'+(stepOk===false?'#b5451b':stepOk===true?'#4a7c59':'#6b5e50')+';';
+      el.textContent = (stepOk===true?'✓ ':stepOk===false?'✕ ':'⏳ ') + stepText;
+      steps.appendChild(el);
+    }
+  }
+
+  function showSuccess() {
+    icon.textContent = '🎉';
+    title.textContent = 'Verification Complete!';
+    msg.innerHTML = '<strong style="color:#4a7c59;">Congratulations!</strong> Your details have been verified successfully. You are now cleared to proceed to the next step.';
+    setProgress(100, 'All checks passed', true);
+    document.getElementById('rv-proceed-btn').style.display = 'block';
+    document.getElementById('rv-cancel-btn').style.display = 'none';
+  }
+
+  function showFail(reason) {
+    icon.textContent = '⚠️';
+    title.textContent = 'Verification Failed';
+    msg.textContent = reason;
+    document.getElementById('rv-cancel-btn').textContent = '← Go Back & Fix';
+  }
+
+  // Animated progress steps
+  var stage = 0;
+  setProgress(5, 'Starting verification...', null);
+
+  setTimeout(function() {
+    setProgress(20, 'Connecting to server...', null);
+  }, 400);
+
+  setTimeout(function() {
+    setProgress(40, 'Checking phone number...', null);
+    if (!_db) { setTimeout(function(){ setProgress(100); showSuccess(); }, 600); return; }
+    _db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
+      if (doc.exists) {
+        setProgress(45, 'Phone number: already registered', false);
+        showFail('This phone number is already registered. Please go back and sign in instead.');
+        _phoneVerified = false;
+        return;
+      }
+      setProgress(60, 'Phone number: available', true);
+      _phoneVerified = true;
+
+      setTimeout(function() {
+        setProgress(75, 'Checking username...', null);
+        _db.collection('user_registry').where('name','==',username).get().then(function(snap) {
+          if (!snap.empty) {
+            setProgress(80, 'Username: already taken', false);
+            showFail('The username "' + username + '" is already taken. Please go back and choose a different one.');
+            _usernameVerified = false;
+            return;
+          }
+          setProgress(90, 'Username: available', true);
+          _usernameVerified = true;
+
+          setTimeout(function() {
+            // Check email if provided
+            if (email) {
+              setProgress(85, 'Checking email...', null);
+              _db.collection('user_registry').where('email','==',email).get().then(function(eSnap){
+                if (!eSnap.empty) {
+                  setProgress(88, 'Email: already registered', false);
+                  showFail('The email address "' + email + '" is already registered. Please use a different email or sign in.');
+                } else {
+                  setProgress(95, 'Email: available', true);
+                  setTimeout(function(){ showSuccess(); }, 400);
+                }
+              }).catch(function(){
+                setProgress(95, 'Email check skipped (offline)', null);
+                setTimeout(function(){ showSuccess(); }, 400);
+              });
+            } else {
+              setProgress(95, 'Finalising...', null);
+              setTimeout(function() {
+                showSuccess();
+              }, 400);
+            }
+          }, 300);
+        }).catch(function() {
+          setProgress(90, 'Username check skipped (offline)', null);
+          _usernameVerified = true;
+          setTimeout(function(){ showSuccess(); }, 500);
+        });
+      }, 500);
+    }).catch(function() {
+      setProgress(50, 'Server check skipped (offline)', null);
+      _phoneVerified = true;
+      _usernameVerified = true;
+      setTimeout(function(){ showSuccess(); }, 500);
+    });
+  }, 900);
+}
+
+function _rvProceed() {
+  var overlay = document.getElementById('reg-verify-overlay');
+  if (overlay) overlay.style.display = 'none';
+  if (_rvProceedCallback) { _rvProceedCallback(); _rvProceedCallback = null; }
+}
+
+function _rvCancel() {
+  var overlay = document.getElementById('reg-verify-overlay');
+  if (overlay) overlay.style.display = 'none';
+  _rvProceedCallback = null;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// EMAIL SYSTEM — store/display/duplicate-check/reset (no code sending)
+// ═══════════════════════════════════════════════════════════════════════
+var EMAIL_KEY          = 'expense_user_email';
+
+// Real-time duplicate check while typing in registration form
+var _emailCheckTimer = null;
+function _realtimeEmailCheck(val) {
+  clearTimeout(_emailCheckTimer);
+  var statusEl = document.getElementById('reg-email-status');
+  if (!val || !val.includes('@')) { if (statusEl) statusEl.textContent = ''; return; }
+  if (statusEl) { statusEl.textContent = '⏳ Checking...'; statusEl.style.color = '#6b5e50'; }
+  _emailCheckTimer = setTimeout(function() {
+    if (!_db) return;
+    _db.collection('user_registry').where('email','==',val.trim().toLowerCase()).get().then(function(snap) {
+      if (!snap.empty) {
+        if (statusEl) { statusEl.textContent = '✕ Email already registered.'; statusEl.style.color = '#b5451b'; }
+        var inp = document.getElementById('reg-email'); if (inp) inp.style.borderColor = '#b5451b';
+      } else {
+        if (statusEl) { statusEl.textContent = '✓ Email available'; statusEl.style.color = '#4a7c59'; }
+        var inp = document.getElementById('reg-email'); if (inp) inp.style.borderColor = '#4a7c59';
+      }
+    }).catch(function(){ if (statusEl) statusEl.textContent = ''; });
+  }, 600);
+}
+
+// Open email overlay from profile card
+function openEmailVerifyOverlay() {
+  var overlay = document.getElementById('email-verify-overlay');
+  if (!overlay) return;
+  var stored = localStorage.getItem(EMAIL_KEY + '_' + (_userId||'default')) || '';
+  var inp = document.getElementById('ev-email-input');
+  if (inp) inp.value = stored;
+  var errEl = document.getElementById('ev-input-error');
+  if (errEl) errEl.textContent = '';
+  overlay.style.display = 'flex';
+  setTimeout(function(){ if (inp) inp.focus(); }, 100);
+}
+
+function closeEmailVerifyOverlay() {
+  var o = document.getElementById('email-verify-overlay');
+  if (o) o.style.display = 'none';
+  renderUserProfileCard();
+}
+
+// Save email — check duplicate then store
+function saveEmailAddress() {
+  var inp   = document.getElementById('ev-email-input');
+  var errEl = document.getElementById('ev-input-error');
+  var email = inp ? inp.value.trim().toLowerCase() : '';
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    if (errEl) { errEl.textContent = 'Please enter a valid email address'; errEl.style.color = '#b5451b'; } return;
+  }
+  var uid = _userId || 'default';
+  var current = localStorage.getItem(EMAIL_KEY + '_' + uid) || '';
+  if (email === current) { closeEmailVerifyOverlay(); return; }
+
+  if (errEl) { errEl.textContent = '⏳ Checking...'; errEl.style.color = '#6b5e50'; }
+
+  var doSave = function() {
+    localStorage.setItem(EMAIL_KEY + '_' + uid, email);
+    // Save to Firebase
+    if (_db && _userId) {
+      userCol('settings').doc('email').set({ email: email, ts: Date.now() }).catch(function(){});
+      // Save to user_registry for reset lookup
+      if (_userPhone) {
+        _db.collection('user_registry').doc(_userPhone).update({ email: email }).catch(function(){});
+      }
+    }
+    if (errEl) { errEl.textContent = ''; }
+    closeEmailVerifyOverlay();
+    showToast('✓ Email saved to your profile');
+  };
+
+  if (!_db) { doSave(); return; }
+  _db.collection('user_registry').where('email','==',email).get().then(function(snap) {
+    if (!snap.empty) {
+      // Check if the match is the current user's own record
+      var sameUser = snap.docs.some(function(d){ return d.data().user_id === _userId; });
+      if (sameUser) { doSave(); return; }
+      if (errEl) { errEl.textContent = '✕ This email is already linked to another account.'; errEl.style.color = '#b5451b'; }
+    } else {
+      doSave();
+    }
+  }).catch(function(){ doSave(); }); // offline — save anyway
+}
+
+// Render email in profile card
+function _renderProfileEmail() {
+  var uid    = _userId || 'default';
+  var email  = localStorage.getItem(EMAIL_KEY + '_' + uid) || '';
+  var emailEl = document.getElementById('profile-email');
+  var badgeEl = document.getElementById('profile-email-badge');
+  var btnEl   = document.getElementById('profile-email-btn');
+  if (emailEl) emailEl.textContent = email || '—';
+  if (badgeEl) {
+    if (email) {
+      badgeEl.style.display = 'block';
+      badgeEl.innerHTML = '<span style="font-family:DM Mono,monospace;font-size:0.62rem;padding:2px 8px;background:rgba(74,124,89,0.15);color:#4a7c59;border:1px solid #4a7c59;border-radius:10px;">✓ Saved</span>';
+    } else { badgeEl.style.display = 'none'; }
+  }
+  if (btnEl) { btnEl.textContent = email ? '✎ Change' : '+ Add Email'; }
+  // Load from Firebase if not in localStorage
+  if (_db && _userId && !email) {
+    userCol('settings').doc('email').get().then(function(doc) {
+      if (doc.exists && doc.data().email) {
+        localStorage.setItem(EMAIL_KEY + '_' + uid, doc.data().email);
+        _renderProfileEmail();
+      }
+    }).catch(function(){});
+  }
+}
+
+// Save email collected at registration
+function _saveRegEmail() {
+  var emailInp = document.getElementById('reg-email');
+  if (!emailInp || !emailInp.value.trim()) return;
+  var email = emailInp.value.trim().toLowerCase();
+  var uid = _userId || localStorage.getItem('_pending_uid') || 'default';
+  localStorage.setItem(EMAIL_KEY + '_' + uid, email);
+}
+
+
+// ── Reset via email ───────────────────────────────────────────────────────
+function _tryEmailReset(input) {
+  if (!input.includes('@')) return false; // not an email
+  var errEl = document.getElementById('reset-phone-error');
+  if (errEl) { errEl.textContent = '⏳ Looking up your account...'; errEl.style.color = '#6b5e50'; }
+  if (!_db) { if (errEl) { errEl.textContent = 'No internet connection.'; errEl.style.color = '#b5451b'; } return true; }
+  _db.collection('user_registry').where('email', '==', input.toLowerCase()).get().then(function(snap) {
+    if (snap.empty) {
+      if (errEl) { errEl.textContent = 'No account found with that email.'; errEl.style.color = '#b5451b'; }
+      return;
+    }
+    var data = snap.docs[0].data();
+    // Found — proceed same as phone reset
+    _pendingResetUID   = data.user_id;
+    _pendingResetName  = data.name;
+    _pendingResetPhone = snap.docs[0].id;
+    _resetCode = String(Math.floor(100000 + Math.random() * 900000));
+    _resetCodeExpiry = Date.now() + 15 * 60 * 1000;
+    _db.collection('user_registry').doc(_pendingResetPhone).update({
+      reset_code_hash:   hashPin(_resetCode),
+      reset_code_expiry: _resetCodeExpiry
+    }).then(function() {
+      // Show reset code
+      var sa = document.getElementById('reset-step-phone');
+      var sb = document.getElementById('reset-step-code');
+      if (sa) sa.style.display = 'none';
+      if (sb) sb.style.display = 'block';
+      var cd = document.getElementById('reset-code-display');
+      if (cd) cd.textContent = _resetCode;
+      _startResetTimer();
+    }).catch(function() {
+      if (errEl) { errEl.textContent = 'Error. Please try again.'; errEl.style.color = '#b5451b'; }
+    });
+  }).catch(function() {
+    if (errEl) { errEl.textContent = 'Connection error.'; errEl.style.color = '#b5451b'; }
+  });
+  return true;
+}
+
 function generateCode() {
   var name   = (document.getElementById('reg-name')  ||{}).value.trim();
   var dob    = (document.getElementById('reg-dob')   ||{}).value;
-  var dial   = (document.getElementById('reg-country-code') ||{}).value || '';
+  var dial   = (document.getElementById('reg-country-code') ||{}).value || (document.getElementById('reg-country-code-input')||{}).value || '';
   var number = (document.getElementById('reg-phone-number') ||{}).value.trim();
   var phone  = dial + number;
   var errEl  = document.getElementById('reg-error');
@@ -12957,7 +13439,18 @@ function generateCode() {
     if(errEl) errEl.textContent='Please enter a valid phone number'; return;
   }
   if (!_selectedUsername) { showToast('Please select a username first'); return; }
-  if(errEl) errEl.textContent = 'Checking...';
+  if(errEl) errEl.textContent = '';
+
+  // Show verification overlay — pass phone hash and username directly
+  var phoneHash = hashPhone(phone);
+  var username  = _selectedUsername;
+  var regEmail = (document.getElementById('reg-email')||{}).value.trim().toLowerCase();
+  _showVerifyOverlay(phoneHash, username, function() {
+    _doGenerateCode(name, dob, dial, number, phone, errEl);
+  });
+}
+
+function _doGenerateCode(name, dob, dial, number, phone, errEl) {
 
   // Save DOB and country to localStorage
   var country = '';
@@ -13025,6 +13518,7 @@ function confirmCode() {
   localStorage.setItem('expense_pin_hash_local', hashPin(_generatedCode));
   // Record full verify since they just registered
   recordFullVerify();
+  _saveRegEmail();
   // Clear any previous user data from this device
   localStorage.removeItem('expense_ledger');
   localStorage.removeItem('custom_categories');
@@ -13040,6 +13534,7 @@ function confirmCode() {
   // This ensures privacy is always accepted before the tour starts
   // Mark as new version so acceptPrivacy triggers the tour
   sessionStorage.setItem('new_app_version', '1');
+  sessionStorage.setItem('just_registered', '1');
 }
 
 // -- Wrong attempt tracker & password reset --
@@ -13073,16 +13568,24 @@ function closeResetOverlay() {
 function submitResetRequest() {
   var inp = document.getElementById('reset-phone-input');
   var err = document.getElementById('reset-phone-error');
-  var phone = inp ? inp.value.trim() : '';
+  var input = inp ? inp.value.trim() : '';
+  if (!input) { if (err) err.textContent = 'Please enter your phone number or email'; return; }
+
+  // If it looks like an email — try email reset path
+  if (input.includes('@')) {
+    if (_tryEmailReset(input)); return;
+  }
+
+  var phone = input;
   if (!phone || phone.replace(/[^0-9]/g,'').length < 7) {
-    if (err) err.textContent = 'Please enter a valid phone number'; return;
+    if (err) err.textContent = 'Please enter a valid phone number or email'; return;
   }
   if (err) err.textContent = 'Checking...';
   var phoneHash = hashPhone(phone);
   getDB(function(db) {
     db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
       if (!doc.exists) {
-        if (err) err.textContent = 'No account found with this phone number.'; return;
+        if (err) err.textContent = 'No account found with this phone number or email.'; return;
       }
       var data = doc.data();
       _resetCode = String(Math.floor(100000 + Math.random() * 900000));
@@ -13158,6 +13661,7 @@ function useResetCodeNow() {
   fetchTrashFromFirebase();
   fetchIncTrashFromFirebase();
   startSync();
+  _promptEmailIfMissing();
   showToast('Signed in! Change your PIN in Manage now.');
   setTimeout(function() {
     var manageBtn = document.querySelector('#main-nav button[onclick*="manage"]');
@@ -13227,6 +13731,7 @@ function submitLogin() {
     fetchTrashFromFirebase();
   fetchIncTrashFromFirebase();
     startSync();
+    _promptEmailIfMissing();
     return true;
   }
 
@@ -13693,8 +14198,14 @@ function _checkAppVersion() {
 
 // Called after login — checks Firebase first, then localStorage as fallback
 function checkPrivacy() {
-  // New app version always forces re-acceptance, even if Firebase has old record
   var isNewVersion = sessionStorage.getItem('new_app_version') === '1';
+
+  // If privacy overlay is already visible — don't show again
+  var ppOverlay = document.getElementById('privacy-overlay');
+  if (ppOverlay && ppOverlay.style.display === 'flex') return;
+
+  // If user just registered this session — privacy already shown during register flow
+  if (sessionStorage.getItem('just_registered') === '1') return;
 
   if (_db && _userId) {
     userCol('settings').doc('privacy').get().then(function(doc) {
@@ -13703,7 +14214,6 @@ function checkPrivacy() {
         localStorage.setItem(_privacyKey(), PRIVACY_VER);
         return;
       }
-      // Show policy — either new version or not yet accepted
       _showPrivacyOverlay();
     }).catch(function() {
       if (!isNewVersion && localStorage.getItem(_privacyKey()) === PRIVACY_VER) return;
@@ -15274,6 +15784,71 @@ function submitPhoneConfirm() {
 }
 var COUNTRY_CODES = [{"code": "AF", "name": "Afghanistan", "dial": "+93"}, {"code": "AL", "name": "Albania", "dial": "+355"}, {"code": "DZ", "name": "Algeria", "dial": "+213"}, {"code": "AD", "name": "Andorra", "dial": "+376"}, {"code": "AO", "name": "Angola", "dial": "+244"}, {"code": "AR", "name": "Argentina", "dial": "+54"}, {"code": "AM", "name": "Armenia", "dial": "+374"}, {"code": "AU", "name": "Australia", "dial": "+61"}, {"code": "AT", "name": "Austria", "dial": "+43"}, {"code": "AZ", "name": "Azerbaijan", "dial": "+994"}, {"code": "BH", "name": "Bahrain", "dial": "+973"}, {"code": "BD", "name": "Bangladesh", "dial": "+880"}, {"code": "BY", "name": "Belarus", "dial": "+375"}, {"code": "BE", "name": "Belgium", "dial": "+32"}, {"code": "BZ", "name": "Belize", "dial": "+501"}, {"code": "BJ", "name": "Benin", "dial": "+229"}, {"code": "BT", "name": "Bhutan", "dial": "+975"}, {"code": "BO", "name": "Bolivia", "dial": "+591"}, {"code": "BA", "name": "Bosnia", "dial": "+387"}, {"code": "BW", "name": "Botswana", "dial": "+267"}, {"code": "BR", "name": "Brazil", "dial": "+55"}, {"code": "BN", "name": "Brunei", "dial": "+673"}, {"code": "BG", "name": "Bulgaria", "dial": "+359"}, {"code": "BF", "name": "Burkina Faso", "dial": "+226"}, {"code": "BI", "name": "Burundi", "dial": "+257"}, {"code": "KH", "name": "Cambodia", "dial": "+855"}, {"code": "CM", "name": "Cameroon", "dial": "+237"}, {"code": "CA", "name": "Canada", "dial": "+1"}, {"code": "CF", "name": "C.A.R.", "dial": "+236"}, {"code": "TD", "name": "Chad", "dial": "+235"}, {"code": "CL", "name": "Chile", "dial": "+56"}, {"code": "CN", "name": "China", "dial": "+86"}, {"code": "CO", "name": "Colombia", "dial": "+57"}, {"code": "CD", "name": "Congo DRC", "dial": "+243"}, {"code": "CG", "name": "Congo Rep.", "dial": "+242"}, {"code": "CR", "name": "Costa Rica", "dial": "+506"}, {"code": "HR", "name": "Croatia", "dial": "+385"}, {"code": "CU", "name": "Cuba", "dial": "+53"}, {"code": "CY", "name": "Cyprus", "dial": "+357"}, {"code": "CZ", "name": "Czech Rep.", "dial": "+420"}, {"code": "DK", "name": "Denmark", "dial": "+45"}, {"code": "DJ", "name": "Djibouti", "dial": "+253"}, {"code": "DO", "name": "Dominican Rep.", "dial": "+1829"}, {"code": "EC", "name": "Ecuador", "dial": "+593"}, {"code": "EG", "name": "Egypt", "dial": "+20"}, {"code": "SV", "name": "El Salvador", "dial": "+503"}, {"code": "GQ", "name": "Eq. Guinea", "dial": "+240"}, {"code": "ER", "name": "Eritrea", "dial": "+291"}, {"code": "EE", "name": "Estonia", "dial": "+372"}, {"code": "SZ", "name": "Eswatini", "dial": "+268"}, {"code": "ET", "name": "Ethiopia", "dial": "+251"}, {"code": "FJ", "name": "Fiji", "dial": "+679"}, {"code": "FI", "name": "Finland", "dial": "+358"}, {"code": "FR", "name": "France", "dial": "+33"}, {"code": "GA", "name": "Gabon", "dial": "+241"}, {"code": "GM", "name": "Gambia", "dial": "+220"}, {"code": "GE", "name": "Georgia", "dial": "+995"}, {"code": "DE", "name": "Germany", "dial": "+49"}, {"code": "GH", "name": "Ghana", "dial": "+233"}, {"code": "GR", "name": "Greece", "dial": "+30"}, {"code": "GT", "name": "Guatemala", "dial": "+502"}, {"code": "GN", "name": "Guinea", "dial": "+224"}, {"code": "GW", "name": "Guinea-Bissau", "dial": "+245"}, {"code": "GY", "name": "Guyana", "dial": "+592"}, {"code": "HT", "name": "Haiti", "dial": "+509"}, {"code": "HN", "name": "Honduras", "dial": "+504"}, {"code": "HU", "name": "Hungary", "dial": "+36"}, {"code": "IS", "name": "Iceland", "dial": "+354"}, {"code": "IN", "name": "India", "dial": "+91"}, {"code": "ID", "name": "Indonesia", "dial": "+62"}, {"code": "IR", "name": "Iran", "dial": "+98"}, {"code": "IQ", "name": "Iraq", "dial": "+964"}, {"code": "IE", "name": "Ireland", "dial": "+353"}, {"code": "IL", "name": "Israel", "dial": "+972"}, {"code": "IT", "name": "Italy", "dial": "+39"}, {"code": "JM", "name": "Jamaica", "dial": "+1876"}, {"code": "JP", "name": "Japan", "dial": "+81"}, {"code": "JO", "name": "Jordan", "dial": "+962"}, {"code": "KZ", "name": "Kazakhstan", "dial": "+7"}, {"code": "KE", "name": "Kenya", "dial": "+254"}, {"code": "KW", "name": "Kuwait", "dial": "+965"}, {"code": "KG", "name": "Kyrgyzstan", "dial": "+996"}, {"code": "LA", "name": "Laos", "dial": "+856"}, {"code": "LV", "name": "Latvia", "dial": "+371"}, {"code": "LB", "name": "Lebanon", "dial": "+961"}, {"code": "LS", "name": "Lesotho", "dial": "+266"}, {"code": "LR", "name": "Liberia", "dial": "+231"}, {"code": "LY", "name": "Libya", "dial": "+218"}, {"code": "LT", "name": "Lithuania", "dial": "+370"}, {"code": "LU", "name": "Luxembourg", "dial": "+352"}, {"code": "MG", "name": "Madagascar", "dial": "+261"}, {"code": "MW", "name": "Malawi", "dial": "+265"}, {"code": "MY", "name": "Malaysia", "dial": "+60"}, {"code": "MV", "name": "Maldives", "dial": "+960"}, {"code": "ML", "name": "Mali", "dial": "+223"}, {"code": "MT", "name": "Malta", "dial": "+356"}, {"code": "MR", "name": "Mauritania", "dial": "+222"}, {"code": "MU", "name": "Mauritius", "dial": "+230"}, {"code": "MX", "name": "Mexico", "dial": "+52"}, {"code": "MD", "name": "Moldova", "dial": "+373"}, {"code": "MN", "name": "Mongolia", "dial": "+976"}, {"code": "ME", "name": "Montenegro", "dial": "+382"}, {"code": "MA", "name": "Morocco", "dial": "+212"}, {"code": "MZ", "name": "Mozambique", "dial": "+258"}, {"code": "MM", "name": "Myanmar", "dial": "+95"}, {"code": "NA", "name": "Namibia", "dial": "+264"}, {"code": "NP", "name": "Nepal", "dial": "+977"}, {"code": "NL", "name": "Netherlands", "dial": "+31"}, {"code": "NZ", "name": "New Zealand", "dial": "+64"}, {"code": "NI", "name": "Nicaragua", "dial": "+505"}, {"code": "NE", "name": "Niger", "dial": "+227"}, {"code": "NG", "name": "Nigeria", "dial": "+234"}, {"code": "NO", "name": "Norway", "dial": "+47"}, {"code": "OM", "name": "Oman", "dial": "+968"}, {"code": "PK", "name": "Pakistan", "dial": "+92"}, {"code": "PA", "name": "Panama", "dial": "+507"}, {"code": "PY", "name": "Paraguay", "dial": "+595"}, {"code": "PE", "name": "Peru", "dial": "+51"}, {"code": "PH", "name": "Philippines", "dial": "+63"}, {"code": "PL", "name": "Poland", "dial": "+48"}, {"code": "PT", "name": "Portugal", "dial": "+351"}, {"code": "QA", "name": "Qatar", "dial": "+974"}, {"code": "RO", "name": "Romania", "dial": "+40"}, {"code": "RU", "name": "Russia", "dial": "+7"}, {"code": "RW", "name": "Rwanda", "dial": "+250"}, {"code": "SA", "name": "Saudi Arabia", "dial": "+966"}, {"code": "SN", "name": "Senegal", "dial": "+221"}, {"code": "RS", "name": "Serbia", "dial": "+381"}, {"code": "SL", "name": "Sierra Leone", "dial": "+232"}, {"code": "SG", "name": "Singapore", "dial": "+65"}, {"code": "SK", "name": "Slovakia", "dial": "+421"}, {"code": "SI", "name": "Slovenia", "dial": "+386"}, {"code": "SO", "name": "Somalia", "dial": "+252"}, {"code": "ZA", "name": "South Africa", "dial": "+27"}, {"code": "SS", "name": "South Sudan", "dial": "+211"}, {"code": "ES", "name": "Spain", "dial": "+34"}, {"code": "LK", "name": "Sri Lanka", "dial": "+94"}, {"code": "SD", "name": "Sudan", "dial": "+249"}, {"code": "SE", "name": "Sweden", "dial": "+46"}, {"code": "CH", "name": "Switzerland", "dial": "+41"}, {"code": "SY", "name": "Syria", "dial": "+963"}, {"code": "TW", "name": "Taiwan", "dial": "+886"}, {"code": "TZ", "name": "Tanzania", "dial": "+255"}, {"code": "TH", "name": "Thailand", "dial": "+66"}, {"code": "TG", "name": "Togo", "dial": "+228"}, {"code": "TT", "name": "Trinidad", "dial": "+1868"}, {"code": "TN", "name": "Tunisia", "dial": "+216"}, {"code": "TR", "name": "Turkey", "dial": "+90"}, {"code": "TM", "name": "Turkmenistan", "dial": "+993"}, {"code": "UG", "name": "Uganda", "dial": "+256"}, {"code": "UA", "name": "Ukraine", "dial": "+380"}, {"code": "AE", "name": "UAE", "dial": "+971"}, {"code": "GB", "name": "UK", "dial": "+44"}, {"code": "US", "name": "USA", "dial": "+1"}, {"code": "UY", "name": "Uruguay", "dial": "+598"}, {"code": "UZ", "name": "Uzbekistan", "dial": "+998"}, {"code": "VE", "name": "Venezuela", "dial": "+58"}, {"code": "VN", "name": "Vietnam", "dial": "+84"}, {"code": "YE", "name": "Yemen", "dial": "+967"}, {"code": "ZM", "name": "Zambia", "dial": "+260"}, {"code": "ZW", "name": "Zimbabwe", "dial": "+263"}];
 
+
+// ── Searchable Country Code Dropdown ────────────────────────────────────
+function _openCountryDrop(prefix) {
+  var drop = document.getElementById(prefix+'-country-drop');
+  var inp  = document.getElementById(prefix+'-country-code-input');
+  if (!drop) return;
+  _renderCountryDrop(prefix, inp ? inp.value : '');
+  drop.style.display = 'block';
+}
+function _closeCountryDropDelay(prefix) {
+  setTimeout(function(){ _closeCountryDrop(prefix); }, 200);
+}
+function _closeCountryDrop(prefix) {
+  var drop = document.getElementById(prefix+'-country-drop');
+  if (drop) drop.style.display = 'none';
+}
+function _filterCountryDrop(prefix, q) {
+  _renderCountryDrop(prefix, q);
+  var drop = document.getElementById(prefix+'-country-drop');
+  if (drop) drop.style.display = 'block';
+}
+function _renderCountryDrop(prefix, q) {
+  var drop = document.getElementById(prefix+'-country-drop');
+  if (!drop) return;
+  q = (q||'').toLowerCase().replace(/^\+/,'');
+  var filtered = COUNTRY_CODES.filter(function(c){
+    return !q || c.name.toLowerCase().indexOf(q) === 0
+      || c.dial.replace('+','').indexOf(q) === 0
+      || ('+'+q) === c.dial
+      || c.code.toLowerCase().indexOf(q) === 0;
+  }).slice(0, 30);
+  drop.innerHTML = filtered.map(function(c){
+    var d = c.dial; var n = c.name;
+    var onclick = '_selectCountry('+JSON.stringify(prefix)+','+JSON.stringify(d)+','+JSON.stringify(n)+')';
+    return '<div onclick="'+onclick+'" style="padding:8px 10px;font-family:DM Mono,monospace;font-size:0.72rem;color:#e0d0b0;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);" onmouseover="this.style.background=\'rgba(200,150,46,0.15)\'" onmouseout="this.style.background=\'\'">'+
+      '<span style="color:#c8962e;font-weight:700;">'+d+'</span> '+c.code+' <span style="color:#6b5e50;font-size:0.65rem;">'+n+'</span></div>';
+  }).join('');
+}
+function _selectCountry(prefix, dial, name) {
+  var inp  = document.getElementById(prefix+'-country-code-input');
+  var hid  = document.getElementById(prefix+'-country-code');
+  if (inp) inp.value = dial;
+  if (hid) hid.value = dial;
+  _closeCountryDrop(prefix);
+}
+// Init searchable inputs from existing _populateCountrySelect data
+function _initCountryInputs() {
+  var lang = navigator.language || 'en-NG';
+  var defaultDial = '+234';
+  if(lang.includes('GB')) defaultDial='+44';
+  else if(lang.includes('US')) defaultDial='+1';
+  else if(lang.includes('IE')) defaultDial='+353';
+  else if(lang.includes('ES')) defaultDial='+34';
+  // Set default on searchable inputs
+  ['reg','confirm'].forEach(function(pfx){
+    var inp = document.getElementById(pfx+'-country-code-input');
+    var hid = document.getElementById(pfx+'-country-code');
+    if (inp && !inp.value) inp.value = defaultDial;
+    if (hid && !hid.value) hid.value = defaultDial;
+  });
+  // Legacy select elements — keep working
+  _populateCountrySelect('reg-country-code-legacy', defaultDial);
+  _populateCountrySelect('confirm-country-code', defaultDial);
+}
+
 function _populateCountrySelect(selId, defaultDial) {
   if(typeof COUNTRY_CODES === 'undefined') return;
   var sel = document.getElementById(selId); if(!sel || sel.options.length > 1) return;
@@ -15287,13 +15862,16 @@ function _populateCountrySelect(selId, defaultDial) {
 }
 function _initCountrySelects() {
   var lang = navigator.language || 'en-NG', defaultDial = '+234';
-  if(lang.includes('GB')) defaultDial='+44'; else if(lang.includes('US')) defaultDial='+1'; else if(lang.includes('IE')) defaultDial='+353';
-  _populateCountrySelect('reg-country-code', defaultDial);
+  if(lang.includes('GB')) defaultDial='+44'; else if(lang.includes('US')) defaultDial='+1';
+  else if(lang.includes('IE')) defaultDial='+353'; else if(lang.includes('ES')) defaultDial='+34';
+  // Init searchable inputs
+  var regInp  = document.getElementById('reg-country-code-input');
+  var regHid  = document.getElementById('reg-country-code');
+  if (regInp && !regInp.value) regInp.value = defaultDial;
+  if (regHid && !regHid.value) regHid.value = defaultDial;
+  // Legacy selects
   _populateCountrySelect('confirm-country-code', defaultDial);
 }
-document.addEventListener('DOMContentLoaded', _initCountrySelects);
-setTimeout(_initCountrySelects, 500);
-
 document.addEventListener('DOMContentLoaded', _initCountrySelects);
 setTimeout(_initCountrySelects, 500);
 
@@ -15487,8 +16065,12 @@ function _renderTourStep() {
   // New users must watch the full tour
   var skipBtn = document.getElementById('tour-skip-btn');
   if (skipBtn) {
-    var isNewUser = localStorage.getItem(ONBOARD_EXPENSES_KEY) !== '1';
-    skipBtn.style.display = (isNewUser && !_onboardIsReplay) ? 'none' : 'block';
+    // Hide skip for truly new users (just registered OR never completed either tour)
+    var neverDoneExpenses = localStorage.getItem(ONBOARD_EXPENSES_KEY) !== '1';
+    var neverDoneIncome   = localStorage.getItem(ONBOARD_INCOME_KEY)   !== '1';
+    var justRegistered    = sessionStorage.getItem('just_registered')   === '1';
+    var isFirstEver = (neverDoneExpenses && neverDoneIncome) || justRegistered;
+    skipBtn.style.display = (isFirstEver && !_onboardIsReplay) ? 'none' : 'block';
   }
   setTimeout(function(){ _positionTourStep(step); }, 150);
 }
@@ -16121,6 +16703,57 @@ try {
 } catch(e) { /* iframe/local file — ignore */ }
 
 syncInit();
+
 </script>
+
+<!-- ═══ REGISTRATION VERIFICATION OVERLAY ═══ -->
+<div id="reg-verify-overlay" style="display:none;position:fixed;inset:0;z-index:100020;background:rgba(10,8,6,0.92);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#1a1410;border:2px solid #c8962e;border-radius:12px;width:100%;max-width:340px;padding:32px 28px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.8);">
+    <div id="rv-icon" style="font-size:2.5rem;margin-bottom:12px;">🔍</div>
+    <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--gold2);margin-bottom:6px;" id="rv-title">Verifying Your Details</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;line-height:1.7;margin-bottom:20px;" id="rv-msg">Please wait while we verify your information...</div>
+    <!-- Progress bar -->
+    <div id="rv-progress-wrap" style="background:#2a2018;border-radius:20px;height:10px;overflow:hidden;margin-bottom:10px;">
+      <div id="rv-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#c8962e,#f0c060);border-radius:20px;transition:width 0.3s ease;"></div>
+    </div>
+    <div id="rv-pct" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--gold);margin-bottom:20px;">0%</div>
+    <div id="rv-steps" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#3a3020;line-height:2;text-align:left;margin-bottom:20px;"></div>
+    <button id="rv-proceed-btn" onclick="_rvProceed()" style="display:none;width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:700;letter-spacing:2px;color:var(--ink);cursor:pointer;">✓ PROCEED TO NEXT STEP</button>
+    <button id="rv-cancel-btn" onclick="_rvCancel()" style="width:100%;padding:8px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#3a3020;cursor:pointer;margin-top:6px;">✕ Cancel</button>
+  </div>
+</div>
+
+<!-- ═══ EMAIL OVERLAY (save email, no code needed) ═══ -->
+<div id="email-verify-overlay" style="display:none;position:fixed;inset:0;z-index:100020;background:rgba(10,8,6,0.92);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#1a1410;border:2px solid #c8962e;border-radius:12px;width:100%;max-width:360px;padding:28px;box-shadow:0 12px 48px rgba(0,0,0,0.8);">
+    <div style="font-size:2rem;text-align:center;margin-bottom:10px;">📧</div>
+    <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);text-align:center;margin-bottom:6px;">Add Email Address</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:6px;line-height:1.7;">Your email is used for account recovery and duplicate detection. It is stored securely and never shared.</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a7c59;text-align:center;margin-bottom:18px;background:rgba(74,124,89,0.1);border:1px solid rgba(74,124,89,0.3);border-radius:4px;padding:6px 10px;">✓ Free — no verification email sent</div>
+    <input id="ev-email-input" type="email" placeholder="your@email.com"
+      style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.88rem;color:var(--paper);outline:none;box-sizing:border-box;margin-bottom:8px;"
+      onkeydown="if(event.key==='Enter')saveEmailAddress()">
+    <div id="ev-input-error" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#b5451b;margin-bottom:10px;min-height:16px;"></div>
+    <button onclick="saveEmailAddress()" style="width:100%;padding:12px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--ink);cursor:pointer;letter-spacing:1px;margin-bottom:8px;">💾 SAVE EMAIL</button>
+    <button onclick="closeEmailVerifyOverlay()" style="width:100%;padding:8px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#3a3020;cursor:pointer;">Cancel</button>
+  </div>
+</div>
+
+<!-- ═══ EMAIL OVERLAY (save email, no code needed) ═══ -->
+<div id="email-verify-overlay" style="display:none;position:fixed;inset:0;z-index:100020;background:rgba(10,8,6,0.92);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#1a1410;border:2px solid #c8962e;border-radius:12px;width:100%;max-width:360px;padding:28px;box-shadow:0 12px 48px rgba(0,0,0,0.8);">
+    <div style="font-size:2rem;text-align:center;margin-bottom:10px;">📧</div>
+    <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);text-align:center;margin-bottom:6px;">Add Email Address</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:6px;line-height:1.7;">Your email is used for account recovery and duplicate detection. It is stored securely and never shared.</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#4a7c59;text-align:center;margin-bottom:18px;background:rgba(74,124,89,0.1);border:1px solid rgba(74,124,89,0.3);border-radius:4px;padding:6px 10px;">✓ Free — no verification email sent</div>
+    <input id="ev-email-input" type="email" placeholder="your@email.com"
+      style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.88rem;color:var(--paper);outline:none;box-sizing:border-box;margin-bottom:8px;"
+      onkeydown="if(event.key==='Enter')saveEmailAddress()">
+    <div id="ev-input-error" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#b5451b;margin-bottom:10px;min-height:16px;"></div>
+    <button onclick="saveEmailAddress()" style="width:100%;padding:12px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--ink);cursor:pointer;letter-spacing:1px;margin-bottom:8px;">💾 SAVE EMAIL</button>
+    <button onclick="closeEmailVerifyOverlay()" style="width:100%;padding:8px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#3a3020;cursor:pointer;">Cancel</button>
+  </div>
+</div>
+
 </body>
 </html>
