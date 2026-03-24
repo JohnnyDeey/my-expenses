@@ -2074,13 +2074,15 @@ input[type="password"]::-ms-clear { display:none !important; }
       </div>
     </div>
     <!-- Email row — full width -->
-    <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">EMAIL</div>
-        <div id="profile-email" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);">—</div>
+    <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;margin-top:10px;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">EMAIL</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <div style="min-width:0;flex:1;">
+          <div id="profile-email" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
+          <div id="profile-email-badge" style="display:none;margin-top:3px;"></div>
+        </div>
+        <button id="profile-email-btn" onclick="openEmailVerifyOverlay()" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:4px 10px;border-radius:4px;border:1px solid var(--gold);background:none;color:var(--gold);cursor:pointer;white-space:nowrap;flex-shrink:0;"></button>
       </div>
-      <div id="profile-email-badge" style="display:none;"></div>
-      <button id="profile-email-btn" onclick="openEmailVerifyOverlay()" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:4px 10px;border-radius:4px;border:1px solid var(--gold);background:none;color:var(--gold);cursor:pointer;white-space:nowrap;flex-shrink:0;"></button>
     </div>
   </div>
 
@@ -2795,42 +2797,77 @@ input[type="password"]::-ms-clear { display:none !important; }
 </div>
 
 <!-- == DELETE ACCOUNT OVERLAY == -->
-<div id="delete-account-overlay" style="display:none;position:fixed;inset:0;z-index:99993;background:rgba(26,20,16,0.95);align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--paper);border:2px solid var(--rust);border-radius:8px;width:100%;max-width:420px;">
+<div id="delete-account-overlay" style="display:none;position:fixed;inset:0;z-index:99993;background:rgba(26,20,16,0.95);align-items:flex-start;justify-content:center;padding:16px;padding-top:60px;overflow-y:auto;">
+  <div style="background:var(--paper);border:2px solid var(--rust);border-radius:8px;width:100%;max-width:420px;margin:auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--rust);border-radius:6px 6px 0 0;">
-      <span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:white;">&#9888; Delete Account</span>
-      <button onclick="closeDeleteAccountOverlay()" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:1.4rem;cursor:pointer;padding:0 4px;">&#10005;</button>
+      <span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:white;">⚠ Delete Account</span>
+      <button onclick="closeDeleteAccountOverlay()" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:1.4rem;cursor:pointer;padding:0 4px;">✕</button>
     </div>
+
+    <!-- Step 1: Questionnaire -->
     <div id="delete-account-step1" style="padding:24px 20px;">
-      <div style="background:#fff0f0;border:1px solid var(--rust);border-radius:6px;padding:14px;margin-bottom:18px;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.75rem;font-weight:700;color:var(--rust);margin-bottom:8px;">&#9888; THIS WILL PERMANENTLY DELETE:</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:16px;line-height:1.7;">Before you go, please tell us why. This helps us improve the app for everyone.</div>
+      <div style="margin-bottom:16px;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:8px;text-transform:uppercase;">Why are you deleting your account?</div>
+        <div style="display:flex;flex-direction:column;gap:6px;" id="delete-reasons">
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--paper2);border-radius:4px;cursor:pointer;font-family:'DM Mono',monospace;font-size:0.72rem;"><input type="radio" name="del-reason" value="not_useful" style="accent-color:var(--rust);"> The app is not useful to me</label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--paper2);border-radius:4px;cursor:pointer;font-family:'DM Mono',monospace;font-size:0.72rem;"><input type="radio" name="del-reason" value="too_complex"> Too complicated to use</label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--paper2);border-radius:4px;cursor:pointer;font-family:'DM Mono',monospace;font-size:0.72rem;"><input type="radio" name="del-reason" value="found_better"> Found a better alternative</label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--paper2);border-radius:4px;cursor:pointer;font-family:'DM Mono',monospace;font-size:0.72rem;"><input type="radio" name="del-reason" value="privacy"> Privacy concerns</label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--paper2);border-radius:4px;cursor:pointer;font-family:'DM Mono',monospace;font-size:0.72rem;"><input type="radio" name="del-reason" value="technical"> Technical issues or bugs</label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--paper2);border-radius:4px;cursor:pointer;font-family:'DM Mono',monospace;font-size:0.72rem;"><input type="radio" name="del-reason" value="testing"> Just testing — will create new account</label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--paper2);border-radius:4px;cursor:pointer;font-family:'DM Mono',monospace;font-size:0.72rem;"><input type="radio" name="del-reason" value="other"> Other</label>
+        </div>
+        <textarea id="delete-extra-msg" placeholder="Any additional feedback? (optional)" style="width:100%;margin-top:10px;padding:10px;background:var(--paper2);border:1px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);resize:vertical;min-height:60px;outline:none;box-sizing:border-box;"></textarea>
+      </div>
+      <div id="delete-q-error" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--rust);margin-bottom:8px;min-height:16px;"></div>
+      <button onclick="_deleteStep2()" style="width:100%;padding:12px;background:var(--rust);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:white;cursor:pointer;letter-spacing:1px;margin-bottom:8px;">CONTINUE →</button>
+      <button onclick="closeDeleteAccountOverlay()" style="width:100%;padding:10px;background:none;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);cursor:pointer;">Cancel — Keep My Account</button>
+    </div>
+
+    <!-- Step 2: PIN confirm -->
+    <div id="delete-account-step2" style="display:none;padding:24px 20px;">
+      <div style="background:#fff0f0;border:1px solid var(--rust);border-radius:6px;padding:14px;margin-bottom:16px;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.75rem;font-weight:700;color:var(--rust);margin-bottom:8px;">⚠ THIS WILL PERMANENTLY DELETE:</div>
         <ul style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:2;margin:0;padding-left:18px;">
-          <li>All your expense entries</li>
-          <li>All your income entries</li>
+          <li>All your expense &amp; income entries</li>
           <li>All budgets and settings</li>
-          <li>Your recycle bin</li>
-          <li>Your referral history</li>
           <li>Your account from our servers</li>
+          <li>Your login credentials</li>
         </ul>
       </div>
       <p style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:16px;line-height:1.7;">This action is <strong>irreversible</strong>. Your data cannot be recovered once deleted.</p>
-      <div style="margin-bottom:16px;">
-        <label style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">ENTER YOUR PIN TO CONFIRM</label>
-        <input type="password" id="delete-account-pin" inputmode="numeric" maxlength="8" placeholder="Enter your PIN" style="width:100%;padding:10px 12px;font-family:'DM Mono',monospace;font-size:1rem;letter-spacing:4px;border:1.5px solid var(--border);border-radius:4px;outline:none;box-sizing:border-box;">
+      <div style="margin-bottom:14px;">
+        <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">ENTER YOUR PIN TO CONFIRM</label>
+        <input type="password" id="delete-account-pin" inputmode="numeric" maxlength="8" placeholder="Enter your PIN"
+          style="width:100%;padding:10px 12px;font-family:'DM Mono',monospace;font-size:1rem;letter-spacing:4px;border:1.5px solid var(--border);border-radius:4px;outline:none;box-sizing:border-box;"
+          onkeydown="if(event.key==='Enter')confirmDeleteAccount()">
       </div>
-      <div style="margin-bottom:18px;display:flex;align-items:flex-start;gap:10px;">
+      <div style="margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;">
         <input type="checkbox" id="delete-account-confirm-check" style="margin-top:3px;accent-color:var(--rust);width:16px;height:16px;flex-shrink:0;">
-        <label for="delete-account-confirm-check" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.6;cursor:pointer;">I understand this is permanent and all my data will be deleted from My Expense Ledger servers forever.</label>
+        <label for="delete-account-confirm-check" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.6;cursor:pointer;">I understand this is permanent and all my data will be deleted forever.</label>
       </div>
       <div id="delete-account-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--rust);margin-bottom:10px;min-height:18px;"></div>
-      <button onclick="confirmDeleteAccount()" style="width:100%;padding:13px;background:var(--rust);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px;">&#128465; DELETE MY ACCOUNT PERMANENTLY</button>
-      <button onclick="closeDeleteAccountOverlay()" style="width:100%;padding:12px;background:none;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);cursor:pointer;">Cancel — Keep My Account</button>
+      <button onclick="confirmDeleteAccount()" style="width:100%;padding:13px;background:var(--rust);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px;">🗑 DELETE MY ACCOUNT PERMANENTLY</button>
+      <button onclick="document.getElementById('delete-account-step2').style.display='none';document.getElementById('delete-account-step1').style.display='block';" style="width:100%;padding:10px;background:none;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);cursor:pointer;">← Back</button>
     </div>
-    <!-- Success step -->
-    <div id="delete-account-step2" style="display:none;padding:32px 20px;text-align:center;">
-      <div style="font-size:2.5rem;margin-bottom:12px;">&#128465;</div>
+
+    <!-- Step 3: Deleting progress -->
+    <div id="delete-account-step3" style="display:none;padding:32px 20px;text-align:center;">
+      <div style="font-size:2rem;margin-bottom:12px;">⏳</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:8px;">Deleting your account...</div>
+      <div id="delete-progress-msg" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:16px;">Please wait. Do not close the app.</div>
+      <div style="background:var(--paper2);border-radius:20px;height:8px;overflow:hidden;">
+        <div id="delete-progress-bar" style="height:100%;width:0%;background:var(--rust);border-radius:20px;transition:width 0.5s ease;"></div>
+      </div>
+    </div>
+
+    <!-- Step 4: Done -->
+    <div id="delete-account-step4" style="display:none;padding:32px 20px;text-align:center;">
+      <div style="font-size:2.5rem;margin-bottom:12px;">✅</div>
       <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:10px;">Account Deleted</div>
-      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);line-height:1.7;">Your account and all data have been permanently deleted from our servers. Thank you for using My Expense Ledger.</p>
+      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);line-height:1.7;margin-bottom:16px;">Your account and all data have been permanently deleted. Thank you for using My Expense Ledger.</p>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">Redirecting to sign-in screen...</div>
     </div>
   </div>
 </div>
@@ -3271,7 +3308,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 <!-- HELP OVERLAY -->
 <div id="help-overlay" style="display:none;position:fixed;inset:0;z-index:99991;background:rgba(26,20,16,0.85);align-items:flex-start;justify-content:center;padding:16px;padding-top:70px;overflow-y:auto;">
-  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:600px;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:600px;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;box-sizing:border-box;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--ink);border-radius:6px 6px 0 0;">
       <span style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--gold2);">&#10067; Help &amp; Support</span>
       <button onclick="closeHelp()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;padding:0 4px;">&#10005;</button>
@@ -3280,16 +3317,19 @@ input[type="password"]::-ms-clear { display:none !important; }
       <input type="text" id="help-search" placeholder="Search help... e.g. total expenses January" oninput="runHelpSearch(this.value)" autocomplete="off"
         style="width:100%;padding:10px 14px;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.88rem;background:white;color:var(--ink);outline:none;box-sizing:border-box;">
     </div>
-    <div id="help-icons" style="padding:14px 20px;border-bottom:1px solid var(--border);">
-      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:2px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Tap an icon to learn what it does</div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#a09070;margin-bottom:10px;">⌨️ Arrow keys = navigate &nbsp;·&nbsp; Enter = open article &nbsp;·&nbsp; G = back to grid</div>
-      <div id="help-icon-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    <div id="help-icons" style="padding:10px 20px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Topics</div>
+        <button id="help-icons-toggle" onclick="_toggleHelpIcons()" style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--gold);background:none;border:1px solid rgba(200,150,46,0.3);border-radius:3px;padding:2px 8px;cursor:pointer;">▾ Show all</button>
+      </div>
+      <!-- One-line scrollable row (default) -->
+      <div id="help-icon-list" style="display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;scrollbar-width:none;-webkit-scrollbar:none;"></div>
     </div>
-    <div id="help-body" style="padding:16px 20px;min-height:80px;">
+    <div id="help-body" style="padding:16px 20px;overflow-y:auto;max-height:52vh;overflow-x:hidden;word-break:break-word;box-sizing:border-box;">
       <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Select an icon above or type to search</div>
     </div>
     <div style="padding:14px 20px;border-top:1px solid var(--border);background:#fffbf0;">
-      <button onclick="openUserManual()" style="width:100%;padding:11px;background:var(--ink);border:2px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;">📖 User Manual</button>
+      <button id="help-manual-footer-btn" onclick="openUserManual()" style="width:100%;padding:11px;background:var(--ink);border:2px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;">📖 User Manual</button>
       <button onclick="startOnboarding(_appMode, true, true)" style="width:100%;padding:10px;background:none;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;color:var(--gold);cursor:pointer;margin-bottom:8px;">&#127916; Replay App Tour</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:8px;">Still need help? Send us a message.</div>
       <button onclick="openContact()" style="width:100%;padding:11px;background:var(--ink);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;">&#9993; Contact Support</button>
@@ -14955,7 +14995,7 @@ function openUserManual() {
     return '<div style="background:white;border:1.5px solid var(--gold);border-radius:4px;padding:8px 12px;'+S+'font-size:0.8rem;color:var(--ink);margin:6px 0;">'+val+'<span style="background:var(--gold);display:inline-block;width:2px;height:14px;margin-left:2px;vertical-align:middle;"></span></div>';
   }
   function tabRow(tabs, active){
-    return '<div style="display:flex;gap:4px;margin:8px 0;">'+tabs.map(function(t){
+    return '<div style="display:flex;gap:4px;margin:8px 0;flex-wrap:wrap;">'+tabs.map(function(t){
       var on = t===active;
       return '<div style="'+S+'font-size:0.62rem;letter-spacing:1px;padding:4px 10px;border-radius:4px;background:'+(on?'var(--ink)':'var(--paper2)')+';color:'+(on?'var(--gold)':'var(--muted)')+';border:1px solid '+(on?'var(--gold)':'var(--border)')+';">'+t+'</div>';
     }).join('')+'</div>';
@@ -14969,7 +15009,7 @@ function openUserManual() {
       '</div>';
   }
 
-  var out = '<div style="font-family:DM Sans,sans-serif;">';
+  var out = '<div style="font-family:DM Sans,sans-serif;overflow-x:hidden;max-width:100%;box-sizing:border-box;">';
 
   // ── Cover ──────────────────────────────────────────────────
   out += '<div style="background:var(--ink);border-radius:8px;padding:20px;margin-bottom:16px;text-align:center;">';
@@ -14983,7 +15023,7 @@ function openUserManual() {
   // ── Introduction ────────────────────────────────────────────
   out += h2('Introduction');
   out += p('<strong>My Expense Ledger</strong> is a personal finance tracker that lets you record, categorise and analyse your spending and income across multiple currencies. Data syncs securely to the cloud via Firebase so you can access it from any device.');
-  out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;">';
+  out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;max-width:100%;">';
   out += '<div style="padding:10px;background:var(--paper2);border-radius:6px;border:1px solid var(--border);text-align:center;"><div style="font-size:1.4rem;">📱</div><div style="'+S+'font-size:0.62rem;'+MUTED+'margin-top:4px;">Mobile first</div></div>';
   out += '<div style="padding:10px;background:var(--paper2);border-radius:6px;border:1px solid var(--border);text-align:center;"><div style="font-size:1.4rem;">☁️</div><div style="'+S+'font-size:0.62rem;'+MUTED+'margin-top:4px;">Cloud sync</div></div>';
   out += '<div style="padding:10px;background:var(--paper2);border-radius:6px;border:1px solid var(--border);text-align:center;"><div style="font-size:1.4rem;">💱</div><div style="'+S+'font-size:0.62rem;'+MUTED+'margin-top:4px;">Multi-currency</div></div>';
@@ -15085,13 +15125,20 @@ function openUserManual() {
   out += p('The <strong>📊 Dashboard</strong> has 5 independent chart sections, each with its own currency and time range selector:');
   out += '<div style="margin:8px 0;">';
   out += '<div style="padding:10px 12px;background:white;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;">';
-  out += '<div style="'+S+'font-size:0.72rem;font-weight:700;'+GOLD+'margin-bottom:4px;">📊 Daily Flow</div>';
-  out += '<div style="'+S+'font-size:0.7rem;'+MUTED+'margin-bottom:6px;">Bar chart of spending per day in a selected month. Defaults to current month.</div>';
-  out += '<div style="display:flex;gap:8px;height:32px;align-items:flex-end;">';
-  [3,8,15,2,22,18,5,1,30,12,4,9,25].forEach(function(h){
-    out += '<div style="background:var(--gold);border-radius:2px;width:8px;height:'+Math.max(4,h*1.2)+'px;opacity:0.8;"></div>';
-  });
-  out += '</div></div>';
+  out += '<div style="'+S+'font-size:0.72rem;font-weight:700;'+GOLD+'margin-bottom:4px;">📈 Daily Flow</div>';
+  out += '<div style="'+S+'font-size:0.7rem;'+MUTED+'margin-bottom:6px;">Smooth line chart showing spending per day in a selected month.</div>';
+  // SVG line chart mockup
+  var pts = [3,8,15,2,22,18,5,1,30,12,4,9,25,14,7,20,3,16,28,10];
+  var maxV = 30; var w = 260; var h = 48; var pad = 4;
+  var xs = pts.map(function(v,i){ return (pad + i*(w-2*pad)/(pts.length-1)).toFixed(1); });
+  var ys = pts.map(function(v){ return (h - pad - (v/maxV)*(h-2*pad)).toFixed(1); });
+  var polyline = xs.map(function(x,i){ return x+','+ys[i]; }).join(' ');
+  var fillPts  = xs[0]+','+(h-pad)+' '+polyline+' '+xs[xs.length-1]+','+(h-pad);
+  out += '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:48px;display:block;">';
+  out += '<defs><linearGradient id="dfg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c8962e" stop-opacity="0.3"/><stop offset="100%" stop-color="#c8962e" stop-opacity="0.02"/></linearGradient></defs>';
+  out += '<polygon points="'+fillPts+'" fill="url(#dfg)"/>';
+  out += '<polyline points="'+polyline+'" fill="none" stroke="#c8962e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>';
+  out += '</svg>';
   out += '<div style="padding:10px 12px;background:white;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;">';
   out += '<div style="'+S+'font-size:0.72rem;font-weight:700;'+GOLD+'margin-bottom:4px;">📈 Monthly Trend</div>';
   out += '<div style="'+S+'font-size:0.7rem;'+MUTED+'">Smooth line chart of monthly totals over your selected date range.</div>';
@@ -15180,7 +15227,7 @@ function openUserManual() {
 
   // ── Tips & Tricks ────────────────────────────────────────────
   out += h2('Tips & Shortcuts');
-  out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;">';
+  out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;max-width:100%;">';
   [
     ['⌨️', 'Ctrl+Enter','Parse on Import, then go to Categorize on second press'],
     ['🔍', 'Search -word','Exclude entries matching a word'],
@@ -15223,7 +15270,10 @@ function openUserManual() {
 
   out += '</div>'; // end font-family wrapper
   hb.innerHTML = out;
-  // Scroll to top of help overlay
+  // Hide the manual button since we're already showing it
+  var mbtn = document.getElementById('help-manual-footer-btn');
+  if (mbtn) mbtn.style.display = 'none';
+  // Scroll to top
   setTimeout(function(){ if(overlay) overlay.scrollTop=0; }, 50);
 }
 function openHelp() {
@@ -15234,8 +15284,21 @@ function openHelp() {
   buildHelpIcons();
   var hb = document.getElementById('help-body');
   if (hb) hb.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Tap an icon above or type to search</div>';
-  _helpFocusIdx = -1; // reset focus index
+  _helpFocusIdx = -1;
   _helpArticleOpen = false;
+  _helpOpenTag = null;
+  _helpIconsExpanded = false;
+  var _hlist = document.getElementById('help-icon-list');
+  if(_hlist){_hlist.style.flexWrap='nowrap';_hlist.style.overflowX='auto';}
+  var _htbtn = document.getElementById('help-icons-toggle');
+  if(_htbtn) _htbtn.textContent='▾ Show all';
+  // Reset all icon buttons
+  if (typeof HELP_ITEMS !== 'undefined') {
+    HELP_ITEMS.forEach(function(item) {
+      var b = document.getElementById('help-icon-btn-' + item.tag);
+      if (b) { b.style.borderColor = 'var(--border)'; b.style.background = 'white'; }
+    });
+  }
 }
 
 function closeHelp() {
@@ -15246,18 +15309,70 @@ function closeHelp() {
   _helpClearFocus();
 }
 
+
+var _helpIconsExpanded = false;
+function _toggleHelpIcons() {
+  var list = document.getElementById('help-icon-list');
+  var btn  = document.getElementById('help-icons-toggle');
+  if (!list) return;
+  _helpIconsExpanded = !_helpIconsExpanded;
+  if (_helpIconsExpanded) {
+    list.style.flexWrap  = 'wrap';
+    list.style.overflowX = 'visible';
+    if (btn) btn.textContent = '▴ Show less';
+  } else {
+    list.style.flexWrap  = 'nowrap';
+    list.style.overflowX = 'auto';
+    if (btn) btn.textContent = '▾ Show all';
+  }
+}
+
+var _helpOpenTag = null;
+
 function buildHelpIcons() {
   var c = document.getElementById('help-icon-list');
   if (!c || c.children.length > 0) return;
   HELP_ITEMS.forEach(function(item) {
     var btn = document.createElement('button');
-    btn.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 10px;background:white;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;min-width:54px;transition:border-color 0.15s;';
+    btn.id = 'help-icon-btn-' + item.tag;
+    btn.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 10px;background:white;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;min-width:54px;transition:border-color 0.15s,background 0.15s;';
     btn.innerHTML = '<span style="font-size:1.3rem;line-height:1;">' + item.icon + '</span><span style="font-family:DM Mono,monospace;font-size:0.55rem;color:var(--muted);">' + item.label + '</span>';
-    btn.addEventListener('click', function() { showHelpArticle(item.tag); });
-    btn.addEventListener('mouseover', function() { btn.style.borderColor = 'var(--gold)'; });
-    btn.addEventListener('mouseout',  function() { btn.style.borderColor = 'var(--border)'; });
+    btn.addEventListener('click', function() { _toggleHelpArticle(item.tag); });
     c.appendChild(btn);
   });
+}
+
+function _toggleHelpArticle(tag) {
+  var hb = document.getElementById('help-body');
+  if (!hb) return;
+  // Reset all icon buttons
+  HELP_ITEMS.forEach(function(item) {
+    var b = document.getElementById('help-icon-btn-' + item.tag);
+    if (b) { b.style.borderColor = 'var(--border)'; b.style.background = 'white'; }
+  });
+  // Hide manual button if it was showing — only show when body is empty
+  var footerManualBtn = document.getElementById('help-manual-footer-btn');
+  // If same icon clicked — collapse
+  if (_helpOpenTag === tag) {
+    _helpOpenTag = null;
+    _helpArticleOpen = false;
+    hb.innerHTML = '<div style="font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Tap an icon above or type to search</div>';
+    var mbtn = document.getElementById('help-manual-footer-btn');
+    if (mbtn) mbtn.style.display = '';
+    return;
+  }
+  _helpOpenTag = tag;
+  _helpArticleOpen = true;
+  var btn = document.getElementById('help-icon-btn-' + tag);
+  if (btn) { btn.style.borderColor = 'var(--gold)'; btn.style.background = '#fffbf0'; }
+  // Auto-collapse icon list when article opens
+  var list = document.getElementById('help-icon-list');
+  var tBtn = document.getElementById('help-icons-toggle');
+  if (list) { list.style.flexWrap = 'nowrap'; list.style.overflowX = 'auto'; }
+  if (tBtn) tBtn.textContent = '▾ Show all';
+  _helpIconsExpanded = false;
+  showHelpArticle(tag);
+  hb.scrollTop = 0;
 }
 
 function showHelpArticle(tag) {
@@ -15266,10 +15381,15 @@ function showHelpArticle(tag) {
   var stepsHtml = art.steps.map(function(s, i) {
     return '<div style="display:flex;gap:10px;margin-bottom:8px;"><span style="font-family:DM Mono,monospace;font-size:0.72rem;color:var(--gold);font-weight:700;min-width:18px;">' + (i+1) + '.</span><span style="font-size:0.82rem;line-height:1.7;">' + s + '</span></div>';
   }).join('');
-  var exHtml = art.example ? '<div style="margin-top:12px;padding:12px;background:var(--paper2);border-left:3px solid var(--sage);border-radius:3px;font-family:DM Mono,monospace;font-size:0.72rem;white-space:pre-wrap;line-height:1.7;">' + art.example + '</div>' : '';
-  var tipHtml = art.tip ? '<div style="margin-top:10px;padding:10px 12px;background:#fffbf0;border-left:3px solid var(--gold);border-radius:3px;font-family:DM Mono,monospace;font-size:0.72rem;line-height:1.7;"><strong>Tip:</strong> ' + art.tip + '</div>' : '';
+  var exHtml  = art.example ? '<div style="margin-top:12px;padding:12px;background:var(--paper2);border-left:3px solid var(--sage);border-radius:3px;font-family:DM Mono,monospace;font-size:0.72rem;white-space:pre-wrap;line-height:1.7;">' + art.example + '</div>' : '';
+  var tipHtml = art.tip     ? '<div style="margin-top:10px;padding:10px 12px;background:#fffbf0;border-left:3px solid var(--gold);border-radius:3px;font-family:DM Mono,monospace;font-size:0.72rem;line-height:1.7;"><strong>Tip:</strong> ' + art.tip + '</div>' : '';
   var hb = document.getElementById('help-body');
-  if (hb) hb.innerHTML = '<div style="background:white;border:1px solid var(--border);border-radius:6px;padding:16px;">' + '<div style="font-family:Playfair Display,serif;font-size:1rem;font-weight:700;margin-bottom:14px;">' + art.title + '</div>' + stepsHtml + exHtml + tipHtml + '</div>';
+  if (!hb) return;
+  var closeRow = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+    '<div style="font-family:Playfair Display,serif;font-size:1rem;font-weight:700;">' + art.title + '</div>' +
+    '<button onclick="_toggleHelpArticle(\'' + tag + '\')" style="background:none;border:none;font-size:1rem;cursor:pointer;color:var(--muted);padding:0 4px;line-height:1;">✕</button>' +
+    '</div>';
+  hb.innerHTML = '<div style="background:white;border:1px solid var(--border);border-radius:6px;padding:16px;">' + closeRow + stepsHtml + exHtml + tipHtml + '</div>';
 }
 
 function runHelpSearch(q) {
@@ -16335,20 +16455,21 @@ function showGuestUpgradePrompt() {
 // ================================
 //  DELETE ACCOUNT
 // ================================
-function showDeleteAccountOverlay() {
+function openDeleteAccountOverlay() {
   var o = document.getElementById('delete-account-overlay');
   if (!o) return;
-  // Reset form
-  var pinEl   = document.getElementById('delete-account-pin');
-  var chkEl   = document.getElementById('delete-account-confirm-check');
-  var errEl   = document.getElementById('delete-account-error');
-  var step1   = document.getElementById('delete-account-step1');
-  var step2   = document.getElementById('delete-account-step2');
-  if (pinEl)  pinEl.value = '';
-  if (chkEl)  chkEl.checked = false;
-  if (errEl)  errEl.textContent = '';
-  if (step1)  step1.style.display = 'block';
-  if (step2)  step2.style.display = 'none';
+  // Reset all steps
+  ['delete-account-step1','delete-account-step2','delete-account-step3','delete-account-step4'].forEach(function(id,i){
+    var el = document.getElementById(id);
+    if (el) el.style.display = i===0 ? 'block' : 'none';
+  });
+  // Clear inputs
+  document.querySelectorAll('input[name="del-reason"]').forEach(function(r){ r.checked = false; });
+  var extra = document.getElementById('delete-extra-msg'); if(extra) extra.value = '';
+  var pin   = document.getElementById('delete-account-pin'); if(pin) pin.value = '';
+  var chk   = document.getElementById('delete-account-confirm-check'); if(chk) chk.checked = false;
+  var err1  = document.getElementById('delete-q-error'); if(err1) err1.textContent = '';
+  var err2  = document.getElementById('delete-account-error'); if(err2) err2.textContent = '';
   o.style.display = 'flex';
 }
 
@@ -16357,62 +16478,133 @@ function closeDeleteAccountOverlay() {
   if (o) o.style.display = 'none';
 }
 
+function _deleteStep2() {
+  // Validate a reason was selected
+  var selected = document.querySelector('input[name="del-reason"]:checked');
+  var errEl = document.getElementById('delete-q-error');
+  if (!selected) {
+    if (errEl) { errEl.textContent = 'Please select a reason before continuing.'; }
+    return;
+  }
+  if (errEl) errEl.textContent = '';
+  document.getElementById('delete-account-step1').style.display = 'none';
+  document.getElementById('delete-account-step2').style.display = 'block';
+  setTimeout(function(){ var p = document.getElementById('delete-account-pin'); if(p) p.focus(); }, 100);
+}
+
 function confirmDeleteAccount() {
   var pinEl  = document.getElementById('delete-account-pin');
   var chkEl  = document.getElementById('delete-account-confirm-check');
   var errEl  = document.getElementById('delete-account-error');
   var pin    = pinEl ? pinEl.value.trim() : '';
-  var errMsg = '';
 
-  if (!pin) { errMsg = 'Please enter your PIN to confirm.'; }
-  else if (!chkEl || !chkEl.checked) { errMsg = 'Please tick the confirmation checkbox.'; }
-  else {
-    // Verify PIN
-    var storedHash = localStorage.getItem('expense_pin_hash_local');
-    if (storedHash && hashPin(pin) !== storedHash) { errMsg = 'Incorrect PIN. Please try again.'; }
-  }
+  if (!pin) { if(errEl) errEl.textContent = 'Please enter your PIN.'; return; }
+  if (!chkEl || !chkEl.checked) { if(errEl) errEl.textContent = 'Please tick the confirmation checkbox.'; return; }
 
-  if (errMsg) {
-    if (errEl) errEl.textContent = errMsg;
-    if (pinEl) pinEl.style.borderColor = 'var(--rust)';
+  var storedHash = localStorage.getItem('expense_pin_hash_local');
+  if (storedHash && hashPin(pin) !== storedHash) {
+    if(errEl) errEl.textContent = 'Incorrect PIN. Please try again.';
+    if(pinEl) { pinEl.style.borderColor='var(--rust)'; pinEl.value=''; }
     return;
   }
+  if(errEl) errEl.textContent = '';
 
-  // PIN verified — delete everything
-  if (errEl) errEl.textContent = '';
+  // Collect questionnaire answers to send to Firebase
+  var reason  = (document.querySelector('input[name="del-reason"]:checked')||{}).value || 'unknown';
+  var extraMsg = (document.getElementById('delete-extra-msg')||{}).value || '';
 
-  // 1. Delete all Firebase data
-  if (_db && _userId) {
-    var cols = ['expenses', 'income', 'settings', 'categories'];
-    cols.forEach(function(col) {
-      userCol(col).get().then(function(snap) {
-        snap.forEach(function(doc) { doc.ref.delete().catch(function(){}); });
-      }).catch(function(){});
-    });
-    // Delete user registry entry
-    if (_userPhone) {
-      _db.collection('user_registry').doc(_userPhone).delete().catch(function(){});
+  // Show progress step
+  document.getElementById('delete-account-step2').style.display = 'none';
+  document.getElementById('delete-account-step3').style.display = 'block';
+
+  var bar  = document.getElementById('delete-progress-bar');
+  var pmsg = document.getElementById('delete-progress-msg');
+  var prog = 0;
+  function setP(p, msg) {
+    prog = p;
+    if (bar)  bar.style.width  = p + '%';
+    if (pmsg) pmsg.textContent = msg;
+  }
+
+  setP(10, 'Saving feedback...');
+
+  // Save feedback to Firebase before deleting
+  var uid   = _userId;
+  var uname = _userName;
+  var phone = _userPhone;
+
+  function doDelete() {
+    setP(30, 'Deleting expense data...');
+    var promises = [];
+
+    if (_db && uid) {
+      // Delete all user collections
+      var cols = ['expenses','income','settings','categories','trash','inc_trash'];
+      cols.forEach(function(col) {
+        var p = _db.collection('users').doc(uid).collection(col).get().then(function(snap){
+          snap.forEach(function(doc){ doc.ref.delete().catch(function(){}); });
+        }).catch(function(){});
+        promises.push(p);
+      });
     }
+
+    setP(50, 'Deleting account credentials...');
+
+    Promise.all(promises).then(function() {
+      setP(70, 'Removing from registry...');
+      // Delete user_registry — try all possible phone hash formats
+      var regDeletions = [];
+      if (_db) {
+        // Delete by stored phone hash
+        if (phone) {
+          regDeletions.push(_db.collection('user_registry').doc(phone).delete().catch(function(){}));
+        }
+        // Also search by user_id in case phone hash is wrong
+        if (uid) {
+          regDeletions.push(
+            _db.collection('user_registry').where('user_id','==',uid).get().then(function(snap){
+              snap.forEach(function(doc){ doc.ref.delete().catch(function(){}); });
+            }).catch(function(){})
+          );
+        }
+        // Delete main user document
+        if (uid) {
+          regDeletions.push(_db.collection('users').doc(uid).delete().catch(function(){}));
+        }
+      }
+
+      Promise.all(regDeletions).then(function() {
+        setP(90, 'Clearing local data...');
+        // Clear ALL localStorage
+        var keys = [];
+        for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+        keys.forEach(function(k){ localStorage.removeItem(k); });
+        sessionStorage.clear();
+        setP(100, 'Account deleted successfully.');
+
+        // Show done step
+        setTimeout(function() {
+          document.getElementById('delete-account-step3').style.display = 'none';
+          document.getElementById('delete-account-step4').style.display = 'block';
+          // Reload to login screen
+          setTimeout(function(){ window.location.reload(); }, 3000);
+        }, 500);
+      });
+    });
   }
 
-  // 2. Clear all localStorage
-  var keysToRemove = [];
-  for (var i = 0; i < localStorage.length; i++) {
-    keysToRemove.push(localStorage.key(i));
+  // Save feedback first (non-blocking)
+  if (_db) {
+    _db.collection('account_deletions').add({
+      uid:       uid || 'unknown',
+      username:  uname || 'unknown',
+      reason:    reason,
+      message:   extraMsg,
+      ts:        Date.now()
+    }).then(function(){ doDelete(); }).catch(function(){ doDelete(); });
+  } else {
+    doDelete();
   }
-  keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
-  sessionStorage.clear();
-
-  // 3. Show success step
-  var step1 = document.getElementById('delete-account-step1');
-  var step2 = document.getElementById('delete-account-step2');
-  if (step1) step1.style.display = 'none';
-  if (step2) step2.style.display = 'block';
-
-  // 4. Redirect to login after 3 seconds
-  setTimeout(function() {
-    window.location.reload();
-  }, 3000);
 }
 
 // Close delete overlay on backdrop tap
