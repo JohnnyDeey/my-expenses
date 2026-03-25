@@ -3839,7 +3839,17 @@ function saveData(data) {
 }
 
 function loadData() {
-  try { return JSON.parse(localStorage.getItem('expense_ledger') || '[]'); } catch(e) { return []; }
+  try {
+    var data = JSON.parse(localStorage.getItem('expense_ledger') || '[]');
+    // One-time migration: fix any dates stored in DD-MM-YYYY format
+    var dirty = false;
+    data.forEach(function(e) {
+      var fixed = normDateToISO(e.date);
+      if (fixed !== e.date) { e.date = fixed; dirty = true; }
+    });
+    if (dirty) localStorage.setItem('expense_ledger', JSON.stringify(data));
+    return data;
+  } catch(e) { return []; }
 }
 
 // -- Search filter helper — supports exclusions with minus prefix --
@@ -4381,6 +4391,15 @@ function parseInput() {
       currentDate = (parts[0].length===4)
         ? parts[0]+'-'+pad(parseInt(parts[1]))+'-'+pad(parseInt(parts[2]))
         : parts[2]+'-'+pad(parseInt(parts[1]))+'-'+pad(parseInt(parts[0]));
+      // Validate the date is real (catches Feb 31, day 0, etc.)
+      var _dv = new Date(currentDate);
+      var _dp = currentDate.split('-');
+      if (isNaN(_dv.getTime()) || _dv.getFullYear() !== parseInt(_dp[0]) ||
+          (_dv.getMonth()+1) !== parseInt(_dp[1]) || _dv.getDate() !== parseInt(_dp[2])) {
+        var _fD = _dp[2]+'-'+_dp[1]+'-'+_dp[0];
+        skippedLines.push({ line: rawLine.trim(), reason: _fD + ' is not a valid calendar date' });
+        currentDate = null; return;
+      }
       // If date doesn't match selected year+month → show in red warning panel
       var expectedKey = pickerYear + '-' + pad(pickerMonth);
       if (currentDate.substring(0,7) !== expectedKey) {
@@ -7849,6 +7868,24 @@ function exportCSV(){
 // ================================
 //  UTILS
 // ================================
+
+// Normalise date string to internal YYYY-MM-DD format
+function normDateToISO(d) {
+  if (!d) return '';
+  d = d.trim();
+  // Already YYYY-MM-DD or YYYY/MM/DD
+  if (/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/.test(d)) {
+    var p = d.split(/[-\/]/);
+    return p[0] + '-' + ('0'+parseInt(p[1])).slice(-2) + '-' + ('0'+parseInt(p[2])).slice(-2);
+  }
+  // DD-MM-YYYY or DD/MM/YYYY
+  if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{4}$/.test(d)) {
+    var p = d.split(/[-\/]/);
+    return p[2] + '-' + ('0'+parseInt(p[1])).slice(-2) + '-' + ('0'+parseInt(p[0])).slice(-2);
+  }
+  return d; // return as-is if unrecognised
+}
+
 function importCSV(event) {
   var file = event.target.files[0];
   if (!file) return;
@@ -7895,7 +7932,7 @@ function importCSV(event) {
       if (!line) continue;
       var cols = parseCSVLine(line);
       if (cols.length < 3) { skipped++; continue; }
-      var date     = (cols[colDate]||'').trim().replace(/"/g,'');
+      var date     = normDateToISO((cols[colDate]||'').trim().replace(/"/g,''));
       var desc     = (cols[colDesc]||'').trim().replace(/"/g,'');
       var amount   = parseFloat((cols[colAmt]||'').replace(/[^0-9.-]/g,''));
       var currency = colCur < cols.length ? (cols[colCur]||'').trim().replace(/"/g,'').toUpperCase() : 'NGN';
@@ -9564,7 +9601,17 @@ function getIncTrashKey() { return 'income_trash_'       + (_userId||'default');
 function getIncCatsKey()  { return 'income_custom_cats_' + (_userId||'default'); }
 
 function loadIncomeData() {
-  try { return JSON.parse(localStorage.getItem(getIncKey()) || '[]'); } catch(e){ return []; }
+  try {
+    var data = JSON.parse(localStorage.getItem(getIncKey()) || '[]');
+    // One-time migration: fix any dates stored in DD-MM-YYYY format
+    var dirty = false;
+    data.forEach(function(e) {
+      var fixed = normDateToISO(e.date);
+      if (fixed !== e.date) { e.date = fixed; dirty = true; }
+    });
+    if (dirty) localStorage.setItem(getIncKey(), JSON.stringify(data));
+    return data;
+  } catch(e){ return []; }
 }
 function saveIncomeData(data) {
   window._incLastDeleteTime = Date.now();
@@ -10357,6 +10404,15 @@ function parseIncomeInput() {
       currentDate = (p[0].length===4)
         ? p[0]+'-'+pad(parseInt(p[1]))+'-'+pad(parseInt(p[2]))
         : p[2]+'-'+pad(parseInt(p[1]))+'-'+pad(parseInt(p[0]));
+      // Validate the date is real
+      var _dv2 = new Date(currentDate);
+      var _dp2 = currentDate.split('-');
+      if (isNaN(_dv2.getTime()) || _dv2.getFullYear() !== parseInt(_dp2[0]) ||
+          (_dv2.getMonth()+1) !== parseInt(_dp2[1]) || _dv2.getDate() !== parseInt(_dp2[2])) {
+        var _fD2 = _dp2[2]+'-'+_dp2[1]+'-'+_dp2[0];
+        skipped.push(rawLine.trim() + ' [invalid date: ' + _fD2 + ' does not exist]');
+        currentDate = null; return;
+      }
       // If date doesn't match selected year+month, mark as wrong
       var expectedKey = incPickerYear + '-' + pad(incPickerMonth);
       if (currentDate.substring(0,7) !== expectedKey) {
@@ -11722,7 +11778,7 @@ function importIncomeCSV(event) {
       if (!line) continue;
       var cols = parseCSVLine(line);
       if (cols.length < 3) { skipped++; continue; }
-      var date     = (cols[colDate]||'').trim().replace(/"/g,'');
+      var date     = normDateToISO((cols[colDate]||'').trim().replace(/"/g,''));
       var desc     = (cols[colDesc]||'').trim().replace(/"/g,'');
       var amount   = parseFloat((cols[colAmt]||'').replace(/[^0-9.-]/g,''));
       var currency = colCur < cols.length ? (cols[colCur]||'').trim().replace(/"/g,'').toUpperCase() : 'NGN';
