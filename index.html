@@ -81,18 +81,125 @@ body.app-ready{background:var(--paper)!important;}
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
+    var CACHE_VER = 'mel-v__APP_VER__';
     var sw = [
-      "var CACHE='mel-v2';",
-      "self.addEventListener('install',function(e){self.skipWaiting();});",
-      "self.addEventListener('activate',function(e){e.waitUntil(clients.claim());});",
-      "self.addEventListener('fetch',function(e){",
-      "  if(e.request.method!=='GET') return;",
-      "  e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request);}));",
+      "var CACHE = '" + CACHE_VER + "';",
+      "var APP_URL = '" + location.pathname + "';",
+      "self.addEventListener('install', function(e) {",
+      "  e.waitUntil(caches.open(CACHE).then(function(c){ return c.add(APP_URL); }));",
+      "  self.skipWaiting();",
+      "});",
+      "self.addEventListener('activate', function(e) {",
+      "  e.waitUntil(caches.keys().then(function(keys){",
+      "    return Promise.all(keys.filter(function(k){ return k !== CACHE; }).map(function(k){ return caches.delete(k); }));",
+      "  }));",
+      "  clients.claim();",
+      "});",
+      "self.addEventListener('fetch', function(e) {",
+      "  if (e.request.method !== 'GET') return;",
+      "  var url = new URL(e.request.url);",
+      "  if (url.pathname === APP_URL || url.pathname.endsWith('index.html')) {",
+      "    e.respondWith(",
+      "      caches.open(CACHE).then(function(cache) {",
+      "        return cache.match(e.request).then(function(cached) {",
+      "          var fresh = fetch(e.request).then(function(resp) {",
+      "            if (resp && resp.status === 200) cache.put(e.request, resp.clone());",
+      "            return resp;",
+      "          }).catch(function(){ return cached; });",
+      "          return cached || fresh;",
+      "        });",
+      "      })",
+      "    );",
+      "  } else {",
+      "    e.respondWith(fetch(e.request).catch(function(){ return caches.match(e.request); }));",
+      "  }",
+      "});",
+      "// Notify clients when a new version is cached",
+      "self.addEventListener('message', function(e) {",
+      "  if (e.data === 'CHECK_UPDATE') {",
+      "    fetch(APP_URL + '?_bust=' + Date.now(), {cache:'no-store'})",
+      "      .then(function(resp){ return resp.text(); })",
+      "      .then(function(html) {",
+      "        var m = html.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);",
+      "        var remoteVer = m ? m[1] : null;",
+      "        e.source.postMessage({ type: 'UPDATE_STATUS', version: remoteVer, cache: CACHE_VER });",
+      "      }).catch(function(){});",
+      "  }",
       "});"
     ].join('\n');
     var swb = new Blob([sw], {type:'application/javascript'});
-    navigator.serviceWorker.register(URL.createObjectURL(swb)).catch(function(e){console.log('SW:',e);});
+    var swUrl = URL.createObjectURL(swb);
+    navigator.serviceWorker.register(swUrl).then(function(reg) {
+      window._swReg = reg;
+    }).catch(function(e){ console.log('SW:', e); });
+
+    // Listen for messages from SW
+    navigator.serviceWorker.addEventListener('message', function(e) {
+      if (e.data && e.data.type === 'UPDATE_STATUS') {
+        var remoteVer = e.data.version;
+        var localVer  = typeof APP_VERSION !== 'undefined' ? APP_VERSION : null;
+        if (remoteVer && localVer && remoteVer !== localVer) {
+          _showUpdateBanner(remoteVer);
+        }
+      }
+    });
+
+    // Check for update after app is stable (30 seconds after load)
+    setTimeout(function() { _checkForUpdate(); }, 30000);
+    // Then check every 30 minutes
+    setInterval(function() { _checkForUpdate(); }, 30 * 60 * 1000);
   });
+}
+
+function _checkForceUpdate() {
+  if (!FORCE_UPDATE_AFTER || !APP_VERSION) return;
+  // Compare version strings — if current < forced minimum, show blocking overlay
+  function verNum(v) {
+    return v.split('.').map(function(n){ return parseInt(n,10) || 0; })
+            .reduce(function(acc,n,i){ return acc + n * Math.pow(1000, 2-i); }, 0);
+  }
+  if (verNum(APP_VERSION) < verNum(FORCE_UPDATE_AFTER)) {
+    var o = document.getElementById('force-update-overlay');
+    var cv = document.getElementById('force-update-current-ver');
+    if (cv) cv.textContent = APP_VERSION;
+    if (o)  o.style.display = 'flex';
+  }
+}
+
+function _checkForUpdate() {
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage('CHECK_UPDATE');
+  }
+}
+
+function _showUpdateBanner(newVer) {
+  if (document.getElementById('update-banner')) return; // already showing
+  var banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a3a28;border-bottom:2px solid var(--gold);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,0.4);';
+  banner.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;">' +
+      '<span style="font-size:1rem;">✨</span>' +
+      '<span style="font-family:DM Mono,monospace;font-size:0.72rem;color:#8dd4a8;"><strong>v'+newVer+' available</strong> — new features ready</span>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;">' +
+      '<button onclick="_applyUpdate()" style="background:var(--gold);border:none;border-radius:4px;padding:6px 14px;font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--ink);cursor:pointer;">Update now</button>' +
+      '<button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#8dd4a8;cursor:pointer;font-size:1rem;padding:4px;">✕</button>' +
+    '</div>';
+  document.body.prepend(banner);
+}
+
+function _applyUpdate() {
+  // Clear all caches so the fresh version is fetched
+  if ('caches' in window) {
+    caches.keys().then(function(keys) {
+      Promise.all(keys.map(function(k){ return caches.delete(k); })).then(function() {
+        window.location.reload(true);
+      });
+    });
+  } else {
+    window.location.reload(true);
+  }
 }
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -2245,26 +2352,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
   </div>
 
-  <!-- -- 5. RECYCLE BIN (last) -- -->
-  <div class="card" style="border-color:var(--rust);">
-    <label style="display:flex;align-items:center;gap:8px;">
-      &#128465; Recycle Bin
-      <span id="trash-count-badge" style="font-family:DM Mono,monospace;font-size:0.7rem;background:var(--rust);color:white;padding:2px 7px;border-radius:10px;"></span>
-    </label>
-    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Deleted and skipped entries land here. Restore anytime or permanently delete.</p>
-    <div id="trash-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-      <select id="trash-year-filter" onchange="onTrashYearChange()" style="flex:1;min-width:90px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
-        <option value="all">All Years</option>
-      </select>
-      <select id="trash-month-filter" onchange="onTrashMonthChange()" style="flex:1;min-width:100px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
-        <option value="all">All Months</option>
-      </select>
-      <select id="trash-day-filter" onchange="renderTrashPanel()" style="flex:1;min-width:80px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
-        <option value="all">All Days</option>
-      </select>
-    </div>
-    <div id="trash-content"></div>
-  </div>
+
 
   <!-- -- Privacy Policy -- -->
   <div class="card" style="border-color:var(--slate);">
@@ -2695,21 +2783,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
     <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="clearAllIncome()">&#128465; Delete ALL Income Data</button>
   </div>
-  <div class="card" style="border-color:var(--rust);">
-    <label>&#128465; Income Recycle Bin <span id="inc-trash-count-badge" style="font-family:'DM Mono',monospace;font-size:0.7rem;background:var(--rust);color:white;padding:2px 7px;border-radius:10px;margin-left:6px;"></span></label>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-      <select id="inc-trash-year-filter" onchange="onIncTrashYearChange()" style="flex:1;min-width:90px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
-        <option value="all">All Years</option>
-      </select>
-      <select id="inc-trash-month-filter" onchange="onIncTrashMonthChange()" style="flex:1;min-width:100px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
-        <option value="all">All Months</option>
-      </select>
-      <select id="inc-trash-day-filter" onchange="renderIncTrashPanel()" style="flex:1;min-width:80px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;background:white;outline:none;">
-        <option value="all">All Days</option>
-      </select>
-    </div>
-    <div id="inc-trash-content"></div>
-  </div>
+  
 
   <!-- -- Privacy Policy -- -->
   <div class="card" style="border-color:var(--slate);">
@@ -12763,6 +12837,8 @@ function _resumeSession(uid, name, phone) {
   }
   setTimeout(function() { checkInactivity(); }, 500);
   setTimeout(checkBackupReminder, 3000);
+  // Check if app version is below forced minimum
+  setTimeout(_checkForceUpdate, 2000);
   // Re-render manage user bar now that _userId and _userName are guaranteed set
   setTimeout(function(){ if (typeof renderManageUserBar==='function') renderManageUserBar(); }, 200);
 
@@ -14332,6 +14408,9 @@ function _privacyKey() {
   return 'privacy_ok_' + (_userId || localStorage.getItem('expense_uid') || 'default');
 }
 var PRIVACY_VER  = '2026-03-25'; // bump to force all users to re-sign privacy
+// Set FORCE_UPDATE_AFTER to a version string to block users on older versions.
+// Leave as '' to never force. Example: '2.5.0' forces anyone below that to update.
+var FORCE_UPDATE_AFTER = '';
 var TOUR_VER     = '2026-03-23'; // bump ONLY when new slides are added to the tour
 var APP_VERSION  = '2.4.0';
 var APP_VERSION_KEY = 'expense_app_version';
@@ -17491,6 +17570,16 @@ l>
       <button onclick="_confirmDelete()" style="flex:1;padding:11px;background:var(--rust);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;font-weight:700;color:#fff;cursor:pointer;">Delete</button>
     </div>
   </div>
+</div>
+
+
+<!-- ═══ FORCE UPDATE OVERLAY ═══ -->
+<div id="force-update-overlay" style="display:none;position:fixed;inset:0;z-index:999999;background:var(--ink);flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;">
+  <div style="font-size:2.5rem;margin-bottom:12px;">⚡</div>
+  <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--gold2);margin-bottom:8px;">Important Update Required</div>
+  <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:24px;max-width:300px;line-height:1.8;" id="force-update-msg">A critical update is available. Please update to continue using the app.</div>
+  <button onclick="_applyUpdate()" style="background:var(--gold);border:none;border-radius:6px;padding:14px 32px;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:700;color:var(--ink);cursor:pointer;letter-spacing:1px;">⚡ Update Now</button>
+  <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#3a3020;margin-top:16px;">My Expense Ledger · v<span id="force-update-current-ver"></span></div>
 </div>
 
 </body>
