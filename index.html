@@ -211,6 +211,13 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
+    // F3 — User Manual
+    if (key === 'F3') {
+      e.preventDefault();
+      toggleManualOverlay();
+      return;
+    }
+
     // Alt+R — replay onboarding tour
     if (e.altKey && (key === 'r' || key === 'R')) {
       e.preventDefault();
@@ -1606,10 +1613,11 @@ input[type="password"]::-ms-clear { display:none !important; }
         </div>
       </div>
     </div>
-    <!-- Centered: date lookup + help -->
+    <!-- Centered: date lookup + help + manual -->
     <div style="flex:1;display:flex;justify-content:center;gap:6px;">
-      <button onclick="openDateLookup()" title="Date lookup" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#128467;</button>
-      <button onclick="openHelp()" title="Help &amp; Support" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#10067;</button>
+      <button onclick="openDateLookup()" title="Date lookup [F2]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#128467;</button>
+      <button onclick="openHelp()" title="Help &amp; Support [F1]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#10067;</button>
+      <button onclick="toggleManualOverlay()" id="hdr-manual-btn" title="User Manual [F3]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#128218;</button>
     </div>
     <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" title="Show/Hide header" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128065;</button>
   </div>
@@ -3344,14 +3352,18 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Topics</div>
         <button id="help-icons-toggle" onclick="_toggleHelpIcons()" style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--gold);background:none;border:1px solid rgba(200,150,46,0.3);border-radius:3px;padding:2px 8px;cursor:pointer;">▾ Show all</button>
       </div>
-      <!-- One-line scrollable row (default) -->
-      <div id="help-icon-list" style="display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;scrollbar-width:none;-webkit-scrollbar:none;"></div>
+      <!-- Scrollable row with left/right arrows -->
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button id="help-scroll-left" onclick="_helpScrollIcons(-1)" style="background:none;border:1px solid var(--border);border-radius:4px;padding:4px 6px;cursor:pointer;font-size:0.75rem;color:var(--muted);flex-shrink:0;line-height:1;">‹</button>
+        <div id="help-icon-list" style="display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;flex:1;"></div>
+        <button id="help-scroll-right" onclick="_helpScrollIcons(1)" style="background:none;border:1px solid var(--border);border-radius:4px;padding:4px 6px;cursor:pointer;font-size:0.75rem;color:var(--muted);flex-shrink:0;line-height:1;">›</button>
+      </div>
     </div>
     <div id="help-body" style="padding:16px 20px;overflow-y:auto;max-height:52vh;overflow-x:hidden;word-break:break-word;box-sizing:border-box;">
       <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);text-align:center;padding:20px;">Select an icon above or type to search</div>
     </div>
     <div style="padding:14px 20px;border-top:1px solid var(--border);background:#fffbf0;">
-      <button id="help-manual-footer-btn" onclick="openUserManual()" style="width:100%;padding:11px;background:var(--ink);border:2px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;">📖 User Manual</button>
+
       <button onclick="startOnboarding(_appMode, true, true)" style="width:100%;padding:10px;background:none;border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;color:var(--gold);cursor:pointer;margin-bottom:8px;">&#127916; Replay App Tour</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:8px;">Still need help? Send us a message.</div>
       <button onclick="openContact()" style="width:100%;padding:11px;background:var(--ink);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:1px;color:var(--gold2);cursor:pointer;">&#9993; Contact Support</button>
@@ -5494,8 +5506,6 @@ function printDashboard(mode, selectedCurrencies) {
   });
 
   html+='<div class="footer">My Expense Ledger &nbsp;·&nbsp; '+userName+' &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; '+now+'</div>';
-  html+='</body></html>';
-
   printWin.document.write(html);
   printWin.document.close();
   printWin.focus();
@@ -8991,7 +9001,6 @@ function generateIncomePDFReport() {
   win.document.write('<div class="footer">My Expense Ledger · Income Report · Built by John-de-Scholar © 2026</div>');
   win.document.write('<style>@media print { .no-print { display:none!important; } } .no-print{position:fixed;top:16px;right:16px;z-index:9999;}</style>');
   win.document.write('<div class="no-print"><button onclick="window.print()" style="padding:10px 20px;background:#1a4128;color:#8dd4a8;border:2px solid #4a7c59;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT / SAVE PDF</button></div>');
-  win.document.write('</body></html>');
   win.document.close();
 }
 function generatePDFReport() {
@@ -9116,8 +9125,7 @@ function generatePDFReport() {
   });
   win.document.write('</tbody></table>');
 
-  win.document.write('<div class="footer">My Expense Ledger · Personal Finance Tracker · Built by John-de-Scholar © 2026</div>');
-  win.document.write('</body></html>');
+
   // Add save-as-PDF button instead of auto-printing
   win.document.write('<style>@media print { .no-print { display:none!important; } } .no-print{position:fixed;top:16px;right:16px;z-index:9999;}</style>');
   win.document.write('<div class="no-print"><button onclick="window.print()" style="padding:10px 20px;background:#1a1410;color:#e8b84b;border:2px solid #c8962e;border-radius:4px;font-family:DM Mono,monospace;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">&#128197; PRINT / SAVE PDF</button></div>');
@@ -15092,6 +15100,41 @@ function skipOnboarding() {
 // ═══════════════════════════════════════════════════════════
 // USER MANUAL
 // ═══════════════════════════════════════════════════════════
+
+// ═══ STANDALONE USER MANUAL OVERLAY ═══════════════════════════════════
+function toggleManualOverlay() {
+  var o = document.getElementById('manual-overlay');
+  if (!o) return;
+  if (o.style.display === 'flex') {
+    closeManualOverlay();
+  } else {
+    openManualOverlay();
+  }
+}
+
+function openManualOverlay() {
+  var o    = document.getElementById('manual-overlay');
+  var body = document.getElementById('manual-overlay-body');
+  if (!o || !body) return;
+  // Populate if empty — call openUserManual which now returns the HTML string
+  if (!body.innerHTML.trim()) {
+    var manualHtml = openUserManual();
+    if (manualHtml) body.innerHTML = manualHtml;
+  }
+  o.style.display = 'flex';
+  // Highlight header button
+  var btn = document.getElementById('hdr-manual-btn');
+  if (btn) { btn.style.background='rgba(200,150,46,0.15)'; btn.style.borderColor='var(--gold)'; }
+  body.scrollTop = 0;
+}
+
+function closeManualOverlay() {
+  var o = document.getElementById('manual-overlay');
+  if (o) o.style.display = 'none';
+  var btn = document.getElementById('hdr-manual-btn');
+  if (btn) { btn.style.background='none'; btn.style.borderColor='rgba(200,150,46,0.35)'; }
+}
+
 function openUserManual() {
   var hb = document.getElementById('help-body');
   if (!hb) return;
@@ -15582,12 +15625,11 @@ function openUserManual() {
 
   out += '</div>'; // close outer div
 
-
-    // Hide the manual button since we're already showing it
-  var mbtn = document.getElementById('help-manual-footer-btn');
-  if (mbtn) mbtn.style.display = 'none';
+  // Write to help-body if called from help panel context
+  if (hb) hb.innerHTML = out;
   // Scroll to top
   setTimeout(function(){ if(overlay) overlay.scrollTop=0; }, 50);
+  return out;
 }
 function openHelp() {
   var o = document.getElementById('help-overlay');
@@ -15632,12 +15674,39 @@ function _toggleHelpIcons() {
   if (_helpIconsExpanded) {
     list.style.flexWrap  = 'wrap';
     list.style.overflowX = 'visible';
+    // Hide arrows when expanded
+    var la = document.getElementById('help-scroll-left');  if(la) la.style.display='none';
+    var ra = document.getElementById('help-scroll-right'); if(ra) ra.style.display='none';
     if (btn) btn.textContent = '▴ Show less';
   } else {
     list.style.flexWrap  = 'nowrap';
     list.style.overflowX = 'auto';
+    // Show arrows when collapsed
+    var la = document.getElementById('help-scroll-left');  if(la) la.style.display='';
+    var ra = document.getElementById('help-scroll-right'); if(ra) ra.style.display='';
+    setTimeout(_helpUpdateScrollArrows, 50);
     if (btn) btn.textContent = '▾ Show all';
   }
+}
+
+
+function _helpScrollIcons(dir) {
+  var list = document.getElementById('help-icon-list');
+  if (!list) return;
+  var amount = list.clientWidth * 0.75;
+  list.scrollBy({ left: dir * amount, behavior: 'smooth' });
+  setTimeout(_helpUpdateScrollArrows, 300);
+}
+
+function _helpUpdateScrollArrows() {
+  var list  = document.getElementById('help-icon-list');
+  var left  = document.getElementById('help-scroll-left');
+  var right = document.getElementById('help-scroll-right');
+  if (!list) return;
+  var atStart = list.scrollLeft <= 4;
+  var atEnd   = list.scrollLeft + list.clientWidth >= list.scrollWidth - 4;
+  if (left)  { left.style.color  = atStart ? 'var(--border)' : 'var(--gold)';  left.style.borderColor  = atStart ? 'var(--border)' : 'rgba(200,150,46,0.4)'; }
+  if (right) { right.style.color = atEnd   ? 'var(--border)' : 'var(--gold)'; right.style.borderColor = atEnd   ? 'var(--border)' : 'rgba(200,150,46,0.4)'; }
 }
 
 var _helpOpenTag = null;
@@ -15645,6 +15714,8 @@ var _helpOpenTag = null;
 function buildHelpIcons() {
   var c = document.getElementById('help-icon-list');
   if (!c || c.children.length > 0) return;
+  // Update arrow visibility on scroll
+  c.addEventListener('scroll', _helpUpdateScrollArrows, { passive: true });
   HELP_ITEMS.forEach(function(item) {
     var btn = document.createElement('button');
     btn.id = 'help-icon-btn-' + item.tag;
@@ -15653,6 +15724,7 @@ function buildHelpIcons() {
     btn.addEventListener('click', function() { _toggleHelpArticle(item.tag); });
     c.appendChild(btn);
   });
+  setTimeout(_helpUpdateScrollArrows, 50);
 }
 
 function _toggleHelpArticle(tag) {
@@ -17146,6 +17218,9 @@ document.addEventListener('keydown', function(e) {
   // Don't interfere with pin overlay
   var pin = document.getElementById('pin-overlay');
   if (pin && pin.style.display !== 'none') return;
+  // Close manual overlay first if open
+  var manO = document.getElementById('manual-overlay');
+  if (manO && manO.style.display === 'flex') { closeManualOverlay(); return; }
   // Close fnr bar first if open
   var fnrBar = document.getElementById('fnr-bar');
   if (fnrBar && fnrBar.style.display !== 'none') { if (typeof closeFnr === 'function') closeFnr(); return; }
@@ -17243,5 +17318,53 @@ syncInit();
 
 l>
 
+
+<!-- ═══ USER MANUAL OVERLAY ═══ -->
+<div id="manual-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:var(--paper);flex-direction:column;">
+  <!-- Header -->
+  <div style="background:var(--ink);padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top,10px));display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--gold);flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1.2rem;">📖</span>
+      <span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);">User Manual</span>
+      <span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:rgba(255,255,255,0.3);letter-spacing:1px;">v2.4.0</span>
+    </div>
+    <button onclick="closeManualOverlay()" title="Close [Esc]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1rem;line-height:1;">✕</button>
+  </div>
+  <!-- Scrollable body -->
+  <div id="manual-overlay-body" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 18px;-webkit-overflow-scrolling:touch;"></div>
+</div>
+
+<!-- ═══ USER MANUAL OVERLAY ═══ -->
+<div id="manual-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:var(--paper);flex-direction:column;">
+  <!-- Header -->
+  <div style="background:var(--ink);padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top,10px));display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--gold);flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1.2rem;">📖</span>
+      <span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);">User Manual</span>
+      <span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:rgba(255,255,255,0.3);letter-spacing:1px;">v2.4.0</span>
+    </div>
+    <button onclick="closeManualOverlay()" title="Close [Esc]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1rem;line-height:1;">✕</button>
+  </div>
+  <!-- Scrollable body -->
+  <div id="manual-overlay-body" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 18px;-webkit-overflow-scrolling:touch;"></div>
+</div>
+
+<!-- ═══ USER MANUAL OVERLAY ═══ -->
+<div id="manual-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:var(--paper);flex-direction:column;">
+  <div style="background:var(--ink);padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top,10px));display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--gold);flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:1.2rem;">📖</span><span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);">User Manual</span><span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:rgba(255,255,255,0.3);letter-spacing:1px;">v2.4.0</span></div>
+    <button onclick="closeManualOverlay()" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1rem;line-height:1;">✕ Close</button>
+  </div>
+  <div id="manual-overlay-body" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 18px;-webkit-overflow-scrolling:touch;"></div>
+</div>
+
+<!-- ═══ USER MANUAL OVERLAY ═══ -->
+<div id="manual-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:var(--paper);flex-direction:column;">
+  <div style="background:var(--ink);padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top,10px));display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--gold);flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:1.2rem;">&#128218;</span><span style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);">User Manual</span><span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:rgba(255,255,255,0.3);letter-spacing:1px;">v2.4.0</span></div>
+    <button onclick="closeManualOverlay()" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1rem;line-height:1;">&#10005; Close</button>
+  </div>
+  <div id="manual-overlay-body" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 18px;-webkit-overflow-scrolling:touch;"></div>
+</div>
 </body>
 </html>
