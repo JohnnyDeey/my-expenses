@@ -2032,7 +2032,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
     <button class="btn btn-success" id="led-assign-btn" style="padding:8px 16px;font-size:0.8rem;white-space:nowrap;" onclick="ledgerBulkAssign()">&#10003; Assign</button>
     <button class="cb-action-btn cb-hide-btn" title="Hide selected rows from view" onclick="ledHideSelected()">&#8212; Hide</button>
-    <button class="cb-action-btn cb-del-btn" title="Delete selected rows to recycle bin" onclick="ledDeleteSelected()">&#10005; Delete</button>
+    <button class="cb-action-btn cb-del-btn" title="Delete selected rows permanently" onclick="ledDeleteSelected()">&#10005; Delete</button>
     <button class="cb-action-btn cb-sel-btn" id="led-selall-btn" title="Select all / deselect all" onclick="ledToggleSelectAll()">&#9634; All</button>
     <button class="btn btn-ghost" style="padding:8px 10px;font-size:0.8rem;" onclick="clearLedgerBulkSearch()">&#10005;</button>
   </div>
@@ -2385,7 +2385,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="fnrKeyShortcut(event);"></textarea>
       <div class="import-tip">
         Supported: <strong>&#8358; / # Naira</strong> &nbsp;&bull;&nbsp; <strong>$ Dollar</strong> &nbsp;&bull;&nbsp; <strong>&#8364; Euro</strong> &nbsp;&bull;&nbsp; <strong>&#163; Pound</strong>
-        &nbsp;&nbsp;|&nbsp;&nbsp; Colon or tab before amount &nbsp;&nbsp;|&nbsp;&nbsp; No currency symbol = skipped to recycle bin
+        &nbsp;&nbsp;|&nbsp;&nbsp; Colon or tab before amount &nbsp;&nbsp;|&nbsp;&nbsp; No currency symbol = skipped to deleted items
       </div>
       <div class="parse-actions">
         <button class="btn btn-primary" id="inc-parse-btn" onclick="parseIncomeInput()">&#9660; Parse Income</button>
@@ -2629,7 +2629,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     </select>
     <button class="btn btn-success" id="inc-assign-btn" style="padding:8px 16px;font-size:0.8rem;" onclick="incomeBulkAssign()">&#10003; Assign</button>
     <button class="cb-action-btn cb-hide-btn" title="Hide selected rows from view" onclick="incLedHideSelected()">&#8212; Hide</button>
-    <button class="cb-action-btn cb-del-btn" title="Delete selected rows to recycle bin" onclick="incLedDeleteSelected()">&#10005; Delete</button>
+    <button class="cb-action-btn cb-del-btn" title="Delete selected rows permanently" onclick="incLedDeleteSelected()">&#10005; Delete</button>
     <button class="cb-action-btn cb-sel-btn" id="inc-led-selall-btn" title="Select all / deselect all" onclick="incLedToggleSelectAll()">&#9634; All</button>
     <button class="btn btn-ghost" style="padding:8px 10px;" onclick="_incExcludedIds={};document.getElementById('inc-bulk-search').value='';renderIncomeLedger();">&#10005;</button>
   </div>
@@ -3260,7 +3260,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <p style="margin-bottom:14px;">If you add an email address to your profile, you can use it to reset your PIN. Enter your email on the "Forgot your PIN?" screen. The system looks up your account and displays a temporary reset code on screen. No email is sent — the code is shown directly to you for security and cost reasons. Your email is also used to detect duplicate registrations.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">8. Account Deletion</p>
-      <p style="margin-bottom:14px;">You have the right to permanently delete your account and all associated data at any time via <strong>Manage → Delete Account</strong>. A 4-step process guides you: (1) an exit questionnaire asking for your reason, (2) PIN confirmation, (3) a deletion progress indicator, and (4) a completion screen. Your exit reason and optional feedback message are saved anonymously to a Firebase collection to help improve the app. All personal data — expenses, income, settings, recycle bin, user registry entry, and credentials — is permanently and irreversibly deleted. This data cannot be recovered.</p>
+      <p style="margin-bottom:14px;">You have the right to permanently delete your account and all associated data at any time via <strong>Manage → Delete Account</strong>. A 4-step process guides you: (1) an exit questionnaire asking for your reason, (2) PIN confirmation, (3) a deletion progress indicator, and (4) a completion screen. Your exit reason and optional feedback message are saved anonymously to a Firebase collection to help improve the app. All personal data — expenses, income, settings, deleted items, user registry entry, and credentials — is permanently and irreversibly deleted. This data cannot be recovered.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">9. Usage Analytics</p>
       <p style="margin-bottom:14px;">This app uses Google Analytics to collect anonymous usage statistics. No personal financial data, names, phone numbers, or email addresses are ever sent to Google Analytics.</p>
@@ -3859,9 +3859,14 @@ function saveData(data) {
   window._deletePending = true;
   localStorage.setItem('expense_ledger', JSON.stringify(data));
   autoDetectCurrencies(data);
-  syncPush();
-  clearTimeout(window._deletePendingTimer);
-  window._deletePendingTimer = setTimeout(function(){ window._deletePending = false; }, 6000);
+  if (_db && _userId) {
+    syncPush();
+    clearTimeout(window._deletePendingTimer);
+    window._deletePendingTimer = setTimeout(function(){ window._deletePending = false; }, 6000);
+  } else {
+    // Not connected — save locally only, clear flag immediately
+    setTimeout(function(){ window._deletePending = false; }, 500);
+  }
 }
 
 function loadData() {
@@ -4243,7 +4248,7 @@ function loadMonthIntoTextarea() {
   var statusEl = document.getElementById('import-status');
   var clearBtn = document.getElementById('btn-clear-month');
 
-  // Check if there are pending lines restored from recycle bin
+  // Check if there are pending lines restored from deleted items
   var pendingBufKey = 'import_pending_' + key;
   var pendingLines  = localStorage.getItem(pendingBufKey) || '';
 
@@ -4274,7 +4279,7 @@ function loadMonthIntoTextarea() {
     ta.value = pendingLines || '';
     if (pendingLines) localStorage.removeItem(pendingBufKey);
     ta.className = '';
-    statusEl.textContent = pendingLines ? 'Restored lines from recycle bin — edit and re-parse' : 'No data yet for this month — paste your expenses below';
+    statusEl.textContent = pendingLines ? 'No data yet for this month — paste your expenses below' : 'No data yet for this month — paste your expenses below';
     statusEl.className = 'import-status';
     clearBtn.style.display = 'none';
   }
@@ -6404,7 +6409,7 @@ function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];
 //  PARSE DATE VALIDATION
 // ================================
 function expSendSkippedToTrashAndGo() {
-  // Send skipped lines to recycle bin NOW (user chose to proceed)
+  // Send skipped lines to deleted items NOW (user chose to proceed)
   if (skippedLines && skippedLines.length) {
     var lastDate = '';
     // Try to extract a date from the skipped line reason
@@ -6418,8 +6423,8 @@ function expSendSkippedToTrashAndGo() {
       var d = m ? m[1] : '';
       return { _raw_line: s.line, _reason: s.reason, date: d, desc: s.line, amount: null, currency: '', category: '' };
     });
-    addToTrash(skippedItems, 'skipped');
-    showToast(skippedLines.length + ' skipped lines moved to recycle bin');
+    // skipped items discarded — no deleted items
+    showToast(skippedLines.length + ' skipped lines (see warnings above)');
   }
   switchTab('categorize', null);
 }
@@ -6494,18 +6499,28 @@ function catHideSelected() {
 function catDeleteSelected() {
   var selected = _getCatCheckedItemObjects();
   if (!selected.length) { showToast('Check some items first'); return; }
-  if (!confirm('Delete ' + selected.length + ' item'+(selected.length===1?'':'s')+' to recycle bin?')) return;
-  var items = (catViewMode === 'pending') ? pendingItems : catEditItems;
-  var trashItems = selected.map(function(item) {
-    return { _raw_line: item.desc, _reason: 'Manually deleted', date: item.date, desc: item.desc, amount: item.amount, currency: item.currency, category: item.category };
-  });
-  addToTrash(trashItems, 'deleted');
-  selected.forEach(function(item) {
-    var i = items.indexOf(item);
-    if (i !== -1) items.splice(i, 1);
-  });
-  showToast(selected.length + ' item'+(selected.length===1?'':'s')+' moved to recycle bin');
-  renderCategorizeTable();
+  var count = selected.length;
+  _showDeleteConfirm(
+    'Delete ' + count + ' item' + (count===1?'':'s') + '?',
+    'Permanently delete ' + count + ' selected item' + (count===1?'':'s') + '? This cannot be undone.',
+    function() {
+      var items = (catViewMode === 'pending') ? pendingItems : catEditItems;
+      selected.forEach(function(item) {
+        var i = items.indexOf(item);
+        if (i !== -1) items.splice(i, 1);
+      });
+      if (catViewMode === 'edit') {
+        // Also remove from saved ledger
+        var ids = {};
+        selected.forEach(function(s){ ids[String(s.id)] = true; });
+        var newData = loadData().filter(function(i){ return !ids[String(i.id)]; });
+        window._lastDeleteTime = Date.now(); window._deletePending = true;
+        saveData(newData); syncPushNow();
+      }
+      showToast(count + ' item'+(count===1?'':'s')+' deleted');
+      renderCategorizeTable();
+    }
+  );
 }
 
 var _catAllSelected = false;
@@ -6558,15 +6573,14 @@ function incCatHideSelected() {
 function incCatDeleteSelected() {
   var selected = _getIncCatCheckedItemObjects();
   if (!selected.length) { showToast('Check some items first'); return; }
-  if (!confirm('Delete ' + selected.length + ' item'+(selected.length===1?'':'s')+' to recycle bin?')) return;
+  // confirmed via _showDeleteConfirm below
   var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
   var trashItems = selected.map(function(item) {
     return { _raw_line: item.desc, _reason: 'Manually deleted', date: item.date, desc: item.desc, amount: item.amount, currency: item.currency, category: item.category };
   });
-  if (typeof addToIncTrash === 'function') addToIncTrash(trashItems, 'deleted');
-  else if (typeof addToTrash === 'function') addToTrash(trashItems, 'deleted');
+  // items permanently deleted — no deleted items
   selected.forEach(function(item) { var i = items.indexOf(item); if (i !== -1) items.splice(i, 1); });
-  showToast(selected.length + ' item'+(selected.length===1?'':'s')+' moved to recycle bin');
+  showToast(selected.length + ' item'+(selected.length===1?'':'s')+' moved to deleted items');
   renderIncomeCatTable();
 }
 
@@ -6635,7 +6649,7 @@ function validateParsedDates() {
     skippedDiv.style.display = 'none';
   }
 
-  // -- No more yellow mismatch panel — wrong dates go to recycle bin at parse time --
+  // -- No more yellow mismatch panel — wrong dates go to deleted items at parse time --
   // Show ok-row always (skipped lines are warnings, not blockers)
   var okRow = document.getElementById('ps-ok-row');
   var mismatchDiv = document.getElementById('ps-mismatch');
@@ -7031,7 +7045,7 @@ function ledHideSelected() {
 function ledDeleteSelected() {
   var checked = document.querySelectorAll('#ledger-accordion .led-row-cb:checked');
   if (!checked.length) { showToast('Check some items first'); return; }
-  if (!confirm('Move ' + checked.length + ' item'+(checked.length===1?'':'s')+' to recycle bin?')) return;
+  // confirm handled by _showDeleteConfirm below
   var ids = {};
   checked.forEach(function(cb) { ids[cb.getAttribute('data-id')] = true; });
   var data = loadData();
@@ -7039,12 +7053,18 @@ function ledDeleteSelected() {
   var trashItems = toTrash.map(function(item) {
     return { _raw_line: item.desc, _reason: 'Manually deleted', date: item.date, desc: item.desc, amount: item.amount, currency: item.currency, category: item.category };
   });
-  addToTrash(trashItems, 'deleted');
   var remaining = data.filter(function(i){ return !ids[String(i.id)]; });
-  saveData(remaining);
-  showToast(toTrash.length + ' item'+(toTrash.length===1?'':'s')+' moved to recycle bin');
-  _ledAllSelected = false;
-  renderLedger();
+  var count = toTrash.length;
+  _showDeleteConfirm(
+    'Delete ' + count + ' item' + (count===1?'':'s') + '?',
+    'Permanently delete ' + count + ' selected ' + (count===1?'entry':'entries') + '? This cannot be undone.',
+    function() {
+      window._lastDeleteTime = Date.now(); window._deletePending = true;
+      saveData(remaining); syncPushNow();
+      showToast(count + ' item'+(count===1?'':'s')+' deleted');
+      _ledAllSelected = false; renderLedger();
+    }
+  );
 }
 
 function openRenameModal() {
@@ -7459,16 +7479,47 @@ function renderLedger(){
 }
 
 
+
+// ═══ CONFIRM DELETE — replaces deleted items ════════════════════════════════
+var _pendingDeleteFn = null;
+
+function _showDeleteConfirm(title, msg, onConfirm) {
+  _pendingDeleteFn = onConfirm;
+  var o = document.getElementById('confirm-delete-overlay');
+  var t = document.getElementById('confirm-delete-title');
+  var m = document.getElementById('confirm-delete-msg');
+  if (t) t.textContent = title || 'Delete entry?';
+  if (m) m.textContent = msg  || 'This cannot be undone.';
+  if (o) o.style.display = 'flex';
+}
+function _confirmDelete() {
+  var o = document.getElementById('confirm-delete-overlay');
+  if (o) o.style.display = 'none';
+  if (_pendingDeleteFn) { _pendingDeleteFn(); _pendingDeleteFn = null; }
+}
+function _cancelDelete() {
+  var o = document.getElementById('confirm-delete-overlay');
+  if (o) o.style.display = 'none';
+  _pendingDeleteFn = null;
+}
+
 function deleteEntry(id){
-  window._lastDeleteTime = Date.now(); // block listener for 8s
   var data = loadData();
-  var item = data.filter(function(i){ return String(i.id)===String(id); })[0];
-  if (item) addToTrash([item], 'deleted');
-  var newData = data.filter(function(i){ return String(i.id)!==String(id); });
-  localStorage.setItem('expense_ledger', JSON.stringify(newData));
-  syncPushNow();
-  renderLedger(); updateHeader();
-  showToast('Moved to recycle bin · ↩ restore in Manage');
+  var item = data.find(function(i){ return String(i.id)===String(id); });
+  var label = item ? ('"' + item.desc.substring(0,35) + '"') : 'this entry';
+  _showDeleteConfirm(
+    'Delete entry?',
+    'Permanently delete ' + label + '? This cannot be undone.',
+    function() {
+      window._lastDeleteTime = Date.now();
+      window._deletePending  = true;
+      var newData = loadData().filter(function(i){ return String(i.id)!==String(id); });
+      saveData(newData);
+      syncPushNow();
+      renderLedger(); updateHeaderContext();
+      showToast('Entry deleted');
+    }
+  );
 }
 
 function openLedgerCatDropdown(id, item) {
@@ -7555,9 +7606,8 @@ function clearAll(){
   if (conf) conf.style.display = 'flex';
 }
 function clearAllConfirmed(){
-  var all = loadData();
-  if (all.length) addToTrash(all, 'deleted');
   window._lastDeleteTime = Date.now();
+  window._deletePending = true;
   localStorage.removeItem('expense_ledger');
   syncPushNow();
   var btn = document.getElementById('clear-all-btn');
@@ -7809,13 +7859,13 @@ function renderManagePanel(){
     yesBtn.addEventListener('click', function(){
       var all = loadData();
       var toDelete = grp.items;
-      if(toDelete.length) addToTrash(toDelete, 'deleted', grp.label);
+      if(toDelete.length) { /* permanently deleted */ }
       window._lastDeleteTime = Date.now();
       var ids = toDelete.map(function(i){ return i.id||i._id||(i.date+i.desc+i.amount); });
       var remaining = all.filter(function(i){ return ids.indexOf(i.id||i._id||(i.date+i.desc+i.amount))<0; });
       localStorage.setItem('expense_ledger', JSON.stringify(remaining));
       syncPushNow();
-      showToast(grp.label+' moved to recycle bin ('+toDelete.length+' entries)');
+      showToast(grp.label+' deleted ('+toDelete.length+' entries)');
       renderManagePanel(); updateHeaderContext(); renderMonthPicker();
     });
     btnWrap.appendChild(btn); btnWrap.appendChild(confirmWrap);
@@ -8242,7 +8292,7 @@ function fetchIncTrashFromFirebase() {
 }
 
 function getTrashKey() {
-  // Use user-specific key so each user has their own recycle bin
+  // Use user-specific key so each user has their own deleted items
   return _userId ? TRASH_KEY + '_' + _userId : TRASH_KEY;
 }
 function loadTrash() {
@@ -8279,7 +8329,6 @@ function addToTrash(items, source, groupLabel) {
   }
   saveTrash(trash);
   // Push to Firebase so trash survives across devices and sessions
-  pushTrashToFirebase();
 }
 function restoreFromTrash(trashId) {
   var trash = loadTrash();
@@ -8299,7 +8348,6 @@ function restoreFromTrash(trashId) {
         localStorage.setItem(bufKey, existing + (existing ? String.fromCharCode(10) : '') + rawLine);
       }
       saveTrash(trash);
-      pushTrashToFirebase();
       renderTrashPanel();
       showToast('Saved to Import notepad — open that month when ready');
     } else {
@@ -8315,7 +8363,6 @@ function restoreFromTrash(trashId) {
         saveData(data);
       }
       saveTrash(trash);
-      pushTrashToFirebase();
       renderTrashPanel();
       renderManagePanel();
       updateHeaderContext();
@@ -8391,7 +8438,7 @@ function renderTrashPanel() {
   var el = document.getElementById('trash-content');
   if (!el) return;
   if (!_userId) {
-    el.innerHTML = '<div style="text-align:center;padding:20px;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);">Sign in to view recycle bin</div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--muted);">Sign in to view deleted items</div>';
     return;
   }
   var trash = loadTrash();
@@ -10030,12 +10077,12 @@ function loadIncomeMonthIntoTextarea() {
     statusEl.textContent = monthData.length + ' entries saved — edit and re-parse';
     if (clearBtn) clearBtn.style.display = 'inline-flex';
   } else {
-    // Check pending buffer from recycle bin restore
+    // Check pending buffer from deleted items restore
     var bufKey = 'import_pending_inc_' + key;
     var pending = localStorage.getItem(bufKey) || '';
     ta.value = pending;
     if (pending) localStorage.removeItem(bufKey);
-    statusEl.textContent = pending ? 'Restored lines from recycle bin — fix and re-parse' : 'No income for this month yet — paste below';
+    statusEl.textContent = pending ? 'No income for this month yet — paste below' : 'No income for this month yet — paste below';
     if (clearBtn) clearBtn.style.display = 'none';
   }
   document.getElementById('inc-parse-stats').style.display = 'none';
@@ -10321,7 +10368,6 @@ function incYearSaveAll() {
       if (typeof s === 'string') incTrash.push({ _raw_line:s, date:'', _trash_source:'skipped', _trash_date:now, _trash_id:Date.now()+Math.random() });
     });
     localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
-    pushIncTrashToFirebase();
   }
 
   var months = Object.keys(byMonth).length;
@@ -10485,8 +10531,7 @@ function parseIncomeInput() {
       incTrash.push({ _raw_line:s, date:currentDate||'', _trash_source:'skipped', _trash_date:now, _trash_id:Date.now()+Math.random() });
     });
     localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
-    pushIncTrashToFirebase();
-    showToast('Parsed ' + incPendingItems.length + ' · ' + skipped.length + ' skipped to recycle bin');
+    showToast('Parsed ' + incPendingItems.length + ' · ' + skipped.length + ' skipped (see warnings)');
   } else {
     showToast('Parsed ' + incPendingItems.length + ' income entries');
   }
@@ -11562,7 +11607,7 @@ function incLedHideSelected() {
 function incLedDeleteSelected() {
   var checked = document.querySelectorAll('#inc-ledger-accordion .inc-led-row-cb:checked');
   if (!checked.length) { showToast('Check some items first'); return; }
-  if (!confirm('Move ' + checked.length + ' item'+(checked.length===1?'':'s')+' to recycle bin?')) return;
+  if (!confirm('Move ' + checked.length + ' item'+(checked.length===1?'':'s')+' to deleted items?')) return;
   var ids = {};
   checked.forEach(function(cb) { ids[cb.getAttribute('data-id')] = true; });
   var data = loadIncomeData();
@@ -11572,10 +11617,9 @@ function incLedDeleteSelected() {
   toTrash.forEach(function(t){
     incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random()}));
   });
-  localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
-  pushIncTrashToFirebase();
+  // trash removed
   saveIncomeData(data.filter(function(i){ return !ids[String(i.id)]; }));
-  showToast(toTrash.length + ' item'+(toTrash.length===1?'':'s')+' moved to recycle bin');
+  showToast(toTrash.length + ' item'+(toTrash.length===1?'':'s')+' deleted');
   _incLedAllSelected = false;
   renderIncomeLedger();
 }
@@ -11707,9 +11751,9 @@ function renderIncomeManage() {
       var gid='incgrp_'+Date.now();
       var ids=g.items.map(function(i){ return i.id||i._id||(i.date+i.desc+i.amount); });
       g.items.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:g.label})); });
-      localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash)); pushIncTrashToFirebase();
+      localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
       saveIncomeData(loadIncomeData().filter(function(i){ return ids.indexOf(i.id||i._id||(i.date+i.desc+i.amount))<0; }));
-      renderIncomeManage(); showToast(g.label+' moved to income recycle bin');
+      renderIncomeManage(); showToast(g.label+' moved to income deleted items');
     }); })(grp);
     row.appendChild(info); row.appendChild(delBtn);
     listEl.appendChild(row);
@@ -11735,7 +11779,7 @@ function resetIncManageFilters() {
 }
 
 function clearAllIncome() {
-  if (!confirm('Delete ALL income data? It will go to the recycle bin.')) return;
+  if (!confirm('Delete ALL income data? It will go to the deleted items.')) return;
   var all = loadIncomeData();
   if (all.length) {
     var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
@@ -11743,7 +11787,6 @@ function clearAllIncome() {
     var gid = 'incgrp_'+Date.now();
     all.forEach(function(t){ incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random(),_group_id:gid,_group_label:'All Income Data'})); });
     localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
-    pushIncTrashToFirebase();
   }
   saveIncomeData([]);
   renderIncomeManage();
@@ -11928,7 +11971,7 @@ function renderIncomeTrash() {
   var iSelAllBtn = document.createElement('button'); iSelAllBtn.id='inc-trash-selall-btn'; iSelAllBtn.className='cb-action-btn cb-sel-btn'; iSelAllBtn.style.cssText='padding:4px 10px;font-size:0.7rem;'; iSelAllBtn.textContent='☐ All'; iSelAllBtn.addEventListener('click',_incTrashToggleAll);
   var iRestBtn = document.createElement('button'); iRestBtn.className='btn btn-ghost'; iRestBtn.style.cssText='padding:4px 10px;font-size:0.7rem;color:var(--sage);border-color:var(--sage);'; iRestBtn.textContent='↩ Restore'; iRestBtn.addEventListener('click',_incTrashRestoreSelected);
   var iDelBtn = document.createElement('button'); iDelBtn.className='btn btn-danger'; iDelBtn.style.cssText='padding:4px 10px;font-size:0.7rem;'; iDelBtn.textContent='✕ Delete'; iDelBtn.addEventListener('click',_incTrashDeleteSelected);
-  var iEmptyBtn = document.createElement('button'); iEmptyBtn.className='btn btn-danger'; iEmptyBtn.style.cssText='padding:4px 10px;font-size:0.7rem;opacity:0.7;'; iEmptyBtn.textContent='🗑 Empty bin'; iEmptyBtn.addEventListener('click',function(){ if(confirm('Empty income recycle bin?')){ localStorage.setItem(getIncTrashKey(),'[]'); pushIncTrashToFirebase(); renderIncomeTrash(); }});
+  var iEmptyBtn = document.createElement('button'); iEmptyBtn.className='btn btn-danger'; iEmptyBtn.style.cssText='padding:4px 10px;font-size:0.7rem;opacity:0.7;'; iEmptyBtn.textContent='🗑 Empty bin'; iEmptyBtn.addEventListener('click',function(){ if(confirm('Empty income deleted items?')){ localStorage.setItem(getIncTrashKey(),'[]'); pushIncTrashToFirebase(); renderIncomeTrash(); }});
   incBtnRow.appendChild(iSelAllBtn); incBtnRow.appendChild(iRestBtn); incBtnRow.appendChild(iDelBtn); incBtnRow.appendChild(iEmptyBtn);
   incSumDiv.appendChild(incBtnRow);
   el.appendChild(incSumDiv);
@@ -11982,7 +12025,6 @@ function renderIncomeTrash() {
         localStorage.setItem(bufKey, existing+(existing?String.fromCharCode(10):'')+( t._raw_line||t.desc||''));
         var trash2 = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(x){ return String(x._trash_id)!==String(t._trash_id); });
         localStorage.setItem(getIncTrashKey(), JSON.stringify(trash2));
-        pushIncTrashToFirebase();
         renderIncomeTrash();
         showToast('Saved to Import notepad for that month');
       } else {
@@ -12060,7 +12102,6 @@ function _incTrashDeleteSelected() {
   if (!confirm('Permanently delete ' + ids.length + ' item' + (ids.length===1?'':'s') + '?')) return;
   var trash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(t){ return ids.indexOf(String(t._trash_id)) === -1; });
   localStorage.setItem(getIncTrashKey(), JSON.stringify(trash));
-  pushIncTrashToFirebase();
   renderIncomeTrash();
 }
 
@@ -12078,7 +12119,6 @@ function restoreIncomeItem(trashId) {
       saveIncomeData(data);
     }
     localStorage.setItem(getIncTrashKey(), JSON.stringify(trash));
-    pushIncTrashToFirebase();
     renderIncomeTrash();
     showToast('Income entry restored');
   }
@@ -12096,7 +12136,6 @@ function restoreIncomeGroup(gid) {
   data.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
   saveIncomeData(data);
   localStorage.setItem(getIncTrashKey(), JSON.stringify(remaining));
-  pushIncTrashToFirebase();
   renderIncomeTrash();
   renderIncomeManage();
   showToast(toRestore.length + ' income entries restored');
@@ -12104,7 +12143,6 @@ function restoreIncomeGroup(gid) {
 function deleteIncomeGroup(gid) {
   var trash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').filter(function(t){ return t._group_id!==gid; });
   localStorage.setItem(getIncTrashKey(), JSON.stringify(trash));
-  pushIncTrashToFirebase();
   renderIncomeTrash();
   showToast('Group permanently deleted');
 }
@@ -12146,8 +12184,6 @@ document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible') {
     // Returned to app — check if 10 minutes have passed since last interaction
     checkInactivity();
-    if (_db && !window._trashDeletePending) fetchTrashFromFirebase();
-    if (_db && !window._incTrashDeletePending) fetchIncTrashFromFirebase();
   }
   // When hiding: do NOT update last_active — we want to measure from last real interaction
 });
@@ -12778,9 +12814,8 @@ function _resumeSession(uid, name, phone) {
     updateHeaderContext();
     renderMonthPicker();
     populateFilters();
-    // -- Restore recycle bins from Firebase on every login --
-    if (!window._trashDeletePending)    fetchTrashFromFirebase();
-    if (!window._incTrashDeletePending) fetchIncTrashFromFirebase();
+    // -- Restore deleted itemss from Firebase on every login --
+    if (!window._trashDeletePending)    if (!window._incTrashDeletePending)
     // -- Restore profile, avatar, onboarding + income categories from Firebase --
     // We do ALL restores here, then start the sequence ONLY after they complete.
     // This guarantees confirmNeeded/tourNeeded are accurate on any device.
@@ -13017,7 +13052,7 @@ function syncLoadFromFirebase(callback) {
 function syncPushNow() {
   // Immediate push — also deletes removed month documents from Firebase
   clearTimeout(_syncPushTimer);
-  if (!_db || !_userId) return;
+  if (!_db || !_userId) { syncSetStatus('live'); return; }
   window._deletePending = true;
   _isMerging = true;
   syncSetStatus('syncing');
@@ -13051,17 +13086,11 @@ function syncPushNow() {
     custom_categories: cats, custom_cat_rules: rules, user_currencies: localStorage.getItem(CURRENCY_STORAGE_KEY) || '',
     display_name: _userName, updated: Date.now()
   });
-  var trashData = localStorage.getItem(getTrashKey()) || '[]';
-  var trashArr = []; try { trashArr = JSON.parse(trashData); } catch(e){}
-  if (trashArr.length > 0 || window._trashFetched) {
-    batch.set(userCol('settings').doc('trash'), { items: trashData, updated: Date.now() });
-  }
   batch.commit()
     .then(function(){
       syncSetStatus('live');
       _isMerging = false;
-      // Keep delete lock for 5 more seconds after confirmed write
-      setTimeout(function(){ window._deletePending = false; }, 5000);
+      setTimeout(function(){ window._deletePending = false; }, 2000);
     })
     .catch(function(e){
       console.error('Push error:', e);
@@ -13072,7 +13101,7 @@ function syncPushNow() {
 }
 
 function syncPush() {
-  if (!_db || !_userId || _isMerging) return;
+  if (!_db || !_userId || _isMerging) { syncSetStatus('live'); return; }
   clearTimeout(_syncPushTimer);
   _syncPushTimer = setTimeout(function() {
     syncSetStatus('syncing');
@@ -13103,14 +13132,6 @@ function syncPush() {
       custom_categories: cats, custom_cat_rules: rules, user_currencies: localStorage.getItem(CURRENCY_STORAGE_KEY) || '',
       display_name: _userName, updated: Date.now()
     });
-    // Push trash — only push if non-empty OR if we've already fetched from Firebase
-    var trashData = localStorage.getItem(getTrashKey()) || '[]';
-    var trashArr = []; try { trashArr = JSON.parse(trashData); } catch(e){}
-    if (trashArr.length > 0 || window._trashFetched) {
-      batch.set(userCol('settings').doc('trash'), {
-        items: trashData, updated: Date.now()
-      });
-    }
     batch.commit()
       .then(function(){ syncSetStatus('live'); })
       .catch(function(e){ console.error('Push error:', e); syncSetStatus('error'); });
@@ -13128,7 +13149,7 @@ function syncStartListener() {
   if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
   _syncUnsubscribe = userCol('expense_months').onSnapshot(function(snapshot) {
     // Block if we just wrote locally (avoids race condition restoring deleted data)
-    if (window._deletePending || window._isMerging || window._lastDeleteTime && (Date.now() - window._lastDeleteTime) < 8000) return;
+    if (window._deletePending || window._isMerging || (window._lastDeleteTime && (Date.now() - window._lastDeleteTime) < 15000)) return;
     var allEntries = [];
     var fbMonths = [];
     snapshot.forEach(function(doc) {
@@ -13927,8 +13948,6 @@ function useResetCodeNow() {
   var hint = document.getElementById('reset-attempt-hint');
   if (hint) hint.style.display = 'none';
   hidePinScreen();
-  fetchTrashFromFirebase();
-  fetchIncTrashFromFirebase();
   startSync();
   _promptEmailIfMissing();
   showToast('Signed in! Change your PIN in Manage now.');
@@ -14005,9 +14024,7 @@ function submitLogin() {
     var hint = document.getElementById('reset-attempt-hint');
     if (hint) hint.style.display = 'none';
     hidePinScreen();
-    fetchTrashFromFirebase();
-  fetchIncTrashFromFirebase();
-    startSync();
+        startSync();
     _promptEmailIfMissing();
     return true;
   }
@@ -15078,7 +15095,7 @@ var ONBOARD_INCOME_SLIDES = [
   {
     icon: '📋',
     title: 'Income Ledger',
-    body: 'View all income entries, filter by year, month, currency, or category. Each row has a <strong>☐ checkbox</strong>. Check rows and use <strong>— Hide</strong> (removes from view), <strong>✕ Delete</strong> (recycle bin), or <strong>✓ Assign</strong> (category). Assign with nothing checked updates all visible filtered items at once.',
+    body: 'View all income entries, filter by year, month, currency, or category. Each row has a <strong>☐ checkbox</strong>. Check rows and use <strong>— Hide</strong> (removes from view), <strong>✕ Delete</strong> (deleted items), or <strong>✓ Assign</strong> (category). Assign with nothing checked updates all visible filtered items at once.',
     color: '#8b5e3c'
   },
   {
@@ -15328,7 +15345,7 @@ function openUserManual() {
     ['📊 Dashboard', '5 independent charts: Daily Flow, Monthly Trend, Category Breakdown, Yearly Total, Heatmap.'],
     ['📋 Ledger',    'Full searchable, filterable list of all saved entries. Supports multi-word and exclusion search.'],
     ['🎯 Budget',    'Set monthly spending limits per category. Progress bars show usage in real time.'],
-    ['⚙️ Manage',    'Profile card, email, PIN, currency manager, recycle bin, export, and account deletion.'],
+    ['⚙️ Manage',    'Profile card, email, PIN, currency manager, deleted items, export, and account deletion.'],
   ].forEach(function(r){
     out += '<div style="display:flex;gap:10px;padding:7px 10px;background:var(--paper2);border-radius:4px;margin-bottom:4px;align-items:flex-start;">';
     out += '<span style="'+S+'font-size:0.7rem;font-weight:700;'+GOLD+'min-width:80px;padding-top:1px;">'+r[0]+'</span>';
@@ -15597,7 +15614,7 @@ function openUserManual() {
   out += step(2,'<strong>PIN confirmation</strong> — tick the confirmation checkbox and enter your PIN to prove it is you.');
   out += step(3,'<strong>Deletion progress</strong> — a 0–100% bar shows the deletion happening in real time: expense data, income data, credentials, registry entry, local storage.');
   out += step(4,'<strong>Done</strong> — your account is fully removed. The app redirects to the sign-in screen.');
-  out += warn('Account deletion is <strong>permanent and irreversible</strong>. All data — expenses, income, budgets, settings, recycle bin, and credentials — is permanently removed from our servers and your device.');
+  out += warn('Account deletion is <strong>permanent and irreversible</strong>. All data — expenses, income, budgets, settings, deleted items, and credentials — is permanently removed from our servers and your device.');
 
   // ── ACCOUNT RECOVERY ────────────────────────────────────────────────────
   out += h2('Account Recovery — Forgot PIN');
@@ -16504,7 +16521,7 @@ var TOUR_EXPENSES_STEPS = [
     body:'Every parsed entry appears here with a category dropdown. The app auto-suggests based on your history.',
     arrow:'up' },
   { target:'#cat-selall-btn', tab:'categorize', icon:'☐', title:'Categorize — Checkbox Actions',
-    body:'Each row has a <strong>☐ checkbox</strong> on the right. Use <strong>☐ All</strong> to select everything, then:<br>• <strong>✓ Assign</strong> — set category for all checked<br>• <strong>— Hide</strong> — remove from view<br>• <strong>✕ Delete</strong> — send to recycle bin',
+    body:'Each row has a <strong>☐ checkbox</strong> on the right. Use <strong>☐ All</strong> to select everything, then:<br>• <strong>✓ Assign</strong> — set category for all checked<br>• <strong>— Hide</strong> — remove from view<br>• <strong>✕ Delete</strong> — send to deleted items',
     arrow:'down' },
   { target:'#bulk-cat-input', tab:'categorize', icon:'⚡', title:'Bulk Assign — One Category to Many',
     body:'Type or pick a category here, then tap <strong>✓ Assign</strong>. With nothing checked → assigns to <em>all visible items</em>. With rows checked → assigns only to <em>those rows</em>.',
@@ -16539,7 +16556,7 @@ var TOUR_EXPENSES_STEPS = [
 
   // -- MANAGE / RECYCLE BIN --
   { target:'#main-nav button:nth-child(7)', tab:'manage', icon:'⚙️', title:'Manage — Your Control Centre',
-    body:'Profile, PIN change, data deletion, recycle bin, currencies, CSV export — all here.',
+    body:'Profile, PIN change, data deletion, deleted items, currencies, CSV export — all here.',
     arrow:'up' },
   { target:'#avatar-circle', tab:'manage', icon:'😊', title:'Your Avatar — Tap to Personalise',
     body:'Tap your avatar to open the emoji picker. Your choice syncs across all devices.',
@@ -16584,7 +16601,7 @@ var TOUR_INCOME_STEPS = [
     body:'Every parsed income entry appears here. Use the <strong>▼ Filters</strong> to filter by Period, Currency and Category before assigning.',
     arrow:'up' },
   { target:'#inc-cat-selall-btn', tab:'inc-categorize', icon:'☐', title:'Income Categorize — Checkbox Actions',
-    body:'Each row has a <strong>☐ checkbox</strong> on the right. Use <strong>☐ All</strong> to select everything, then:<br>• <strong>✓ Assign</strong> — set category for all checked<br>• <strong>— Hide</strong> — remove from view<br>• <strong>✕ Delete</strong> — send to recycle bin',
+    body:'Each row has a <strong>☐ checkbox</strong> on the right. Use <strong>☐ All</strong> to select everything, then:<br>• <strong>✓ Assign</strong> — set category for all checked<br>• <strong>— Hide</strong> — remove from view<br>• <strong>✕ Delete</strong> — send to deleted items',
     arrow:'down' },
   { target:'#inc-cat-bulk-sel', tab:'inc-categorize', icon:'⚡', title:'Income Bulk Assign',
     body:'Pick a category and tap <strong>✓ Assign All</strong>. With nothing checked → assigns to all visible. With rows checked → assigns to those rows only.',
@@ -16614,7 +16631,7 @@ var TOUR_INCOME_STEPS = [
 
   // -- MANAGE / RECYCLE BIN --
   { target:'#income-nav button:nth-child(6)', tab:'inc-manage', icon:'⚙️', title:'Income Manage Tab',
-    body:'Delete income data by year, month or day. Export to CSV, print PDF reports and manage the income recycle bin.',
+    body:'Delete income data by year, month or day. Export to CSV, print PDF reports and manage the income deleted items.',
     arrow:'up' },
   { target:'#inc-manage-year-filter', tab:'inc-manage', icon:'🔍', title:'Income Delete Filter',
     body:'Select <strong>Year</strong> → months appear. Select <strong>Month</strong> → days appear. Tap <strong>Delete</strong> to move entries to the Recycle Bin.',
@@ -17462,5 +17479,19 @@ l>
   </div>
   <div id="manual-overlay-body" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 18px;-webkit-overflow-scrolling:touch;"></div>
 </div>
+
+<!-- ═══ CONFIRM DELETE OVERLAY ═══ -->
+<div id="confirm-delete-overlay" style="display:none;position:fixed;inset:0;z-index:100030;background:rgba(10,8,6,0.88);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#1a1410;border:2px solid var(--rust);border-radius:10px;width:100%;max-width:320px;padding:24px 22px;text-align:center;">
+    <div style="font-size:1.8rem;margin-bottom:8px;">🗑️</div>
+    <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:#e07060;margin-bottom:6px;" id="confirm-delete-title">Delete entry?</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:20px;" id="confirm-delete-msg">This cannot be undone.</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="_cancelDelete()" style="flex:1;padding:11px;background:none;border:1px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);cursor:pointer;">Cancel</button>
+      <button onclick="_confirmDelete()" style="flex:1;padding:11px;background:var(--rust);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;font-weight:700;color:#fff;cursor:pointer;">Delete</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
