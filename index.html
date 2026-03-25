@@ -4384,7 +4384,11 @@ function parseInput() {
       // If date doesn't match selected year+month → show in red warning panel
       var expectedKey = pickerYear + '-' + pad(pickerMonth);
       if (currentDate.substring(0,7) !== expectedKey) {
-        skippedLines.push({ line: rawLine.trim(), reason: 'Date ' + currentDate + ' is outside the selected period ' + expectedKey });
+        var dp = currentDate.split('-');
+        var friendlyD = dp[2]+'-'+dp[1]+'-'+dp[0];
+        var ep = expectedKey.split('-');
+        var friendlyE = ep[1]+'-'+ep[0];
+        skippedLines.push({ line: rawLine.trim(), reason: 'Date ' + friendlyD + ' is outside the selected period ' + friendlyE });
         currentDate = null; // block items under this date
       }
       return;
@@ -10138,12 +10142,20 @@ function parseIncomeYear() {
   var skipped = [];
   var dateErrors = []; // dates outside incPickerYear
 
+    // Build dynamic symbol→code map from all active currencies
+    var _incSymMap = {};
+    ALL_WORLD_CURRENCIES.forEach(function(c){ _incSymMap[c.sym] = c.code; });
+    Object.keys(SYMS).forEach(function(code){ _incSymMap[SYMS[code]] = code; });
+    _incSymMap['#'] = 'NGN';
+    var _incSymList = Object.keys(_incSymMap).map(function(s){
+      return s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+    }).join('|');
+    var _incCurAmtRe  = new RegExp('^(.*?)[\\s:]*(' + _incSymList + ')\\s*([\\d,]+\.?\\d*)\\s*$');
+    var _incColonAmtRe = new RegExp('^(.+?):\\s*(' + _incSymList + ')\\s*([\\d,]+\.?\\d*)\\s*$');
+    function _incGetCurrency(sym) { return _incSymMap[sym] || 'NGN'; }
   function extractIncAmt(s) {
-    var m = s.match(/^(.+?)[:\s]+([€₦$£#])\s*([\d,]+\.?\d*)\s*$/);
-    if (m) {
-      var sym = m[2];
-      return { desc: m[1].trim(), amtStr: m[3].replace(/,/g,''), currency: (sym==='€')?'EUR':(sym==='₦'||sym==='#')?'NGN':(sym==='$')?'USD':'GBP' };
-    }
+    var m = s.match(_incCurAmtRe);
+    if (m) return { desc: m[1].trim().replace(/[:\s]+$/, '').trim(), amtStr: m[3].replace(/,/g,''), currency: _incGetCurrency(m[2]) };
     return null;
   }
 
@@ -10318,27 +10330,22 @@ function parseIncomeInput() {
   var currentDate = null;
   var dateRe = /^\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\s*$/;
 
+    // Build dynamic symbol→code map from all active currencies
+    var _incSymMap = {};
+    ALL_WORLD_CURRENCIES.forEach(function(c){ _incSymMap[c.sym] = c.code; });
+    Object.keys(SYMS).forEach(function(code){ _incSymMap[SYMS[code]] = code; });
+    _incSymMap['#'] = 'NGN';
+    var _incSymList = Object.keys(_incSymMap).map(function(s){
+      return s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+    }).join('|');
+    var _incCurAmtRe  = new RegExp('^(.*?)[\\s:]*(' + _incSymList + ')\\s*([\\d,]+\.?\\d*)\\s*$');
+    var _incColonAmtRe = new RegExp('^(.+?):\\s*(' + _incSymList + ')\\s*([\\d,]+\.?\\d*)\\s*$');
+    function _incGetCurrency(sym) { return _incSymMap[sym] || 'NGN'; }
   function extractIncomeAmt(s) {
-    // Try currency symbol
-    var m = s.match(/^(.*?)[\s:]*([€₦$£#])\s*([\d,]+\.?\d*)\s*$/);
-    if (m) {
-      var sym = m[2];
-      return {
-        desc: m[1].trim().replace(/[:\s]+$/, '').trim(),
-        amtStr: m[3].replace(/,/g,''),
-        currency: (sym==='€')?'EUR':(sym==='₦'||sym==='#')?'NGN':(sym==='$')?'USD':'GBP'
-      };
-    }
-    // Try colon separator: "desc: amount" or "desc: #amount"
-    var colonM = s.match(/^(.+?):\s*([€₦$£#])\s*([\d,]+\.?\d*)\s*$/);
-    if (colonM) {
-      var sym2 = colonM[2];
-      return {
-        desc: colonM[1].trim(),
-        amtStr: colonM[3].replace(/,/g,''),
-        currency: (sym2==='€')?'EUR':(sym2==='₦'||sym2==='#')?'NGN':(sym2==='$')?'USD':'GBP'
-      };
-    }
+    var m = s.match(_incCurAmtRe);
+    if (m) return { desc: m[1].trim().replace(/[:\s]+$/, '').trim(), amtStr: m[3].replace(/,/g,''), currency: _incGetCurrency(m[2]) };
+    var colonM = s.match(_incColonAmtRe);
+    if (colonM) return { desc: colonM[1].trim(), amtStr: colonM[3].replace(/,/g,''), currency: _incGetCurrency(colonM[2]) };
     return null;
   }
 
@@ -10353,7 +10360,11 @@ function parseIncomeInput() {
       // If date doesn't match selected year+month, mark as wrong
       var expectedKey = incPickerYear + '-' + pad(incPickerMonth);
       if (currentDate.substring(0,7) !== expectedKey) {
-        skipped.push(rawLine.trim() + ' [wrong date: ' + currentDate + ', expected ' + expectedKey + ']');
+        var dateParts = currentDate.split('-');
+        var friendlyDate = dateParts[2]+'-'+dateParts[1]+'-'+dateParts[0]; // DD-MM-YYYY
+        var expParts = expectedKey.split('-');
+        var friendlyExp = expParts[1]+'-'+expParts[0]; // MM-YYYY
+        skipped.push(rawLine.trim() + ' [wrong date: ' + friendlyDate + ', expected ' + friendlyExp + ']');
         currentDate = null; // block items under this date
       }
       return;
