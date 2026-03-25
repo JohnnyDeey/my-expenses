@@ -3743,9 +3743,33 @@ var CAT_RULES = [
   {cat:'Personal Care',kw:['hairdo','hair','belt','earpod','clipper','driver','sensor','desodorante']}
 ];
 
+
+// ═══ MANUAL CATEGORY OVERRIDES ════════════════════════════════════════════
+// Stores desc → category mappings set explicitly by the user.
+// These always win over autoCategory, existing ledger majority vote, and rules.
+var MANUAL_CAT_KEY = 'expense_manual_cats';
+var MANUAL_INC_CAT_KEY = 'expense_manual_inc_cats';
+
+function loadManualCats(incMode) {
+  try { return JSON.parse(localStorage.getItem(incMode ? MANUAL_INC_CAT_KEY : MANUAL_CAT_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveManualCat(desc, cat, incMode) {
+  if (!desc || !cat || cat === 'Other') return; // don't store 'Other' as intentional
+  var store = loadManualCats(incMode);
+  store[desc.trim().toLowerCase()] = cat;
+  localStorage.setItem(incMode ? MANUAL_INC_CAT_KEY : MANUAL_CAT_KEY, JSON.stringify(store));
+}
+function getManualCat(desc, incMode) {
+  var store = loadManualCats(incMode);
+  return store[desc.trim().toLowerCase()] || null;
+}
+
 function autoCategory(desc, existingLedger) {
   var d = desc.toLowerCase();
-  // 0. Check existing ledger — use MAJORITY VOTE across all matching entries
+  // 0a. Check manual override store — user's explicit choice always wins
+  var manualCat = getManualCat(desc, false);
+  if (manualCat) return manualCat;
+  // 0b. Check existing ledger — use MAJORITY VOTE across all matching entries
   // Prevents one rogue entry from permanently corrupting a category
   if (existingLedger && existingLedger.length) {
     var descLower = desc.toLowerCase().trim();
@@ -3804,6 +3828,8 @@ function extractWords(desc) {
 // Learn keywords from user-assigned descriptions, for ANY category.
 // This means even built-in categories get smarter from your own data.
 function learnKeywordsFromEntry(desc, cat) {
+  // Persist the manual choice so re-parsing always restores it
+  saveManualCat(desc, cat, false);
   if (!desc || !cat || cat === 'Other') return;
   var rules = loadCustomRules();
   var existing = null;
@@ -10038,6 +10064,8 @@ function loadIncomeSample() {
 
 // -- Income auto-category --
 function autoCategoryIncome(desc) {
+  var manualIncCat = getManualCat(desc, true);
+  if (manualIncCat) return manualIncCat;
   var d = desc.toLowerCase();
   // Check custom rules first
   var custom = loadIncomeCustomCats();
@@ -10581,6 +10609,7 @@ function renderIncomeCatTable() {
           renderIncomeCatTable();
         } else { sel.value = item.category; }
       } else {
+        saveManualCat(item.desc, sel.value, true);
         item.category = sel.value;
       }
     });
