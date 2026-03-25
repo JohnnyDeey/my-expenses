@@ -7536,9 +7536,9 @@ function renderUserProfileCard() {
 
   var fullName    = localStorage.getItem(FULL_NAME_KEY) || _userName || '?';
   var username    = _userName || '—';
-  var country     = localStorage.getItem('expense_user_country_'+(_userId||'default')) || '—';
-  var dob         = localStorage.getItem('expense_user_dob_'+(_userId||'default')) || '';
-  var dial        = localStorage.getItem('expense_user_dial_'+(_userId||'default')) || '';
+  var country     = localStorage.getItem('expense_user_country_'+(_userId||'default')) || localStorage.getItem('expense_user_country_default') || '—';
+  var dob         = localStorage.getItem('expense_user_dob_'+(_userId||'default'))     || localStorage.getItem('expense_user_dob_default')     || '';
+  var dial        = localStorage.getItem('expense_user_dial_'+(_userId||'default'))    || localStorage.getItem('expense_user_dial_default')    || '';
   var tail        = localStorage.getItem('expense_phone_tail') || '';
   var savedAvatar = localStorage.getItem(AVATAR_KEY+'_'+(_userId||'default')) || '😊';
 
@@ -12588,6 +12588,7 @@ function _resumeSession(uid, name, phone) {
   buildSYMS();
   refreshAllCurrencyDropdowns();
   updateUserDisplay();
+
   var savedMode = localStorage.getItem(APP_MODE_KEY) || 'expenses';
   _appMode = savedMode;
   applyMode();
@@ -12859,6 +12860,19 @@ function syncLoadFromFirebase(callback) {
         }
       }
     });
+    // -- Fetch registration date for Member Since display --
+    if (_userPhone && !localStorage.getItem('expense_joined_' + (_userId||'default'))) {
+      _db.collection('user_registry').doc(_userPhone).get().then(function(regDoc) {
+        if (regDoc.exists) {
+          var d = regDoc.data();
+          var ts = d.created || d.ts || d.timestamp || 0;
+          if (!ts) ts = Date.now(); // fallback: use now if field missing
+          localStorage.setItem('expense_joined_' + (_userId||'default'), String(ts));
+          if (typeof renderUserProfileCard === 'function') renderUserProfileCard();
+        }
+      }).catch(function(){});
+    }
+
     // -- Restore profile confirmation from Firebase --
     // This ensures phone/DOB/country confirmation never re-triggers on new devices
     userCol('settings').doc('profile').get().then(function(doc) {
@@ -13560,14 +13574,15 @@ function generateCode() {
 
 function _doGenerateCode(name, dob, dial, number, phone, errEl) {
 
-  // Save DOB and country to localStorage
+  // Save DOB and country to localStorage — use pending uid if available
   var country = '';
   if (typeof COUNTRY_CODES !== 'undefined') {
     COUNTRY_CODES.forEach(function(c) { if (c.dial === dial) country = c.name; });
   }
-  localStorage.setItem('expense_user_dob_'+(_userId||'default'),     dob);
-  localStorage.setItem('expense_user_country_'+(_userId||'default'),  country);
-  localStorage.setItem('expense_user_dial_'+(_userId||'default'),     dial);
+  // Store under 'default' for now — confirmCode() will migrate to real uid
+  localStorage.setItem('expense_user_dob_default',     dob);
+  localStorage.setItem('expense_user_country_default',  country);
+  localStorage.setItem('expense_user_dial_default',     dial);
   // Mark phone confirmed with uid-specific key so sequence skips confirmation step
   var _pcUid = _pendingName ? (localStorage.getItem('_pending_uid') || 'default') : (_userId || 'default');
   localStorage.setItem(PHONE_CONFIRM_KEY + '_' + _pcUid, '1');
@@ -13644,6 +13659,30 @@ function confirmCode() {
   var uidPrivKey     = 'privacy_ok_' + _userId;
   if (localStorage.getItem(defaultPrivKey) === PRIVACY_VER) {
     localStorage.setItem(uidPrivKey, PRIVACY_VER);
+  }
+  // Migrate DOB, country, dial from 'default' key to real uid key
+  // (they were saved under 'default' during registration before _userId was known)
+  ['expense_user_dob_','expense_user_country_','expense_user_dial_'].forEach(function(key) {
+    var val = localStorage.getItem(key + 'default');
+    if (val) {
+      localStorage.setItem(key + _userId, val);
+      localStorage.removeItem(key + 'default');
+    }
+  });
+  // Also save profile fields to Firebase settings so they restore on new devices
+  if (_db && _userId) {
+    var uid2 = _userId;
+    var dob2     = localStorage.getItem('expense_user_dob_'     + uid2) || '';
+    var country2 = localStorage.getItem('expense_user_country_' + uid2) || '';
+    var dial2    = localStorage.getItem('expense_user_dial_'    + uid2) || '';
+    if (dob2 || country2 || dial2) {
+      _db.collection('users').doc(uid2).collection('settings').doc('profile').set({
+        dob:             dob2,
+        country:         country2,
+        dial:            dial2,
+        phone_confirmed: true
+      }, { merge: true }).catch(function(){});
+    }
   }
   // Clear any previous user data from this device
   localStorage.removeItem('expense_ledger');
@@ -16826,20 +16865,11 @@ function confirmDeleteAccount() {
 
     Promise.all(promises).then(function() {
       setP(70, 'Removing from registry...');
-      // Delete user_registry — try all possible phone hash formats
       var regDeletions = [];
       if (_db) {
-        // Delete by stored phone hash
+        // Delete by phone hash (direct doc — always works, no rules issue)
         if (phone) {
           regDeletions.push(_db.collection('user_registry').doc(phone).delete().catch(function(){}));
-        }
-        // Also search by user_id in case phone hash is wrong
-        if (uid) {
-          regDeletions.push(
-            _db.collection('user_registry').where('user_id','==',uid).get().then(function(snap){
-              snap.forEach(function(doc){ doc.ref.delete().catch(function(){}); });
-            }).catch(function(){})
-          );
         }
         // Delete main user document
         if (uid) {
@@ -16849,19 +16879,24 @@ function confirmDeleteAccount() {
 
       Promise.all(regDeletions).then(function() {
         setP(90, 'Clearing local data...');
-        // Clear ALL localStorage
+        // Clear ALL localStorage and sessionStorage
         var keys = [];
         for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
         keys.forEach(function(k){ localStorage.removeItem(k); });
         sessionStorage.clear();
         setP(100, 'Account deleted successfully.');
 
-        // Show done step
+        // Show done step then go straight to SIGN UP screen
         setTimeout(function() {
           document.getElementById('delete-account-step3').style.display = 'none';
           document.getElementById('delete-account-step4').style.display = 'block';
-          // Reload to login screen
-          setTimeout(function(){ window.location.reload(); }, 3000);
+          setTimeout(function() {
+            // Hide overlay, show pin screen at register step (not login)
+            var o = document.getElementById('delete-account-overlay');
+            if (o) o.style.display = 'none';
+            showPinScreen();
+            showRegisterStep();
+          }, 2500);
         }, 500);
       });
     });
