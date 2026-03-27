@@ -4617,29 +4617,99 @@ function parseInput() {
     });
   });
 
-  // Build dynamic currency count for parse stats bar
-  var psByCur = {};
-  pendingItems.forEach(function(i){ psByCur[i.currency] = (psByCur[i.currency]||0) + 1; });
-  var psCurHtml = Object.keys(psByCur).sort().map(function(c){
-    return c + ': <strong>' + psByCur[c] + '</strong>';
-  }).join(' &nbsp; ');
-  document.getElementById('ps-count').textContent = pendingItems.length;
-  var psByCurEl = document.getElementById('ps-by-currency');
-  if (psByCurEl) psByCurEl.innerHTML = psCurHtml;
-  document.getElementById('parse-stats').style.display = 'block';
+  // ── Cross-check parsed items against ledger ──────────────────────────────
+  function _makeKey(i){ return i.date+'|'+i.desc.trim().toLowerCase()+'|'+i.amount+'|'+i.currency; }
+  function _normDesc(s){ return s.trim().toLowerCase(); }
 
-  pendingItems.forEach(function(item){
-    if (item.category !== 'Other') learnKeywordsFromEntry(item.desc, item.category);
+  var _savedCounts = {};
+  existingLedger.forEach(function(i){ var k=_makeKey(i); _savedCounts[k]=(_savedCounts[k]||0)+1; });
+
+  // Group existing ledger by date for conflict detection
+  var _ledgerByDay = {};
+  existingLedger.forEach(function(i){
+    if (!_ledgerByDay[i.date]) _ledgerByDay[i.date] = [];
+    _ledgerByDay[i.date].push(i);
   });
 
-  catDescFilter = '';
-  var dsi = document.getElementById('cat-desc-search'); if (dsi) dsi.value = '';
-  var ccf = document.getElementById('cat-cat-filter'); if (ccf) ccf.value = 'all';
-  var cyf = document.getElementById('cat-year-filter'); if (cyf) cyf.value = 'pending';
-  catViewMode = 'pending';
+  var _seenCounts   = {};
+  var _totalParsed  = pendingItems.length;
+  var _parseConflicts = [];
+  var _cleanItems   = [];
 
-  validateParsedDates();
-  showToast('Parsed ' + pendingItems.length + ' items' + (skippedLines.length ? ' · ' + skippedLines.length + ' lines need attention' : ''));
+  pendingItems.forEach(function(item){
+    var k = _makeKey(item);
+    _seenCounts[k] = (_seenCounts[k]||0) + 1;
+
+    // Exact match already in ledger → silently drop
+    if (_seenCounts[k] <= (_savedCounts[k]||0)) return;
+
+    // Check for same-desc-different-amount OR same-amount-different-desc on the same date
+    var _dayEntries = _ledgerByDay[item.date] || [];
+    var _sameDescDiffAmt = _dayEntries.filter(function(e){
+      return _normDesc(e.desc) === _normDesc(item.desc) && e.currency === item.currency && e.amount !== item.amount;
+    });
+    var _sameAmtDiffDesc = _dayEntries.filter(function(e){
+      return e.amount === item.amount && e.currency === item.currency && _normDesc(e.desc) !== _normDesc(item.desc);
+    });
+
+    if (_sameDescDiffAmt.length) {
+      _parseConflicts.push({ item: item, existing: _sameDescDiffAmt[0] });
+    } else if (_sameAmtDiffDesc.length) {
+      _parseConflicts.push({ item: item, existing: _sameAmtDiffDesc[0] });
+    } else {
+      _cleanItems.push(item);
+    }
+  });
+
+  var _alreadySaved = _totalParsed - _cleanItems.length - _parseConflicts.length;
+  // ────────────────────────────────────────────────────────────────────────────
+
+  // Shared function to finish parse after conflicts are resolved
+  function _finishExpenseParse(extraItems, replacedIds) {
+    // Remove replaced entries from ledger immediately
+    if (replacedIds.length) {
+      var _kept = loadData().filter(function(e){ return replacedIds.indexOf(String(e.id)) === -1; });
+      saveData(_kept);
+      // Also rebuild existingLedger reference so save step doesn't re-add them
+      existingLedger = _kept;
+    }
+    pendingItems = _cleanItems.concat(extraItems);
+
+    // Build dynamic currency count for parse stats bar
+    var psByCur = {};
+    pendingItems.forEach(function(i){ psByCur[i.currency] = (psByCur[i.currency]||0) + 1; });
+    var psCurHtml = Object.keys(psByCur).sort().map(function(c){
+      return c + ': <strong>' + psByCur[c] + '</strong>';
+    }).join(' &nbsp; ');
+    document.getElementById('ps-count').textContent = pendingItems.length;
+    var psByCurEl = document.getElementById('ps-by-currency');
+    if (psByCurEl) psByCurEl.innerHTML = psCurHtml;
+    document.getElementById('parse-stats').style.display = 'block';
+
+    pendingItems.forEach(function(i){ if (i.category !== 'Other') learnKeywordsFromEntry(i.desc, i.category); });
+
+    catDescFilter = '';
+    var dsi = document.getElementById('cat-desc-search'); if (dsi) dsi.value = '';
+    var ccf = document.getElementById('cat-cat-filter'); if (ccf) ccf.value = 'all';
+    var cyf = document.getElementById('cat-year-filter'); if (cyf) cyf.value = 'pending';
+    catViewMode = 'pending';
+
+    validateParsedDates();
+    renderCategorizeTable();
+    var _toastMsg = 'Parsed ' + pendingItems.length + ' new item' + (pendingItems.length !== 1 ? 's' : '');
+    if (_alreadySaved) _toastMsg += ' · ' + _alreadySaved + ' unchanged (skipped)';
+    if (replacedIds.length) _toastMsg += ' · ' + replacedIds.length + ' replaced';
+    if (skippedLines.length) _toastMsg += ' · ' + skippedLines.length + ' lines need attention';
+    showToast(_toastMsg);
+  }
+
+  if (_parseConflicts.length) {
+    _showConflictModal(_parseConflicts, false, function(resolvedItems, replacedIds){
+      _finishExpenseParse(resolvedItems, replacedIds);
+    });
+  } else {
+    _finishExpenseParse([], []);
+  }
 }
 
 
@@ -5027,28 +5097,99 @@ function saveAllPending() {
   if (catViewMode === 'pending') {
     if (!pendingItems.length) return;
     var existing = loadData();
+    var todayStr = (function(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); })();
+
     function makeKey(i){ return i.date+'|'+i.desc+'|'+i.amount+'|'+i.currency; }
-    // Count occurrences in existing data so same item can appear multiple times per day
+    function normDesc(s){ return s.trim().toLowerCase(); }
+
+    // Build exact-match lookup (count-based so genuine same-day duplicates are allowed)
     var existingCounts = {};
+    existing.forEach(function(i){ var k=makeKey(i); existingCounts[k]=(existingCounts[k]||0)+1; });
+
+    // Build per-day lookup for "same desc, different amount" detection
+    var existingByDay = {};
     existing.forEach(function(i){
-      var k = makeKey(i);
-      existingCounts[k] = (existingCounts[k]||0) + 1;
+      if (!existingByDay[i.date]) existingByDay[i.date] = [];
+      existingByDay[i.date].push(i);
     });
-    // Count occurrences in pending items
+
+    var toAddDirectly = [];   // items to save without asking
+    var exactSkipped  = 0;    // exact dupes silently skipped
+    var conflicts     = [];   // items needing user decision
+
     var pendingCounts = {};
-    var toAdd = pendingItems.filter(function(i){
-      var k = makeKey(i);
+    pendingItems.forEach(function(item){
+      var k = makeKey(item);
       pendingCounts[k] = (pendingCounts[k]||0) + 1;
-      // Allow if this occurrence number doesn't already exist
-      return pendingCounts[k] > (existingCounts[k]||0);
+
+      // TODAY'S items → always save
+      if (item.date === todayStr) {
+        if (pendingCounts[k] <= (existingCounts[k]||0)) {
+          exactSkipped++; // exact duplicate even for today → skip
+        } else {
+          toAddDirectly.push(item);
+        }
+        return;
+      }
+
+      // PREVIOUS DAYS — check for exact match first
+      if (pendingCounts[k] <= (existingCounts[k]||0)) {
+        exactSkipped++; // identical entry already in ledger → silently drop
+        return;
+      }
+
+      // Check if there is an existing entry for the same date with same normalised desc
+      // but different amount (or same amount but different desc) — possible edit
+      var sameDayEntries = existingByDay[item.date] || [];
+      var sameDescDiffAmt = sameDayEntries.filter(function(e){
+        return normDesc(e.desc) === normDesc(item.desc) && e.currency === item.currency && e.amount !== item.amount;
+      });
+      var sameAmtDiffDesc = sameDayEntries.filter(function(e){
+        return e.amount === item.amount && e.currency === item.currency && normDesc(e.desc) !== normDesc(item.desc);
+      });
+
+      if (sameDescDiffAmt.length || sameAmtDiffDesc.length) {
+        // Possible edit — needs user decision
+        conflicts.push({ item: item, existing: sameDescDiffAmt.length ? sameDescDiffAmt[0] : sameAmtDiffDesc[0] });
+      } else {
+        // No related prior entry — genuinely new item for a previous day
+        toAddDirectly.push(item);
+      }
     });
-    var dupes = pendingItems.length - toAdd.length;
-    if (!toAdd.length) { showToast('All items already exist — no duplicates saved'); pendingItems=[]; renderCategorizeTable(); return; }
-    // Learn keywords from any custom-categorised entries before saving
-    toAdd.forEach(function(i){ learnKeywordsFromEntry(i.desc, i.category); });
-    saveData(existing.concat(toAdd));
-    showToast('Saved '+toAdd.length+' entries'+(dupes>0?' ('+dupes+' duplicates skipped)':''));
-    pendingItems=[];
+
+    // Helper: commit the items we already know to save, then resolve conflicts
+    function doCommit(resolvedItems, replacedIds) {
+      var base = existing.filter(function(e){ return replacedIds.indexOf(String(e.id)) === -1; });
+      var finalItems = toAddDirectly.concat(resolvedItems);
+      if (!finalItems.length && !replacedIds.length) {
+        showToast('All items already exist — nothing new to save');
+        pendingItems = [];
+        renderCategorizeTable();
+        updateHeader();
+        populateFilters();
+        renderMonthPicker();
+        return;
+      }
+      finalItems.forEach(function(i){ learnKeywordsFromEntry(i.desc, i.category); });
+      saveData(base.concat(finalItems));
+      var msg = 'Saved ' + finalItems.length + ' entries';
+      if (exactSkipped) msg += ' · ' + exactSkipped + ' unchanged skipped';
+      if (replacedIds.length) msg += ' · ' + replacedIds.length + ' replaced';
+      showToast(msg);
+      pendingItems = [];
+      renderCategorizeTable();
+      updateHeader();
+      populateFilters();
+      renderMonthPicker();
+    }
+
+    if (conflicts.length) {
+      // Show conflict-resolution modal
+      _showConflictModal(conflicts, false, doCommit);
+    } else {
+      doCommit([], []);
+    }
+    return; // exit early — doCommit handles the rest (possibly async via modal)
   } else {
     // Update categories of existing saved items
     var data = loadData();
@@ -7576,6 +7717,108 @@ function _cancelDelete() {
   if (o) o.style.display = 'none';
   _pendingDeleteFn = null;
 }
+
+// ─── CONFLICT RESOLUTION MODAL ───────────────────────────────────────────────
+// Called when a pending item matches an existing entry on a PREVIOUS day
+// with a changed description or amount.
+// conflicts = [{item: pendingItem, existing: existingItem}, ...]
+// isIncome  = true for income module
+// onDone(resolvedItems, replacedIds) called when user finishes all decisions
+var _conflictState = null;
+
+function _showConflictModal(conflicts, isIncome, onDone) {
+  _conflictState = {
+    conflicts:  conflicts,
+    isIncome:   isIncome,
+    onDone:     onDone,
+    index:      0,
+    resolved:   [],    // items to add
+    replacedIds:[]     // existing IDs to remove
+  };
+  _renderConflictStep();
+  var o = document.getElementById('conflict-resolve-overlay');
+  if (o) o.style.display = 'flex';
+}
+
+function _renderConflictStep() {
+  var s = _conflictState;
+  if (!s) return;
+  var total  = s.conflicts.length;
+  var idx    = s.index;
+  var o      = document.getElementById('conflict-resolve-overlay');
+  if (!o) return;
+
+  if (idx >= total) {
+    // All conflicts resolved — call onDone
+    o.style.display = 'none';
+    s.onDone(s.resolved, s.replacedIds);
+    _conflictState = null;
+    return;
+  }
+
+  var c   = s.conflicts[idx];
+  var ex  = c.existing;
+  var nw  = c.item;
+  var sym = (typeof SYMS !== 'undefined' && SYMS[nw.currency]) ? SYMS[nw.currency] : nw.currency + ' ';
+  var symE= (typeof SYMS !== 'undefined' && SYMS[ex.currency]) ? SYMS[ex.currency] : ex.currency + ' ';
+
+  function fmtDate(d){ var p=d.split('-'); return p[2]+'-'+p[1]+'-'+p[0]; }
+  function fmtAmt(a){ return a.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  var descChanged = nw.desc.trim().toLowerCase() !== ex.desc.trim().toLowerCase();
+  var amtChanged  = nw.amount !== ex.amount;
+  var changeLabel = descChanged && amtChanged ? 'Description & amount changed'
+                  : descChanged ? 'Description changed'
+                  : 'Amount changed';
+
+  document.getElementById('cr-progress').textContent  = (idx+1) + ' of ' + total + ' conflicts';
+  document.getElementById('cr-change-label').textContent = changeLabel;
+  document.getElementById('cr-date').textContent      = fmtDate(nw.date);
+  document.getElementById('cr-ex-desc').textContent   = ex.desc;
+  document.getElementById('cr-ex-amt').textContent    = symE + fmtAmt(ex.amount);
+  document.getElementById('cr-new-desc').textContent  = nw.desc;
+  document.getElementById('cr-new-amt').textContent   = sym  + fmtAmt(nw.amount);
+
+  // Highlight changed fields
+  document.getElementById('cr-ex-desc').style.opacity  = descChanged ? '0.55' : '1';
+  document.getElementById('cr-new-desc').style.color   = descChanged ? 'var(--gold)' : 'inherit';
+  document.getElementById('cr-ex-amt').style.opacity   = amtChanged  ? '0.55' : '1';
+  document.getElementById('cr-new-amt').style.color    = amtChanged  ? 'var(--gold)' : 'inherit';
+}
+
+// User chose to KEEP existing — skip the new item
+function _crKeepExisting() {
+  if (!_conflictState) return;
+  _conflictState.index++;
+  _renderConflictStep();
+}
+
+// User chose to REPLACE existing with the new item
+function _crReplaceWithNew() {
+  if (!_conflictState) return;
+  var c = _conflictState.conflicts[_conflictState.index];
+  _conflictState.replacedIds.push(String(c.existing.id));
+  _conflictState.resolved.push(c.item);
+  _conflictState.index++;
+  _renderConflictStep();
+}
+
+// User chose to KEEP BOTH — add new alongside existing
+function _crKeepBoth() {
+  if (!_conflictState) return;
+  var c = _conflictState.conflicts[_conflictState.index];
+  _conflictState.resolved.push(c.item);
+  _conflictState.index++;
+  _renderConflictStep();
+}
+
+// Cancel everything — discard all pending
+function _crCancel() {
+  var o = document.getElementById('conflict-resolve-overlay');
+  if (o) o.style.display = 'none';
+  _conflictState = null;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function deleteEntry(id){
   var data = loadData();
@@ -10597,23 +10840,87 @@ function parseIncomeInput() {
     // Lines with no numbers at all are silently ignored
   });
 
-  // Send skipped to income trash
-  if (skipped.length) {
-    var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey()) || '[]');
-    var now = new Date().toISOString().substring(0,10);
-    skipped.forEach(function(s) {
-      incTrash.push({ _raw_line:s, date:currentDate||'', _trash_source:'skipped', _trash_date:now, _trash_id:Date.now()+Math.random() });
+  // ── Cross-check parsed income against ledger ─────────────────────────────
+  var _incExistingLedger = loadIncomeData();
+  function _makeIncKey(i){ return i.date+'|'+i.desc.trim().toLowerCase()+'|'+i.amount+'|'+i.currency; }
+  function _normIncDesc(s){ return s.trim().toLowerCase(); }
+
+  var _incSavedCounts = {};
+  _incExistingLedger.forEach(function(i){ var k=_makeIncKey(i); _incSavedCounts[k]=(_incSavedCounts[k]||0)+1; });
+
+  var _incLedgerByDay = {};
+  _incExistingLedger.forEach(function(i){
+    if (!_incLedgerByDay[i.date]) _incLedgerByDay[i.date] = [];
+    _incLedgerByDay[i.date].push(i);
+  });
+
+  var _incSeenCounts   = {};
+  var _incTotalParsed  = incPendingItems.length;
+  var _incParseConflicts = [];
+  var _incCleanItems   = [];
+
+  incPendingItems.forEach(function(item){
+    var k = _makeIncKey(item);
+    _incSeenCounts[k] = (_incSeenCounts[k]||0) + 1;
+
+    if (_incSeenCounts[k] <= (_incSavedCounts[k]||0)) return;
+
+    var _dayEntries = _incLedgerByDay[item.date] || [];
+    var _sameDescDiffAmt = _dayEntries.filter(function(e){
+      return _normIncDesc(e.desc) === _normIncDesc(item.desc) && e.currency === item.currency && e.amount !== item.amount;
     });
-    localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
-    showToast('Parsed ' + incPendingItems.length + ' · ' + skipped.length + ' skipped (see warnings)');
-  } else {
-    showToast('Parsed ' + incPendingItems.length + ' income entries');
+    var _sameAmtDiffDesc = _dayEntries.filter(function(e){
+      return e.amount === item.amount && e.currency === item.currency && _normIncDesc(e.desc) !== _normIncDesc(item.desc);
+    });
+
+    if (_sameDescDiffAmt.length) {
+      _incParseConflicts.push({ item: item, existing: _sameDescDiffAmt[0] });
+    } else if (_sameAmtDiffDesc.length) {
+      _incParseConflicts.push({ item: item, existing: _sameAmtDiffDesc[0] });
+    } else {
+      _incCleanItems.push(item);
+    }
+  });
+
+  var _incAlreadySaved = _incTotalParsed - _incCleanItems.length - _incParseConflicts.length;
+  // ────────────────────────────────────────────────────────────────────────────
+
+  function _finishIncomeParse(extraItems, replacedIds) {
+    if (replacedIds.length) {
+      var _kept = loadIncomeData().filter(function(e){ return replacedIds.indexOf(String(e.id)) === -1; });
+      saveIncomeData(_kept);
+    }
+    incPendingItems = _incCleanItems.concat(extraItems);
+
+    // Send skipped to income trash
+    if (skipped.length) {
+      var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey()) || '[]');
+      var now2 = new Date().toISOString().substring(0,10);
+      skipped.forEach(function(s) {
+        incTrash.push({ _raw_line:s, date:currentDate||'', _trash_source:'skipped', _trash_date:now2, _trash_id:Date.now()+Math.random() });
+      });
+      localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
+    }
+
+    document.getElementById('inc-ps-count').textContent = incPendingItems.length;
+    document.getElementById('inc-parse-stats').style.display = 'block';
+    incValidateParseResults(skipped);
+    renderIncomeCatTable();
+
+    var _incMsg = 'Parsed ' + incPendingItems.length + ' new income entr' + (incPendingItems.length !== 1 ? 'ies' : 'y');
+    if (_incAlreadySaved) _incMsg += ' · ' + _incAlreadySaved + ' unchanged (skipped)';
+    if (replacedIds.length) _incMsg += ' · ' + replacedIds.length + ' replaced';
+    if (skipped.length) _incMsg += ' · ' + skipped.length + ' skipped';
+    showToast(_incMsg);
   }
 
-  document.getElementById('inc-ps-count').textContent = incPendingItems.length;
-  document.getElementById('inc-parse-stats').style.display = 'block';
-  incValidateParseResults(skipped);
-  renderIncomeCatTable();
+  if (_incParseConflicts.length) {
+    _showConflictModal(_incParseConflicts, true, function(resolvedItems, replacedIds){
+      _finishIncomeParse(resolvedItems, replacedIds);
+    });
+  } else {
+    _finishIncomeParse([], []);
+  }
 }
 
 // -- Income categorize --
@@ -10796,35 +11103,80 @@ function saveAllPendingIncome() {
   if (incCatViewMode === 'pending') {
     if (!incPendingItems.length) return;
     var existing = loadIncomeData();
+    var todayStr = (function(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); })();
 
-    // Same deduplication logic as expenses:
-    // Count occurrences so same item can appear multiple times on same day (genuine duplicates)
     function makeIncKey(i){ return i.date+'|'+i.desc+'|'+i.amount+'|'+i.currency; }
-    var existingCounts = {};
-    existing.forEach(function(i){
-      var k = makeIncKey(i);
-      existingCounts[k] = (existingCounts[k]||0) + 1;
-    });
-    var pendingCounts = {};
-    var toAdd = incPendingItems.filter(function(i){
-      var k = makeIncKey(i);
-      pendingCounts[k] = (pendingCounts[k]||0) + 1;
-      // Only add if this occurrence number doesn't already exist
-      return pendingCounts[k] > (existingCounts[k]||0);
-    });
-    var dupes = incPendingItems.length - toAdd.length;
+    function normDesc(s){ return s.trim().toLowerCase(); }
 
-    if (!toAdd.length) {
-      showToast('All items already exist — no duplicates saved');
+    var existingCounts = {};
+    existing.forEach(function(i){ var k=makeIncKey(i); existingCounts[k]=(existingCounts[k]||0)+1; });
+
+    var existingByDay = {};
+    existing.forEach(function(i){
+      if (!existingByDay[i.date]) existingByDay[i.date] = [];
+      existingByDay[i.date].push(i);
+    });
+
+    var toAddDirectly = [];
+    var exactSkipped  = 0;
+    var conflicts     = [];
+
+    var pendingCounts = {};
+    incPendingItems.forEach(function(item){
+      var k = makeIncKey(item);
+      pendingCounts[k] = (pendingCounts[k]||0) + 1;
+
+      if (item.date === todayStr) {
+        if (pendingCounts[k] <= (existingCounts[k]||0)) { exactSkipped++; }
+        else { toAddDirectly.push(item); }
+        return;
+      }
+
+      if (pendingCounts[k] <= (existingCounts[k]||0)) { exactSkipped++; return; }
+
+      var sameDayEntries = existingByDay[item.date] || [];
+      var sameDescDiffAmt = sameDayEntries.filter(function(e){
+        return normDesc(e.desc) === normDesc(item.desc) && e.currency === item.currency && e.amount !== item.amount;
+      });
+      var sameAmtDiffDesc = sameDayEntries.filter(function(e){
+        return e.amount === item.amount && e.currency === item.currency && normDesc(e.desc) !== normDesc(item.desc);
+      });
+
+      if (sameDescDiffAmt.length || sameAmtDiffDesc.length) {
+        conflicts.push({ item: item, existing: sameDescDiffAmt.length ? sameDescDiffAmt[0] : sameAmtDiffDesc[0] });
+      } else {
+        toAddDirectly.push(item);
+      }
+    });
+
+    function doIncCommit(resolvedItems, replacedIds) {
+      var base = existing.filter(function(e){ return replacedIds.indexOf(String(e.id)) === -1; });
+      var finalItems = toAddDirectly.concat(resolvedItems);
+      if (!finalItems.length && !replacedIds.length) {
+        showToast('All items already exist — nothing new to save');
+        incPendingItems = [];
+        renderIncomeCatTable();
+        renderIncomeMonthPicker();
+        incPopulateFilters();
+        return;
+      }
+      saveIncomeData(base.concat(finalItems));
+      var msg = 'Saved ' + finalItems.length + ' income entries';
+      if (exactSkipped) msg += ' · ' + exactSkipped + ' unchanged skipped';
+      if (replacedIds.length) msg += ' · ' + replacedIds.length + ' replaced';
+      showToast(msg);
       incPendingItems = [];
       renderIncomeCatTable();
       renderIncomeMonthPicker();
       incPopulateFilters();
-      return;
     }
-    saveIncomeData(existing.concat(toAdd));
-    showToast('Saved ' + toAdd.length + ' income entries' + (dupes > 0 ? ' (' + dupes + ' duplicates skipped)' : ''));
-    incPendingItems = [];
+
+    if (conflicts.length) {
+      _showConflictModal(conflicts, true, doIncCommit);
+    } else {
+      doIncCommit([], []);
+    }
+    return;
   } else {
     var data = loadIncomeData();
     var updMap = {};
@@ -17580,6 +17932,54 @@ l>
   <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:24px;max-width:300px;line-height:1.8;" id="force-update-msg">A critical update is available. Please update to continue using the app.</div>
   <button onclick="_applyUpdate()" style="background:var(--gold);border:none;border-radius:6px;padding:14px 32px;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:700;color:var(--ink);cursor:pointer;letter-spacing:1px;">⚡ Update Now</button>
   <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#3a3020;margin-top:16px;">My Expense Ledger · v<span id="force-update-current-ver"></span></div>
+</div>
+
+<!-- ═══ CONFLICT RESOLUTION OVERLAY ═══ -->
+<div id="conflict-resolve-overlay" style="display:none;position:fixed;inset:0;z-index:100035;background:rgba(10,8,6,0.92);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#1a1410;border:2px solid var(--gold);border-radius:12px;width:100%;max-width:360px;padding:24px 22px;box-shadow:0 12px 48px rgba(0,0,0,0.85);">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold2);">⚠️ Entry Conflict</div>
+      <div id="cr-progress" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);"></div>
+    </div>
+    <div id="cr-change-label" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#c8962e;margin-bottom:14px;letter-spacing:0.5px;"></div>
+
+    <!-- Comparison table -->
+    <div style="background:#2a2018;border-radius:6px;padding:12px 14px;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:0.72rem;">
+      <div style="color:var(--muted);font-size:0.62rem;letter-spacing:1px;margin-bottom:8px;">DATE: <span id="cr-date" style="color:var(--paper);"></span></div>
+      <!-- Existing row -->
+      <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #3a3020;">
+        <div style="font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:3px;">IN LEDGER</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+          <div id="cr-ex-desc" style="color:var(--paper);flex:1;word-break:break-word;"></div>
+          <div id="cr-ex-amt" style="white-space:nowrap;font-weight:700;color:var(--paper);"></div>
+        </div>
+      </div>
+      <!-- New row -->
+      <div>
+        <div style="font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:3px;">INCOMING</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+          <div id="cr-new-desc" style="flex:1;word-break:break-word;font-weight:600;"></div>
+          <div id="cr-new-amt" style="white-space:nowrap;font-weight:700;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button onclick="_crKeepExisting()" style="width:100%;padding:11px;background:none;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);cursor:pointer;text-align:left;">
+        🗄 <strong style="color:var(--paper);">Keep existing</strong> &nbsp;— discard incoming
+      </button>
+      <button onclick="_crReplaceWithNew()" style="width:100%;padding:11px;background:rgba(200,150,46,0.12);border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--gold);cursor:pointer;text-align:left;">
+        🔄 <strong>Replace</strong> &nbsp;— remove old, save incoming
+      </button>
+      <button onclick="_crKeepBoth()" style="width:100%;padding:11px;background:none;border:1.5px solid #4a7c59;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.75rem;color:#8dd4a8;cursor:pointer;text-align:left;">
+        ➕ <strong>Keep both</strong> &nbsp;— save alongside existing
+      </button>
+    </div>
+
+    <button onclick="_crCancel()" style="width:100%;padding:7px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.63rem;color:#3a3020;cursor:pointer;margin-top:8px;">✕ Cancel import</button>
+  </div>
 </div>
 
 </body>
