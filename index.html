@@ -1745,6 +1745,57 @@ input[type="password"]::-ms-clear { display:none !important; }
 .cb-del-btn   { background:#c0392b;color:#fff; }
 .cb-sel-btn   { background:#2980b9;color:#fff; }
 .cb-action-btn:active { opacity:.8; }
+
+/* ── HOME SCREEN ──────────────────────────────────────────── */
+.home-icon-card {
+  background: white;
+  border-radius: 14px;
+  padding: 14px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all .2s;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(26,20,16,0.06);
+  -webkit-tap-highlight-color: transparent;
+}
+.home-icon-card:hover, .home-icon-card:active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(26,20,16,0.12);
+  border-color: var(--gold);
+}
+.home-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+.home-icon-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: .01em;
+}
+/* Light theme home card overrides */
+body.light-theme .home-icon-card {
+  border: none;
+  box-shadow: 0 2px 12px rgba(99,102,241,0.08);
+}
+body.light-theme .home-icon-card:hover {
+  box-shadow: 0 6px 20px rgba(99,102,241,0.18);
+  border: none;
+}
+body.light-theme #home-banner {
+  background: linear-gradient(135deg,#6c3fc5 0%,#2563eb 100%) !important;
+}
+
 </style>
 </head>
 <body>
@@ -1788,7 +1839,8 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 <nav class="tabs" id="main-nav" style="justify-content:center;">
-  <button class="active" onclick="switchTab('import',this)"><span class="tab-icon">&#128221;</span><span class="tab-label"> Import</span></button>
+  <button onclick="switchTab('home',this)" id="nav-home-btn"><span class="tab-icon">&#127968;</span><span class="tab-label"> Home</span></button>
+  <button onclick="switchTab('import',this)"><span class="tab-icon">&#128221;</span><span class="tab-label"> Import</span></button>
   <button onclick="switchTab('categorize',this)"><span class="tab-icon">&#128278;</span><span class="tab-label"> Categorize</span></button>
   <button onclick="switchTab('daily',this)"><span class="tab-icon">&#128197;</span><span class="tab-label"> Daily</span></button>
   <button onclick="switchTab('dashboard',this)"><span class="tab-icon">&#128200;</span><span class="tab-label"> Dashboard</span></button>
@@ -1856,7 +1908,157 @@ input[type="password"]::-ms-clear { display:none !important; }
 <main>
 
 <!-- == IMPORT == -->
-<div class="panel active" id="panel-import">
+<div class="panel" id="panel-home" style="padding:0">
+
+  <!-- GREETING BANNER -->
+  <div id="home-banner" style="background:linear-gradient(135deg,#2a1a5e 0%,#1a3a5e 100%);
+    padding:20px 20px 28px;position:relative;overflow:hidden">
+    <div style="position:absolute;top:-30px;right:-30px;width:140px;height:140px;
+      border-radius:50%;background:rgba(255,255,255,.06)"></div>
+    <div style="position:absolute;bottom:-20px;right:40px;width:80px;height:80px;
+      border-radius:50%;background:rgba(255,255,255,.04)"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;position:relative">
+      <div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.55);letter-spacing:.08em;
+          text-transform:uppercase;font-family:'DM Mono',monospace">Welcome back</div>
+        <div id="home-username" style="font-size:1.2rem;font-weight:700;color:#fff;
+          margin-top:3px">Loading…</div>
+      </div>
+      <div id="home-avatar-circle" style="width:44px;height:44px;border-radius:50%;
+        background:rgba(255,255,255,.15);display:flex;align-items:center;
+        justify-content:center;font-size:1.4rem;cursor:pointer"
+        onclick="switchTab('manage',null)">😊</div>
+    </div>
+    <!-- SUMMARY CARD -->
+    <div style="background:rgba(255,255,255,.12);border-radius:14px;padding:14px 16px;
+      backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1)">
+      <div style="font-size:.68rem;color:rgba(255,255,255,.55);
+        font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase">
+        Total Entries</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:4px">
+        <div id="home-total-entries" style="font-size:1.8rem;font-weight:700;
+          color:#fff;font-family:'Playfair Display',serif">—</div>
+        <div style="display:flex;gap:12px">
+          <div style="text-align:center">
+            <div id="home-exp-count" style="font-size:1rem;font-weight:700;color:#f0c060">—</div>
+            <div style="font-size:.6rem;color:rgba(255,255,255,.5);
+              font-family:'DM Mono',monospace">Expenses</div>
+          </div>
+          <div style="text-align:center">
+            <div id="home-inc-count" style="font-size:1rem;font-weight:700;color:#7dd9a0">—</div>
+            <div style="font-size:.6rem;color:rgba(255,255,255,.5);
+              font-family:'DM Mono',monospace">Income</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULES GRID -->
+  <div style="padding:20px 16px">
+    <div style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:14px">Expenses</div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+
+      <div class="home-icon-card" onclick="switchTab('import',null)">
+        <div class="home-icon-wrap" style="background:#fff3e0">📝</div>
+        <div class="home-icon-label">Import</div>
+      </div>
+
+      <div class="home-icon-card" onclick="switchTab('categorize',null)">
+        <div class="home-icon-wrap" style="background:#fce4ec">🏷️</div>
+        <div class="home-icon-label">Categorize</div>
+      </div>
+
+      <div class="home-icon-card" onclick="switchTab('daily',null)">
+        <div class="home-icon-wrap" style="background:#e8f5e9">📅</div>
+        <div class="home-icon-label">Daily</div>
+      </div>
+
+      <div class="home-icon-card" onclick="switchTab('dashboard',null)">
+        <div class="home-icon-wrap" style="background:#e3f2fd">📊</div>
+        <div class="home-icon-label">Dashboard</div>
+      </div>
+
+      <div class="home-icon-card" onclick="switchTab('ledger',null)">
+        <div class="home-icon-wrap" style="background:#f3e5f5">📋</div>
+        <div class="home-icon-label">Ledger</div>
+      </div>
+
+      <div class="home-icon-card" onclick="switchTab('budget',null)">
+        <div class="home-icon-wrap" style="background:#fff8e1">🎯</div>
+        <div class="home-icon-label">Budget</div>
+      </div>
+
+    </div>
+
+    <div style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:14px">Income</div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+
+      <div class="home-icon-card" onclick="switchToIncome();switchIncomeTab('inc-import',null)">
+        <div class="home-icon-wrap" style="background:#e8f5e9">💰</div>
+        <div class="home-icon-label">Import</div>
+      </div>
+
+      <div class="home-icon-card" onclick="switchToIncome();switchIncomeTab('inc-categorize',null)">
+        <div class="home-icon-wrap" style="background:#fce4ec">🏷️</div>
+        <div class="home-icon-label">Categorize</div>
+      </div>
+
+      <div class="home-icon-card" onclick="switchToIncome();switchIncomeTab('inc-monthly',null)">
+        <div class="home-icon-wrap" style="background:#e3f2fd">📅</div>
+        <div class="home-icon-label">Monthly</div>
+      </div>
+
+      <div class="home-icon-card" onclick="switchToIncome();switchIncomeTab('inc-dashboard',null)">
+        <div class="home-icon-wrap" style="background:#fff3e0">📈</div>
+        <div class="home-icon-label">Dashboard</div>
+      </div>
+
+      <div class="home-icon-card" onclick="switchToIncome();switchIncomeTab('inc-ledger',null)">
+        <div class="home-icon-wrap" style="background:#f3e5f5">📋</div>
+        <div class="home-icon-label">Ledger</div>
+      </div>
+
+      <div class="home-icon-card" onclick="switchToIncome();switchIncomeTab('inc-manage',null)">
+        <div class="home-icon-wrap" style="background:#fff8e1">⚙️</div>
+        <div class="home-icon-label">Manage</div>
+      </div>
+
+    </div>
+
+    <div style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:14px">Account</div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      <div class="home-icon-card" onclick="switchTab('manage',null)">
+        <div class="home-icon-wrap" style="background:#e8eaf6">⚙️</div>
+        <div class="home-icon-label">Manage</div>
+      </div>
+      <div class="home-icon-card" onclick="toggleManualOverlay()">
+        <div class="home-icon-wrap" style="background:#e0f7fa">📖</div>
+        <div class="home-icon-label">Help</div>
+      </div>
+      <div class="home-icon-card" onclick="openReferralPanel()">
+        <div class="home-icon-wrap" style="background:#fbe9e7">🔗</div>
+        <div class="home-icon-label">Referral</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- VERSION FOOTER -->
+  <div style="text-align:center;padding:0 0 30px;font-size:.68rem;
+    color:var(--muted);font-family:'DM Mono',monospace">
+    My Expense Ledger &nbsp;·&nbsp; v<span id="home-ver">2.4.1</span>
+  </div>
+
+</div>
+
+<div class="panel" id="panel-import">
   <div class="section-title">Import Monthly Data</div>
   <div class="import-layout">
 
@@ -13236,8 +13438,8 @@ function _resumeSession(uid, name, phone) {
         var savedIncTab = localStorage.getItem('expense_active_inc_tab');
         if (savedIncTab) switchIncomeTab(savedIncTab, null);
       } else {
-        var savedTab = localStorage.getItem('expense_active_tab');
-        if (savedTab) switchTab(savedTab, null);
+        var savedTab = localStorage.getItem('expense_active_tab') || 'home';
+        switchTab(savedTab, null);
       }
     }, 50);
   }
@@ -14848,7 +15050,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION  = '2.4.3';
+var APP_VERSION  = '2.4.4';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -17468,8 +17670,8 @@ function showGuestUpgradePrompt() {
     _applyGuestMode();
     buildSYMS(); refreshAllCurrencyDropdowns(); updateUserDisplay(); adjustMainPadding();
     _appMode = 'expenses'; applyMode();
-    var savedTab = localStorage.getItem('expense_active_tab');
-    if (savedTab) switchTab(savedTab, null);
+    var savedTab = localStorage.getItem('expense_active_tab') || 'home';
+    switchTab(savedTab, null);
   }, 200);
 })();
 
@@ -17915,6 +18117,48 @@ try {
 } catch(e) { /* iframe/local file — ignore */ }
 
 syncInit();
+
+
+
+// ── HOME SCREEN ───────────────────────────────────────────────
+function renderHomeScreen() {
+  var nameEl = document.getElementById('home-username');
+  if (nameEl) {
+    var n = (typeof _userName !== 'undefined' && _userName) ? _userName : 'there';
+    nameEl.textContent = 'Hi, ' + n + '!';
+  }
+  var avEl = document.getElementById('home-avatar-circle');
+  if (avEl) {
+    var uid = (typeof _userId !== 'undefined' && _userId) ? _userId : 'default';
+    var av = localStorage.getItem('expense_user_avatar_'+uid) || '\u{1F60A}';
+    avEl.textContent = av;
+  }
+  try {
+    var uid2 = (typeof _userId !== 'undefined' && _userId) ? _userId : 'default';
+    var expLedger = JSON.parse(localStorage.getItem('expense_ledger_'+uid2) || '[]');
+    var incLedger = JSON.parse(localStorage.getItem('income_ledger_'+uid2) || '[]');
+    var expCount = expLedger.length, incCount = incLedger.length;
+    var totalEl = document.getElementById('home-total-entries');
+    var expEl   = document.getElementById('home-exp-count');
+    var incEl   = document.getElementById('home-inc-count');
+    if (totalEl) totalEl.textContent = (expCount + incCount).toLocaleString();
+    if (expEl)   expEl.textContent   = expCount.toLocaleString();
+    if (incEl)   incEl.textContent   = incCount.toLocaleString();
+  } catch(e) {}
+  var verEl = document.getElementById('home-ver');
+  if (verEl && typeof APP_VERSION !== 'undefined') verEl.textContent = APP_VERSION;
+}
+
+var _origSwitchTab = switchTab;
+switchTab = function(name, btn) {
+  _origSwitchTab(name, btn);
+  if (name === 'home') { setTimeout(renderHomeScreen, 100); }
+};
+
+setTimeout(function() {
+  var savedTab = localStorage.getItem('expense_active_tab') || 'home';
+  if (savedTab === 'home') renderHomeScreen();
+}, 500);
 
 </script>
 
