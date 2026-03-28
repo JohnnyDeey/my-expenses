@@ -81,9 +81,35 @@ body.app-ready{background:var(--paper)!important;}
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
+
+    // Unregister ALL old service workers (especially old blob-URL ones)
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      regs.forEach(function(reg) {
+        // If it's not our sw.js, unregister it
+        if (reg.active && reg.active.scriptURL &&
+            !reg.active.scriptURL.endsWith('/sw.js')) {
+          reg.unregister();
+          console.log('Unregistered old SW:', reg.active.scriptURL);
+        }
+      });
+    });
+
+    // Clear all old caches except current version
+    if ('caches' in window) {
+      caches.keys().then(function(keys) {
+        keys.forEach(function(key) {
+          if (!key.startsWith('mel-v2.4.1')) {
+            caches.delete(key);
+            console.log('Deleted old cache:', key);
+          }
+        });
+      });
+    }
+
     // Register external sw.js — works on HTTPS/Vercel (blob URLs are blocked)
     navigator.serviceWorker.register('/sw.js').then(function(reg) {
       window._swReg = reg;
+      console.log('SW registered:', reg.scope);
     }).catch(function(e){ console.log('SW registration failed:', e); });
 
     // Listen for messages from SW
@@ -14717,7 +14743,7 @@ var PRIVACY_VER  = '2026-03-25'; // bump to force all users to re-sign privacy
 // Leave as '' to never force. Example: '2.5.0' forces anyone below that to update.
 var FORCE_UPDATE_AFTER = '';
 var TOUR_VER     = '2026-03-23'; // bump ONLY when new slides are added to the tour
-var APP_VERSION  = '2.4.3';
+var APP_VERSION  = '2.4.1';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
