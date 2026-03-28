@@ -52,8 +52,8 @@ body.app-ready{background:var(--paper)!important;}
 <!-- PWA: inline manifest with base64 icon — works on desktop Chrome + Android -->
 <script>
 (function(){
-  var icon192 = '/my-expenses/icon-192.png';
-  var icon512 = '/my-expenses/icon-512.png';
+  var icon192 = '/icon-192.png';
+  var icon512 = '/icon-512.png';
 
   // Apple touch icon
   var al = document.createElement('link');
@@ -72,7 +72,7 @@ body.app-ready{background:var(--paper)!important;}
 
   // Manifest — reference external manifest.json for proper Android app drawer install
   var ml = document.createElement('link');
-  ml.rel = 'manifest'; ml.href = '/my-expenses/manifest.json';
+  ml.rel = 'manifest'; ml.href = '/manifest.json';
   document.head.appendChild(ml);
 })();
 </script>
@@ -15304,7 +15304,7 @@ var HELP_DATA = {
     title: '🔗 Referral Programme',
     steps: [
       'Tap the 🔗 link icon beside your username in the header to open your referral panel.',
-      'Your unique referral link is tied to your username — e.g. https://johnnydeey.github.io/my-expenses/?ref=JDS79.',
+      'Your unique referral link is tied to your username — e.g. https://my-expenses.vercel.app/?ref=JDS79.',
       'Tap COPY LINK to copy it to your clipboard, or SHARE to send it via WhatsApp, email, or any app.',
       'When someone registers using your link, it counts as one referral.',
       'You can see your total referral count in the panel — but you will never see the names or details of who used your link.',
@@ -17540,7 +17540,7 @@ document.addEventListener('click', function(e) {
 
 // ================================
 // ================================
-var APP_BASE_URL = 'https://johnnydeey.github.io/my-expenses/';
+var APP_BASE_URL = 'https://my-expenses.vercel.app/';
 
 function getReferralCode() {
   // Referral code = username (e.g. JDS79)
