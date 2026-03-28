@@ -1071,6 +1071,80 @@ var _notePadActive = false; // global — shared with Ctrl+Enter handlers
   --sage:#4a7c59; --slate:#3d5a73; --dollar:#8b5e3c;
   --muted:#8a7d6b; --border:#d4c9b0; --shadow:rgba(26,20,16,0.12);
 }
+
+/* ── LIGHT THEME (PalmPay-inspired) ─────────────────────────── */
+body.light-theme {
+  --ink:#1a1a2e; --paper:#f0f2f8; --paper2:#e4e8f4;
+  --gold:#6c3fc5; --gold2:#8b5cf6; --rust:#e11d48;
+  --sage:#059669; --slate:#2563eb; --dollar:#d97706;
+  --muted:#6b7280; --border:#e2e8f0; --shadow:rgba(99,102,241,0.1);
+}
+body.light-theme { background:#f0f2f8 !important; color:#1a1a2e; }
+body.light-theme.app-ready { background:#f0f2f8 !important; }
+body.light-theme .panel.active { background:#f0f2f8; }
+body.light-theme header { background:#fff; color:#1a1a2e; border-bottom:1px solid #e2e8f0; box-shadow:0 2px 12px rgba(99,102,241,0.08); }
+body.light-theme header h1 { color:#1a1a2e; }
+body.light-theme header h1 span { color:#6c3fc5; }
+body.light-theme .header-context-label { color:#6c3fc5; }
+body.light-theme nav.tabs { background:#fff; border-bottom:2px solid #e2e8f0; }
+body.light-theme nav.tabs button { color:#6b7280; }
+body.light-theme nav.tabs button:hover { color:#6c3fc5; background:rgba(108,63,197,0.06); }
+body.light-theme nav.tabs button.active { color:#6c3fc5; border-bottom-color:#6c3fc5; }
+body.light-theme #sticky-topbar { background:#fff; }
+body.light-theme main { background:#f0f2f8; }
+body.light-theme .card {
+  background:#fff;
+  border:none;
+  border-radius:16px !important;
+  box-shadow:0 2px 16px rgba(99,102,241,0.10);
+  padding:20px;
+}
+body.light-theme .btn-primary { background:#6c3fc5; color:#fff; box-shadow:0 4px 12px rgba(108,63,197,0.3); border-radius:10px; }
+body.light-theme .btn-primary:hover { background:#5b32a8; transform:translateY(-1px); box-shadow:0 6px 16px rgba(108,63,197,0.4); }
+body.light-theme .btn-ghost { background:#f0f2f8; color:#6b7280; border:1.5px solid #e2e8f0; border-radius:10px; }
+body.light-theme .btn-ghost:hover { border-color:#6c3fc5; color:#6c3fc5; background:#f5f3ff; }
+body.light-theme .section-title { border-bottom:2px solid #e2e8f0; color:#1a1a2e; }
+body.light-theme .month-btn { background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; color:#6b7280; }
+body.light-theme .month-btn:hover { border-color:#6c3fc5; color:#6c3fc5; background:#f5f3ff; }
+body.light-theme .month-btn.selected { background:#6c3fc5; color:#fff; border-color:#6c3fc5; }
+body.light-theme .month-btn.has-data { border-color:#8b5cf6; color:#6c3fc5; }
+body.light-theme #hdr-user-bar { background:#fff; border-bottom:1px solid #e2e8f0; }
+body.light-theme #hdr-user-bar-name { color:#6c3fc5 !important; }
+body.light-theme #hdr-user-bar-dot { background:#22c55e !important; }
+body.light-theme #hdr-user-bar-status { color:#6b7280 !important; }
+body.light-theme [style*="background:var(--ink)"] { background:#fff !important; color:#1a1a2e !important; }
+body.light-theme .hdr-pill { border-radius:20px !important; }
+body.light-theme .tab-icon { font-size:1.1rem; }
+body.light-theme input, body.light-theme select, body.light-theme textarea {
+  background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; color:#1a1a2e;
+}
+body.light-theme input:focus, body.light-theme select:focus, body.light-theme textarea:focus {
+  border-color:#6c3fc5; box-shadow:0 0 0 3px rgba(108,63,197,0.1);
+}
+body.light-theme .day-card { background:#fff; border-radius:12px; border:none; box-shadow:0 2px 8px rgba(99,102,241,0.08); }
+body.light-theme thead tr { background:#6c3fc5 !important; }
+body.light-theme thead tr th { color:#fff !important; }
+body.light-theme .insight-card { background:#fff; border-radius:16px; border:none; box-shadow:0 2px 12px rgba(99,102,241,0.08); }
+body.light-theme .budget-row { background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(99,102,241,0.06); border:none; }
+body.light-theme .progress-bar-fill { background:linear-gradient(90deg,#6c3fc5,#8b5cf6); }
+body.light-theme .cat-badge { border-radius:20px !important; }
+/* Theme toggle button */
+#theme-toggle-btn {
+  background:none;
+  border:1px solid rgba(200,150,46,0.35);
+  border-radius:4px;
+  color:var(--gold);
+  cursor:pointer;
+  padding:5px 10px;
+  font-size:1rem;
+  line-height:1;
+  transition:all .2s;
+}
+body.light-theme #theme-toggle-btn {
+  border-color:rgba(108,63,197,0.35);
+  color:#6c3fc5;
+}
+
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:#1a1410;color:var(--ink);min-height:100vh;}
 body.app-ready{background:var(--paper);}
@@ -1705,6 +1779,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <button onclick="openHelp()" title="Help &amp; Support [F1]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#10067;</button>
       <button onclick="toggleManualOverlay()" id="hdr-manual-btn" title="User Manual [F3]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#128218;</button>
     </div>
+    <button id="theme-toggle-btn" onclick="toggleAppTheme()" title="Switch theme">🌙</button>
     <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" title="Show/Hide header" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128065;</button>
   </div>
   <!-- Row 2: switch · mode label · logout (injected by JS) -->
@@ -14743,7 +14818,37 @@ var PRIVACY_VER  = '2026-03-25'; // bump to force all users to re-sign privacy
 // Leave as '' to never force. Example: '2.5.0' forces anyone below that to update.
 var FORCE_UPDATE_AFTER = '';
 var TOUR_VER     = '2026-03-23'; // bump ONLY when new slides are added to the tour
-var APP_VERSION  = '2.4.2';
+// ── THEME TOGGLE ──────────────────────────────────────────────────
+var _THEME_KEY = 'mel_app_theme';
+function toggleAppTheme() {
+  var isLight = document.body.classList.contains('light-theme');
+  if (isLight) {
+    document.body.classList.remove('light-theme');
+    localStorage.setItem(_THEME_KEY, 'dark');
+    document.getElementById('theme-toggle-btn').textContent = '🌙';
+    document.querySelector('meta[name="theme-color"]').setAttribute('content','#1a1410');
+  } else {
+    document.body.classList.add('light-theme');
+    localStorage.setItem(_THEME_KEY, 'light');
+    document.getElementById('theme-toggle-btn').textContent = '🌑';
+    document.querySelector('meta[name="theme-color"]').setAttribute('content','#f0f2f8');
+  }
+}
+// Apply saved theme on load
+(function(){
+  var saved = localStorage.getItem('mel_app_theme');
+  if (saved === 'light') {
+    document.body.classList.add('light-theme');
+    document.addEventListener('DOMContentLoaded', function() {
+      var btn = document.getElementById('theme-toggle-btn');
+      if (btn) btn.textContent = '🌑';
+      var mc = document.querySelector('meta[name="theme-color"]');
+      if (mc) mc.setAttribute('content','#f0f2f8');
+    });
+  }
+})();
+
+var APP_VERSION  = '2.4.1';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
