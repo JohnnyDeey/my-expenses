@@ -113,16 +113,6 @@ if ('serviceWorker' in navigator) {
     }).catch(function(e){ console.log('SW registration failed:', e); });
 
     // Listen for messages from SW
-    navigator.serviceWorker.addEventListener('message', function(e) {
-      if (e.data && e.data.type === 'UPDATE_STATUS') {
-        var remoteVer = e.data.version;
-        var localVer  = typeof APP_VERSION !== 'undefined' ? APP_VERSION : null;
-        if (remoteVer && localVer && remoteVer !== localVer) {
-          _showUpdateBanner(remoteVer);
-        }
-      }
-    });
-
     // Check for update after app is stable (30 seconds after load)
     setTimeout(function() { _checkForUpdate(); }, 30000);
     // Then check every 30 minutes
@@ -146,9 +136,19 @@ function _checkForceUpdate() {
 }
 
 function _checkForUpdate() {
-  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage('CHECK_UPDATE');
-  }
+  // Simple direct fetch — no service worker needed
+  fetch('/?_v=' + Date.now(), { cache: 'no-store' })
+    .then(function(resp) { return resp.text(); })
+    .then(function(html) {
+      var m = html.match(/var APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+      if (!m) return;
+      var remoteVer = m[1];
+      var localVer  = typeof APP_VERSION !== 'undefined' ? APP_VERSION : null;
+      if (remoteVer && localVer && remoteVer !== localVer) {
+        _showUpdateBanner(remoteVer);
+      }
+    })
+    .catch(function() {});
 }
 
 function _showUpdateBanner(newVer) {
