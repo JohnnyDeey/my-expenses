@@ -81,7 +81,7 @@ body.app-ready{background:var(--paper)!important;}
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    var CACHE_VER = 'mel-v__APP_VER__';
+    var CACHE_VER = 'mel-v' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : '2.4.0');
     var sw = [
       "var CACHE = '" + CACHE_VER + "';",
       "var APP_URL = '" + location.pathname + "';",
@@ -121,7 +121,7 @@ if ('serviceWorker' in navigator) {
       "      .then(function(resp){ return resp.text(); })",
       "      .then(function(html) {",
       "        var m = html.match(/APP_VERSION\s*=\s*([\x27\x22])([^\x27\x22]+)\\1/);",
-      "        var remoteVer = m ? m[1] : null;",
+      "        var remoteVer = m ? m[2] : null;",
       "        e.source.postMessage({ type: 'UPDATE_STATUS', version: remoteVer, cache: CACHE_VER });",
       "      }).catch(function(){});",
       "  }",
@@ -14764,7 +14764,7 @@ var PRIVACY_VER  = '2026-03-25'; // bump to force all users to re-sign privacy
 // Leave as '' to never force. Example: '2.5.0' forces anyone below that to update.
 var FORCE_UPDATE_AFTER = '';
 var TOUR_VER     = '2026-03-23'; // bump ONLY when new slides are added to the tour
-var APP_VERSION  = '2.4.0';
+var APP_VERSION  = '2.4.1';
 var APP_VERSION_KEY = 'expense_app_version';
 
 function _tourKey() {
