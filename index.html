@@ -81,57 +81,10 @@ body.app-ready{background:var(--paper)!important;}
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    var CACHE_VER = 'mel-v' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : '2.4.0');
-    var sw = [
-      "var CACHE = '" + CACHE_VER + "';",
-      "var APP_URL = '" + location.pathname + "';",
-      "self.addEventListener('install', function(e) {",
-      "  e.waitUntil(caches.open(CACHE).then(function(c){ return c.add(APP_URL); }));",
-      "  self.skipWaiting();",
-      "});",
-      "self.addEventListener('activate', function(e) {",
-      "  e.waitUntil(caches.keys().then(function(keys){",
-      "    return Promise.all(keys.filter(function(k){ return k !== CACHE; }).map(function(k){ return caches.delete(k); }));",
-      "  }));",
-      "  clients.claim();",
-      "});",
-      "self.addEventListener('fetch', function(e) {",
-      "  if (e.request.method !== 'GET') return;",
-      "  var url = new URL(e.request.url);",
-      "  if (url.pathname === APP_URL || url.pathname.endsWith('index.html')) {",
-      "    e.respondWith(",
-      "      caches.open(CACHE).then(function(cache) {",
-      "        return cache.match(e.request).then(function(cached) {",
-      "          var fresh = fetch(e.request).then(function(resp) {",
-      "            if (resp && resp.status === 200) cache.put(e.request, resp.clone());",
-      "            return resp;",
-      "          }).catch(function(){ return cached; });",
-      "          return cached || fresh;",
-      "        });",
-      "      })",
-      "    );",
-      "  } else {",
-      "    e.respondWith(fetch(e.request).catch(function(){ return caches.match(e.request); }));",
-      "  }",
-      "});",
-      "// Notify clients when a new version is cached",
-      "self.addEventListener('message', function(e) {",
-      "  if (e.data === 'CHECK_UPDATE') {",
-      "    fetch(APP_URL + '?_bust=' + Date.now(), {cache:'no-store'})",
-      "      .then(function(resp){ return resp.text(); })",
-      "      .then(function(html) {",
-      "        var m = html.match(/APP_VERSION\s*=\s*([\x27\x22])([^\x27\x22]+)\\1/);",
-      "        var remoteVer = m ? m[2] : null;",
-      "        e.source.postMessage({ type: 'UPDATE_STATUS', version: remoteVer, cache: CACHE_VER });",
-      "      }).catch(function(){});",
-      "  }",
-      "});"
-    ].join('\n');
-    var swb = new Blob([sw], {type:'application/javascript'});
-    var swUrl = URL.createObjectURL(swb);
-    navigator.serviceWorker.register(swUrl).then(function(reg) {
+    // Register external sw.js — works on HTTPS/Vercel (blob URLs are blocked)
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
       window._swReg = reg;
-    }).catch(function(e){ console.log('SW:', e); });
+    }).catch(function(e){ console.log('SW registration failed:', e); });
 
     // Listen for messages from SW
     navigator.serviceWorker.addEventListener('message', function(e) {
@@ -14764,7 +14717,7 @@ var PRIVACY_VER  = '2026-03-25'; // bump to force all users to re-sign privacy
 // Leave as '' to never force. Example: '2.5.0' forces anyone below that to update.
 var FORCE_UPDATE_AFTER = '';
 var TOUR_VER     = '2026-03-23'; // bump ONLY when new slides are added to the tour
-var APP_VERSION  = '2.4.2';
+var APP_VERSION  = '2.4.1';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
