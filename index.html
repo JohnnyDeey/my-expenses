@@ -120,7 +120,7 @@ if ('serviceWorker' in navigator) {
       "    fetch(APP_URL + '?_bust=' + Date.now(), {cache:'no-store'})",
       "      .then(function(resp){ return resp.text(); })",
       "      .then(function(html) {",
-      "        var m = html.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);",
+      "        var m = html.match(/APP_VERSION\s*=\s*([\x27\x22])([^\x27\x22]+)\\1/);",
       "        var remoteVer = m ? m[1] : null;",
       "        e.source.postMessage({ type: 'UPDATE_STATUS', version: remoteVer, cache: CACHE_VER });",
       "      }).catch(function(){});",
@@ -15304,7 +15304,7 @@ var HELP_DATA = {
     title: '🔗 Referral Programme',
     steps: [
       'Tap the 🔗 link icon beside your username in the header to open your referral panel.',
-      'Your unique referral link is tied to your username — e.g. https://my-expenses.vercel.app/?ref=JDS79.',
+      'Your unique referral link is tied to your username — e.g. https://my-expenses-neon.vercel.app/?ref=JDS79.',
       'Tap COPY LINK to copy it to your clipboard, or SHARE to send it via WhatsApp, email, or any app.',
       'When someone registers using your link, it counts as one referral.',
       'You can see your total referral count in the panel — but you will never see the names or details of who used your link.',
@@ -17540,7 +17540,7 @@ document.addEventListener('click', function(e) {
 
 // ================================
 // ================================
-var APP_BASE_URL = 'https://my-expenses.vercel.app/';
+var APP_BASE_URL = 'https://my-expenses-neon.vercel.app/';
 
 function getReferralCode() {
   // Referral code = username (e.g. JDS79)
