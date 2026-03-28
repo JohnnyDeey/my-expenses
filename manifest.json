@@ -1,11 +1,11 @@
 {
   "name": "My Expense Ledger",
   "short_name": "Expense Ledger",
-  "description": "Personal finance tracker — expenses, income, budgets and reports.",
+  "description": "Personal finance tracker \u2014 expenses, income, budgets and reports.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#1a1410",
   "theme_color": "#1a1410",
   "icons": [
