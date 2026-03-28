@@ -2399,7 +2399,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- -- App Version & Copyright -- -->
   <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.3.2</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;" id="app-version-display">Version 2.4.1</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
   </div>
@@ -2802,7 +2802,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- -- App Version & Copyright -- -->
   <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;">Version 2.3.2</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;" id="app-version-display">Version 2.4.1</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
   </div>
@@ -3384,7 +3384,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
     <!-- Accept button at the very bottom of the scroll area -->
     <div id="privacy-accept-wrap" style="padding:20px 0 8px;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; MARCH 2026 &mdash; v2.3.2</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; MARCH 2026 &mdash; v2.4.1</div>
       <button onclick="acceptPrivacy()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.88rem;letter-spacing:2px;font-weight:900;color:var(--ink);cursor:pointer;">&#10003; I ACCEPT &mdash; CONTINUE</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#4a3e30;text-align:center;margin-top:8px;">By tapping Accept you confirm you have read and agree to the above terms.</div>
     </div>
@@ -14764,7 +14764,15 @@ var PRIVACY_VER  = '2026-03-25'; // bump to force all users to re-sign privacy
 // Leave as '' to never force. Example: '2.5.0' forces anyone below that to update.
 var FORCE_UPDATE_AFTER = '';
 var TOUR_VER     = '2026-03-23'; // bump ONLY when new slides are added to the tour
-var APP_VERSION  = '2.4.1';
+var APP_VERSION  = '2.4.2';
+// Dynamically update all version displays
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('#app-version-display').forEach(function(el) {
+    el.textContent = 'Version ' + APP_VERSION;
+  });
+  var pvl = document.getElementById('privacy-version-label');
+  if (pvl) pvl.textContent = 'MY EXPENSE LEDGER — MARCH 2026 — v' + APP_VERSION;
+});
 var APP_VERSION_KEY = 'expense_app_version';
 
 function _tourKey() {
