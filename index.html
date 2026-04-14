@@ -7646,7 +7646,9 @@ function renderLedger(){
     // Description — autofit
     var descTd = document.createElement('td');
     descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;';
-    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
+    var _ledDateFmt = item.date ? item.date.split('-').reverse().join('-') : '';
+    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+(_ledDateFmt ? _ledDateFmt+' | ':'')+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
+    // descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>'; This is the latest modification-1
 
     // Amount — autofit
     var amtTd = document.createElement('td');
@@ -11902,7 +11904,9 @@ function renderIncomeLedger() {
     // Description column — autofit
     var descTd = document.createElement('td');
     descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;';
-    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
+    var _incDateFmt = item.date ? item.date.split('-').reverse().join('-') : '';
+    descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+(_incDateFmt ? _incDateFmt+' | ':'')+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
+    //descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>'; This is the latest modification-2
 
     // Amount column - LEFT aligned to match expenses
     var amtTd = document.createElement('td');
