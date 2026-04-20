@@ -442,7 +442,8 @@ function syncLoadSDK(callback) {
   if (typeof firebase !== 'undefined' && firebase.firestore) { callback(); return; }
   var sdks = [
     'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js'
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js',
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'
   ];
   var i = 0;
   function next() {
