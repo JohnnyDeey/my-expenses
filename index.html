@@ -442,8 +442,7 @@ function syncLoadSDK(callback) {
   if (typeof firebase !== 'undefined' && firebase.firestore) { callback(); return; }
   var sdks = [
     'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js'
   ];
   var i = 0;
   function next() {
@@ -12884,10 +12883,6 @@ function submitPinLogin() {
   }
   // Correct PIN — set globals and enter app
   _loginAttempts = 0;
-  // After successful PIN verification, sign into Firebase anonymously
-  firebase.auth().signInAnonymously().catch(function(e) {
-    console.log('Anon auth failed:', e);
-  });
   _pinBuffer = '';
   updatePinDots();
   // T&C already saved via acceptPrivacy() — nothing extra needed here
