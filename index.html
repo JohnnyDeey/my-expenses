@@ -1170,7 +1170,15 @@ header h1 span{color:var(--gold2);}
 .header-meta{display:none;}
 
 /* TABS */
-nav.tabs{background:var(--ink);display:flex;padding:0 40px;border-bottom:1px solid #2e2620;}
+.bline{display:block;width:22px;height:2px;background:var(--gold2);border-radius:2px;}
+.bmenu-item{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;color:#a89880;font-family:'DM Mono',monospace;font-size:0.8rem;letter-spacing:0.5px;text-transform:uppercase;padding:14px 24px;cursor:pointer;transition:all 0.15s;text-align:left;}
+.bmenu-item:hover{color:var(--paper);background:rgba(255,255,255,0.04);}
+.bmenu-item.active{color:var(--gold2);background:rgba(200,150,46,0.08);border-left:3px solid var(--gold);}
+.bmenu-item span{font-size:1rem;width:20px;text-align:center;}
+body.light-theme .bmenu-item{color:#6b7280;}
+body.light-theme .bmenu-item.active{color:#6c3fc5;background:rgba(108,63,197,0.06);border-left-color:#6c3fc5;}
+body.light-theme #burger-sidebar{background:#fff;}
+nav.tabs{display:none;}
 nav.tabs button{font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;background:none;border:none;color:#6b5e50;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;}
 nav.tabs button:hover{color:var(--paper);}
 nav.tabs button.active{color:var(--gold2);border-bottom-color:var(--gold);}
@@ -1784,28 +1792,59 @@ input[type="password"]::-ms-clear { display:none !important; }
     <button id="theme-toggle-btn" onclick="toggleAppTheme()" title="Switch theme">🌙</button>
     <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" title="Show/Hide header" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128065;</button>
   </div>
-  <!-- Row 2: switch · mode label · logout (injected by JS) -->
+  <!-- Row 2: burger · switch · mode label · logout (injected by JS) -->
   <div id="hdr-user-bar-btns" style="display:flex;gap:6px;align-items:center;">
+    <button id="burger-btn" onclick="toggleBurgerMenu()" aria-label="Open menu" style="background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;flex-direction:column;gap:4px;justify-content:center;">
+      <span class="bline"></span><span class="bline"></span><span class="bline"></span>
+    </button>
     <button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128275;</button>
   </div>
 </div>
-<nav class="tabs" id="main-nav" style="justify-content:center;">
-  <button class="active" onclick="switchTab('import',this)"><span class="tab-icon">&#128221;</span><span class="tab-label"> Import</span></button>
-  <button onclick="switchTab('categorize',this)"><span class="tab-icon">&#128278;</span><span class="tab-label"> Categorize</span></button>
-  <button onclick="switchTab('daily',this)"><span class="tab-icon">&#128197;</span><span class="tab-label"> Daily</span></button>
-  <button onclick="switchTab('dashboard',this)"><span class="tab-icon">&#128200;</span><span class="tab-label"> Dashboard</span></button>
-  <button onclick="switchTab('ledger',this)"><span class="tab-icon">&#128220;</span><span class="tab-label"> Ledger</span></button>
-  <button onclick="switchTab('budget',this)"><span class="tab-icon">&#127919;</span><span class="tab-label"> Budget</span></button>
-  <button onclick="switchTab('manage',this)"><span class="tab-icon">&#9881;&#65039;</span><span class="tab-label"> Manage</span></button>
+<!-- Sidebar backdrop -->
+<div id="burger-backdrop" onclick="closeBurgerMenu()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1100;"></div>
+
+<!-- Sidebar drawer -->
+<div id="burger-sidebar" style="display:none;position:fixed;top:0;left:0;width:240px;height:100%;background:var(--ink);z-index:1101;box-shadow:4px 0 24px rgba(0,0,0,0.4);overflow-y:auto;flex-direction:column;padding:24px 0 40px;">
+  <div style="padding:0 20px 20px;border-bottom:1px solid #2e2620;display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--gold2);">Menu</span>
+    <button onclick="closeBurgerMenu()" style="background:none;border:none;color:#6b5e50;cursor:pointer;font-size:1.2rem;line-height:1;">&#10005;</button>
+  </div>
+  <div id="burger-exp-items">
+    <button class="bmenu-item active" id="bmi-import"     onclick="burgerSwitch('import','Import')">     <span>&#128221;</span> Import</button>
+    <button class="bmenu-item"        id="bmi-categorize" onclick="burgerSwitch('categorize','Categorize')"><span>&#128278;</span> Categorize</button>
+    <button class="bmenu-item"        id="bmi-daily"      onclick="burgerSwitch('daily','Daily')">       <span>&#128197;</span> Daily</button>
+    <button class="bmenu-item"        id="bmi-dashboard"  onclick="burgerSwitch('dashboard','Dashboard')"><span>&#128200;</span> Dashboard</button>
+    <button class="bmenu-item"        id="bmi-ledger"     onclick="burgerSwitch('ledger','Ledger')">     <span>&#128220;</span> Ledger</button>
+    <button class="bmenu-item"        id="bmi-budget"     onclick="burgerSwitch('budget','Budget')">     <span>&#127919;</span> Budget</button>
+    <button class="bmenu-item"        id="bmi-manage"     onclick="burgerSwitch('manage','Manage')">     <span>&#9881;&#65039;</span> Manage</button>
+  </div>
+  <div id="burger-inc-items" style="display:none;">
+    <button class="bmenu-item active" id="bmi-inc-import"     onclick="burgerSwitchInc('inc-import','Import')">     <span>&#128221;</span> Import</button>
+    <button class="bmenu-item"        id="bmi-inc-categorize" onclick="burgerSwitchInc('inc-categorize','Categorize')"><span>&#128278;</span> Categorize</button>
+    <button class="bmenu-item"        id="bmi-inc-monthly"    onclick="burgerSwitchInc('inc-monthly','Monthly')">    <span>&#128197;</span> Monthly</button>
+    <button class="bmenu-item"        id="bmi-inc-dashboard"  onclick="burgerSwitchInc('inc-dashboard','Dashboard')"><span>&#128200;</span> Dashboard</button>
+    <button class="bmenu-item"        id="bmi-inc-ledger"     onclick="burgerSwitchInc('inc-ledger','Ledger')">     <span>&#128220;</span> Ledger</button>
+    <button class="bmenu-item"        id="bmi-inc-manage"     onclick="burgerSwitchInc('inc-manage','Manage')">     <span>&#9881;&#65039;</span> Manage</button>
+  </div>
+</div>
+
+<!-- Hidden navs kept for JS compatibility -->
+<nav class="tabs" id="main-nav" style="display:none;">
+  <button class="active" onclick="switchTab('import',this)"></button>
+  <button onclick="switchTab('categorize',this)"></button>
+  <button onclick="switchTab('daily',this)"></button>
+  <button onclick="switchTab('dashboard',this)"></button>
+  <button onclick="switchTab('ledger',this)"></button>
+  <button onclick="switchTab('budget',this)"></button>
+  <button onclick="switchTab('manage',this)"></button>
 </nav>
-<!-- Income nav -->
-<nav class="tabs" id="income-nav" style="display:none;justify-content:center;">
-  <button class="active" onclick="switchIncomeTab('inc-import',this)"><span class="tab-icon">&#128221;</span><span class="tab-label"> Import</span></button>
-  <button onclick="switchIncomeTab('inc-categorize',this)"><span class="tab-icon">&#128278;</span><span class="tab-label"> Categorize</span></button>
-  <button onclick="switchIncomeTab('inc-monthly',this)"><span class="tab-icon">&#128197;</span><span class="tab-label"> Monthly</span></button>
-  <button onclick="switchIncomeTab('inc-dashboard',this)"><span class="tab-icon">&#128200;</span><span class="tab-label"> Dashboard</span></button>
-  <button onclick="switchIncomeTab('inc-ledger',this)"><span class="tab-icon">&#128220;</span><span class="tab-label"> Ledger</span></button>
-  <button onclick="switchIncomeTab('inc-manage',this)"><span class="tab-icon">&#9881;&#65039;</span><span class="tab-label"> Manage</span></button>
+<nav class="tabs" id="income-nav" style="display:none;">
+  <button class="active" onclick="switchIncomeTab('inc-import',this)"></button>
+  <button onclick="switchIncomeTab('inc-categorize',this)"></button>
+  <button onclick="switchIncomeTab('inc-monthly',this)"></button>
+  <button onclick="switchIncomeTab('inc-dashboard',this)"></button>
+  <button onclick="switchIncomeTab('inc-ledger',this)"></button>
+  <button onclick="switchIncomeTab('inc-manage',this)"></button>
 </nav>
 </div><!-- end fixed-topbar -->
 
@@ -8450,6 +8489,35 @@ function fmtAmt(amount,currency){return(SYMS[currency]||'')+fmtNum(Math.abs(amou
 function pad(n){return String(n).padStart(2,'0');}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2800);}
 
+function toggleBurgerMenu(){
+  var s=document.getElementById('burger-sidebar');
+  var b=document.getElementById('burger-backdrop');
+  var open=s.style.display==='flex';
+  s.style.display=open?'none':'flex';
+  b.style.display=open?'none':'block';
+}
+function closeBurgerMenu(){
+  document.getElementById('burger-sidebar').style.display='none';
+  document.getElementById('burger-backdrop').style.display='none';
+}
+function burgerSwitch(name,label){
+  document.querySelectorAll('#burger-exp-items .bmenu-item').forEach(function(b){b.classList.remove('active');});
+  var mi=document.getElementById('bmi-'+name); if(mi) mi.classList.add('active');
+  var btn=document.querySelector("#main-nav button[onclick*=\"'"+name+"'\"]");
+  switchTab(name,btn);
+  closeBurgerMenu();
+}
+function burgerSwitchInc(name,label){
+  document.querySelectorAll('#burger-inc-items .bmenu-item').forEach(function(b){b.classList.remove('active');});
+  var mi=document.getElementById('bmi-'+name); if(mi) mi.classList.add('active');
+  var btn=document.querySelector("#income-nav button[onclick*=\"'"+name+"'\"]");
+  switchIncomeTab(name,btn);
+  closeBurgerMenu();
+}
+function syncBurgerMode(mode){
+  document.getElementById('burger-exp-items').style.display=mode==='expenses'?'block':'none';
+  document.getElementById('burger-inc-items').style.display=mode==='income'?'block':'none';
+}
 function switchTab(name,btn){
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('nav.tabs button').forEach(function(b){b.classList.remove('active');});
@@ -10254,6 +10322,7 @@ function applyMode() {
     // Nav: hide expense tabs, show income tabs
     if (mainNav) mainNav.style.display = 'none';
     if (incNav)  incNav.style.display  = '';
+    if (typeof syncBurgerMode === 'function') syncBurgerMode('income');
     // Panels: show income, hide expense
     if (incMain) incMain.style.display = 'block';
     document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = 'none'; });
@@ -10279,6 +10348,7 @@ function applyMode() {
     // Nav: show expense tabs, hide income tabs
     if (mainNav) mainNav.style.display = '';
     if (incNav)  incNav.style.display  = 'none';
+    if (typeof syncBurgerMode === 'function') syncBurgerMode('expenses');
     // Panels: show expense, hide income
     if (incMain) incMain.style.display = 'none';
     document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = ''; });
@@ -14606,11 +14676,13 @@ function updateUserDisplay() {
       var mlClr = isInc ? '#8dd4a8' : 'var(--gold2)';
       var mlTxt = isInc ? '&#128176;' : '&#128184;';
       btns.innerHTML =
+        '<button id="burger-btn" onclick="toggleBurgerMenu()" aria-label="Open menu" style="background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;flex-direction:column;gap:4px;justify-content:center;"><span class=\"bline\"></span><span class=\"bline\"></span><span class=\"bline\"></span></button>' +
         '<button id="mode-switch-btn" onclick="showModeSwitchPrompt()" title="Switch module" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.6);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128260;</button>' +
         '<span id="hdr-mode-label" style="font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;padding:5px 12px;border-radius:4px;background:'+mlBg+';color:'+mlClr+';white-space:nowrap;flex:1;text-align:center;">'+mlTxt+'</span>' +
         '<button onclick="logOut()" title="Log out  [L]" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128275;</button>';
     } else {
       btns.innerHTML =
+        '<button id="burger-btn" onclick="toggleBurgerMenu()" aria-label="Open menu" style="background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;flex-direction:column;gap:4px;justify-content:center;"><span class=\"bline\"></span><span class=\"bline\"></span><span class=\"bline\"></span></button>' +
         '<button onclick="showPinScreen();showLoginStep();" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;" title="Sign in">&#128275;</button>';
     }
   }
