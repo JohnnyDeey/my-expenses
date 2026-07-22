@@ -1278,7 +1278,18 @@ tbody td{padding:9px 12px;vertical-align:middle;}
 .dash-section-label::after{content:'';flex:1;height:1px;background:var(--border);}
 
 /* Stat cards */
-.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:32px;}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+.stats-row{position:relative;margin-bottom:24px;}
+.stats-carousel{display:flex;align-items:center;gap:8px;}
+.stats-track-wrap{flex:1;overflow:hidden;border-radius:8px;}
+.stats-track{display:flex;transition:transform 0.35s cubic-bezier(.4,0,.2,1);}
+.stat-card{min-width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px 14px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);box-sizing:border-box;animation:fadeSlideUp 0.4s ease both;}
+.stat-card:hover{box-shadow:0 6px 18px rgba(0,0,0,0.10);}
+.stats-dots{display:flex;justify-content:center;gap:6px;margin-top:10px;}
+.stats-dot{width:7px;height:7px;border-radius:50%;background:var(--border);cursor:pointer;transition:background 0.2s;}
+.stats-dot.active{background:var(--gold);}
+.stats-arr{background:none;border:1px solid var(--border);border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:0.75rem;color:var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.stats-arr:hover{background:var(--gold);color:var(--ink);border-color:var(--gold);}
 .stat-card{background:white;border:1px solid var(--border);border-radius:6px;padding:18px 20px;box-shadow:3px 3px 0 var(--shadow);position:relative;overflow:hidden;transition:transform 0.15s;}
 .stat-card:hover{transform:translateY(-2px);}
 .stat-card::after{content:'';position:absolute;top:0;left:0;width:4px;height:100%;}
@@ -6112,26 +6123,113 @@ function renderDailyFlowChart(data, year, month, currency, canvasId, subId) {
   });
 }
 
+function animateCount(el, target, sym, isInt) {
+  var start = 0;
+  var duration = 900;
+  var startTime = null;
+  function step(ts) {
+    if (!startTime) startTime = ts;
+    var progress = Math.min((ts - startTime) / duration, 1);
+    var ease = 1 - Math.pow(1 - progress, 3);
+    var current = isInt ? Math.floor(ease * target) : ease * target;
+    el.textContent = sym + fmtNum(current);
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = sym + fmtNum(target);
+  }
+  requestAnimationFrame(step);
+}
+
 function renderStats(data){
-  var byCur={};
-  data.forEach(function(i){ byCur[i.currency]=(byCur[i.currency]||0)+i.amount; });
-  var items=[
-    {label:'Total Entries',value:data.length,sub:'transactions',cls:'total',sym:'',isCur:false}
-  ];
-  // Add a card for every currency that has data — fully dynamic
-  Object.keys(byCur).sort().forEach(function(c){
-    if (byCur[c] > 0) {
-      items.push({label:'Total '+c,value:byCur[c],sub:c,cls:'stat-cur-'+c.toLowerCase(),sym:SYMS[c]||c,isCur:true});
-    }
+  var cur = _dashCurSelected;
+  var sym = cur ? (SYMS[cur]||cur) : '';
+  var filtered = cur ? data.filter(function(i){return i.currency===cur;}) : data;
+
+  // Total spent
+  var total = filtered.reduce(function(s,i){return s+(i.amount>0?i.amount:0);},0);
+
+  // Monthly average
+  var byMonth = {};
+  filtered.forEach(function(i){
+    if(i.amount<=0) return;
+    var k = i.date.substring(0,7);
+    byMonth[k] = (byMonth[k]||0) + i.amount;
   });
-  document.getElementById('stats-row').innerHTML=items.map(function(s){
-    return '<div class="stat-card '+s.cls+'">'+
-      '<div class="stat-label">'+s.label+'</div>'+
-      '<div class="stat-value">'+(s.isCur ? s.sym+fmtNum(s.value) : s.value)+'</div>'+
-      '<div class="stat-sub">'+s.sub+'</div>'+
+  var months = Object.keys(byMonth);
+  var avgMonth = months.length ? total / months.length : 0;
+
+  // Biggest month
+  var bigMonth = '', bigVal = 0;
+  months.forEach(function(k){
+    if(byMonth[k] > bigVal){ bigVal = byMonth[k]; bigMonth = k; }
+  });
+  var bigMonthLabel = bigMonth ? (MONTHS[parseInt(bigMonth.substring(5,7))-1]+' '+bigMonth.substring(0,4)) : '—';
+
+  // Top category
+  var byCat = {};
+  filtered.forEach(function(i){
+    if(i.amount<=0) return;
+    byCat[i.category] = (byCat[i.category]||0) + i.amount;
+  });
+  var topCat = '', topCatVal = 0;
+  Object.keys(byCat).forEach(function(c){ if(byCat[c]>topCatVal){topCatVal=byCat[c];topCat=c;} });
+
+  var cards = [
+    {icon:'📊', label:'Total Entries', value:data.length, sub: (cur||'All currencies'), isCur:false, sym:''},
+    {icon:'💸', label:'Total Spent', value:total, sub:cur||'All', isCur:true, sym:sym},
+    {icon:'📅', label:'Monthly Avg', value:avgMonth, sub:'per month', isCur:true, sym:sym},
+    {icon:'🔥', label:'Biggest Month', value:bigVal, sub:bigMonthLabel, isCur:true, sym:sym},
+    {icon:'🏷️', label:'Top Category', value:topCatVal, sub:topCat||'—', isCur:true, sym:sym},
+  ];
+
+  var row = document.getElementById('stats-row');
+  var cardsHTML = cards.map(function(c,idx){
+    return '<div class="stat-card">'+
+      '<div style="font-size:1.6rem;margin-bottom:6px;">'+c.icon+'</div>'+
+      '<div class="stat-label">'+c.label+'</div>'+
+      '<div class="stat-value" id="sval-'+idx+'">'+( c.isCur ? c.sym+fmtNum(c.value) : c.value)+'</div>'+
+      '<div class="stat-sub">'+c.sub+'</div>'+
       '</div>';
   }).join('');
+
+  var dotsHTML = cards.map(function(_,idx){
+    return '<div class="stats-dot'+(idx===0?' active':'')+'" onclick="_statGoTo('+idx+')"></div>';
+  }).join('');
+
+  row.innerHTML =
+    '<div class="stats-carousel">'+
+      '<button class="stats-arr" onclick="_statPrev()">&#9664;</button>'+
+      '<div class="stats-track-wrap"><div class="stats-track" id="stats-track">'+cardsHTML+'</div></div>'+
+      '<button class="stats-arr" onclick="_statNext()">&#9654;</button>'+
+    '</div>'+
+    '<div class="stats-dots" id="stats-dots">'+dotsHTML+'</div>';
+
+  // Animate numbers for first card
+  cards.forEach(function(c,idx){
+    if(c.value && c.value > 0){
+      var el = document.getElementById('sval-'+idx);
+      if(el) animateCount(el, c.value, c.sym, !c.isCur);
+    }
+  });
+
+  // Init carousel
+  _statIdx = 0;
+  _statTotal = cards.length;
+  if(_statTimer) clearInterval(_statTimer);
+  _statTimer = setInterval(function(){ _statNext(); }, 3000);
 }
+
+var _statIdx = 0;
+var _statTotal = 0;
+var _statTimer = null;
+
+function _statGoTo(idx){
+  _statIdx = idx;
+  var track = document.getElementById('stats-track');
+  if(track) track.style.transform = 'translateX(-'+(idx*100)+'%)';
+  document.querySelectorAll('.stats-dot').forEach(function(d,i){ d.classList.toggle('active', i===idx); });
+}
+function _statNext(){ _statGoTo((_statIdx+1) % _statTotal); }
+function _statPrev(){ _statGoTo((_statIdx-1+_statTotal) % _statTotal); }
 function renderCategoryBars(data){
   var container = document.getElementById('cat-bars-container');
   container.innerHTML = '';
