@@ -2099,9 +2099,9 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="dash-content" style="display:none;">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:nowrap;">
       <!-- Currency strip -->
-      <button onclick="scrollDashCur(-1)" id="dash-cur-prev" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">&#9664;</button>
-      <div id="dash-cur-strip" style="display:flex;gap:6px;overflow:hidden;flex:1;"></div>
-      <button onclick="scrollDashCur(1)" id="dash-cur-next" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">&#9654;</button>
+      <button onclick="scrollDashCur(-1)" id="dash-cur-prev" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;min-width:32px;opacity:0.3;">&#9664;</button>
+      <div id="dash-cur-strip-wrap" style="flex:1;overflow:hidden;min-width:0;"><div id="dash-cur-strip" style="display:flex;gap:6px;transition:transform 0.25s ease;"></div></div>
+      <button onclick="scrollDashCur(1)" id="dash-cur-next" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;min-width:32px;">&#9654;</button>
       <!-- Print -->
       <button onclick="openPrintPicker('expenses')" style="padding:6px 14px;background:var(--ink);border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;white-space:nowrap;letter-spacing:1px;flex-shrink:0;">&#128438; Print Report</button>
     </div>
@@ -2712,7 +2712,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="inc-dash-content" style="display:none;">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:nowrap;">
       <button onclick="scrollIncDashCur(-1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">&#9664;</button>
-      <div id="inc-dash-cur-strip" style="display:flex;gap:6px;overflow:hidden;flex:1;"></div>
+      <div id="inc-dash-cur-strip-wrap" style="flex:1;overflow:hidden;min-width:0;"><div id="inc-dash-cur-strip" style="display:flex;gap:6px;transition:transform 0.25s ease;"></div></div>
       <button onclick="scrollIncDashCur(1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">&#9654;</button>
       <button onclick="openPrintPicker('income')" style="padding:6px 14px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);cursor:pointer;white-space:nowrap;letter-spacing:1px;flex-shrink:0;">&#128438; Print Report</button>
     </div>
@@ -2734,7 +2734,7 @@ input[type="password"]::-ms-clear { display:none !important; }
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
             <select id="inc-daily-flow-year"     onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
             <select id="inc-daily-flow-month"    onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
-            <select id="inc-daily-flow-currency" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All</option></select>
+            <select id="inc-daily-flow-currency" style="display:none;"><option value="all">All</option></select>
           </div>
           <div class="chart-sub" id="inc-daily-flow-sub"></div>
           <div class="chart-wrap"><canvas id="inc-chart-daily-flow"></canvas></div>
@@ -8740,8 +8740,8 @@ function buildIncDashCurStrip() {
     btn.setAttribute('data-cur', c);
     var active = c === _incDashCurSelected;
     btn.style.cssText = 'padding:5px 12px;border-radius:4px;font-family:DM Mono,monospace;font-size:0.72rem;cursor:pointer;white-space:nowrap;flex-shrink:0;' +
-      (active ? 'background:var(--sage);color:#fff;border:1.5px solid var(--sage);font-weight:700;'
-               : 'background:none;color:var(--muted);border:1px solid var(--border);');
+      (active ? 'background:#4a7c59;color:#fff;border:1.5px solid #4a7c59;font-weight:700;'
+               : 'background:#2a1f0e;color:#e8b84b;border:1px solid #c8962e;');
     btn.onclick = function() {
       _incDashCurSelected = c;
       setAllIncDashCurrency(c);
@@ -8754,7 +8754,7 @@ function buildIncDashCurStrip() {
 }
 
 function setAllIncDashCurrency(c) {
-  ['inc-monthly-currency-sel','inc-cat-currency-sel','inc-yearly-currency-sel','inc-heatmap-currency-sel'].forEach(function(id){
+  ['inc-monthly-currency-sel','inc-cat-currency-sel','inc-yearly-currency-sel','inc-heatmap-currency-sel','inc-daily-flow-currency'].forEach(function(id){
     var el = document.getElementById(id);
     if (!el) return;
     for (var i=0; i<el.options.length; i++) {
@@ -8765,11 +8765,22 @@ function setAllIncDashCurrency(c) {
 
 function scrollIncDashCur(dir) {
   var strip = document.getElementById('inc-dash-cur-strip');
-  if (!strip) return;
-  var btnW = 90;
-  _incDashCurOffset += dir * btnW;
-  _incDashCurOffset = Math.max(0, _incDashCurOffset);
-  strip.style.transform = 'translateX(-'+_incDashCurOffset+'px)';
+  var wrap = document.getElementById('inc-dash-cur-strip-wrap');
+  if (!strip || !wrap) return;
+  var btns = strip.querySelectorAll('button');
+  if (!btns.length) return;
+  var total = btns.length;
+  var wrapW = wrap.offsetWidth;
+  var btnW = btns[0].offsetWidth + 6;
+  var visible = Math.max(1, Math.floor(wrapW / btnW));
+  var maxOffset = Math.max(0, total - visible);
+  _incDashCurOffset = Math.min(Math.max(0, _incDashCurOffset + dir), maxOffset);
+  strip.style.transform = 'translateX(-'+(_incDashCurOffset * btnW)+'px)';
+  var row = wrap.parentElement;
+  var prev = row.querySelector('button:first-child');
+  var next = row.querySelector('button:last-child');
+  if(prev){ prev.style.opacity=_incDashCurOffset<=0?'0.3':'1'; }
+  if(next){ next.style.opacity=_incDashCurOffset>=maxOffset?'0.3':'1'; }
 }
 var _dashCurSelected = null;
 var _dashCurOffset = 0;
@@ -8790,8 +8801,8 @@ function buildDashCurStrip() {
     btn.setAttribute('data-cur', c);
     var active = c === _dashCurSelected;
     btn.style.cssText = 'padding:5px 12px;border-radius:4px;font-family:DM Mono,monospace;font-size:0.72rem;cursor:pointer;white-space:nowrap;flex-shrink:0;' +
-      (active ? 'background:var(--gold);color:var(--ink);border:1.5px solid var(--gold);font-weight:700;'
-               : 'background:none;color:var(--muted);border:1px solid var(--border);');
+      (active ? 'background:#4a7c59;color:#fff;border:1.5px solid #4a7c59;font-weight:700;'
+               : 'background:#2a1f0e;color:#e8b84b;border:1px solid #c8962e;');
     btn.onclick = function() {
       _dashCurSelected = c;
       setAllDashCurrency(c);
@@ -8801,6 +8812,11 @@ function buildDashCurStrip() {
     strip.appendChild(btn);
   });
   _dashCurOffset = 0;
+  strip.style.transform = 'translateX(0)';
+  var prev = document.getElementById('dash-cur-prev');
+  var next = document.getElementById('dash-cur-next');
+  if(prev) prev.style.opacity = '0.3';
+  if(next) next.style.opacity = curs.length > 1 ? '1' : '0.3';
 }
 
 function setAllDashCurrency(c) {
@@ -8815,11 +8831,22 @@ function setAllDashCurrency(c) {
 
 function scrollDashCur(dir) {
   var strip = document.getElementById('dash-cur-strip');
-  if (!strip) return;
-  var btnW = 90;
-  _dashCurOffset += dir * btnW;
-  _dashCurOffset = Math.max(0, _dashCurOffset);
-  strip.style.transform = 'translateX(-'+_dashCurOffset+'px)';
+  var wrap = document.getElementById('dash-cur-strip-wrap');
+  if (!strip || !wrap) return;
+  var btns = strip.querySelectorAll('button');
+  if (!btns.length) return;
+  var total = btns.length;
+  var wrapW = wrap.offsetWidth;
+  var firstBtn = btns[0];
+  var btnW = firstBtn.offsetWidth + 6;
+  var visible = Math.max(1, Math.floor(wrapW / btnW));
+  var maxOffset = Math.max(0, total - visible);
+  _dashCurOffset = Math.min(Math.max(0, _dashCurOffset + dir), maxOffset);
+  strip.style.transform = 'translateX(-'+(_dashCurOffset * btnW)+'px)';
+  var prev = document.getElementById('dash-cur-prev');
+  var next = document.getElementById('dash-cur-next');
+  if(prev){ prev.style.opacity=_dashCurOffset<=0?'0.3':'1'; }
+  if(next){ next.style.opacity=_dashCurOffset>=maxOffset?'0.3':'1'; }
 }
 
 function showLedgerRowInfo(date, desc){
@@ -8873,6 +8900,55 @@ function toggleHint(id){
   document.body.appendChild(box);
   document.getElementById('_hint_close_btn').onclick=closeHint;
 }
+// Swipe navigation
+(function(){
+  var EXP_TABS = [
+    ['import','Import'],['categorize','Categorize'],['daily','Daily'],
+    ['dashboard','Dashboard'],['ledger','Ledger'],['budget','Budget'],['manage','Manage']
+  ];
+  var INC_TABS = [
+    ['inc-import','Import'],['inc-categorize','Categorize'],['inc-monthly','Monthly'],
+    ['inc-dashboard','Dashboard'],['inc-ledger','Ledger'],['inc-manage','Manage']
+  ];
+  var _swipeX = null;
+  var _swipeY = null;
+
+  document.addEventListener('touchstart', function(e){
+    var t = e.touches[0];
+    _swipeX = t.clientX;
+    _swipeY = t.clientY;
+  }, {passive:true});
+
+  document.addEventListener('touchend', function(e){
+    if(_swipeX === null) return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - _swipeX;
+    var dy = t.clientY - _swipeY;
+    _swipeX = null; _swipeY = null;
+    // Only horizontal swipes (dx > dy in magnitude, and dx > 50px)
+    if(Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    var dir = dx < 0 ? 1 : -1; // swipe left = next, swipe right = prev
+    var isIncome = _appMode === 'income';
+    var tabs = isIncome ? INC_TABS : EXP_TABS;
+    // Find current tab
+    var curTab = null;
+    var curIdx = -1;
+    tabs.forEach(function(t,i){
+      var panel = document.getElementById('panel-'+(isIncome?'':'') + t[0]);
+      if(!panel) panel = document.getElementById('panel-'+t[0]);
+      if(panel && panel.classList.contains('active')){ curTab=t[0]; curIdx=i; }
+    });
+    if(curIdx === -1) return;
+    var nextIdx = (curIdx + dir + tabs.length) % tabs.length;
+    var next = tabs[nextIdx];
+    if(isIncome){
+      burgerSwitchInc(next[0], next[1]);
+    } else {
+      burgerSwitch(next[0], next[1]);
+    }
+  }, {passive:true});
+})();
+
 function toggleBurgerMenu(){
   var s=document.getElementById('burger-sidebar');
   var b=document.getElementById('burger-backdrop');
@@ -11990,7 +12066,7 @@ function renderIncomeDashboard() {
   // -- DAILY FLOW --
   var idfY = idfYr ? idfYr.value : curYear;
   var idfM = idfMo ? idfMo.value : curMonth;
-  var idfC = idfCur ? idfCur.value : "all";
+  var idfC = _incDashCurSelected || (idfCur ? idfCur.value : "all");
   var idfData = allPositive.filter(function(i){ return i.date.substring(0,4)===idfY && i.date.substring(5,7)===idfM; });
   if(idfC !== "all") idfData = idfData.filter(function(i){return i.currency===idfC;});
   renderDailyFlowChart(idfData, idfY, idfM, idfC!=="all"?idfC:(incCurs[0]||"NGN"), "inc-chart-daily-flow", "inc-daily-flow-sub");
