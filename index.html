@@ -2175,7 +2175,22 @@ input[type="password"]::-ms-clear { display:none !important; }
             <select id="cat-to-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
             <button onclick="resetChartRange('cat')" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:3px 8px;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;" title="Reset">&#8635;</button>
           </div>
-          <div class="dash-cat-scroll" id="cat-bars-scroll"><div id="cat-bars-container"></div></div>
+          <!-- View toggle -->
+          <div style="display:flex;gap:4px;margin-bottom:12px;">
+            <button id="cat-view-list-btn" onclick="setCatView('list')" style="flex:1;padding:5px;font-family:DM Mono,monospace;font-size:0.7rem;border:1.5px solid var(--gold);border-radius:4px 0 0 4px;cursor:pointer;background:var(--gold);color:var(--ink);font-weight:700;">&#8801; List</button>
+            <button id="cat-view-donut-btn" onclick="setCatView('donut')" style="flex:1;padding:5px;font-family:DM Mono,monospace;font-size:0.7rem;border:1.5px solid var(--gold);border-radius:0 4px 4px 0;cursor:pointer;background:none;color:var(--muted);">&#9685; Donut</button>
+          </div>
+          <!-- List view -->
+          <div id="cat-list-view">
+            <div class="dash-cat-scroll" id="cat-bars-scroll"><div id="cat-bars-container"></div></div>
+          </div>
+          <!-- Donut view -->
+          <div id="cat-donut-view" style="display:none;">
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div style="position:relative;height:220px;"><canvas id="chart-cat-donut"></canvas></div>
+              <div id="cat-donut-legend" style="display:flex;flex-direction:column;gap:6px;max-height:250px;overflow-y:auto;"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2781,7 +2796,22 @@ input[type="password"]::-ms-clear { display:none !important; }
             <select id="inc-cat-to-month" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
             <button onclick="resetChartRange('inc-cat')" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:3px 8px;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;" title="Reset">&#8635;</button>
           </div>
-          <div class="dash-cat-scroll" id="inc-cat-bars-scroll"><div id="inc-cat-bars-container"></div></div>
+          <!-- View toggle -->
+          <div style="display:flex;gap:4px;margin-bottom:12px;">
+            <button id="inc-cat-view-list-btn" onclick="setIncCatView('list')" style="flex:1;padding:5px;font-family:DM Mono,monospace;font-size:0.7rem;border:1.5px solid var(--sage);border-radius:4px 0 0 4px;cursor:pointer;background:var(--sage);color:#fff;font-weight:700;">&#8801; List</button>
+            <button id="inc-cat-view-donut-btn" onclick="setIncCatView('donut')" style="flex:1;padding:5px;font-family:DM Mono,monospace;font-size:0.7rem;border:1.5px solid var(--sage);border-radius:0 4px 4px 0;cursor:pointer;background:none;color:var(--muted);">&#9685; Donut</button>
+          </div>
+          <!-- List view -->
+          <div id="inc-cat-list-view">
+            <div class="dash-cat-scroll" id="inc-cat-bars-scroll"><div id="inc-cat-bars-container"></div></div>
+          </div>
+          <!-- Donut view -->
+          <div id="inc-cat-donut-view" style="display:none;">
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div style="position:relative;height:220px;"><canvas id="chart-inc-cat-donut"></canvas></div>
+              <div id="inc-cat-donut-legend" style="display:flex;flex-direction:column;gap:6px;max-height:250px;overflow-y:auto;"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -6207,6 +6237,168 @@ function getCurBg(cur) {
   var c = getCurColor(cur);
   return c + '15';
 }
+var _catView = 'list';
+var _incCatView = 'list';
+
+function setIncCatView(view) {
+  _incCatView = view;
+  var listBtn  = document.getElementById('inc-cat-view-list-btn');
+  var donutBtn = document.getElementById('inc-cat-view-donut-btn');
+  var listView  = document.getElementById('inc-cat-list-view');
+  var donutView = document.getElementById('inc-cat-donut-view');
+  if(view === 'list') {
+    if(listBtn){ listBtn.style.background='var(--sage)'; listBtn.style.color='#fff'; listBtn.style.fontWeight='700'; }
+    if(donutBtn){ donutBtn.style.background='none'; donutBtn.style.color='var(--muted)'; donutBtn.style.fontWeight=''; }
+    if(listView) listView.style.display='block';
+    if(donutView) donutView.style.display='none';
+  } else {
+    if(donutBtn){ donutBtn.style.background='var(--sage)'; donutBtn.style.color='#fff'; donutBtn.style.fontWeight='700'; }
+    if(listBtn){ listBtn.style.background='none'; listBtn.style.color='var(--muted)'; listBtn.style.fontWeight=''; }
+    if(listView) listView.style.display='none';
+    if(donutView) donutView.style.display='block';
+    renderIncCatDonut();
+  }
+}
+
+function renderIncCatDonut() {
+  var container = document.getElementById('inc-cat-bars-container');
+  var data = container ? container._catData : null;
+  if(!data || !data.cats || !data.cats.length) return;
+  var cats = data.cats; var byCat = data.byCat; var grandTotal = data.grandTotal; var sym = data.sym;
+  var colors = cats.map(function(c){ return getIncCatColor(c); });
+  var values = cats.map(function(c){ return byCat[c]||0; });
+  var existing = Chart.getChart('chart-inc-cat-donut');
+  if(existing) existing.destroy();
+  var ctx = document.getElementById('chart-inc-cat-donut');
+  if(!ctx) return;
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: cats, datasets: [{ data: values, backgroundColor: colors.map(function(c){return c+'cc';}), borderColor: colors, borderWidth: 2, hoverOffset: 8 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(ctx) {
+          var pct = grandTotal>0?(ctx.parsed/grandTotal*100).toFixed(1):'0';
+          return ' '+sym+fmtNum(ctx.parsed)+' ('+pct+'%)';
+        }}}
+      },
+      onClick: function(e, els) {
+        if(!els.length) return;
+        var idx = els[0].index;
+        var legend = document.getElementById('inc-cat-donut-legend');
+        if(legend){ legend.querySelectorAll('.donut-row').forEach(function(r,i){ r.style.background=i===idx?'rgba(74,124,89,0.1)':''; }); if(legend.querySelectorAll('.donut-row')[idx]) legend.querySelectorAll('.donut-row')[idx].scrollIntoView({behavior:'smooth',block:'nearest'}); }
+      }
+    }
+  });
+  var legend = document.getElementById('inc-cat-donut-legend');
+  if(!legend) return;
+  legend.innerHTML = '';
+  cats.forEach(function(cat, idx) {
+    var val = values[idx]; var pct = grandTotal>0?(val/grandTotal*100).toFixed(1):'0'; var color = colors[idx];
+    var row = document.createElement('div');
+    row.className = 'donut-row';
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;transition:background 0.15s;';
+    row.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;"></span><span style="flex:1;font-size:0.78rem;color:#1a1410;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+cat+'</span><span style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:600;color:'+color+';white-space:nowrap;">'+sym+fmtNum(val)+'</span><span style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);white-space:nowrap;min-width:36px;text-align:right;">'+pct+'%</span>';
+    legend.appendChild(row);
+  });
+}
+
+function setCatView(view) {
+  _catView = view;
+  var listBtn  = document.getElementById('cat-view-list-btn');
+  var donutBtn = document.getElementById('cat-view-donut-btn');
+  var listView  = document.getElementById('cat-list-view');
+  var donutView = document.getElementById('cat-donut-view');
+  if(view === 'list') {
+    if(listBtn){ listBtn.style.background='var(--gold)'; listBtn.style.color='var(--ink)'; listBtn.style.fontWeight='700'; }
+    if(donutBtn){ donutBtn.style.background='none'; donutBtn.style.color='var(--muted)'; donutBtn.style.fontWeight=''; }
+    if(listView) listView.style.display='block';
+    if(donutView) donutView.style.display='none';
+  } else {
+    if(donutBtn){ donutBtn.style.background='var(--gold)'; donutBtn.style.color='var(--ink)'; donutBtn.style.fontWeight='700'; }
+    if(listBtn){ listBtn.style.background='none'; listBtn.style.color='var(--muted)'; listBtn.style.fontWeight=''; }
+    if(listView) listView.style.display='none';
+    if(donutView) donutView.style.display='block';
+    renderCatDonut();
+  }
+}
+
+function renderCatDonut() {
+  var container = document.getElementById('cat-bars-container');
+  var data = container ? container._catData : null;
+  if(!data || !data.cats || !data.cats.length) return;
+  var cats = data.cats; var byCat = data.byCat; var grandTotal = data.grandTotal;
+  var sym = data.sym;
+  var colors = cats.map(function(c){ return getCatColor(c,0); });
+  var values = cats.map(function(c){ return byCat[c]||0; });
+
+  var existing = Chart.getChart('chart-cat-donut');
+  if(existing) existing.destroy();
+
+  var ctx = document.getElementById('chart-cat-donut');
+  if(!ctx) return;
+
+  var chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: cats,
+      datasets: [{ data: values, backgroundColor: colors.map(function(c){return c+'cc';}), borderColor: colors, borderWidth: 2, hoverOffset: 8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: function(ctx) {
+            var pct = grandTotal > 0 ? (ctx.parsed/grandTotal*100).toFixed(1) : '0';
+            return ' ' + sym + fmtNum(ctx.parsed) + ' (' + pct + '%)';
+          }
+        }}
+      },
+      onClick: function(e, els) {
+        if(!els.length) return;
+        var idx = els[0].index;
+        var legend = document.getElementById('cat-donut-legend');
+        if(legend) {
+          var rows = legend.querySelectorAll('.donut-row');
+          rows.forEach(function(r,i){ r.style.background = i===idx ? 'rgba(200,150,46,0.1)' : ''; });
+          if(rows[idx]) rows[idx].scrollIntoView({behavior:'smooth',block:'nearest'});
+        }
+      }
+    }
+  });
+
+  // Legend
+  var legend = document.getElementById('cat-donut-legend');
+  if(!legend) return;
+  legend.innerHTML = '';
+  cats.forEach(function(cat, idx) {
+    var val = values[idx];
+    var pct = grandTotal > 0 ? (val/grandTotal*100).toFixed(1) : '0';
+    var color = colors[idx];
+    var row = document.createElement('div');
+    row.className = 'donut-row';
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;transition:background 0.15s;';
+    row.innerHTML =
+      '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;"></span>'+
+      '<span style="flex:1;font-size:0.78rem;color:#1a1410;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+cat+'</span>'+
+      '<span style="font-family:DM Mono,monospace;font-size:0.72rem;font-weight:600;color:'+color+';white-space:nowrap;">'+sym+fmtNum(val)+'</span>'+
+      '<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);white-space:nowrap;min-width:36px;text-align:right;">'+pct+'%</span>';
+    row.onclick = function(){
+      var existing2 = Chart.getChart('chart-cat-donut');
+      if(existing2) {
+        existing2.setDatasetVisibility(0, true);
+        existing2.toggleDataVisibility(idx);
+        existing2.update();
+      }
+      legend.querySelectorAll('.donut-row').forEach(function(r,i){ r.style.background = i===idx?'rgba(200,150,46,0.1)':''; });
+    };
+    legend.appendChild(row);
+  });
+}
+
 function animateCount(el, target, sym, isInt) {
   var start = 0;
   var duration = 900;
@@ -6405,6 +6597,17 @@ function renderCategoryBars(data){
 
     container.appendChild(catRow);
   });
+
+  // Store data for donut view
+  var _cur = _dashCurSelected;
+  var _sym = _cur ? (SYMS[_cur]||'') : '';
+  var _byCatSimple = {};
+  cats.forEach(function(cat){
+    _byCatSimple[cat] = _cur ? (byCat[cat].totals[_cur]||0) : byCat[cat].grand;
+  });
+  var _grandTotal = Object.values(_byCatSimple).reduce(function(a,b){return a+b;},0);
+  container._catData = { cats:cats, byCat:_byCatSimple, grandTotal:_grandTotal, sym:_sym };
+  if(_catView === 'donut') renderCatDonut();
 }
 
 
@@ -12171,6 +12374,17 @@ function renderIncomeDashboard() {
     });
     catCont.appendChild(catRow);
   });
+
+  // Store data for income donut view
+  var _incCur = _incDashCurSelected;
+  var _incSym = _incCur ? (SYMS[_incCur]||'') : '';
+  var _incByCatSimple = {};
+  incCatsSorted.forEach(function(cat){
+    _incByCatSimple[cat] = _incCur ? (byCat[cat].totals[_incCur]||0) : byCat[cat].grand;
+  });
+  var _incGrandTotal = Object.values(_incByCatSimple).reduce(function(a,b){return a+b;},0);
+  catCont._catData = { cats:incCatsSorted, byCat:_incByCatSimple, grandTotal:_incGrandTotal, sym:_incSym };
+  if(_incCatView === 'donut') renderIncCatDonut();
 
   // Yearly chart — populate year picker and apply range filter
   var incYearlyCurSel = _incDashCurSelected || _getChartCurRaw("inc-yearly-currency-sel");
