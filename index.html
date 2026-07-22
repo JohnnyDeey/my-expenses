@@ -2884,7 +2884,14 @@ input[type="password"]::-ms-clear { display:none !important; }
 
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
-    <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="clearAllIncome()">&#128465; Delete ALL Income Data</button>
+    <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="showClearAllIncome()">&#128465; Delete ALL Income Data</button>
+    <div id="clear-all-income-confirm" style="display:none;flex-direction:column;gap:8px;padding:12px;background:#fff0f0;border:1px solid var(--rust);border-radius:4px;margin-top:10px;">
+      <div style="font-family:DM Mono,monospace;font-size:0.75rem;color:var(--rust);font-weight:600;">Delete ALL income data? Items go to Recycle Bin first.</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-danger" style="flex:1;padding:8px;justify-content:center;" onclick="clearAllIncome()">Yes, delete everything</button>
+        <button class="btn btn-ghost" style="flex:1;padding:8px;justify-content:center;" onclick="cancelClearAllIncome()">Cancel</button>
+      </div>
+    </div>
   </div>
   
 
@@ -7697,6 +7704,8 @@ function renderLedger(){
     descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;';
     var _ledDateFmt = item.date ? item.date.split('-').reverse().join('-') : '';
     descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+(_ledDateFmt ? _ledDateFmt+' | ':'')+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
+    descTd.style.cursor = 'pointer';
+    descTd.addEventListener('click', function(e){ showLedgerRowInfo(_ledDateFmt, item.desc); });
     // descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>'; This is the latest modification-1
 
     // Amount — autofit
@@ -8507,6 +8516,29 @@ function toggleDotMenu(id){
     function closeDot(e){ if(!m.contains(e.target)){ m.style.display='none'; document.removeEventListener('click',closeDot); } }
     setTimeout(function(){ document.addEventListener('click',closeDot); },10);
   }
+}
+function showLedgerRowInfo(date, desc){
+  var ob=document.getElementById('_lri_box');
+  var obb=document.getElementById('_lri_bd');
+  if(ob) ob.remove();
+  if(obb) obb.remove();
+  var bd=document.createElement('div');
+  bd.id='_lri_bd';
+  bd.style.cssText='position:fixed;inset:0;z-index:1999;background:rgba(0,0,0,0.4);';
+  var box=document.createElement('div');
+  box.id='_lri_box';
+  box.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:1px solid #ddd;border-radius:8px;padding:20px 24px;z-index:2000;min-width:260px;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,0.2);font-family:DM Mono,monospace;';
+  function close(){ var o=document.getElementById('_lri_box'); var b=document.getElementById('_lri_bd'); if(o)o.remove(); if(b)b.remove(); }
+  box.innerHTML=
+    '<div style="font-size:0.65rem;letter-spacing:1px;color:#888;text-transform:uppercase;margin-bottom:6px;">Date</div>'+
+    '<div style="font-size:0.85rem;font-weight:700;color:#1a1410;margin-bottom:14px;">'+date+'</div>'+
+    '<div style="font-size:0.65rem;letter-spacing:1px;color:#888;text-transform:uppercase;margin-bottom:6px;">Description</div>'+
+    '<div style="font-size:0.82rem;color:#1a1410;line-height:1.5;margin-bottom:18px;word-break:break-word;">'+desc+'</div>'+
+    '<button style="width:100%;background:#1a1410;border:none;border-radius:4px;padding:8px;font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:#fff;cursor:pointer;" id="_lri_close">Close</button>';
+  bd.onclick=close;
+  document.body.appendChild(bd);
+  document.body.appendChild(box);
+  document.getElementById('_lri_close').onclick=close;
 }
 function togglePicker(bodyId,arrowId){
   var body=document.getElementById(bodyId);
@@ -10238,7 +10270,7 @@ function syncIncomeToFirebase() {
   batch.commit()
     .then(function(){
       // Keep lock for 6 seconds after confirmed write
-      setTimeout(function(){ window._incDeletePending = false; }, 6000);
+      setTimeout(function(){ window._incDeletePending = false; }, 15000);
     })
     .catch(function(e){
       console.error('Income sync error:', e);
@@ -12026,6 +12058,8 @@ function renderIncomeLedger() {
     descTd.style.cssText = 'padding:4px 7px;font-size:0.8rem;border-right:1px solid #eee;';
     var _incDateFmt = item.date ? item.date.split('-').reverse().join('-') : '';
     descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+(_incDateFmt ? _incDateFmt+' | ':'')+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>';
+    descTd.style.cursor = 'pointer';
+    descTd.addEventListener('click', function(e){ showLedgerRowInfo(_incDateFmt, item.desc); });
     //descTd.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+item.desc.replace(/"/g,"&quot;")+'">'+item.desc+'</div>'; This is the latest modification-2
 
     // Amount column - LEFT aligned to match expenses
@@ -12382,8 +12416,16 @@ function resetIncManageFilters() {
   renderIncomeManage();
 }
 
+function showClearAllIncome(){
+  var conf=document.getElementById('clear-all-income-confirm');
+  if(conf) conf.style.display='flex';
+}
+function cancelClearAllIncome(){
+  var conf=document.getElementById('clear-all-income-confirm');
+  if(conf) conf.style.display='none';
+}
 function clearAllIncome() {
-  if (!confirm('Delete ALL income data? It will go to the deleted items.')) return;
+  var conf=document.getElementById('clear-all-income-confirm'); if(conf) conf.style.display='none';
   var all = loadIncomeData();
   if (all.length) {
     var incTrash = JSON.parse(localStorage.getItem(getIncTrashKey())||'[]');
@@ -12393,6 +12435,17 @@ function clearAllIncome() {
     localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash));
   }
   saveIncomeData([]);
+  // Force delete all income months from Firebase
+  if (_db && _userId) {
+    userCol('income_months').get().then(function(snap){
+      var batch = _db.batch();
+      snap.forEach(function(doc){ batch.delete(doc.ref); });
+      return batch.commit();
+    }).then(function(){
+      window._knownIncomeMonths = [];
+      window._incDeletePending = false;
+    }).catch(function(e){ console.error('Income Firebase delete error:', e); });
+  }
   renderIncomeManage();
   showToast('All income data cleared');
 }
@@ -13793,7 +13846,7 @@ function syncStartListener() {
   if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
   _incomeUnsubscribe = userCol('income_months').onSnapshot(function(snapshot) {
     // Block if we just pushed income data (avoids restoring our own deletions)
-    if (window._incDeletePending || (window._incLastDeleteTime && (Date.now() - window._incLastDeleteTime) < 8000)) return;
+    if (window._incDeletePending || (window._incLastDeleteTime && (Date.now() - window._incLastDeleteTime) < 15000)) return;
     var allEntries = [];
     snapshot.forEach(function(doc) {
       var d = doc.data();
