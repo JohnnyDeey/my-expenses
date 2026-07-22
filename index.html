@@ -5477,8 +5477,15 @@ function renderDailyView() {
         '</div>'
       );
     });
-    var _dvTotal = statParts.length;
-    statsHtml = '<div class="dv-stats-bar">'+statParts.join('')+'</div>';
+    var _dvCurs = Object.keys(byCur).sort();
+    // Currency pill switcher — one card visible at a time
+    var pillsHtml = _dvCurs.map(function(c, i){
+      return '<button data-cur="'+c+'" onclick="switchDvStatCur(this)" id="dvpill-'+c+'" style="padding:4px 12px;border-radius:20px;font-family:DM Mono,monospace;font-size:0.7rem;cursor:pointer;border:1.5px solid var(--gold);'+(i===0?'background:var(--gold);color:var(--ink);font-weight:700;':'background:none;color:var(--muted);')+'">'+c+'</button>';
+    }).join('');
+    var cardsHtml = _dvCurs.map(function(c, i){
+      return '<div id="dvcard-'+c+'" style="display:'+(i===0?'block':'none')+';">'+statParts[i]+'</div>';
+    }).join('');
+    statsHtml = '<div style="margin-bottom:16px;"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'+pillsHtml+'</div>'+cardsHtml+'</div>';
   }
 
   // -- Group by year → month → date --
@@ -9067,6 +9074,18 @@ function scrollDvStats(dir){
 function scrollDvStatsTo(idx){
   _dvStatIdx = idx - 1;
   scrollDvStats(1);
+}
+function switchDvStatCur(btn){
+  var cur = btn.getAttribute('data-cur');
+  document.querySelectorAll('[id^="dvcard-"]').forEach(function(el){ el.style.display='none'; });
+  var card = document.getElementById('dvcard-'+cur);
+  if(card) card.style.display='block';
+  document.querySelectorAll('[id^="dvpill-"]').forEach(function(b){
+    var active = b.getAttribute('data-cur')===cur;
+    b.style.background = active?'var(--gold)':'none';
+    b.style.color = active?'var(--ink)':'var(--muted)';
+    b.style.fontWeight = active?'700':'';
+  });
 }
 function toggleDotMenu(id){
   var m=document.getElementById(id);
