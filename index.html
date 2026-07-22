@@ -9075,6 +9075,18 @@ function scrollDvStatsTo(idx){
   _dvStatIdx = idx - 1;
   scrollDvStats(1);
 }
+function switchIncDvStatCur(btn){
+  var cur = btn.getAttribute('data-cur');
+  document.querySelectorAll('[id^="inc-dvcard-"]').forEach(function(el){ el.style.display='none'; });
+  var card = document.getElementById('inc-dvcard-'+cur);
+  if(card) card.style.display='block';
+  document.querySelectorAll('[id^="inc-dvpill-"]').forEach(function(b){
+    var active = b.getAttribute('data-cur')===cur;
+    b.style.background = active?'var(--sage)':'none';
+    b.style.color = active?'#fff':'var(--muted)';
+    b.style.fontWeight = active?'700':'';
+  });
+}
 function switchDvStatCur(btn){
   var cur = btn.getAttribute('data-cur');
   document.querySelectorAll('[id^="dvcard-"]').forEach(function(el){ el.style.display='none'; });
@@ -12241,7 +12253,14 @@ function renderIncomeMonthly() {
         );
       });
       var _incMTotal = statParts.length;
-      statsDiv.innerHTML = '<div class="dv-stats-bar">'+statParts.join('')+'</div>';
+      var _incCursList = Object.keys(byCur).sort();
+      var incPillsHtml = _incCursList.map(function(c, i){
+        return '<button data-cur="'+c+'" onclick="switchIncDvStatCur(this)" id="inc-dvpill-'+c+'" style="padding:4px 12px;border-radius:20px;font-family:DM Mono,monospace;font-size:0.7rem;cursor:pointer;border:1.5px solid var(--sage);'+(i===0?'background:var(--sage);color:#fff;font-weight:700;':'background:none;color:var(--muted);')+'">'+c+'</button>';
+      }).join('');
+      var incCardsHtml = _incCursList.map(function(c, i){
+        return '<div id="inc-dvcard-'+c+'" style="display:'+(i===0?'block':'none')+';">'+statParts[i]+'</div>';
+      }).join('');
+      statsDiv.innerHTML = '<div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'+incPillsHtml+'</div>'+incCardsHtml+'</div>';
     } else {
       statsDiv.style.display = 'none';
     }
