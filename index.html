@@ -2086,8 +2086,13 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div class="section-title">Expense Dashboard</div>
   <div id="dash-empty" class="empty-state"><div class="big">&#9670;</div><p>No saved data yet.<br>Import, categorize and save your expenses first.</p></div>
   <div id="dash-content" style="display:none;">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-      <button onclick="openPrintPicker('expenses')" style="padding:6px 14px;background:var(--ink);border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:nowrap;">
+      <!-- Currency strip -->
+      <button onclick="scrollDashCur(-1)" id="dash-cur-prev" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">&#9664;</button>
+      <div id="dash-cur-strip" style="display:flex;gap:6px;overflow:hidden;flex:1;"></div>
+      <button onclick="scrollDashCur(1)" id="dash-cur-next" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">&#9654;</button>
+      <!-- Print -->
+      <button onclick="openPrintPicker('expenses')" style="padding:6px 14px;background:var(--ink);border:1.5px solid var(--gold);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);cursor:pointer;white-space:nowrap;letter-spacing:1px;flex-shrink:0;">&#128438; Print Report</button>
     </div>
     <!-- Hidden selectors for JS compatibility -->
     <select id="dash-year"         style="display:none;"></select>
@@ -2694,8 +2699,11 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div class="section-title">Income Dashboard</div>
   <div id="inc-dash-empty" class="empty-state"><div class="big">&#128200;</div><p>No income data yet.</p></div>
   <div id="inc-dash-content" style="display:none;">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-      <button onclick="openPrintPicker('income')" style="padding:6px 14px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);cursor:pointer;white-space:nowrap;letter-spacing:1px;">&#128438; Print Report</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:nowrap;">
+      <button onclick="scrollIncDashCur(-1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">&#9664;</button>
+      <div id="inc-dash-cur-strip" style="display:flex;gap:6px;overflow:hidden;flex:1;"></div>
+      <button onclick="scrollIncDashCur(1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">&#9654;</button>
+      <button onclick="openPrintPicker('income')" style="padding:6px 14px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);cursor:pointer;white-space:nowrap;letter-spacing:1px;flex-shrink:0;">&#128438; Print Report</button>
     </div>
     <!-- Hidden selectors for JS compatibility -->
     <select id="inc-dash-year"         style="display:none;"></select>
@@ -5949,6 +5957,7 @@ function renderDashboard(){
   var dataCurs = [];
   allPositive.forEach(function(i){ if(i.currency && dataCurs.indexOf(i.currency)===-1) dataCurs.push(i.currency); });
   dataCurs.sort();
+  buildDashCurStrip();
 
   // Populate all per-chart currency selectors
   ['monthly-currency-sel','cat-currency-sel','yearly-currency-sel','heatmap-currency-sel'].forEach(function(id){ _populateChartCurrencySel(id, dataCurs); });
@@ -8517,6 +8526,108 @@ function toggleDotMenu(id){
     setTimeout(function(){ document.addEventListener('click',closeDot); },10);
   }
 }
+var _dashCurSelected = null;
+var _incDashCurSelected = null;
+var _incDashCurOffset = 0;
+
+function buildIncDashCurStrip() {
+  var data = loadIncomeData();
+  var curs = [];
+  data.forEach(function(i){ if(i.currency && curs.indexOf(i.currency)===-1) curs.push(i.currency); });
+  curs.sort();
+  var strip = document.getElementById('inc-dash-cur-strip');
+  if (!strip) return;
+  strip.innerHTML = '';
+  if (!_incDashCurSelected || curs.indexOf(_incDashCurSelected)===-1) _incDashCurSelected = curs[0] || null;
+  curs.forEach(function(c) {
+    var btn = document.createElement('button');
+    var sym = SYMS[c] || '';
+    btn.textContent = sym + ' ' + c;
+    btn.setAttribute('data-cur', c);
+    var active = c === _incDashCurSelected;
+    btn.style.cssText = 'padding:5px 12px;border-radius:4px;font-family:DM Mono,monospace;font-size:0.72rem;cursor:pointer;white-space:nowrap;flex-shrink:0;' +
+      (active ? 'background:var(--sage);color:#fff;border:1.5px solid var(--sage);font-weight:700;'
+               : 'background:none;color:var(--muted);border:1px solid var(--border);');
+    btn.onclick = function() {
+      _incDashCurSelected = c;
+      setAllIncDashCurrency(c);
+      buildIncDashCurStrip();
+      renderIncomeDashboard();
+    };
+    strip.appendChild(btn);
+  });
+  _incDashCurOffset = 0;
+}
+
+function setAllIncDashCurrency(c) {
+  ['inc-monthly-currency-sel','inc-cat-currency-sel','inc-yearly-currency-sel','inc-heatmap-currency-sel'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (!el) return;
+    for (var i=0; i<el.options.length; i++) {
+      if (el.options[i].value === c) { el.selectedIndex = i; break; }
+    }
+  });
+}
+
+function scrollIncDashCur(dir) {
+  var strip = document.getElementById('inc-dash-cur-strip');
+  if (!strip) return;
+  var btnW = 90;
+  _incDashCurOffset += dir * btnW;
+  _incDashCurOffset = Math.max(0, _incDashCurOffset);
+  strip.style.transform = 'translateX(-'+_incDashCurOffset+'px)';
+}
+var _dashCurSelected = null;
+var _dashCurOffset = 0;
+
+function buildDashCurStrip() {
+  var data = loadData();
+  var curs = [];
+  data.forEach(function(i){ if(i.currency && curs.indexOf(i.currency)===-1) curs.push(i.currency); });
+  curs.sort();
+  var strip = document.getElementById('dash-cur-strip');
+  if (!strip) return;
+  strip.innerHTML = '';
+  if (!_dashCurSelected || curs.indexOf(_dashCurSelected)===-1) _dashCurSelected = curs[0] || null;
+  curs.forEach(function(c) {
+    var btn = document.createElement('button');
+    var sym = SYMS[c] || '';
+    btn.textContent = sym + ' ' + c;
+    btn.setAttribute('data-cur', c);
+    var active = c === _dashCurSelected;
+    btn.style.cssText = 'padding:5px 12px;border-radius:4px;font-family:DM Mono,monospace;font-size:0.72rem;cursor:pointer;white-space:nowrap;flex-shrink:0;' +
+      (active ? 'background:var(--gold);color:var(--ink);border:1.5px solid var(--gold);font-weight:700;'
+               : 'background:none;color:var(--muted);border:1px solid var(--border);');
+    btn.onclick = function() {
+      _dashCurSelected = c;
+      setAllDashCurrency(c);
+      buildDashCurStrip();
+      renderDashboard();
+    };
+    strip.appendChild(btn);
+  });
+  _dashCurOffset = 0;
+}
+
+function setAllDashCurrency(c) {
+  ['monthly-currency-sel','cat-currency-sel','yearly-currency-sel','heatmap-currency-sel','daily-flow-currency'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (!el) return;
+    for (var i=0; i<el.options.length; i++) {
+      if (el.options[i].value === c) { el.selectedIndex = i; break; }
+    }
+  });
+}
+
+function scrollDashCur(dir) {
+  var strip = document.getElementById('dash-cur-strip');
+  if (!strip) return;
+  var btnW = 90;
+  _dashCurOffset += dir * btnW;
+  _dashCurOffset = Math.max(0, _dashCurOffset);
+  strip.style.transform = 'translateX(-'+_dashCurOffset+'px)';
+}
+
 function showLedgerRowInfo(date, desc){
   var ob=document.getElementById('_lri_box');
   var obb=document.getElementById('_lri_bd');
@@ -11612,6 +11723,7 @@ function renderIncomeDashboard() {
   }
   document.getElementById("inc-dash-empty").style.display = "none";
   document.getElementById("inc-dash-content").style.display = "block";
+  buildIncDashCurStrip();
 
   var allPositive = data.filter(function(i){return i.amount>0;});
   var incCurs = []; allPositive.forEach(function(i){ if(i.currency && incCurs.indexOf(i.currency)===-1) incCurs.push(i.currency); }); incCurs.sort();
