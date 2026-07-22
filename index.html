@@ -1338,11 +1338,11 @@ tbody td{padding:9px 12px;vertical-align:middle;}
 .cat-bar-pct{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:1px;}
 
 /* Daily view stats bar */
-.dv-stats-bar{position:relative;margin-bottom:22px;}
-.dv-stats-carousel{display:flex;align-items:center;gap:8px;}
-.dv-stats-track-wrap{flex:1;overflow:hidden;min-width:0;}
-.dv-stats-track{display:flex;gap:14px;transition:transform 0.3s ease;}
-.dv-stat-group{background:white;border:1px solid var(--border);border-radius:6px;padding:16px 20px;min-width:260px;flex-shrink:0;box-shadow:3px 3px 0 var(--shadow);}
+.dv-stats-bar{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:22px;}
+
+
+
+.dv-stat-group{background:white;border:1px solid var(--border);border-radius:6px;padding:16px 20px;flex:1;min-width:200px;box-shadow:3px 3px 0 var(--shadow);}
 .dv-stat-cur{font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
 .dv-stat-row{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;border-bottom:1px solid var(--paper2);}
 .dv-stat-row:last-child{border-bottom:none;}
@@ -1517,7 +1517,8 @@ tbody td{padding:9px 12px;vertical-align:middle;}
   #cat-bars-container, #inc-cat-bars-container{overflow:hidden;min-width:0;}
 
   /* -- Daily view -- */
-  .dv-stat-group{min-width:calc(100vw - 120px);}
+  .dv-stats-bar{flex-direction:column;gap:10px;}
+  .dv-stat-group{min-width:unset;width:100%;}
   .day-header{padding:12px 14px;}
   .day-number{font-size:1.3rem;min-width:28px;}
   .day-item{padding:10px 14px 10px 46px;}
@@ -5477,16 +5478,7 @@ function renderDailyView() {
       );
     });
     var _dvTotal = statParts.length;
-    statsHtml = '<div class="dv-stats-bar">'+
-      '<div class="dv-stats-carousel">'+
-        '<button id="dv-stat-prev" onclick="scrollDvStats(-1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;opacity:'+(_dvTotal>1?'1':'0.3')+';min-width:32px;">&#9664;</button>'+
-        '<div class="dv-stats-track-wrap"><div class="dv-stats-track" id="dv-stats-track">'+statParts.join('')+'</div></div>'+
-        '<button id="dv-stat-next" onclick="scrollDvStats(1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;opacity:'+(_dvTotal>1?'1':'0.3')+';min-width:32px;">&#9654;</button>'+
-      '</div>'+
-      '<div id="dv-stats-dots" style="display:flex;justify-content:center;gap:6px;margin-top:8px;">'+
-        statParts.map(function(_,i){ return '<div class="stats-dot'+(i===0?' active':'')+'" onclick="scrollDvStatsTo('+i+')"></div>'; }).join('')+
-      '</div>'+
-    '</div>';
+    statsHtml = '<div class="dv-stats-bar">'+statParts.join('')+'</div>';
   }
 
   // -- Group by year → month → date --
@@ -9063,9 +9055,7 @@ function scrollDvStats(dir){
   if(!cards.length) return;
   var total = cards.length;
   var cardW = cards[0].offsetWidth + 14;
-  var wrapW = track.parentElement.offsetWidth;
-  var visible = Math.max(1, Math.floor(wrapW/cardW));
-  var maxIdx = Math.max(0, total - visible);
+  var maxIdx = total - 1;
   _dvStatIdx = Math.min(Math.max(0, _dvStatIdx + dir), maxIdx);
   track.style.transform = 'translateX(-'+(_dvStatIdx * cardW)+'px)';
   var prev = document.getElementById('dv-stat-prev');
@@ -12232,16 +12222,7 @@ function renderIncomeMonthly() {
         );
       });
       var _incMTotal = statParts.length;
-      statsDiv.innerHTML = '<div class="dv-stats-bar">'+
-        '<div class="dv-stats-carousel">'+
-          '<button onclick="scrollDvStats(-1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;min-width:32px;opacity:'+(_incMTotal>1?'1':'0.3')+';">&#9664;</button>'+
-          '<div class="dv-stats-track-wrap"><div class="dv-stats-track" id="dv-stats-track">'+statParts.join('')+'</div></div>'+
-          '<button onclick="scrollDvStats(1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;min-width:32px;opacity:'+(_incMTotal>1?'1':'0.3')+';">&#9654;</button>'+
-        '</div>'+
-        '<div id="dv-stats-dots" style="display:flex;justify-content:center;gap:6px;margin-top:8px;">'+
-          statParts.map(function(_,i){ return '<div class="stats-dot'+(i===0?' active':'')+'" onclick="scrollDvStatsTo('+(i+1)+')"></div>'; }).join('')+
-        '</div>'+
-      '</div>';
+      statsDiv.innerHTML = '<div class="dv-stats-bar">'+statParts.join('')+'</div>';
     } else {
       statsDiv.style.display = 'none';
     }
