@@ -9246,11 +9246,13 @@ function toggleHint(id){
   ];
   var _swipeX = null;
   var _swipeY = null;
+  var _swipeT = null;
 
   document.addEventListener('touchstart', function(e){
     var t = e.touches[0];
     _swipeX = t.clientX;
     _swipeY = t.clientY;
+    _swipeT = Date.now();
   }, {passive:true});
 
   document.addEventListener('touchend', function(e){
@@ -9258,9 +9260,19 @@ function toggleHint(id){
     var t = e.changedTouches[0];
     var dx = t.clientX - _swipeX;
     var dy = t.clientY - _swipeY;
-    _swipeX = null; _swipeY = null;
-    // Only horizontal swipes (dx > dy in magnitude, and dx > 50px)
-    if(Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    var dt = Date.now() - _swipeT;
+    _swipeX = null; _swipeY = null; _swipeT = null;
+    // Must be fast (under 300ms), strongly horizontal, and at least 80px
+    if(dt > 300) return;
+    if(Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 2) return;
+    // Ignore if touch target is inside a scrollable table or overflow element
+    var target = e.target;
+    while(target && target !== document.body) {
+      var style = window.getComputedStyle(target);
+      if(style.overflowX === 'auto' || style.overflowX === 'scroll') return;
+      if(target.tagName === 'TABLE' || target.tagName === 'TD' || target.tagName === 'TH') return;
+      target = target.parentElement;
+    }
     var dir = dx < 0 ? 1 : -1; // swipe left = next, swipe right = prev
     var isIncome = _appMode === 'income';
     var tabs = isIncome ? INC_TABS : EXP_TABS;
