@@ -17170,6 +17170,15 @@ function sendSupport() {
       }
       var optBtn = document.getElementById('contact-optional-email-btn');
       if (optBtn) optBtn.style.display = 'none';
+      // Send auto-reply to user
+      if (userEmail) {
+        emailjs.send(EMAILJS_SERVICE_ID, 'template_058e96c', {
+          ticket_no: ticketNo,
+          name:      fullName,
+          subject:   subject,
+          email:     userEmail
+        }).catch(function(){});
+      }
     }).catch(function(err) {
       // EmailJS failed — show fallback option
       if (emailStatus) {
