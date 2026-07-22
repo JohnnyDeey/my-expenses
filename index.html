@@ -2127,7 +2127,7 @@ input[type="password"]::-ms-clear { display:none !important; }
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
             <select id="daily-flow-year"  onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
             <select id="daily-flow-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
-            <select id="daily-flow-currency" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All</option></select>
+            <select id="daily-flow-currency" style="display:none;"><option value="all">All</option></select>
           </div>
           <div class="chart-sub" id="daily-flow-sub"></div>
           <div class="chart-wrap"><canvas id="chart-daily-flow"></canvas></div>
@@ -2135,7 +2135,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div class="chart-card">
           <h3>Monthly Spending Trend</h3>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
-            <select id="monthly-currency-sel" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All</option></select>
+            <select id="monthly-currency-sel" style="display:none;"><option value="all">All</option></select>
             <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">FROM</span>
             <select id="monthly-from-year"  onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
             <select id="monthly-from-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
@@ -2150,7 +2150,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div class="chart-card">
           <h3>Yearly Total Spending</h3>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-            <select id="yearly-currency-sel" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All</option></select>
+            <select id="yearly-currency-sel" style="display:none;"><option value="all">All</option></select>
             <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">From</span>
             <select id="yearly-from-year" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
             <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">To</span>
@@ -2166,7 +2166,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div class="chart-card">
           <h3>Category Breakdown</h3>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-            <select id="cat-currency-sel" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All</option></select>
+            <select id="cat-currency-sel" style="display:none;"><option value="all">All</option></select>
             <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">From</span>
             <select id="cat-from-year"  onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
             <select id="cat-from-month" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
@@ -2184,7 +2184,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <div class="chart-card">
         <h3>Spending Heatmap</h3>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-          <select id="heatmap-currency-sel" onchange="renderDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All</option></select>
+          <select id="heatmap-currency-sel" style="display:none;"><option value="all">All</option></select>
           <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);">Annual × monthly intensity — darker = higher spend</span>
         </div>
         <div id="heatmap-container"></div>
@@ -2742,7 +2742,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div class="chart-card">
           <h3>Monthly Income Trend</h3>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
-            <select id="inc-monthly-currency-sel" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All</option></select>
+            <select id="inc-monthly-currency-sel" style="display:none;"><option value="all">All</option></select>
             <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:1px;">FROM</span>
             <select id="inc-monthly-from-year"  onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
             <select id="inc-monthly-from-month" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
@@ -2757,7 +2757,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div class="chart-card">
           <h3>Yearly Income</h3>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-            <select id="inc-yearly-currency-sel" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All</option></select>
+            <select id="inc-yearly-currency-sel" style="display:none;"><option value="all">All</option></select>
             <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">From</span>
             <select id="inc-yearly-from-year" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
             <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">To</span>
@@ -2772,7 +2772,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div class="chart-card">
           <h3>Income by Category</h3>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-            <select id="inc-cat-currency-sel" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All</option></select>
+            <select id="inc-cat-currency-sel" style="display:none;"><option value="all">All</option></select>
             <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">From</span>
             <select id="inc-cat-from-year"  onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
             <select id="inc-cat-from-month" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"></select>
@@ -2789,7 +2789,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <div class="chart-card">
         <h3>Income Heatmap</h3>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-          <select id="inc-heatmap-currency-sel" onchange="renderIncomeDashboard()" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);outline:none;"><option value="all">All</option></select>
+          <select id="inc-heatmap-currency-sel" style="display:none;"><option value="all">All</option></select>
           <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);">Annual × monthly intensity</span>
         </div>
         <div id="inc-heatmap-container"></div>
@@ -3398,11 +3398,33 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 
 <!-- == PRINT PICKER OVERLAY == -->
-<div id="print-picker-overlay" style="display:none;position:fixed;inset:0;z-index:100010;background:rgba(26,20,16,0.85);align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:10px;width:100%;max-width:380px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,0.5);">
-    <div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:900;color:var(--ink);margin-bottom:4px;">&#128438; Select Currencies to Print</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Each selected currency prints as a full report section — totals, monthly trend, category breakdown, yearly chart, heatmap, and YoY growth.</div>
-    <div id="print-picker-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;max-height:260px;overflow-y:auto;"></div>
+<div id="print-picker-overlay" style="display:none;position:fixed;inset:0;z-index:100010;background:rgba(26,20,16,0.85);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--paper);border:2px solid var(--gold);border-radius:10px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,0.5);">
+    <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:var(--ink);margin-bottom:16px;">&#128438; Print Report</div>
+
+    <!-- Section 1: Currency -->
+    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">1. Select Currency</div>
+    <div id="print-picker-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
+
+    <!-- Section 2: Charts -->
+    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">2. Select Charts</div>
+    <div id="print-chart-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px;"></div>
+
+    <!-- Section 3: Date Range -->
+    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">3. Date Range</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <label style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);">From</label>
+        <input type="date" id="print-date-from" style="font-family:'DM Mono',monospace;font-size:0.75rem;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);padding-top:16px;">→</div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <label style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);">To</label>
+        <input type="date" id="print-date-to" style="font-family:'DM Mono',monospace;font-size:0.75rem;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
+      </div>
+      <button onclick="resetPrintDateRange()" style="font-family:'DM Mono',monospace;font-size:0.65rem;padding:6px 10px;background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;margin-top:16px;">All time</button>
+    </div>
+
     <div style="display:flex;gap:8px;">
       <button onclick="closePrintPicker()" style="flex:1;padding:11px;background:none;border:1.5px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);cursor:pointer;">Cancel</button>
       <button onclick="executePrint()" id="print-picker-go" style="flex:2;padding:11px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--ink);cursor:pointer;letter-spacing:1px;">&#128438; Print Selected</button>
@@ -5609,22 +5631,63 @@ function openPrintPicker(mode) {
 
   var accentColor = isIncome ? 'var(--sage)' : 'var(--gold)';
 
+    var curBtnsDiv = document.createElement('div');
+  curBtnsDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
   allCurs.forEach(function(c) {
     var sym = SYMS[c] || c;
     var count = data.filter(function(i){ return i.currency === c; }).length;
-    // Pre-tick: if master is specific currency tick only that, else tick all
-    var checked = (masterCur === 'all' || masterCur === c);
-
-    var row = document.createElement('label');
-    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8f5f0;border:1.5px solid #e0dbd4;border-radius:6px;cursor:pointer;transition:border-color 0.15s;';
-    row.innerHTML =
-      '<input type="checkbox" value="'+c+'" '+(checked?'checked':'')+' style="width:18px;height:18px;cursor:pointer;accent-color:'+accentColor+';flex-shrink:0;">'+
-      '<div style="flex:1;">'+
-        '<div style="font-family:\'DM Mono\',monospace;font-size:0.82rem;font-weight:700;color:var(--ink);">'+sym+' '+c+'</div>'+
-        '<div style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:var(--muted);">'+count+' entries</div>'+
-      '</div>';
-    list.appendChild(row);
+    var active = (masterCur === 'all' || masterCur === c);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('data-cur', c);
+    btn.innerHTML = sym+' '+c+'<br><span style="font-size:0.6rem;font-weight:400;">'+count+' entries</span>';
+    btn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;padding:8px 14px;border-radius:6px;cursor:pointer;text-align:center;line-height:1.4;'+(active?'background:#4a7c59;color:#fff;border:1.5px solid #4a7c59;':'background:var(--paper);color:var(--muted);border:1.5px solid var(--border);');
+    if(active) btn.classList.add('pcc-active');
+    btn.addEventListener('click', function(){
+      btn.classList.toggle('pcc-active');
+      if(btn.classList.contains('pcc-active')){
+        btn.style.background='#4a7c59'; btn.style.color='#fff'; btn.style.borderColor='#4a7c59';
+      } else {
+        btn.style.background='var(--paper)'; btn.style.color='var(--muted)'; btn.style.borderColor='var(--border)';
+      }
+    });
+    curBtnsDiv.appendChild(btn);
   });
+  list.appendChild(curBtnsDiv);
+
+  // Populate chart dropdown
+  var chartList = document.getElementById('print-chart-list');
+  if(chartList){
+    var chartOptions = isIncome
+      ? ['Daily Income Flow','Monthly Income Trend','Yearly Income','Income by Category','Income Heatmap']
+      : ['Daily Spending Flow','Monthly Spending Trend','Yearly Total Spending','Category Breakdown','Spending Heatmap'];
+        chartList.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px;" id="pct-btns"></div>';
+    var pctDiv = chartList.querySelector('#pct-btns');
+    chartOptions.forEach(function(ch){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('data-chart', ch);
+      b.className = 'pct-active';
+      b.textContent = ch;
+      b.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;padding:5px 10px;border:1.5px solid var(--gold);border-radius:4px;cursor:pointer;background:var(--gold);color:var(--ink);white-space:nowrap;';
+      b.addEventListener('click', function(){
+        b.classList.toggle('pct-active');
+        if(b.classList.contains('pct-active')){
+          b.style.background='var(--gold)'; b.style.color='var(--ink)'; b.style.borderColor='var(--gold)';
+        } else {
+          b.style.background='none'; b.style.color='var(--muted)'; b.style.borderColor='var(--border)';
+        }
+      });
+      pctDiv.appendChild(b);
+    });
+  }
+
+  // Date range
+  var dates = data.map(function(i){return i.date;}).sort();
+  var fromEl = document.getElementById('print-date-from');
+  var toEl = document.getElementById('print-date-to');
+  if(fromEl) fromEl.value = dates[0] || '';
+  if(toEl) toEl.value = dates[dates.length-1] || '';
 
   var ov = document.getElementById('print-picker-overlay');
   if (ov) ov.style.display = 'flex';
@@ -5638,18 +5701,25 @@ function closePrintPicker() {
 function executePrint() {
   var list = document.getElementById('print-picker-list');
   var checked = [];
-  list.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb){ checked.push(cb.value); });
+  list.querySelectorAll('button.pcc-active').forEach(function(b){ checked.push(b.getAttribute('data-cur')); });
   if (!checked.length) { showToast('Select at least one currency'); return; }
+  var selectedCharts = [];
+  var chartList2 = document.getElementById('print-chart-list');
+  if(chartList2) chartList2.querySelectorAll('button.pct-active').forEach(function(b){ selectedCharts.push(b.getAttribute('data-chart')); });
+  var fromDate = document.getElementById('print-date-from') ? document.getElementById('print-date-from').value : '';
+  var toDate = document.getElementById('print-date-to') ? document.getElementById('print-date-to').value : '';
   closePrintPicker();
-  printDashboard(_printPickerMode, checked);
+  printDashboard(_printPickerMode, checked, selectedCharts, fromDate, toDate);
 }
 
-function printDashboard(mode, selectedCurrencies) {
+function printDashboard(mode, selectedCurrencies, selectedCharts, fromDate, toDate) {
   var isIncome = mode === 'income';
   var userName = getReportName();
   var now = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
 
   var rawData = isIncome ? loadIncomeData() : loadData();
+  if(fromDate) rawData = rawData.filter(function(i){ return i.date >= fromDate; });
+  if(toDate) rawData = rawData.filter(function(i){ return i.date <= toDate; });
   var allPositive = rawData.filter(function(i){return i.amount>0;});
 
   // Determine which currencies to print
@@ -5987,15 +6057,15 @@ function renderDashboard(){
   // -- DAILY FLOW CHART --
   var dfY = dfYr ? dfYr.value : curYear;
   var dfM = dfMo ? dfMo.value : curMonth;
-  var dfC = dfCur ? dfCur.value : 'all';
+  var dfC = _dashCurSelected || (dfCur ? dfCur.value : 'all');
   var dfData = allPositive.filter(function(i){ return i.date.substring(0,4)===dfY && i.date.substring(5,7)===dfM; });
   if(dfC !== 'all') dfData = dfData.filter(function(i){return i.currency===dfC;});
   renderDailyFlowChart(dfData, dfY, dfM, dfC !== 'all' ? dfC : (dataCurs[0]||'NGN'), 'chart-daily-flow', 'daily-flow-sub');
 
   // -- MONTHLY TREND --
-  var mCurSel = _getChartCurRaw('monthly-currency-sel');
+  var mCurSel = _dashCurSelected || _getChartCurRaw('monthly-currency-sel');
   var mBase = allPositive.slice();
-  if(mCurSel !== 'all') mBase = mBase.filter(function(i){return i.currency===mCurSel;});
+  if(mCurSel && mCurSel !== 'all') mBase = mBase.filter(function(i){return i.currency===mCurSel;});
   var mKeys = []; mBase.forEach(function(i){var k=i.date.substring(0,7);if(mKeys.indexOf(k)===-1) mKeys.push(k);}); mKeys.sort();
   _populateMonthlyRangePickers(mKeys, 'monthly');
   var mFiltered = _applyChartRangeFilter(mBase,'monthly-from-year','monthly-from-month','monthly-to-year','monthly-to-month');
@@ -6003,18 +6073,18 @@ function renderDashboard(){
   renderMonthlyChart(mFiltered.filter(function(i){return i.currency===monthlyCur;}), monthlyCur);
 
   // -- CATEGORY BARS --
-  var catCurSel = _getChartCurRaw('cat-currency-sel');
+  var catCurSel = _dashCurSelected || _getChartCurRaw('cat-currency-sel');
   var catBase = allPositive.slice();
-  if(catCurSel !== 'all') catBase = catBase.filter(function(i){return i.currency===catCurSel;});
+  if(catCurSel && catCurSel !== 'all') catBase = catBase.filter(function(i){return i.currency===catCurSel;});
   var catKeys = []; catBase.forEach(function(i){var k=i.date.substring(0,7);if(catKeys.indexOf(k)===-1) catKeys.push(k);}); catKeys.sort();
   _populateCatRangePicker(catKeys, 'cat');
   var catFiltered = _applyChartRangeFilter(catBase,'cat-from-year','cat-from-month','cat-to-year','cat-to-month');
   renderCategoryBars(catFiltered);
 
   // -- YEARLY CHART --
-  var yearlyCurSel = _getChartCurRaw('yearly-currency-sel');
+  var yearlyCurSel = _dashCurSelected || _getChartCurRaw('yearly-currency-sel');
   var yearlyBase = allPositive.slice();
-  if(yearlyCurSel !== 'all') yearlyBase = yearlyBase.filter(function(i){return i.currency===yearlyCurSel;});
+  if(yearlyCurSel && yearlyCurSel !== 'all') yearlyBase = yearlyBase.filter(function(i){return i.currency===yearlyCurSel;});
   var allDataYears = []; yearlyBase.forEach(function(i){var y=i.date.substring(0,4);if(allDataYears.indexOf(y)===-1) allDataYears.push(y);}); allDataYears.sort();
   _populateYearRangePicker(allDataYears,'yearly-from-year','yearly-to-year');
   var yearlyFiltered = _applyYearRangeFilter(yearlyBase,'yearly-from-year','yearly-to-year');
@@ -6022,7 +6092,7 @@ function renderDashboard(){
   renderYearlyChart(yearlyFiltered.filter(function(i){return i.currency===yearlyCur;}), yearlyCur);
 
   // -- HEATMAP + YoY --
-  var hmCurSel = _getChartCurRaw('heatmap-currency-sel');
+  var hmCurSel = _dashCurSelected || _getChartCurRaw('heatmap-currency-sel');
   var hmBase = allPositive.slice();
   var yoyContainer = document.getElementById('yoy-growth-container');
   if(yoyContainer) yoyContainer.innerHTML='';
@@ -6100,13 +6170,13 @@ function renderDailyFlowChart(data, year, month, currency, canvasId, subId) {
       datasets:[{
         label:currency,
         data:vals,
-        borderColor:'#c8962e',
-        backgroundColor:'rgba(200,150,46,0.08)',
+        borderColor:getCurColor(currency),
+        backgroundColor:getCurBg(currency),
         borderWidth:2.5,
         tension:0.4,
         fill:true,
-        pointBackgroundColor: vals.map(function(v){return v>0?'#c8962e':'transparent';}),
-        pointBorderColor:    vals.map(function(v){return v>0?'#c8962e':'transparent';}),
+        pointBackgroundColor: vals.map(function(v){return v>0?getCurColor(currency):'transparent';}),
+        pointBorderColor:    vals.map(function(v){return v>0?getCurColor(currency):'transparent';}),
         pointRadius:         vals.map(function(v){return v>0?3:0;}),
         pointHoverRadius:5,
         pointHitRadius:10
@@ -6123,6 +6193,20 @@ function renderDailyFlowChart(data, year, month, currency, canvasId, subId) {
   });
 }
 
+function getCurColor(cur) {
+  var map = {
+    'NGN': '#c8963a',
+    'EUR': '#3d6b8a',
+    'USD': '#8b5e3c',
+    'GBP': '#6b3d8c',
+    'GHS': '#2e7d8a',
+  };
+  return map[cur] || '#c8962e';
+}
+function getCurBg(cur) {
+  var c = getCurColor(cur);
+  return c + '15';
+}
 function animateCount(el, target, sym, isInt) {
   var start = 0;
   var duration = 900;
@@ -6218,6 +6302,17 @@ function renderStats(data){
   _statTimer = setInterval(function(){ _statNext(); }, 3000);
 }
 
+var _incStatIdx = 0;
+var _incStatTotal = 0;
+var _incStatTimer = null;
+function _incStatGoTo(idx){
+  _incStatIdx = idx;
+  var track = document.getElementById('inc-stats-track');
+  if(track) track.style.transform = 'translateX(-'+(idx*100)+'%)';
+  document.querySelectorAll('#inc-stats-dots .stats-dot').forEach(function(d,i){ d.classList.toggle('active', i===idx); });
+}
+function _incStatNext(){ _incStatGoTo((_incStatIdx+1) % (_incStatTotal||1)); }
+function _incStatPrev(){ _incStatGoTo((_incStatIdx-1+(_incStatTotal||1)) % (_incStatTotal||1)); }
 var _statIdx = 0;
 var _statTotal = 0;
 var _statTimer = null;
@@ -6329,8 +6424,9 @@ function renderYearlyChart(data, cur) {
   if (!years.length) return;
 
   // Colour bars: last year gold, others muted
+  var _yc = getCurColor(cur);
   var colors = years.map(function(y, i){
-    return i === years.length - 1 ? 'rgba(200,150,46,0.9)' : 'rgba(200,150,46,0.4)';
+    return i === years.length - 1 ? _yc : _yc+'66';
   });
 
   var ctx = document.getElementById('chart-yearly').getContext('2d');
@@ -6341,7 +6437,7 @@ function renderYearlyChart(data, cur) {
       datasets: [{
         label: cur + ' Annual Spend',
         data: values,
-        borderColor: '#c8962e',
+        borderColor: getCurColor(cur),
         backgroundColor: 'rgba(200,150,46,0.08)',
         tension: 0.4,
         fill: true,
@@ -6592,7 +6688,7 @@ function renderMonthlyChart(data, cur){
   var ptHover  = keys.length <= 36 ? 5 : 4;
   var ctx=document.getElementById('chart-monthly').getContext('2d');
   charts['chart-monthly']=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{
-    label:cur,data:values,borderColor:'#c8962e',backgroundColor:'rgba(200,150,46,0.08)',
+    label:cur,data:values,borderColor:getCurColor(cur),backgroundColor:getCurBg(cur),
     tension:0.4,fill:true,pointBackgroundColor:'#c8962e',
     pointRadius:ptRadius,pointHoverRadius:ptHover,pointHitRadius:12
   }]},options:{responsive:true,maintainAspectRatio:false,
@@ -11842,9 +11938,54 @@ function renderIncomeDashboard() {
   // Stats — show all data
   var byCurAll = {}; allPositive.forEach(function(i){ byCurAll[i.currency]=(byCurAll[i.currency]||0)+i.amount; });
   var statsRow = document.getElementById("inc-stats-row");
-  var statItems = [{label:"Total Entries",value:allPositive.length,sym:"",isCur:false,cls:"total"}];
-  Object.keys(byCurAll).sort().forEach(function(c){ statItems.push({label:"Total "+c,value:byCurAll[c],sym:SYMS[c]||"",isCur:true,cls:"naira"}); });
-  if(statsRow) statsRow.innerHTML = statItems.map(function(s){ return "<div class=\"stat-card "+s.cls+"\"><div class=\"stat-label\">"+s.label+"</div><div class=\"stat-value\" style=\"color:var(--sage);\">"+(s.isCur?s.sym+fmtNum(s.value):s.value)+"</div></div>"; }).join("");
+  var cur = _incDashCurSelected;
+  var sym = cur ? (SYMS[cur]||cur) : '';
+  var incFiltered = cur ? allPositive.filter(function(i){return i.currency===cur;}) : allPositive;
+  var incTotal = incFiltered.reduce(function(s,i){return s+i.amount;},0);
+  var incByMonth = {};
+  incFiltered.forEach(function(i){ var k=i.date.substring(0,7); incByMonth[k]=(incByMonth[k]||0)+i.amount; });
+  var incMonths = Object.keys(incByMonth);
+  var incAvg = incMonths.length ? incTotal/incMonths.length : 0;
+  var incBigMonth='', incBigVal=0;
+  incMonths.forEach(function(k){ if(incByMonth[k]>incBigVal){incBigVal=incByMonth[k];incBigMonth=k;} });
+  var incBigLabel = incBigMonth ? (MONTHS[parseInt(incBigMonth.substring(5,7))-1]+' '+incBigMonth.substring(0,4)) : '—';
+  var incByCat = {};
+  incFiltered.forEach(function(i){ incByCat[i.category]=(incByCat[i.category]||0)+i.amount; });
+  var incTopCat='', incTopVal=0;
+  Object.keys(incByCat).forEach(function(c){ if(incByCat[c]>incTopVal){incTopVal=incByCat[c];incTopCat=c;} });
+  var incCards = [
+    {icon:'📊', label:'Total Entries', value:allPositive.length, sub:cur||'All currencies', isCur:false, sym:''},
+    {icon:'💰', label:'Total Income', value:incTotal, sub:cur||'All', isCur:true, sym:sym},
+    {icon:'📅', label:'Monthly Avg', value:incAvg, sub:'per month', isCur:true, sym:sym},
+    {icon:'🔥', label:'Best Month', value:incBigVal, sub:incBigLabel, isCur:true, sym:sym},
+    {icon:'🏷️', label:'Top Source', value:incTopVal, sub:incTopCat||'—', isCur:true, sym:sym},
+  ];
+  if(statsRow){
+    var incCardsHTML = incCards.map(function(c,idx){
+      return '<div class="stat-card" style="min-width:100%;box-sizing:border-box;">'+
+        '<div style="font-size:1.6rem;margin-bottom:6px;">'+c.icon+'</div>'+
+        '<div class="stat-label">'+c.label+'</div>'+
+        '<div class="stat-value" style="color:var(--sage);" id="inc-sval-'+idx+'">'+(c.isCur?c.sym+fmtNum(c.value):c.value)+'</div>'+
+        '<div class="stat-sub">'+c.sub+'</div>'+
+        '</div>';
+    }).join('');
+    var incDotsHTML = incCards.map(function(_,i){
+      return '<div class="stats-dot'+(i===0?' active':'')+'" onclick="_incStatGoTo('+i+')"></div>';
+    }).join('');
+    statsRow.innerHTML =
+      '<div class="stats-carousel">'+
+        '<button class="stats-arr" onclick="_incStatPrev()">&#9664;</button>'+
+        '<div class="stats-track-wrap"><div class="stats-track" id="inc-stats-track">'+incCardsHTML+'</div></div>'+
+        '<button class="stats-arr" onclick="_incStatNext()">&#9654;</button>'+
+      '</div>'+
+      '<div class="stats-dots" id="inc-stats-dots">'+incDotsHTML+'</div>';
+    incCards.forEach(function(c,idx){
+      if(c.value>0){ var el=document.getElementById('inc-sval-'+idx); if(el) animateCount(el,c.value,c.sym,!c.isCur); }
+    });
+    _incStatIdx=0; _incStatTotal=incCards.length;
+    if(_incStatTimer) clearInterval(_incStatTimer);
+    _incStatTimer = setInterval(function(){ _incStatNext(); }, 3000);
+  }
 
   // -- DAILY FLOW --
   var idfY = idfYr ? idfYr.value : curYear;
@@ -11855,7 +11996,7 @@ function renderIncomeDashboard() {
   renderDailyFlowChart(idfData, idfY, idfM, idfC!=="all"?idfC:(incCurs[0]||"NGN"), "inc-chart-daily-flow", "inc-daily-flow-sub");
 
   // Monthly trend with range picker
-  var mCurSel = _getChartCurRaw("inc-monthly-currency-sel");
+  var mCurSel = _incDashCurSelected || _getChartCurRaw("inc-monthly-currency-sel");
   var mCur = mCurSel !== "all" ? mCurSel : (incCurs[0]||"NGN");
   var mData = allPositive.filter(function(i){ return i.currency===mCur; });
   var byMonth = {}; mData.forEach(function(i){ var k=i.date.substring(0,7); byMonth[k]=(byMonth[k]||0)+i.amount; });
@@ -11886,7 +12027,7 @@ function renderIncomeDashboard() {
   }
 
   // Income category bars — populate picker and apply range filter
-  var catCurSel = _getChartCurRaw("inc-cat-currency-sel");
+  var catCurSel = _incDashCurSelected || _getChartCurRaw("inc-cat-currency-sel");
   var incCatBase = allPositive.slice();
   if(catCurSel !== "all") incCatBase = incCatBase.filter(function(i){return i.currency===catCurSel;});
   var incCatKeys = [];
@@ -11956,7 +12097,7 @@ function renderIncomeDashboard() {
   });
 
   // Yearly chart — populate year picker and apply range filter
-  var incYearlyCurSel = _getChartCurRaw("inc-yearly-currency-sel");
+  var incYearlyCurSel = _incDashCurSelected || _getChartCurRaw("inc-yearly-currency-sel");
   var yCur = incYearlyCurSel !== "all" ? incYearlyCurSel : (incCurs[0]||"NGN");
   var incYearlyBase = allPositive.slice();
   if(incYearlyCurSel !== "all") incYearlyBase = incYearlyBase.filter(function(i){return i.currency===incYearlyCurSel;});
@@ -11978,7 +12119,7 @@ function renderIncomeDashboard() {
   if (incYoyContainer) incYoyContainer.innerHTML = "";
   var incHContainer = document.getElementById("inc-heatmap-container");
 
-  var incHmCurSel = _getChartCurRaw("inc-heatmap-currency-sel");
+  var incHmCurSel = _incDashCurSelected || _getChartCurRaw("inc-heatmap-currency-sel");
   if (incHmCurSel === "all" && incCurs.length) {
     if (incHContainer) incHContainer.innerHTML = "";
     if (incYoyContainer) incYoyContainer.innerHTML = "";
