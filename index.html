@@ -1903,21 +1903,14 @@ input[type="password"]::-ms-clear { display:none !important; }
 
     <!-- LEFT: Year + Month picker -->
     <div class="card month-picker-card">
-      <label>Select Period</label>
+      <label><span onclick="event.preventDefault();event.stopPropagation();">Select Period</span> <button onclick="event.stopPropagation();toggleHint('exp-hint')" style="background:none;border:1px solid var(--border);border-radius:50%;color:var(--muted);cursor:pointer;font-size:0.65rem;width:16px;height:16px;padding:0;line-height:1;vertical-align:middle;">?</button></label><div id="exp-hint" style="display:none;background:var(--paper2,#2a2218);border:1px solid var(--border);border-radius:4px;padding:8px 10px;margin-bottom:8px;font-family:DM Mono,monospace;font-size:0.62rem;color:#a09070;line-height:1.7;">⌨️ <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate · Alt+Enter = enter/exit notepad · N / B = year<br>🟨 Selected &nbsp;|&nbsp; 🟩 Has data &nbsp;|&nbsp; ⬜ Empty</div>
       <div class="year-nav">
         <button onclick="changeYear(-1)">&#8592;</button>
         <div class="year-display" id="picker-year-display">2026</div>
         <button onclick="changeYear(1)">&#8594;</button>
       </div>
       <div class="months-grid" id="months-grid"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#a09070;letter-spacing:1px;text-align:center;margin-top:8px;">⌨️ &nbsp;<strong>Hold Alt</strong> + ← → ↑ ↓ = navigate &nbsp;·&nbsp; Alt+Enter = enter/exit notepad &nbsp;·&nbsp; N / B = year</div>
-      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
-        <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);margin-bottom:8px;letter-spacing:1px;text-transform:uppercase;">Legend</div>
-        <div style="display:flex;flex-direction:column;gap:5px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">
-          <div style="display:flex;align-items:center;gap:8px;"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:var(--gold);"></span>Selected</div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;border:1.5px solid var(--sage);"></span>Has data</div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;border:1.5px solid var(--border);background:white;"></span>Empty</div>
-        </div>
+      <div style="display:none">
       </div>
     </div>
 
@@ -2543,7 +2536,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div class="section-title">Import Income Data</div>
   <div class="import-layout">
     <div class="card month-picker-card">
-      <label>Select Period</label>
+      <label><span onclick="event.preventDefault();event.stopPropagation();">Select Period</span> <button onclick="event.stopPropagation();toggleHint('inc-hint')" style="background:none;border:1px solid var(--border);border-radius:50%;color:var(--muted);cursor:pointer;font-size:0.65rem;width:16px;height:16px;padding:0;line-height:1;vertical-align:middle;">?</button></label><div id="inc-hint" style="display:none;background:var(--paper2,#2a2218);border:1px solid var(--border);border-radius:4px;padding:8px 10px;margin-bottom:8px;font-family:DM Mono,monospace;font-size:0.62rem;color:#a09070;line-height:1.7;">⌨️ <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate · Alt+Enter = enter/exit notepad · N / B = year<br>🟨 Selected &nbsp;|&nbsp; 🟩 Has data &nbsp;|&nbsp; ⬜ Empty</div>
       <div class="year-nav">
         <button onclick="incChangeYear(-1)">&#8592;</button>
         <div id="inc-picker-year-display" class="year-display">2026</div>
@@ -2551,7 +2544,6 @@ input[type="password"]::-ms-clear { display:none !important; }
         <button onclick="incChangeYear(1)">&#8594;</button>
       </div>
       <div id="inc-months-grid" class="months-grid"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#a09070;letter-spacing:1px;text-align:center;margin-top:8px;">⌨️ &nbsp;<strong>Hold Alt</strong> + ← → ↑ ↓ = navigate &nbsp;·&nbsp; Alt+Enter = enter/exit notepad &nbsp;·&nbsp; N / B = year &nbsp;·&nbsp; Y = toggle Year/Month</div>
     </div>
     <div class="import-right">
       <div class="import-header-bar">
@@ -2565,7 +2557,7 @@ input[type="password"]::-ms-clear { display:none !important; }
           <button class="btn btn-ghost" onclick="loadIncomeSample()">Sample</button>
         </div>
       </div>
-      <textarea id="inc-raw-input" rows="18" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="fnrKeyShortcut(event);"></textarea>
+      <textarea id="inc-raw-input" rows="18" class="textarea-existing" style="background:#fff;color:#1a1410;" placeholder="MONTH MODE: Select a month on the left, then paste that month&#39;s income...&#10;&#10;YEAR MODE: Paste a full year — all months at once!&#10;&#10;Format (colon or tab separator):&#10;01-01-2026&#10;Salary: &#8358;70,000&#10;Tips from customer: #2,000&#10;Freelance job: $150&#10;&#10;&#128161; Alt+Enter = enter/exit notepad  |  Ctrl+Enter = Parse  |  Ctrl+Enter again = Go to Categorize" onkeydown="fnrKeyShortcut(event);"></textarea>
       <div class="import-tip">
         Supported: <strong>&#8358; / # Naira</strong> &nbsp;&bull;&nbsp; <strong>$ Dollar</strong> &nbsp;&bull;&nbsp; <strong>&#8364; Euro</strong> &nbsp;&bull;&nbsp; <strong>&#163; Pound</strong>
         &nbsp;&nbsp;|&nbsp;&nbsp; Colon or tab before amount &nbsp;&nbsp;|&nbsp;&nbsp; No currency symbol = skipped to deleted items
@@ -8489,6 +8481,26 @@ function fmtAmt(amount,currency){return(SYMS[currency]||'')+fmtNum(Math.abs(amou
 function pad(n){return String(n).padStart(2,'0');}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2800);}
 
+function toggleHint(id){
+  var el=document.getElementById(id);
+  if(!el) return;
+  var ob=document.getElementById('_hint_box');
+  var obb=document.getElementById('_hint_bd');
+  if(ob) ob.remove();
+  if(obb) obb.remove();
+  var bd=document.createElement('div');
+  bd.id='_hint_bd';
+  bd.style.cssText='position:fixed;inset:0;z-index:1999;background:rgba(0,0,0,0.4);';
+  var box=document.createElement('div');
+  box.id='_hint_box';
+  box.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:1px solid #ddd;border-radius:8px;padding:20px 24px;z-index:2000;min-width:260px;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,0.2);font-family:DM Mono,monospace;font-size:0.75rem;color:#333;line-height:1.9;';
+  function closeHint(){ var o=document.getElementById('_hint_box'); var b=document.getElementById('_hint_bd'); if(o)o.remove(); if(b)b.remove(); }
+  box.innerHTML='<div style="font-size:0.78rem;font-weight:700;margin-bottom:12px;color:#1a1410;">&#128161; Tips</div>'+el.innerHTML+'<br><button style="margin-top:10px;background:#1a1410;border:none;border-radius:4px;padding:6px 18px;font-family:DM Mono,monospace;font-size:0.7rem;font-weight:700;color:#fff;cursor:pointer;" id="_hint_close_btn">Close</button>';
+  bd.onclick=closeHint;
+  document.body.appendChild(bd);
+  document.body.appendChild(box);
+  document.getElementById('_hint_close_btn').onclick=closeHint;
+}
 function toggleBurgerMenu(){
   var s=document.getElementById('burger-sidebar');
   var b=document.getElementById('burger-backdrop');
@@ -11040,6 +11052,7 @@ function parseIncomeInput() {
     if (replacedIds.length) _incMsg += ' · ' + replacedIds.length + ' replaced';
     if (skipped.length) _incMsg += ' · ' + skipped.length + ' skipped';
     showToast(_incMsg);
+    document.getElementById('inc-raw-input').className = 'textarea-existing';
   }
 
   if (_incParseConflicts.length) {
