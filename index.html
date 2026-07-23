@@ -14434,6 +14434,19 @@ function _resumeSession(uid, name, phone) {
         if (d.dial)    localStorage.setItem('expense_user_dial_'    + uid, d.dial);
       }
       profileDone = true; _checkAllDone();
+      // Also fetch created date from user_registry
+      if (_userPhone && !localStorage.getItem('expense_joined_' + uid)) {
+        _db.collection('user_registry').doc(_userPhone).get().then(function(regDoc){
+          if (regDoc.exists && regDoc.data().created) {
+            localStorage.setItem('expense_joined_' + uid, String(regDoc.data().created));
+            var sinceEl = document.getElementById('profile-member-since');
+            if(sinceEl) {
+              var d2 = new Date(regDoc.data().created);
+              sinceEl.textContent = 'Member since ' + d2.toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+            }
+          }
+        }).catch(function(){});
+      }
     }).catch(function(){ profileDone = true; _checkAllDone(); });
     // Onboarding: tour version completed
     userCol('settings').doc('onboarding').get().then(function(doc) {
