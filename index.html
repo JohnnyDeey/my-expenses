@@ -15001,6 +15001,12 @@ function showLoginStep() {
   var cd = document.getElementById('login-code');  if(cd) cd.value = '';
   var er = document.getElementById('login-error'); if(er) er.textContent = '';
   _loginAttempts = 0;
+  // Show FP button and auto-trigger if enabled
+  var fpBtn = document.getElementById('fp-login-btn');
+  if(fpBtn) fpBtn.style.display = localStorage.getItem('fp_enabled')==='1' ? 'block' : 'none';
+  if(localStorage.getItem('fp_enabled')==='1'){
+    setTimeout(function(){ tryBiometricLogin(function(){}); }, 800);
+  }
   var hint = document.getElementById('reset-attempt-hint'); if(hint) hint.style.display = 'none';
   setTimeout(function(){ var el = document.getElementById('login-code'); if(el) el.focus(); }, 80);
 }
