@@ -16748,49 +16748,67 @@ var ONBOARD_EXPENSES_SLIDES = [
   {
     icon: '👋',
     title: 'Welcome to My Expense Ledger!',
-    body: 'Your personal finance tracker — record spending, track income, set budgets, and generate reports. This quick tour shows you how everything works.',
+    body: 'Your personal multi-currency finance tracker. Record spending, track income, set budgets, and generate reports. This quick tour shows you how everything works.',
     color: '#c8962e'
   },
   {
+    icon: '☰',
+    title: 'Navigate with the Burger Menu',
+    body: 'Tap the <strong>☰ menu</strong> in the top bar to switch between Import, Categorize, Daily, Dashboard, Ledger, Budget, and Manage. You can also <strong>swipe left or right</strong> to switch tabs quickly.',
+    color: '#3d5a73'
+  },
+  {
     icon: '📥',
-    title: 'Import Tab — Add Your Expenses',
-    body: 'Navigate to your month using <strong>Hold Alt + arrows</strong>. Press <strong>Alt+Enter</strong> to jump into the notepad. Type your entries. Press <strong>Alt+Enter</strong> again to exit. Then <strong>Ctrl+Enter</strong> to parse, and <strong>Ctrl+Enter</strong> again to go to Categorize.',
+    title: 'Import — Add Your Expenses',
+    body: 'Select a period using the <strong>Select Period</strong> picker — tap ▼ to expand. Paste your entries in the notepad and press <strong>Ctrl+Enter</strong> to parse, then again to go to Categorize. Tap <strong>?</strong> for keyboard tips.',
     color: '#3d5a73'
   },
   {
     icon: '🏷️',
     title: 'Categorize — Sort Your Spending',
-    body: 'After parsing, review each entry and assign a category. Use the <strong>⇅ sort button</strong> to show Newest first — so your latest entries are at the top. The app learns your patterns over time.',
+    body: 'After parsing, assign a category to each entry. Use the <strong>⋮ menu</strong> to load sample data or clear the month. The app learns your patterns over time.',
     color: '#4a7c59'
   },
   {
     icon: '📋',
     title: 'Ledger — Your Full Record',
-    body: 'The Ledger shows all your entries. Filter by year, month, currency, or category. Use the search bar to find specific items. Tap a category pill to change it instantly.',
+    body: 'The Ledger shows all your entries. Filter by year, month, currency, or category. <strong>Tap any row</strong> to see the full date and description. Use the search bar to find items quickly.',
     color: '#8b5e3c'
   },
   {
     icon: '📊',
-    title: 'Dashboard — Charts & Totals',
-    body: 'See your spending broken down by category, month, and currency. Charts update in real time as you add data. Use the currency filter to view one currency at a time.',
+    title: 'Dashboard — Currency Strip',
+    body: 'Select your currency using the <strong>green buttons</strong> at the top. All charts update instantly — monthly trend, category breakdown, yearly totals, heatmap, and Top 10 days.',
     color: '#6b3d8c'
+  },
+  {
+    icon: '🍩',
+    title: 'Dashboard — Category & Top 10',
+    body: 'Toggle the Category Breakdown between <strong>List</strong> and <strong>Donut</strong> view. Scroll down to see your <strong>Top 10 highest spending days</strong> — tap any day to see all transactions.',
+    color: '#c8962e'
   },
   {
     icon: '🎯',
     title: 'Budget — Set Monthly Limits',
-    body: 'Set a spending limit for each category. The app tracks how much you have used and alerts you when you are getting close. Set budgets per currency.',
+    body: 'Add categories and tap <strong>+ Set limit</strong> to set a target. A progress bar shows usage — amber at 70%, red at 90%. Tap the amount to edit your limit anytime.',
     color: '#b5451b'
   },
   {
     icon: '⚙️',
     title: 'Manage — Settings & Backup',
-    body: 'Export your data as CSV, change your PIN, update your name, manage currencies, and delete old months. Your data is always backed up to the cloud automatically.',
+    body: 'Three sections: <strong>Profile</strong> (always visible), <strong>Settings</strong> (currencies, PIN, biometric login), and <strong>Data &amp; Account</strong> (export, import, danger zone). Tap a section header to expand it.',
     color: '#2e7d8a'
+  },
+  {
+    icon: '👆',
+    title: 'Biometric Login',
+    body: 'Enable fingerprint or face ID in <strong>Manage → Settings → Biometric Login</strong>. Once enabled, the fingerprint icon appears beside the ENTER button on the login screen for quick access.',
+    color: '#4a7c59'
   },
   {
     icon: '🔁',
     title: 'Switch to Income Anytime',
-    body: 'Tap the 🔁 button in the header to switch between Expenses and Income modules. Each module has its own ledger, dashboard, and import — completely separate.',
+    body: 'Tap the <strong>EXPENSES / INCOME</strong> button in the top bar to switch modules. Each module has its own import, ledger, dashboard, and manage tab.',
     color: '#4a7c59'
   },
   {
@@ -16830,57 +16848,50 @@ var ONBOARD_INCOME_SLIDES = [
   {
     icon: '💰',
     title: 'Welcome to Income Module!',
-    body: 'Track all your earnings here — salary, freelance payments, allowances, gifts, and more. Income is kept completely separate from your expenses.',
+    body: 'Track all your earnings here — salary, freelance, allowances, gifts, investments, and more. Switch between Expenses and Income using the button in the top bar.',
     color: '#4a7c59'
   },
   {
     icon: '📥',
-    title: 'Import Income Data',
-    body: 'Navigate to your month using <strong>Hold Alt + arrows</strong>. Press <strong>Alt+Enter</strong> to jump into the notepad. Type your income entries. Press <strong>Alt+Enter</strong> again to exit. Then <strong>Ctrl+Enter</strong> to parse, and <strong>Ctrl+Enter</strong> again to go to Categorize.',
+    title: 'Import — Add Your Income',
+    body: 'Select a period using the <strong>Select Period</strong> picker — tap ▼ to expand. Paste your income entries in the notepad and press <strong>Ctrl+Enter</strong> to parse. Use the <strong>⋮ menu</strong> to load sample data.',
     color: '#3d5a73'
   },
   {
     icon: '🏷️',
     title: 'Categorize Your Income',
-    body: 'Assign categories like Salary, Freelance, Commission, Gift, or Refund. Use the <strong>⇅ sort button</strong> to show Newest first. You can create custom categories for your specific income sources.',
-    color: '#2e7d8a'
+    body: 'After parsing, assign a category to each income entry — Salary, Gift, Business, Government Support, and more. The app learns your patterns over time.',
+    color: '#4a7c59'
   },
   {
-    icon: '📋',
-    title: 'Income Ledger',
-    body: 'View all income entries, filter by year, month, currency, or category. Each row has a <strong>☐ checkbox</strong>. Check rows and use <strong>— Hide</strong> (removes from view), <strong>✕ Delete</strong> (deleted items), or <strong>✓ Assign</strong> (category). Assign with nothing checked updates all visible filtered items at once.',
-    color: '#8b5e3c'
+    icon: '📅',
+    title: 'Monthly View',
+    body: 'The Monthly tab groups your income by year and month. Tap a year to expand it, then tap a month to see all entries. Use the currency pill switcher at the top to view one currency at a time.',
+    color: '#2e7d8a'
   },
   {
     icon: '📊',
     title: 'Income Dashboard',
-    body: 'Charts show your income breakdown by category and month. Compare earnings across currencies. Track your monthly totals and yearly trends.',
+    body: 'Select your currency using the <strong>green buttons</strong> at the top. Swipe through the <strong>stat cards</strong> to see total income, monthly average, best month, and top income source.',
     color: '#6b3d8c'
   },
   {
-    icon: '📊',
-    title: 'Income Dashboard — Master Filter',
-    body: 'Use the Year, Month, and Currency filter at the top of the Income Dashboard. All charts — monthly trend, income by category, yearly totals, heatmap, and year-over-year growth — all respond together instantly.',
+    icon: '🏆',
+    title: 'Top 10 Income Days',
+    body: 'Scroll to the bottom of the Income Dashboard to see your <strong>Top 10 highest earning days</strong>. Tap any day to see a full breakdown of all income received that day.',
+    color: '#c8962e'
+  },
+  {
+    icon: '📋',
+    title: 'Income Ledger',
+    body: 'The Income Ledger shows all your income entries. Filter by year, month, currency, or category. <strong>Tap any row</strong> to see the full date and description.',
+    color: '#8b5e3c'
+  },
+  {
+    icon: '⚙️',
+    title: 'Income Manage',
+    body: 'Export your income as CSV, generate a PDF report, or delete income data by period. Your data is backed up to the cloud automatically and syncs across all your devices.',
     color: '#2e7d8a'
-  },
-  {
-    icon: '🖨️',
-    title: 'Print Income Reports',
-    body: 'Click <strong>🖨 Print Report</strong> on the Income Dashboard. Tick the currencies you want — each one prints a full standalone report section with all 6 charts. Perfect for monthly or annual income reviews.',
-    color: '#6b3d8c'
-  },
-  {
-    icon: '⌨️',
-    title: 'Laptop Keyboard Shortcuts',
-    body: '<strong>Tab</strong> → next tab &nbsp;|&nbsp; <strong>Ctrl+Tab</strong> → prev tab &nbsp;|&nbsp; <strong>Ctrl+1–7</strong> = jump to tab<br><strong>↑</strong> top &nbsp;|&nbsp; <strong>↓</strong> bottom &nbsp;|&nbsp; <strong>F1</strong> = Help &nbsp;|&nbsp; <strong>F2</strong> = Calendar<br><strong>S</strong> = switch module &nbsp;|&nbsp; <strong>E</strong> = Expenses &nbsp;|&nbsp; <strong>I</strong> = Income<br><strong>H</strong> = hide/show header &nbsp;|&nbsp; <strong>L</strong> = log out<br>Import tab: <strong>Hold Alt</strong> + ← → ↑ ↓ = navigate months &nbsp;|&nbsp; <strong>Enter</strong> = jump to notepad &nbsp;|&nbsp; <strong>N/B</strong> = year<br>Help panel: arrows = navigate icons &nbsp;|&nbsp; <strong>Enter</strong> = open &nbsp;|&nbsp; <strong>G</strong> = back to grid<br>Onboarding: <strong>N</strong> = next &nbsp;|&nbsp; <strong>B</strong> = back &nbsp;|&nbsp; <strong>S</strong> = skip tour (forced only)<br>Import: <strong>Ctrl+Enter</strong> = Parse → again = Go to Categorize<br>Categorize: <strong>Ctrl+Enter</strong> = Assign All (if category typed) or Save to Ledger<br>Ledger: <strong>Ctrl+Enter</strong> = Assign &nbsp;|&nbsp; Manage: <strong>Ctrl+Enter</strong> = Save<br>Ledger: <strong>← →</strong> buttons at bottom = scroll table left/right<br><strong>Alt+R</strong> = replay tour &nbsp;|&nbsp; <strong>Alt+C</strong> = Contact Support<br>PIN pad: type digits → press <strong>Enter</strong> to log in.',
-    color: '#3d5a73'
-  },
-  {
-    icon: '🚀',
-    title: 'Start Tracking Income!',
-    body: 'Go to <strong>Import</strong> and add your first income entries. Switch back to Expenses anytime using the 🔁 button in the header.',
-    color: '#4a7c59',
-    last: true
   }
 ];
 
