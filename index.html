@@ -6123,13 +6123,6 @@ function _syncCatScrollHeight(leftStackId, scrollId) {
 window.addEventListener('resize', function(){
   _syncCatScrollHeight('dash-left', 'cat-bars-scroll');
   _syncCatScrollHeight('inc-dash-left', 'inc-cat-bars-scroll');
-  var incTop10Cur = _incDashCurSelected || (incCurs[0]||'NGN');
-  renderTop10Days(allPositive.filter(function(i){return i.currency===incTop10Cur;}), SYMS[incTop10Cur]||'', 'inc-top10-container', 'inc-top10-sub', '#4a7c59');
-});
-
-window.addEventListener('resize', function(){
-  _syncCatScrollHeight('dash-left', 'cat-bars-scroll');
-  _syncCatScrollHeight('inc-dash-left', 'inc-cat-bars-scroll');
 });
 function renderDashboard(){
   var data = loadData();
@@ -12653,6 +12646,8 @@ function renderIncomeDashboard() {
     if(incYoyContainer) renderYoYStrip(incYoyContainer, incHmByYM, incHmYears, SYMS[incHmCur]||incHmCur, incHmCur);
   }
   _syncCatScrollHeight('inc-dash-left', 'inc-cat-bars-scroll');
+  var incTop10Cur = _incDashCurSelected || (incCurs[0]||'NGN');
+  renderTop10Days(allPositive.filter(function(i){return i.currency===incTop10Cur;}), SYMS[incTop10Cur]||'', 'inc-top10-container', 'inc-top10-sub', '#4a7c59');
 }
 
 function renderIncomeHeatmap(data, cur, skipYoY) {
