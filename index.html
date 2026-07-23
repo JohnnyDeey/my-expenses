@@ -9493,6 +9493,46 @@ function toggleMgmtSection(bodyId, arrowId){
   body.style.display = open ? 'none' : 'block';
   if(arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
 }
+function showBudgetLimitPicker(key, cat, sym) {
+  var ob=document.getElementById('_blp_box'); var obb=document.getElementById('_blp_bd');
+  if(ob) ob.remove(); if(obb) obb.remove();
+  var budgets = loadBudgets();
+  var current = budgets[key] && budgets[key][cat] ? budgets[key][cat] : '';
+  var bd=document.createElement('div');
+  bd.id='_blp_bd';
+  bd.style.cssText='position:fixed;inset:0;z-index:1999;background:rgba(0,0,0,0.5);';
+  var box=document.createElement('div');
+  box.id='_blp_box';
+  box.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:10px;padding:24px;z-index:2000;width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.2);font-family:DM Mono,monospace;';
+  function close(){ var o=document.getElementById('_blp_box'); var b=document.getElementById('_blp_bd'); if(o)o.remove(); if(b)b.remove(); }
+  box.innerHTML =
+    '<div style="font-size:0.65rem;letter-spacing:1px;color:#9e8e7e;margin-bottom:4px;">SET BUDGET LIMIT</div>'+
+    '<div style="font-size:0.88rem;font-weight:700;color:#1a1410;margin-bottom:16px;">'+cat+'</div>'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">'+
+      '<span style="font-size:1rem;color:#9e8e7e;">'+sym+'</span>'+
+      '<input id="_blp_input" type="number" min="0" value="'+current+'" placeholder="0" style="flex:1;padding:10px 12px;border:2px solid var(--gold);border-radius:6px;font-family:DM Mono,monospace;font-size:1.1rem;font-weight:700;color:#1a1410;outline:none;">'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;">'+
+      '<button style="flex:2;padding:10px;background:var(--gold);border:none;border-radius:6px;font-family:DM Mono,monospace;font-size:0.8rem;font-weight:700;color:#1a1410;cursor:pointer;" id="_blp_save">Save</button>'+
+      '<button id="_blp_close" style="flex:1;padding:10px;background:none;border:1.5px solid var(--border);border-radius:6px;font-family:DM Mono,monospace;font-size:0.8rem;color:#9e8e7e;cursor:pointer;">Cancel</button>'+
+    '</div>';
+  bd.onclick = close;
+  document.body.appendChild(bd);
+  document.body.appendChild(box);
+  document.getElementById('_blp_close').onclick = close;
+  // Save button inline
+  document.getElementById('_blp_save').onclick = function(){
+    var v = document.getElementById('_blp_input').value;
+    var b = loadBudgets();
+    if(!b[key]) b[key]={};
+    if(v && parseFloat(v)>0){ b[key][cat]=parseFloat(v); }
+    else { delete b[key][cat]; }
+    saveBudgets(b);
+    renderBudget();
+    close();
+  };
+  setTimeout(function(){ var inp=document.getElementById('_blp_input'); if(inp) inp.focus(); },100);
+}
 function toggleBurgerMenu(){
   var s=document.getElementById('burger-sidebar');
   var b=document.getElementById('burger-backdrop');
@@ -10307,32 +10347,23 @@ function renderBudget() {
       : 'No budget set';
 
     var safeKey = key; var safeCat = cat;
-    html += '<div data-budget-key="'+safeKey+'" data-budget-cat="'+safeCat+'" style="background:white;border:1px solid var(--border);border-radius:5px;padding:14px 16px;box-shadow:2px 2px 0 var(--shadow);position:relative;">' +
-      '<button onclick="removeBudgetCat(this)" style="position:absolute;top:8px;left:8px;background:none;border:none;color:var(--rust);font-size:1rem;cursor:pointer;font-weight:700;line-height:1;padding:0 4px;" title="Remove">&#10005;</button>' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap;">' +
-        '<div style="display:flex;align-items:center;gap:8px;padding-left:22px;">' +
-          '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;"></span>' +
-          '<span style="font-size:0.88rem;font-weight:500;">'+cat+'</span>' +
-        '</div>' +
-        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-          '<span style="font-family:DM Mono,monospace;font-size:0.75rem;font-weight:600;">'+sym+fmtNum(spent)+'</span>' +
-          (budget>0 ? '<span style="font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);">/ '+sym+fmtNum(budget)+'</span>' : '') +
-          '<div style="display:flex;align-items:center;gap:4px;background:var(--paper2);border:1px solid var(--border);border-radius:3px;padding:2px 6px;">' +
-            '<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);">'+sym+'</span>' +
-            '<input type="number" min="0" value="'+(budget||'')+'" placeholder="Set limit" id="bi-'+key.replace(/[|]/g,'_')+'_'+cat.replace(/[^a-z0-9]/gi,'_')+'" ' +
-            'style="width:80px;border:none;background:transparent;font-family:DM Mono,monospace;font-size:0.72rem;outline:none;color:var(--ink);" ' +
-            'onchange="budgetInputChange(this)">' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-
-    if (budget > 0) {
-      html += '<div style="height:8px;background:#ede7d9;border-radius:4px;overflow:hidden;">' +
-        '<div style="width:'+pct.toFixed(1)+'%;height:100%;background:'+barColor+';border-radius:4px;transition:width 0.6s ease;"></div>' +
+    var inputId = 'bi-'+key.replace(/[|]/g,'_')+'_'+cat.replace(/[^a-z0-9]/gi,'_');
+    html += '<div data-budget-key="'+safeKey+'" data-budget-cat="'+safeCat+'" style="background:white;border:1px solid var(--border);border-radius:8px;padding:16px;box-shadow:2px 2px 0 var(--shadow);">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">' +
+        '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:'+color+';flex-shrink:0;"></span>' +
+        '<span style="font-size:0.88rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+cat+'</span>' +
+        '<span style="font-family:DM Mono,monospace;font-size:0.88rem;font-weight:700;color:'+color+';">'+sym+fmtNum(spent)+'</span>' +
+        '<button onclick="removeBudgetCat(this)" style="background:none;border:none;color:#ccc;font-size:0.9rem;cursor:pointer;padding:0 2px;" title="Remove">&#128465;</button>' +
       '</div>' +
-      '<div style="font-family:DM Mono,monospace;font-size:0.62rem;color:'+(pct>90?'var(--rust)':'var(--muted)')+';margin-top:4px;">'+status+'</div>';
-    }
-    html += '</div>';
+      '<div style="height:10px;background:#ede7d9;border-radius:5px;overflow:hidden;margin-bottom:8px;">' +
+        '<div style="width:'+(budget>0?pct.toFixed(1):0)+'%;height:100%;background:'+barColor+';border-radius:5px;transition:width 0.6s ease;"></div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+        '<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:'+(pct>90?'var(--rust)':pct>70?'var(--gold)':'var(--muted)')+';">'+status+'</span>' +
+        '<button onclick="showBudgetLimitPicker(\'' +safeKey+ '\',\'' +safeCat+ '\',\'' +sym+ '\')" style="font-family:DM Mono,monospace;font-size:0.68rem;padding:4px 10px;background:none;border:1.5px solid '+(budget>0?color:'var(--border)')+';border-radius:4px;color:'+(budget>0?color:'var(--muted)')+';cursor:pointer;">'+(budget>0?sym+fmtNum(budget)+' ✏️':'+ Set limit')+'</button>' +
+      '</div>' +
+      '<input type="number" min="0" value="'+(budget||'')+'" id="'+inputId+'" style="display:none;" onchange="budgetInputChange(this)">' +
+    '</div>';
   });
 
   html += '</div>';
