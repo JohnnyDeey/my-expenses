@@ -9420,8 +9420,17 @@ function initFingerprintCard() {
     card.style.display='none'; return;
   }
   var enabled = localStorage.getItem(FP_KEY) === '1';
-  if(label) label.textContent = enabled ? '✅ Biometric login enabled' : 'Biometric login disabled';
-  if(btn){ btn.textContent = enabled ? 'Disable' : 'Enable'; btn.style.borderColor = enabled ? 'var(--rust)' : 'var(--gold)'; btn.style.color = enabled ? 'var(--rust)' : 'var(--gold)'; }
+  if(label){
+    label.innerHTML = enabled
+      ? '<span style="color:#4a7c59;font-weight:700;">&#10004; Biometric login enabled</span>'
+      : '<span style="color:var(--rust);">&#10006; Biometric login disabled</span>';
+  }
+  if(btn){
+    btn.textContent = enabled ? 'Disable' : 'Enable';
+    btn.style.background = enabled ? '#4a7c59' : 'none';
+    btn.style.color = enabled ? '#fff' : 'var(--rust)';
+    btn.style.borderColor = enabled ? '#4a7c59' : 'var(--rust)';
+  }
 }
 
 function toggleFingerprint() {
