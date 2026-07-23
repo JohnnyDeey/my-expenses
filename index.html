@@ -16415,9 +16415,17 @@ var HELP_ITEMS = [
 var HELP_DATA = {
   'import': {
     title: '📝 Import — Adding Expenses',
-    steps: ['Select a year and month from the left panel.','Paste your expense text into the large text area.','Each day starts with the date e.g. 01-01-2024.','Each item: tab + description + tab + amount with currency symbol e.g. ₦2,500 or €15.00.','Click Parse Expenses — or press Ctrl+Enter — to extract items.','Review any skipped lines shown in red.','When all dates match, click Go to Categorize — or press Ctrl+Enter again — to proceed.','Laptop tip: Hold Alt + arrow keys to navigate months. Press Enter on a month to jump cursor to notepad.'],
-    example: 'User jd0292 — January 2024:\n01-01-2024\n\tBread\t₦500\n\tTransport\t₦200\n\n02-01-2024\n\tLunch\t₦1,200',
-    tip: 'Ctrl+Enter is your shortcut throughout — paste text, press Ctrl+Enter to parse, press Ctrl+Enter again to go to Categorize.'
+    steps: [
+      'Tap the ☰ burger menu and select Import.',
+      'Tap Select Period and tap ▼ to expand the month picker. Tap a month to select it.',
+      'Tap the ⋮ menu beside the journal title to load sample data or clear the month.',
+      'Paste your expense text into the notepad. Each day starts with a date e.g. 01-01-2024.',
+      'Each item on a new line: description then amount with currency symbol e.g. Bread ₦500.',
+      'Press Ctrl+Enter to parse your entries. Review any skipped lines shown in red.',
+      'Press Ctrl+Enter again to go to Categorize.',
+      'Tap the ? icon beside Select Period for full keyboard shortcut reference.'
+    ],
+    tip: 'Ctrl+Enter is your main shortcut — parse with it, then go to Categorize with it again.'
   },
   'categorize': {
     title: '🏷️ Categorize — Assigning Categories',
@@ -16432,20 +16440,17 @@ var HELP_DATA = {
     tip: 'Use the Oldest First / Newest First button to change sort order.'
   },
   'dashboard': {
-    title: '📈 Dashboard — Charts & Analytics',
+    title: '📊 Dashboard — Charts & Currency Filter',
     steps: [
-      'Use the Year, Month, and Currency filters at the top — all three control every chart at once.',
-      'Select All Years + All Months + All Currencies to see your full picture.',
-      'Select a specific year + month + currency to zoom into a single period.',
-      'Monthly Trend shows spending or income per month as a line chart for the selected currency.',
-      'Category Breakdown shows amounts by category — each currency has its own colour-coded bar.',
-      'Yearly Total compares annual totals as a line chart across all years.',
-      'Spending Heatmap shows high and low months — darker = higher amount. When All Currencies is selected, one heatmap is shown per currency.',
-      'Year-over-Year Growth shows % change between consecutive years — green = decrease, red = increase (for expenses).',
-      'Click 🖨 Print Report to choose which currencies to print. Each selected currency generates a complete report section.'
+      'Select your currency using the green currency buttons at the top — all charts update instantly.',
+      'Swipe through the stat cards to see: Total Entries, Total Spent, Monthly Average, Biggest Month, and Top Category.',
+      'Toggle the Category Breakdown between List and Donut view using the buttons above it.',
+      'Tap a donut slice to highlight that category in the list.',
+      'Scroll down to see the Top 10 highest spending days — tap any day to see all transactions.',
+      'The Heatmap shows spending intensity by month — darker colour means higher spend.',
+      'Use the date range pickers on each chart to zoom into a specific period.'
     ],
-    example: 'User jd0292 selected 2024 · All Months · NGN.\nAll charts switched to NGN automatically.\nCategory breakdown showed Food as highest at ₦89,400.\nHe then clicked Print Report, ticked NGN and EUR, and got a 2-section printed report.',
-    tip: 'Use the Print Report currency picker to print one currency or all at once — each gets its own full report page.'
+    tip: 'The green currency button at the top controls ALL charts at once.'
   },
   'ledger': {
     title: '📜 Ledger — Full Transaction List',
@@ -16482,26 +16487,31 @@ var HELP_DATA = {
     tip: 'The minus sign (-) is your filter. Use it to remove noise from search results. You can exclude as many words as you like — just put a minus before each one.'
   },
   'budget': {
-    title: '🎯 Budget — Monthly Spending Targets',
-    steps: ['Select month, year and currency.','Use Add Category dropdown to add a category.','Type a limit amount in the box next to the category.','Progress bars show how much of your budget you have used.','Bars turn amber at 70% and red at 90%.','Click PDF Report to print a budget summary.'],
-    example: 'User mk0374 — March 2024:\nFood budget: ₦30,000.\nMid-month spent: ₦22,400 (74%) shown in amber.\nFinal: ₦31,200 — ₦1,200 over budget shown in red.',
-    tip: 'Budgets are stored per month. Set them at the start of each month.'
+    title: '🎯 Budget — Set Monthly Limits',
+    steps: [
+      'Select the year, month, and currency at the top of the Budget tab.',
+      'Use the Add Category dropdown to add a category you want to track.',
+      'Tap + Set limit on any category card — a popup appears where you type the amount and tap Save.',
+      'Progress bars show how much of your budget you have used.',
+      'The bar turns amber at 70% and red at 90% of the limit.',
+      'Tap the amount shown on a card to edit the limit at any time.',
+      'Tap the trash icon to remove a category from the budget view.',
+      'Tap PDF Report to print a budget summary for the selected month.'
+    ],
+    tip: 'You can add categories even before you have spending data — great for planning ahead.'
   },
   'manage': {
-    title: '⚙️ Manage — Data Settings & Control',
+    title: '⚙️ Manage — Settings & Account',
     steps: [
-      '👤 User Profile — shows your name, username, avatar, country, DOB and age at the top.',
-      'Tap your avatar circle to open the avatar picker — choose from 6 categories of emoji.',
-      'Delete Data — use 3 cascading filters (Year → Month → Day) to pinpoint entries to delete.',
-      'Select All Years to see yearly groups. Select a year to see months. Select a month to see individual days.',
-      'Click Delete on any group — it moves to the Recycle Bin (recoverable).',
-      'Recycle Bin — filter by year/month/day, then restore or permanently delete.',
-      'Export CSV — downloads your data as a spreadsheet file.',
-      'Change PIN, Username, Full Name — all found in separate cards below the profile.',
-      'Delete Account — permanently removes all your data from our servers.'
+      'The Manage tab has three sections: Profile (always visible), Settings (tap to expand), and Data & Account (tap to expand).',
+      'Profile: tap your avatar to change it. Name, username, member since date, and account details are shown here.',
+      'Settings: change currencies, update your full name, change your access code, and enable or disable biometric login.',
+      'Biometric Login: tap Enable to register your fingerprint or face ID. A green tick means it is active.',
+      'On the login screen, tap the fingerprint icon beside the ENTER button to log in without your PIN.',
+      'Data & Account: export as CSV, import from CSV, view the Recycle Bin, and delete data by period.',
+      'Danger Zone: Delete ALL data moves everything to the Recycle Bin first so you can restore if needed.'
     ],
-    example: 'User jd0292 went to Manage, selected Year: 2024, Month: Feb. The 34 February entries appeared. He clicked Delete — they moved to Recycle Bin. He later filtered the bin to Feb 2024 and restored 30 of them.',
-    tip: 'Export a CSV backup at least once a month. The Recycle Bin is your safety net for accidental deletions.'
+    tip: 'Tap any section header to expand or collapse it. Data syncs to the cloud automatically.'
   },
   'avatar': {
     title: '😊 Avatar — Personalise Your Profile',
@@ -16655,18 +16665,17 @@ var HELP_DATA = {
     tip: 'The header state is not saved between sessions — it always resets to visible on next login.'
   },
   'biometric': {
-    title: '👍 PIN Login — Fast & Secure',
+    title: '👆 Biometric Login — Fingerprint & Face ID',
     steps: [
-      'When you open the app you see a PIN pad — tap your digits or type them on a keyboard.',
-      'Your PIN is 4 to 8 digits. The app auto-submits after 6 digits, or tap the ENTER button to submit manually.',
-      'On a laptop or tablet with a keyboard: type your digits directly, press Backspace to delete, Escape to clear, Enter to submit.',
-      'Once in a while (every 1 to 2 weeks, randomly) the app will show a Security Check screen — enter your username AND PIN.',
-      'If you enter the wrong PIN 3 times the app offers a reset option.',
-      'To change your PIN go to Manage → Change Access Code.',
-      'If you forget your PIN tap the Forgot your PIN? link on the login screen.'
+      'Go to Manage, tap Settings to expand it, then tap Biometric Login.',
+      'Tap Enable — your device will ask you to verify with fingerprint or face ID to register.',
+      'Once enabled, the status shows a green tick: Biometric login enabled.',
+      'On the login screen, the fingerprint icon appears beside the ENTER button — tap it to log in instantly.',
+      'To disable, go back to Manage — Settings — Biometric Login and tap Disable.',
+      'The status turns red with an X when disabled.',
+      'Biometric credentials are tied to the device and browser — re-enable on each new device.'
     ],
-    example: 'User jd0292 opens the app on his phone.\nThe PIN pad appears — he taps 8 4 7 2 9 1.\nThe app opens automatically.\n\nLater on his laptop he types 847291 on the keyboard and presses Enter.\nSame result — in under a second.',
-    tip: 'Your PIN is stored as a one-way hash — nobody can read it, not even us. Write it down somewhere safe.'
+    tip: 'Your PIN remains active as a backup — use it for the weekly identity check or if biometric fails.'
   },
   'scroll': {
     title: '⇧ Scroll Buttons — Quick Navigation',
