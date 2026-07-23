@@ -2464,6 +2464,15 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 
 
+  <!-- -- 3c. FINGERPRINT / BIOMETRIC -- -->
+  <div class="card" style="margin-bottom:14px;" id="fingerprint-card">
+    <label>&#128072; Biometric Login</label>
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Use fingerprint or face ID to sign in quickly. Your PIN remains as backup.</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);" id="fp-status-label">Checking support...</span>
+      <button id="fp-toggle-btn" onclick="toggleFingerprint()" style="padding:8px 16px;border-radius:4px;font-family:DM Mono,monospace;font-size:0.75rem;cursor:pointer;border:1.5px solid var(--gold);background:none;color:var(--gold);">Enable</button>
+    </div>
+  </div>
   <!-- -- 4. DANGER ZONE -- -->
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
@@ -3366,9 +3375,18 @@ input[type="password"]::-ms-clear { display:none !important; }
           <button onclick="pinPadPress('0')" class="pin-pad-btn">0</button>
           <button onclick="pinPadDelete()" class="pin-pad-btn" style="font-size:1.1rem;">⌫</button>
         </div>
-        <!-- ENTER button — for PINs shorter than 6 digits -->
-        <div style="max-width:240px;margin:0 auto 14px;">
-          <button onclick="submitPinLogin()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.88rem;font-weight:900;letter-spacing:3px;color:var(--ink);cursor:pointer;text-transform:uppercase;">&#10003; ENTER</button>
+        <!-- ENTER button + Fingerprint -->
+        <div style="max-width:240px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;">
+          <button onclick="submitPinLogin()" style="padding:13px 20px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.88rem;font-weight:900;letter-spacing:3px;color:var(--ink);cursor:pointer;text-transform:uppercase;">&#10003; ENTER</button>
+          <button id="fp-login-btn" onclick="tryBiometricLogin(function(){ closePinScreen(); })" style="display:flex;align-items:center;justify-content:center;background:var(--gold);border:none;border-radius:4px;cursor:pointer;height:50px;flex:1;flex-shrink:0;" title="Biometric login">
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="36" viewBox="0 0 40 36">
+  <ellipse cx="20" cy="18" rx="2" ry="2" fill="none" stroke="#1a1410" stroke-width="1.8"/>
+  <ellipse cx="20" cy="18" rx="6" ry="5" fill="none" stroke="#1a1410" stroke-width="1.8"/>
+  <ellipse cx="20" cy="18" rx="10" ry="8" fill="none" stroke="#1a1410" stroke-width="1.8"/>
+  <ellipse cx="20" cy="18" rx="14" ry="11" fill="none" stroke="#1a1410" stroke-width="1.8"/>
+  <ellipse cx="20" cy="18" rx="18" ry="14" fill="none" stroke="#1a1410" stroke-width="1.5"/>
+</svg>
+</button>
         </div>
         <div id="login-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:18px;text-align:center;"></div>
         <div id="reset-attempt-hint" style="display:none;background:rgba(181,69,27,0.12);border:1px solid rgba(181,69,27,0.4);border-radius:4px;padding:10px 12px;margin-bottom:10px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#e07040;line-height:1.7;">&#128274; Having trouble? <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold2);cursor:pointer;text-decoration:underline;padding:0;">Reset your access code</button></div>
@@ -9343,6 +9361,83 @@ function toggleHint(id){
     }
   }, {passive:true});
 })();
+
+// ── Biometric / Fingerprint ──────────────────────────────────
+var FP_KEY = 'fp_enabled';
+
+function initFingerprintCard() {
+  var card = document.getElementById('fingerprint-card');
+  var label = document.getElementById('fp-status-label');
+  var btn = document.getElementById('fp-toggle-btn');
+  if(!card) return;
+  if(!window.PublicKeyCredential){
+    card.style.display='none'; return;
+  }
+  var enabled = localStorage.getItem(FP_KEY) === '1';
+  if(label) label.textContent = enabled ? '✅ Biometric login enabled' : 'Biometric login disabled';
+  if(btn){ btn.textContent = enabled ? 'Disable' : 'Enable'; btn.style.borderColor = enabled ? 'var(--rust)' : 'var(--gold)'; btn.style.color = enabled ? 'var(--rust)' : 'var(--gold)'; }
+}
+
+function toggleFingerprint() {
+  var enabled = localStorage.getItem(FP_KEY) === '1';
+  if(enabled){
+    localStorage.removeItem(FP_KEY);
+    showToast('Biometric login disabled');
+    initFingerprintCard();
+  } else {
+    // Register biometric
+    if(!window.PublicKeyCredential){ showToast('Not supported on this device'); return; }
+    var challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+    navigator.credentials.create({
+      publicKey: {
+        challenge: challenge,
+        rp: { name: 'My Expense Ledger' },
+        user: { id: new Uint8Array(16), name: _userName||'user', displayName: _userName||'User' },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 60000
+      }
+    }).then(function(cred){
+      localStorage.setItem(FP_KEY, '1');
+      localStorage.setItem('fp_cred_id', btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
+      showToast('✅ Biometric login enabled');
+      initFingerprintCard();
+    }).catch(function(e){
+      showToast('Biometric setup failed: ' + e.message);
+    });
+  }
+}
+
+function tryBiometricLogin(onSuccess) {
+  if(localStorage.getItem(FP_KEY) !== '1') return false;
+  if(!window.PublicKeyCredential) return false;
+  var challenge = new Uint8Array(32);
+  crypto.getRandomValues(challenge);
+  var credId = localStorage.getItem('fp_cred_id');
+  var allowCreds = [];
+  if(credId){
+    var credBytes = Uint8Array.from(atob(credId), function(c){ return c.charCodeAt(0); });
+    allowCreds = [{ type: 'public-key', id: credBytes }];
+  }
+  navigator.credentials.get({
+    publicKey: { challenge: challenge, userVerification: 'required', timeout: 60000, allowCredentials: allowCreds }
+  }).then(function(){
+    // Resume session with stored credentials
+    var uid   = localStorage.getItem('expense_user_uid');
+    var name  = localStorage.getItem('expense_user_name');
+    var phone = localStorage.getItem('expense_user_phone');
+    if(uid && name) {
+      _resumeSession(uid, name, phone);
+      showToast('Welcome back!');
+    } else if(onSuccess) {
+      onSuccess();
+    }
+  }).catch(function(){
+    showToast('Biometric failed — use PIN instead');
+  });
+  return true;
+}
 
 function toggleBurgerMenu(){
   var s=document.getElementById('burger-sidebar');
