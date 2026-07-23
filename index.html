@@ -2933,8 +2933,9 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 <!-- INCOME MANAGE -->
 <div class="panel" id="panel-inc-manage">
-  <div class="section-title">Manage Income Data</div>
-  <div class="manage-grid" style="margin-bottom:14px;">
+  <div class="section-title">Income Manage</div>
+
+  <!-- DATA OVERVIEW — always visible -->
     <div class="card">
       <label>Overview</label>
       <div style="padding:14px;background:var(--paper);border:1px solid var(--border);border-radius:3px;margin-bottom:14px;">
@@ -2972,6 +2973,14 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 
   <!-- -- EDIT FULL NAME -- -->
+
+  <!-- SETTINGS — collapsible -->
+  <div class="mgmt-section">
+    <div class="mgmt-section-hdr" onclick="toggleMgmtSection('inc-mgmt-settings-body','inc-mgmt-settings-arr')">
+      <span>&#9881;&#65039; Settings</span>
+      <span id="inc-mgmt-settings-arr">&#9660;</span>
+    </div>
+    <div id="inc-mgmt-settings-body" style="display:none;">
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--sage);">
     <label>&#9999; Your Full Name (used in PDF reports)</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.7;">This name appears at the top of your printed reports. Enter your real full name here.</p>
@@ -2983,6 +2992,16 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 
 
+    </div>
+  </div>
+
+  <!-- DATA & ACCOUNT — collapsible -->
+  <div class="mgmt-section">
+    <div class="mgmt-section-hdr" onclick="toggleMgmtSection('inc-mgmt-data-body','inc-mgmt-data-arr')">
+      <span>&#128451; Data &amp; Account</span>
+      <span id="inc-mgmt-data-arr">&#9660;</span>
+    </div>
+    <div id="inc-mgmt-data-body" style="display:none;">
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
     <button class="btn btn-danger" style="width:100%;padding:12px;justify-content:center;" onclick="showClearAllIncome()">&#128465; Delete ALL Income Data</button>
@@ -3017,6 +3036,9 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
   </div>
+    </div>
+  </div>
+
 </div>
 </div><!-- end income-main -->
 
