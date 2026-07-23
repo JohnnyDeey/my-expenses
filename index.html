@@ -1179,6 +1179,9 @@ body.light-theme .bmenu-item{color:#6b7280;}
 body.light-theme .bmenu-item.active{color:#6c3fc5;background:rgba(108,63,197,0.06);border-left-color:#6c3fc5;}
 body.light-theme #burger-sidebar{background:#fff;}
 nav.tabs{display:none;}
+.mgmt-section{border:1px solid var(--border);border-radius:6px;margin-bottom:12px;overflow:hidden;}
+.mgmt-section-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--paper);cursor:pointer;font-family:'DM Mono',monospace;font-size:0.8rem;font-weight:700;color:var(--ink);letter-spacing:0.5px;}
+.mgmt-section-hdr:hover{background:#f5f0e8;}
 nav.tabs button{font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;background:none;border:none;color:#6b5e50;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;}
 nav.tabs button:hover{color:var(--paper);}
 nav.tabs button.active{color:var(--gold2);border-bottom-color:var(--gold);}
@@ -2289,10 +2292,9 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 <!-- == MANAGE DATA == -->
 <div class="panel" id="panel-manage">
+  <div class="section-title">Manage</div>
 
-  <div class="section-title">Manage Data</div>
-
-  <!-- -- USER PROFILE CARD -- -->
+  <!-- PROFILE — always visible -->
   <div class="card" style="margin-bottom:18px;border-left:4px solid var(--gold);">
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
       <!-- Clickable Avatar -->
@@ -2341,66 +2343,14 @@ input[type="password"]::-ms-clear { display:none !important; }
   <div id="sync-setup-content" style="display:none;"></div>
 
   <!-- -- 2. DATA OVERVIEW + ACTIONS -- -->
-  <div class="manage-grid" style="margin-bottom:14px;">
-    <div class="card">
-      <label>Data Overview</label>
-      <div style="padding:14px;background:var(--paper);border:1px solid var(--border);border-radius:3px;margin-bottom:14px;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:6px;">TOTAL ENTRIES IN LEDGER</div>
-        <div id="manage-total" style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--gold);">0</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <!-- Export options -->
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Export Data</div>
-        <button class="btn btn-ghost" style="width:100%;padding:10px;justify-content:center;" onclick="exportCSV()">&#128196; Expenses CSV</button>
-        <button class="btn btn-ghost" style="width:100%;padding:10px;justify-content:center;" onclick="exportIncomeCSVFromManage()">&#128196; Income CSV</button>
-        <button class="btn btn-ghost" style="width:100%;padding:10px;justify-content:center;border-color:var(--sage);color:var(--sage);" onclick="exportBothAsZip()">&#128194; Both as ZIP folder</button>
-      </div>
-        <div style="margin-top:12px;padding:10px 12px;background:#fffbf0;border:1px solid var(--gold);border-radius:4px;">
-          <div style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">&#128276; Backup Reminder</div>
-          <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:10px;line-height:1.6;">Back up your data regularly by downloading a CSV. How often should we remind you?</div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <select id="backup-frequency" onchange="saveBackupFrequency(this.value)" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:6px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
-              <option value="never">Never remind me</option>
-              <option value="weekly">Every week</option>
-              <option value="monthly">Every month</option>
-              <option value="yearly">Every year</option>
-            </select>
-            <span id="backup-last" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);"></span>
-          </div>
-        </div>
-        <label style="display:block;">
-          <div class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;cursor:pointer;text-align:center;font-family:'DM Mono',monospace;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;">&#8593; Import from CSV</div>
-          <input type="file" accept=".csv" onchange="importCSV(event)" style="display:none;">
-        </label>
 
-      </div>
+  <!-- SETTINGS — collapsible -->
+  <div class="mgmt-section">
+    <div class="mgmt-section-hdr" onclick="toggleMgmtSection('mgmt-settings-body','mgmt-settings-arr')">
+      <span>&#9881;&#65039; Settings</span>
+      <span id="mgmt-settings-arr">&#9660;</span>
     </div>
-
-    <!-- -- 3. DELETE BY FILTER -- -->
-    <div class="card">
-      <label>&#128465; Delete Data</label>
-      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Filter by year, month, or day. Deleted entries go to the Recycle Bin.</p>
-      <div id="manage-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-        <select id="manage-year-filter" onchange="onManageYearChange()" style="flex:1;min-width:90px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
-          <option value="all">All Years</option>
-        </select>
-        <select id="manage-month-filter" onchange="onManageMonthChange()" style="flex:1;min-width:110px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
-          <option value="all">All Months</option>
-        </select>
-        <select id="manage-day-filter" onchange="renderManagePanel()" style="flex:1;min-width:80px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
-          <option value="all">All Days</option>
-        </select>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <span id="manage-filter-count" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);"></span>
-        <button onclick="resetManageFilters()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);cursor:pointer;text-decoration:underline;">Reset filters</button>
-      </div>
-      <div id="manage-month-list"></div>
-    </div>
-  </div>
-
-  <!-- -- CURRENCY MANAGER -- -->
+    <div id="mgmt-settings-body" style="display:none;">
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--slate);">
     <label>&#128177; Currencies</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Choose the currencies you use. They will appear in all dropdowns, charts, and reports across the whole app.</p>
@@ -2474,6 +2424,76 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
   </div>
   <!-- -- 4. DANGER ZONE -- -->
+    </div>
+  </div>
+
+  <!-- DATA & ACCOUNT — collapsible -->
+  <div class="mgmt-section">
+    <div class="mgmt-section-hdr" onclick="toggleMgmtSection('mgmt-data-body','mgmt-data-arr')">
+      <span>&#128451; Data &amp; Account</span>
+      <span id="mgmt-data-arr">&#9660;</span>
+    </div>
+    <div id="mgmt-data-body" style="display:none;">
+  <div class="manage-grid" style="margin-bottom:14px;">
+    <div class="card">
+      <label>Data Overview</label>
+      <div style="padding:14px;background:var(--paper);border:1px solid var(--border);border-radius:3px;margin-bottom:14px;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:6px;">TOTAL ENTRIES IN LEDGER</div>
+        <div id="manage-total" style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--gold);">0</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <!-- Export options -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Export Data</div>
+        <button class="btn btn-ghost" style="width:100%;padding:10px;justify-content:center;" onclick="exportCSV()">&#128196; Expenses CSV</button>
+        <button class="btn btn-ghost" style="width:100%;padding:10px;justify-content:center;" onclick="exportIncomeCSVFromManage()">&#128196; Income CSV</button>
+        <button class="btn btn-ghost" style="width:100%;padding:10px;justify-content:center;border-color:var(--sage);color:var(--sage);" onclick="exportBothAsZip()">&#128194; Both as ZIP folder</button>
+      </div>
+        <div style="margin-top:12px;padding:10px 12px;background:#fffbf0;border:1px solid var(--gold);border-radius:4px;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">&#128276; Backup Reminder</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:10px;line-height:1.6;">Back up your data regularly by downloading a CSV. How often should we remind you?</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="backup-frequency" onchange="saveBackupFrequency(this.value)" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:6px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
+              <option value="never">Never remind me</option>
+              <option value="weekly">Every week</option>
+              <option value="monthly">Every month</option>
+              <option value="yearly">Every year</option>
+            </select>
+            <span id="backup-last" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);"></span>
+          </div>
+        </div>
+        <label style="display:block;">
+          <div class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;cursor:pointer;text-align:center;font-family:'DM Mono',monospace;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;">&#8593; Import from CSV</div>
+          <input type="file" accept=".csv" onchange="importCSV(event)" style="display:none;">
+        </label>
+
+      </div>
+    </div>
+
+    <!-- -- 3. DELETE BY FILTER -- -->
+    <div class="card">
+      <label>&#128465; Delete Data</label>
+      <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Filter by year, month, or day. Deleted entries go to the Recycle Bin.</p>
+      <div id="manage-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="manage-year-filter" onchange="onManageYearChange()" style="flex:1;min-width:90px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
+          <option value="all">All Years</option>
+        </select>
+        <select id="manage-month-filter" onchange="onManageMonthChange()" style="flex:1;min-width:110px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
+          <option value="all">All Months</option>
+        </select>
+        <select id="manage-day-filter" onchange="renderManagePanel()" style="flex:1;min-width:80px;font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink);outline:none;">
+          <option value="all">All Days</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span id="manage-filter-count" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);"></span>
+        <button onclick="resetManageFilters()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);cursor:pointer;text-decoration:underline;">Reset filters</button>
+      </div>
+      <div id="manage-month-list"></div>
+    </div>
+  </div>
+
+  <!-- -- CURRENCY MANAGER -- -->
   <div class="card" style="border-color:var(--rust);margin-bottom:14px;">
     <label style="color:var(--rust);">&#9888; Danger Zone</label>
     <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Delete ALL data moves everything to the Recycle Bin first — you can still restore from there.</p>
@@ -2553,6 +2573,10 @@ input[type="password"]::-ms-clear { display:none !important; }
 </div>
 
 <!-- == BUDGET == -->
+    </div>
+  </div>
+
+</div>
 <div class="panel" id="panel-budget">
   <div class="section-title">Budget Targets</div>
   <div style="background:#fffbf0;border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:3px;padding:12px 16px;margin-bottom:20px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);line-height:1.8;">
@@ -9439,6 +9463,14 @@ function tryBiometricLogin(onSuccess) {
   return true;
 }
 
+function toggleMgmtSection(bodyId, arrowId){
+  var body = document.getElementById(bodyId);
+  var arrow = document.getElementById(arrowId);
+  if(!body) return;
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
+}
 function toggleBurgerMenu(){
   var s=document.getElementById('burger-sidebar');
   var b=document.getElementById('burger-backdrop');
