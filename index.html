@@ -6368,8 +6368,24 @@ function getCurColor(cur) {
     'USD': '#8b5e3c',
     'GBP': '#6b3d8c',
     'GHS': '#2e7d8a',
+    'CAD': '#2e6b3a',
+    'AUD': '#7c4a2e',
+    'CHF': '#3a5a7c',
+    'JPY': '#7c3a5a',
+    'CNY': '#8b2e2e',
+    'ZAR': '#4a6b2e',
+    'INR': '#6b4a2e',
+    'SEK': '#2e4a6b',
+    'NOK': '#5a2e6b',
+    'DKK': '#2e6b5a',
+    'MXN': '#6b2e3a',
   };
-  return map[cur] || '#c8962e';
+  if(map[cur]) return map[cur];
+  // Generate consistent color from currency code for any unknown currency
+  var hash = 0;
+  for(var i=0;i<cur.length;i++) hash = cur.charCodeAt(i) + ((hash<<5)-hash);
+  var h = Math.abs(hash) % 360;
+  return 'hsl('+h+',45%,38%)';
 }
 function getCurBg(cur) {
   var c = getCurColor(cur);
@@ -9140,9 +9156,11 @@ function switchIncDvStatCur(btn){
   var card = document.getElementById('inc-dvcard-'+cur);
   if(card) card.style.display='block';
   document.querySelectorAll('[id^="inc-dvpill-"]').forEach(function(b){
+    var bc = getCurColor(b.getAttribute('data-cur'));
     var active = b.getAttribute('data-cur')===cur;
-    b.style.background = active?'var(--sage)':'none';
+    b.style.background = active?bc:'none';
     b.style.color = active?'#fff':'var(--muted)';
+    b.style.borderColor = bc;
     b.style.fontWeight = active?'700':'';
   });
 }
@@ -12439,7 +12457,8 @@ function renderIncomeMonthly() {
       var _incMTotal = statParts.length;
       var _incCursList = Object.keys(byCur).sort();
       var incPillsHtml = _incCursList.map(function(c, i){
-        return '<button data-cur="'+c+'" onclick="switchIncDvStatCur(this)" id="inc-dvpill-'+c+'" style="padding:4px 12px;border-radius:20px;font-family:DM Mono,monospace;font-size:0.7rem;cursor:pointer;border:1.5px solid var(--sage);'+(i===0?'background:var(--sage);color:#fff;font-weight:700;':'background:none;color:var(--muted);')+'">'+c+'</button>';
+        var _ic = getCurColor(c);
+        return '<button data-cur="'+c+'" onclick="switchIncDvStatCur(this)" id="inc-dvpill-'+c+'" style="padding:4px 12px;border-radius:20px;font-family:DM Mono,monospace;font-size:0.7rem;cursor:pointer;border:1.5px solid '+_ic+';'+(i===0?'background:'+_ic+';color:#fff;font-weight:700;':'background:none;color:var(--muted);')+'">'+c+'</button>';
       }).join('');
       var incCardsHtml = _incCursList.map(function(c, i){
         return '<div id="inc-dvcard-'+c+'" style="display:'+(i===0?'block':'none')+';">'+statParts[i]+'</div>';
@@ -12472,7 +12491,7 @@ function renderIncomeMonthly() {
     var yTotals = {};
     yearItems.forEach(function(i){ yTotals[i.currency]=(yTotals[i.currency]||0)+i.amount; });
     var yPills = Object.keys(yTotals).map(function(c){
-      return '<span class="day-total-pill '+c+'" style="background:rgba(74,124,89,0.15);color:var(--sage);">'+(SYMS[c]||'')+fmtNum(yTotals[c])+'</span>';
+      return '<span class="day-total-pill '+c+'">'+(SYMS[c]||'')+fmtNum(yTotals[c])+'</span>';
     }).join('');
 
     var isOpen = !!window._incMonthOpenYears[y];
@@ -12515,7 +12534,7 @@ function renderIncomeMonthly() {
       var mTotals = {};
       items.forEach(function(i){ mTotals[i.currency]=(mTotals[i.currency]||0)+i.amount; });
       var mPills = Object.keys(mTotals).map(function(c){
-        return '<span class="day-total-pill '+c+'" style="background:rgba(74,124,89,0.15);color:var(--sage);">'+(SYMS[c]||'')+fmtNum(mTotals[c])+'</span>';
+        return '<span class="day-total-pill '+c+'">'+(SYMS[c]||'')+fmtNum(mTotals[c])+'</span>';
       }).join('');
 
       var monthBlock = document.createElement('div');
