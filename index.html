@@ -961,7 +961,55 @@ var _notePadActive = false; // global — shared with Ctrl+Enter handlers
   // Alt+Enter toggles notepad on/off. When ON — cursor in textarea, all keys go to it.
   // When OFF — Alt+arrows navigate calendar, page arrows scroll normally.
 
-  function _getNotepadTextarea() {
+  // Real-time math evaluator for textarea
+window._evalMathInLine = function _evalMathInLine(line) {
+  return line.replace(/([€₦$£₵¢#])\s*([\d\.\+\-\*\/\(\)\s]+)/g, function(match, sym, expr) {
+    var clean = expr.replace(/\s/g,'');
+    if(!/[\+\-\*\/]/.test(clean)) return match; // no operator, skip
+    try {
+      var r = Function('"use strict";return ('+clean+')')();
+      if(isFinite(r) && r > 0) return sym + (Math.round(r*100)/100).toFixed(2);
+    } catch(e) {}
+    return match;
+  });
+}
+
+window._attachMathEval = function _attachMathEval(taId) {
+  var ta = document.getElementById(taId);
+  if(!ta || ta._mathEvalAttached) return;
+  ta._mathEvalAttached = true;
+  ta.addEventListener('keyup', function(e) {
+    var curLine = (function(){ var lines=ta.value.split('\n'); var pos=ta.selectionStart; var c=0; for(var i=0;i<lines.length;i++){c+=lines[i].length+1;if(c>pos)return lines[i];} return ''; })();
+    if(!/[\+\-\*\/]/.test(curLine)) return;
+    var pos = ta.selectionStart;
+    var lines = ta.value.split('\n');
+    var charCount = 0;
+    var lineIdx = 0;
+    for(var i=0;i<lines.length;i++){
+      charCount += lines[i].length + 1;
+      if(charCount > pos){ lineIdx = i; break; }
+    }
+    var originalLine = lines[lineIdx];
+    var newLine = _evalMathInLine(originalLine);
+    if(newLine !== originalLine){
+      lines[lineIdx] = newLine;
+      var newVal = lines.join('\n');
+      var newPos = pos + (newLine.length - originalLine.length);
+      ta.value = newVal;
+      ta.setSelectionRange(newPos, newPos);
+    }
+  });
+}
+
+// Attach immediately and also on interval to catch late renders
+setTimeout(function(){
+  _attachMathEval('raw-input');
+  _attachMathEval('inc-raw-input');
+}, 500);
+// Also attach when notepad is activated
+var _origActivateNotepad = window._activateNotepad;
+
+function _getNotepadTextarea() {
     var expGrid = document.getElementById('months-grid');
     var incGrid = document.getElementById('inc-months-grid');
     if (expGrid && expGrid.offsetParent !== null) return document.getElementById('raw-input');
