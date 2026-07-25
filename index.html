@@ -1179,6 +1179,11 @@ body.light-theme .bmenu-item{color:#6b7280;}
 body.light-theme .bmenu-item.active{color:#6c3fc5;background:rgba(108,63,197,0.06);border-left-color:#6c3fc5;}
 body.light-theme #burger-sidebar{background:#fff;}
 nav.tabs{display:none;}
+.radial-btn{position:absolute;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:2px solid rgba(255,255,255,0.3);background:rgba(26,20,16,0.92);color:#fff;font-size:1.2rem;box-shadow:0 4px 16px rgba(0,0,0,0.4);transition:transform 0.15s,background 0.15s;-webkit-tap-highlight-color:transparent;z-index:100001;pointer-events:all;}
+.radial-btn:active{transform:translate(-50%,-50%) scale(1.2);background:var(--gold);}
+.radial-btn-label{font-family:DM Mono,monospace;font-size:0.42rem;letter-spacing:0.5px;margin-top:2px;color:rgba(255,255,255,0.7);text-align:center;line-height:1;}
+.radial-inner-ring{position:absolute;border-radius:50%;border:1px solid rgba(200,150,46,0.3);transform:translate(-50%,-50%);}
+.radial-outer-ring{position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,0.15);transform:translate(-50%,-50%);}
 .mgmt-section{border:1px solid var(--border);border-radius:6px;margin-bottom:12px;overflow:hidden;}
 .mgmt-section-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--paper);cursor:pointer;font-family:'DM Mono',monospace;font-size:0.8rem;font-weight:700;color:var(--ink);letter-spacing:0.5px;}
 .mgmt-section-hdr:hover{background:#f5f0e8;}
@@ -3547,6 +3552,15 @@ input[type="password"]::-ms-clear { display:none !important; }
   </div>
 </div>
 
+<!-- == RADIAL MENU == -->
+<div id="radial-menu" style="display:none;position:fixed;inset:0;z-index:99999;touch-action:none;">
+  <div id="radial-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);"></div>
+  <div id="radial-center" style="position:absolute;transform:translate(-50%,-50%);pointer-events:none;">
+    <div style="position:absolute;width:20px;height:20px;border-radius:50%;background:var(--gold);transform:translate(-50%,-50%);z-index:2;box-shadow:0 0 12px rgba(200,150,46,0.8);"></div>
+    <div id="radial-inner" style="position:absolute;transform:translate(-50%,-50%);width:0;height:0;pointer-events:none;"></div>
+    <div id="radial-outer" style="position:absolute;transform:translate(-50%,-50%);width:0;height:0;pointer-events:none;"></div>
+  </div>
+</div>
 <!-- == INACTIVITY WARNING == -->
 <div id="inactivity-warning" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99998;background:var(--ink);border:2px solid var(--gold);border-radius:8px;padding:20px 28px;min-width:300px;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.4);flex-direction:column;align-items:center;gap:12px;">
   <div style="font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);">Still there?</div>
@@ -9562,6 +9576,132 @@ function showBudgetLimitPicker(key, cat, sym) {
   };
   setTimeout(function(){ var inp=document.getElementById('_blp_input'); if(inp) inp.focus(); },100);
 }
+// ── Radial Menu ──────────────────────────────────────────────
+var _radialOpen = false;
+var _radialTimer = null;
+
+function openRadialMenu(x, y) {
+  var menu = document.getElementById('radial-menu');
+  var center = document.getElementById('radial-center');
+  var inner = document.getElementById('radial-inner');
+  var outer = document.getElementById('radial-outer');
+  if(!menu) return;
+  center.style.left = (window.innerWidth/2)+'px';
+  center.style.top = (window.innerHeight/2)+'px';
+  var isIncome = _appMode === 'income';
+  var innerItems = isIncome ? [
+    {icon:'📥',label:'Import',fn:'switchIncomeTab("inc-import",null)'},
+    {icon:'🏷️',label:'Cat',fn:'switchIncomeTab("inc-categorize",null)'},
+    {icon:'📅',label:'Monthly',fn:'switchIncomeTab("inc-monthly",null)'},
+    {icon:'📊',label:'Dash',fn:'switchIncomeTab("inc-dashboard",null)'},
+    {icon:'📋',label:'Ledger',fn:'switchIncomeTab("inc-ledger",null)'},
+    {icon:'⚙️',label:'Manage',fn:'switchIncomeTab("inc-manage",null)'}
+  ] : [
+    {icon:'📥',label:'Import',fn:'switchTab("import",null)'},
+    {icon:'🏷️',label:'Cat',fn:'switchTab("categorize",null)'},
+    {icon:'📅',label:'Daily',fn:'switchTab("daily",null)'},
+    {icon:'📊',label:'Dash',fn:'switchTab("dashboard",null)'},
+    {icon:'📋',label:'Ledger',fn:'switchTab("ledger",null)'},
+    {icon:'🎯',label:'Budget',fn:'switchTab("budget",null)'},
+    {icon:'⚙️',label:'Manage',fn:'switchTab("manage",null)'}
+  ];
+  var outerItems = [
+    {icon:'🔁',label:'Switch',fn:'showModeSwitchPrompt()'},
+    {icon:'📅',label:'Calendar',fn:'openDateLookup()'},
+    {icon:'❓',label:'Help',fn:'openHelp()'},
+    {icon:'📖',label:'Guide',fn:'startOnboarding(_appMode,true,true)'},
+    {icon:'🌙',label:'Theme',fn:'toggleAppTheme()'},
+    {icon:'👁',label:'H/S',fn:'toggleHeaderCollapse()'},
+    {icon:'🔗',label:'Referral',fn:'openReferralPanel()'},
+    {icon:'🔓',label:'Logout',fn:'lockApp()'}
+  ];
+  inner.innerHTML = '';
+  outer.innerHTML = '';
+  // Draw ring guides
+  var ir = document.createElement('div'); ir.className='radial-inner-ring'; ir.style.width='120px'; ir.style.height='120px'; inner.appendChild(ir);
+  var or2 = document.createElement('div'); or2.className='radial-outer-ring'; or2.style.width='220px'; or2.style.height='220px'; outer.appendChild(or2);
+  // Place inner buttons
+  innerItems.forEach(function(item, i) {
+    var angle = (360/innerItems.length)*i - 90;
+    var rad = angle * Math.PI/180;
+    var bx = Math.cos(rad)*60; var by = Math.sin(rad)*60;
+    var btn = document.createElement('div');
+    btn.className = 'radial-btn';
+    btn.style.left = bx+'px'; btn.style.top = by+'px';
+    btn.innerHTML = '<span>'+item.icon+'</span><span class="radial-btn-label">'+item.label+'</span>';
+    btn.setAttribute('data-fn', item.fn);
+    btn.onclick = function(e){
+      e.stopPropagation();
+      var fn = this.getAttribute('data-fn');
+      closeRadialMenu();
+      setTimeout(function(){ eval(fn); }, 200);
+    };
+    inner.appendChild(btn);
+  });
+  // Place outer buttons
+  outerItems.forEach(function(item, i) {
+    var angle = (360/outerItems.length)*i - 90;
+    var rad = angle * Math.PI/180;
+    var bx = Math.cos(rad)*110; var by = Math.sin(rad)*110;
+    var btn = document.createElement('div');
+    btn.className = 'radial-btn';
+    btn.style.left = bx+'px'; btn.style.top = by+'px';
+    btn.innerHTML = '<span>'+item.icon+'</span><span class="radial-btn-label">'+item.label+'</span>';
+    btn.setAttribute('data-fn', item.fn);
+    btn.onclick = function(e){
+      e.stopPropagation();
+      var fn = this.getAttribute('data-fn');
+      closeRadialMenu();
+      setTimeout(function(){ eval(fn); }, 200);
+    };
+    outer.appendChild(btn);
+  });
+  menu.style.display = 'block';
+  _radialOpen = true;
+  document.getElementById('radial-backdrop').onclick = closeRadialMenu;
+}
+
+function closeRadialMenu() {
+  var menu = document.getElementById('radial-menu');
+  if(menu) menu.style.display = 'none';
+  _radialOpen = false;
+}
+
+// Prevent context menu on long press
+document.addEventListener('contextmenu', function(e) {
+  if(_radialOpen || _radialTimer) e.preventDefault();
+});
+
+// Long press detection
+document.addEventListener('touchstart', function(e) {
+  if(_radialOpen) return;
+  var t = e.touches[0];
+  var tx = t.clientX; var ty = t.clientY;
+  _radialTimer = setTimeout(function() {
+    openRadialMenu(tx, ty);
+  }, 500);
+}, {passive:true});
+
+document.addEventListener('touchend', function() {
+  if(_radialTimer){ clearTimeout(_radialTimer); _radialTimer=null; }
+}, {passive:true});
+
+document.addEventListener('touchmove', function() {
+  if(_radialTimer){ clearTimeout(_radialTimer); _radialTimer=null; }
+}, {passive:true});
+
+// Mouse long press (desktop testing)
+document.addEventListener('mousedown', function(e) {
+  if(e.button !== 0) return;
+  var tx = e.clientX; var ty = e.clientY;
+  _radialTimer = setTimeout(function() {
+    openRadialMenu(tx, ty);
+  }, 500);
+});
+document.addEventListener('mouseup', function() {
+  if(_radialTimer){ clearTimeout(_radialTimer); _radialTimer=null; }
+});
+
 function toggleBurgerMenu(){
   var s=document.getElementById('burger-sidebar');
   var b=document.getElementById('burger-backdrop');
