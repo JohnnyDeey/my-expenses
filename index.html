@@ -3554,12 +3554,12 @@ input[type="password"]::-ms-clear { display:none !important; }
 
 <!-- == RADIAL MENU == -->
 <div id="radial-menu" style="display:none;position:fixed;inset:0;z-index:99999;touch-action:none;">
-  <div id="radial-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);"></div>
-  <div id="radial-center" style="position:absolute;transform:translate(-50%,-50%);pointer-events:none;">
-    <div style="position:absolute;width:20px;height:20px;border-radius:50%;background:var(--gold);transform:translate(-50%,-50%);z-index:2;box-shadow:0 0 12px rgba(200,150,46,0.8);"></div>
-    <div id="radial-inner" style="position:absolute;transform:translate(-50%,-50%);width:0;height:0;pointer-events:none;"></div>
-    <div id="radial-outer" style="position:absolute;transform:translate(-50%,-50%);width:0;height:0;pointer-events:none;"></div>
-  </div>
+  <div id="radial-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
+  <svg id="radial-svg" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);overflow:visible;" width="400" height="400" viewBox="-200 -200 400 400">
+    <g id="radial-inner-g"></g>
+    <g id="radial-outer-g"></g>
+    // Center circle not needed 
+  </svg>
 </div>
 <!-- == INACTIVITY WARNING == -->
 <div id="inactivity-warning" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99998;background:var(--ink);border:2px solid var(--gold);border-radius:8px;padding:20px 28px;min-width:300px;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.4);flex-direction:column;align-items:center;gap:12px;">
@@ -9580,82 +9580,123 @@ function showBudgetLimitPicker(key, cat, sym) {
 var _radialOpen = false;
 var _radialTimer = null;
 
+function makeArcPath(r1, r2, startAngle, endAngle) {
+  var gap = 1.5; // degrees gap between slices
+  var s = (startAngle + gap) * Math.PI / 180;
+  var e = (endAngle - gap) * Math.PI / 180;
+  var x1 = Math.cos(s)*r1; var y1 = Math.sin(s)*r1;
+  var x2 = Math.cos(e)*r1; var y2 = Math.sin(e)*r1;
+  var x3 = Math.cos(e)*r2; var y3 = Math.sin(e)*r2;
+  var x4 = Math.cos(s)*r2; var y4 = Math.sin(s)*r2;
+  var large = (endAngle - startAngle) > 180 ? 1 : 0;
+  return 'M'+x1+','+y1+' A'+r1+','+r1+' 0 '+large+',1 '+x2+','+y2+' L'+x3+','+y3+' A'+r2+','+r2+' 0 '+large+',0 '+x4+','+y4+' Z';
+}
+
 function openRadialMenu(x, y) {
   var menu = document.getElementById('radial-menu');
-  var center = document.getElementById('radial-center');
-  var inner = document.getElementById('radial-inner');
-  var outer = document.getElementById('radial-outer');
+  var innerG = document.getElementById('radial-inner-g');
+  var outerG = document.getElementById('radial-outer-g');
   if(!menu) return;
-  center.style.left = (window.innerWidth/2)+'px';
-  center.style.top = (window.innerHeight/2)+'px';
   var isIncome = _appMode === 'income';
   var innerItems = isIncome ? [
-    {icon:'📥',label:'Import',fn:'switchIncomeTab("inc-import",null)'},
-    {icon:'🏷️',label:'Cat',fn:'switchIncomeTab("inc-categorize",null)'},
-    {icon:'📅',label:'Monthly',fn:'switchIncomeTab("inc-monthly",null)'},
-    {icon:'📊',label:'Dash',fn:'switchIncomeTab("inc-dashboard",null)'},
-    {icon:'📋',label:'Ledger',fn:'switchIncomeTab("inc-ledger",null)'},
-    {icon:'⚙️',label:'Manage',fn:'switchIncomeTab("inc-manage",null)'}
+    {icon:'📥',label:'Import',fn:'switchIncomeTab("inc-import",null)',color:'#3d5a73'},
+    {icon:'🏷️',label:'Cat',fn:'switchIncomeTab("inc-categorize",null)',color:'#4a7c59'},
+    {icon:'📅',label:'Monthly',fn:'switchIncomeTab("inc-monthly",null)',color:'#8b5e3c'},
+    {icon:'📊',label:'Dash',fn:'switchIncomeTab("inc-dashboard",null)',color:'#6b3d8c'},
+    {icon:'📋',label:'Ledger',fn:'switchIncomeTab("inc-ledger",null)',color:'#2e7d8a'},
+    {icon:'⚙️',label:'Manage',fn:'switchIncomeTab("inc-manage",null)',color:'#5a6b3d'}
   ] : [
-    {icon:'📥',label:'Import',fn:'switchTab("import",null)'},
-    {icon:'🏷️',label:'Cat',fn:'switchTab("categorize",null)'},
-    {icon:'📅',label:'Daily',fn:'switchTab("daily",null)'},
-    {icon:'📊',label:'Dash',fn:'switchTab("dashboard",null)'},
-    {icon:'📋',label:'Ledger',fn:'switchTab("ledger",null)'},
-    {icon:'🎯',label:'Budget',fn:'switchTab("budget",null)'},
-    {icon:'⚙️',label:'Manage',fn:'switchTab("manage",null)'}
+    {icon:'📥',label:'Import',fn:'switchTab("import",null)',color:'#3d5a73'},
+    {icon:'🏷️',label:'Cat',fn:'switchTab("categorize",null)',color:'#4a7c59'},
+    {icon:'📅',label:'Daily',fn:'switchTab("daily",null)',color:'#8b5e3c'},
+    {icon:'📊',label:'Dash',fn:'switchTab("dashboard",null)',color:'#6b3d8c'},
+    {icon:'📋',label:'Ledger',fn:'switchTab("ledger",null)',color:'#2e7d8a'},
+    {icon:'🎯',label:'Budget',fn:'switchTab("budget",null)',color:'#b5451b'},
+    {icon:'⚙️',label:'Manage',fn:'switchTab("manage",null)',color:'#5a6b3d'}
   ];
   var outerItems = [
-    {icon:'🔁',label:'Switch',fn:'showModeSwitchPrompt()'},
-    {icon:'📅',label:'Calendar',fn:'openDateLookup()'},
-    {icon:'❓',label:'Help',fn:'openHelp()'},
-    {icon:'📖',label:'Guide',fn:'startOnboarding(_appMode,true,true)'},
-    {icon:'🌙',label:'Theme',fn:'toggleAppTheme()'},
-    {icon:'👁',label:'H/S',fn:'toggleHeaderCollapse()'},
-    {icon:'🔗',label:'Referral',fn:'openReferralPanel()'},
-    {icon:'🔓',label:'Logout',fn:'lockApp()'}
+    {icon:'🔁',label:'Switch',fn:'selectMode(_appMode==="income"?"expenses":"income")',color:'#c8962e'},
+    {icon:'📅',label:'Calendar',fn:'openDateLookup()',color:'#3d6b8a'},
+    {icon:'❓',label:'Help',fn:'openHelp()',color:'#6b3d8c'},
+    {icon:'📖',label:'Guide',fn:'startOnboarding(_appMode,true,true)',color:'#4a7c59'},
+    {icon:'🌙',label:'Theme',fn:'toggleAppTheme()',color:'#2e4a6b'},
+    {icon:'👁',label:'H/S',fn:'toggleHeaderCollapse()',color:'#5a4e3e'},
+    {icon:'🔗',label:'Referral',fn:'openReferralPanel()',color:'#7c4a4a'},
+    {icon:'🔓',label:'Logout',fn:'lockApp()',color:'#b5451b'}
   ];
-  inner.innerHTML = '';
-  outer.innerHTML = '';
-  // Draw ring guides
-  var ir = document.createElement('div'); ir.className='radial-inner-ring'; ir.style.width='120px'; ir.style.height='120px'; inner.appendChild(ir);
-  var or2 = document.createElement('div'); or2.className='radial-outer-ring'; or2.style.width='220px'; or2.style.height='220px'; outer.appendChild(or2);
-  // Place inner buttons
-  innerItems.forEach(function(item, i) {
-    var angle = (360/innerItems.length)*i - 90;
-    var rad = angle * Math.PI/180;
-    var bx = Math.cos(rad)*60; var by = Math.sin(rad)*60;
-    var btn = document.createElement('div');
-    btn.className = 'radial-btn';
-    btn.style.left = bx+'px'; btn.style.top = by+'px';
-    btn.innerHTML = '<span>'+item.icon+'</span><span class="radial-btn-label">'+item.label+'</span>';
-    btn.setAttribute('data-fn', item.fn);
-    btn.onclick = function(e){
-      e.stopPropagation();
-      var fn = this.getAttribute('data-fn');
-      closeRadialMenu();
-      setTimeout(function(){ eval(fn); }, 200);
-    };
-    inner.appendChild(btn);
-  });
-  // Place outer buttons
-  outerItems.forEach(function(item, i) {
-    var angle = (360/outerItems.length)*i - 90;
-    var rad = angle * Math.PI/180;
-    var bx = Math.cos(rad)*110; var by = Math.sin(rad)*110;
-    var btn = document.createElement('div');
-    btn.className = 'radial-btn';
-    btn.style.left = bx+'px'; btn.style.top = by+'px';
-    btn.innerHTML = '<span>'+item.icon+'</span><span class="radial-btn-label">'+item.label+'</span>';
-    btn.setAttribute('data-fn', item.fn);
-    btn.onclick = function(e){
-      e.stopPropagation();
-      var fn = this.getAttribute('data-fn');
-      closeRadialMenu();
-      setTimeout(function(){ eval(fn); }, 200);
-    };
-    outer.appendChild(btn);
-  });
+
+  innerG.innerHTML = '';
+  outerG.innerHTML = '';
+
+  var innerR1 = 35, innerR2 = 90;
+  var outerR1 = 95, outerR2 = 165;
+
+  function addSlice(g, items, r1, r2) {
+    var n = items.length;
+    var sliceDeg = 360/n;
+    items.forEach(function(item, i) {
+      var startA = sliceDeg*i - 90;
+      var endA = startA + sliceDeg;
+      var midA = (startA+endA)/2 * Math.PI/180;
+      var midR = (r1+r2)/2;
+      var tx = Math.cos(midA)*midR;
+      var ty = Math.sin(midA)*midR;
+
+      var path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', makeArcPath(r1,r2,startA,endA));
+      path.setAttribute('fill', item.color);
+      path.setAttribute('opacity','0.9');
+      path.style.cursor='pointer';
+      path.style.transition='opacity 0.15s';
+
+      path.addEventListener('touchstart',function(){this.setAttribute('opacity','1');},{passive:true});
+      path.addEventListener('touchend',function(){this.setAttribute('opacity','0.9');},{passive:true});
+
+      // Icon
+      var iconEl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      iconEl.setAttribute('x',tx); iconEl.setAttribute('y',ty-6);
+      iconEl.setAttribute('text-anchor','middle');
+      iconEl.setAttribute('dominant-baseline','middle');
+      iconEl.setAttribute('font-size', r2-r1 > 60 ? '18' : '14');
+      iconEl.setAttribute('pointer-events','none');
+      iconEl.textContent = item.icon;
+
+      // Label
+      var labelEl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      labelEl.setAttribute('x',tx); labelEl.setAttribute('y',ty+10);
+      labelEl.setAttribute('text-anchor','middle');
+      labelEl.setAttribute('font-size','8');
+      labelEl.setAttribute('fill','#fff');
+      labelEl.setAttribute('font-family','DM Mono,monospace');
+      labelEl.setAttribute('pointer-events','none');
+      labelEl.textContent = item.label;
+
+      var fn = item.fn;
+      path.onclick = function(e) {
+        e.stopPropagation();
+        closeRadialMenu();
+        setTimeout(function(){ eval(fn); }, 100);
+      };
+      path.addEventListener('touchend', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        closeRadialMenu();
+        setTimeout(function(){ eval(fn); }, 100);
+      });
+
+      g.appendChild(path);
+      g.appendChild(iconEl);
+      g.appendChild(labelEl);
+    });
+  }
+
+  addSlice(innerG, innerItems, innerR1, innerR2);
+  addSlice(outerG, outerItems, outerR1, outerR2);
+
+  // Close on center tap
+  var centerCircle = document.querySelector('#radial-svg circle');
+  if(centerCircle) centerCircle.onclick = closeRadialMenu;
+
   menu.style.display = 'block';
   _radialOpen = true;
   document.getElementById('radial-backdrop').onclick = closeRadialMenu;
@@ -15990,7 +16031,7 @@ function updateUserDisplay() {
       var mlTxt = isInc ? '&#128176;' : '&#128184;';
       btns.innerHTML =
         '<button id="burger-btn" onclick="toggleBurgerMenu()" aria-label="Open menu" style="background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;flex-direction:column;gap:4px;justify-content:center;"><span class=\"bline\"></span><span class=\"bline\"></span><span class=\"bline\"></span></button>' +
-        '<button id="mode-switch-btn" onclick="showModeSwitchPrompt()" title="Switch module" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.6);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128260;</button>' +
+        '<button id="mode-switch-btn" onclick="selectMode(_appMode===&quot;income&quot;?&quot;expenses&quot;:&quot;income&quot;)" title="Switch module" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.6);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128260;</button>' +
         '<span id="hdr-mode-label" style="font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;padding:5px 12px;border-radius:4px;background:'+mlBg+';color:'+mlClr+';white-space:nowrap;flex:1;text-align:center;">'+mlTxt+'</span>' +
         '<button onclick="logOut()" title="Log out  [L]" style="background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128275;</button>';
     } else {
