@@ -3626,9 +3626,9 @@ input[type="password"]::-ms-clear { display:none !important; }
 </div>
 
 <!-- == RADIAL MENU == -->
-<div id="radial-menu" style="display:none;position:fixed;inset:0;z-index:99999;touch-action:none;">
+<div id="radial-menu" style="display:none;position:fixed;inset:0;z-index:99999;touch-action:none;overflow:hidden;">
   <div id="radial-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
-  <svg id="radial-svg" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);overflow:visible;" width="400" height="400" viewBox="-200 -200 400 400">
+  <svg id="radial-svg" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);overflow:hidden;visibility:hidden;" width="400" height="400" viewBox="-200 -200 400 400">
     <g id="radial-inner-g"></g>
     <g id="radial-outer-g"></g>
     // Center circle not needed 
@@ -4749,22 +4749,32 @@ function clearMonthData() {
   }
 }
 function loadSample() {
-  pickerYear = 2026; pickerMonth = 2;
-  document.getElementById('picker-year-display').textContent = pickerYear;
+  var now = new Date();
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var y = now.getFullYear();
+  pickerYear = y; pickerMonth = now.getMonth()+1;
+  document.getElementById('picker-year-display').textContent = y;
   renderMonthPicker();
-  document.getElementById('import-period-label').textContent = 'February 2026';
+  document.getElementById('import-period-label').textContent = MONTHS_FULL[now.getMonth()] + ' ' + y;
   document.getElementById('import-status').textContent = 'Sample data loaded — click Parse Expenses';
   document.getElementById('import-status').className = 'import-status';
-  var lines = [];
-  var dateRe = /^\d{1,2}-\d{1,2}-\d{4}$/;
-  SAMPLE_LINES.forEach(function(line){
-    if (dateRe.test(line.trim())) { lines.push(line); }
-    else if (line.indexOf('|')!==-1) {
-      var p=line.split('|');
-      lines.push('\t'+p[0]+'\t'+(SYMS[p[1]]||'')+p[2]);
-    }
-  });
-  document.getElementById('raw-input').value = lines.join('\n');
+  document.getElementById('raw-input').value =
+    '01-'+m+'-'+y + '\n' +
+    '\tMorning coffee\t€1.50\n' +
+    '\tSupermarket groceries\t€45.20\n' +
+    '\tTransport card\t€2.40\n' +
+    '05-'+m+'-'+y + '\n' +
+    '\tRestaurant lunch\t€12.80\n' +
+    '\tPhone credit\t₦2,000\n' +
+    '\tFamily support\t₦15,000\n' +
+    '10-'+m+'-'+y + '\n' +
+    '\tMonthly gym fee\t€25.00\n' +
+    '\tBread and milk\t€3.60\n' +
+    '\tOnline subscription\t$9.99\n' +
+    '15-'+m+'-'+y + '\n' +
+    '\tElectricity bill\t€55.00\n' +
+    '\tWeekend market\t₦8,500\n' +
+    '\tBus ticket\t€1.80';
   document.getElementById('raw-input').className = '';
   updateHeaderContext();
 }
@@ -9454,66 +9464,7 @@ function toggleHint(id){
   document.body.appendChild(box);
   document.getElementById('_hint_close_btn').onclick=closeHint;
 }
-// Swipe navigation
-(function(){
-  var EXP_TABS = [
-    ['import','Import'],['categorize','Categorize'],['daily','Daily'],
-    ['dashboard','Dashboard'],['ledger','Ledger'],['budget','Budget'],['manage','Manage']
-  ];
-  var INC_TABS = [
-    ['inc-import','Import'],['inc-categorize','Categorize'],['inc-monthly','Monthly'],
-    ['inc-dashboard','Dashboard'],['inc-ledger','Ledger'],['inc-manage','Manage']
-  ];
-  var _swipeX = null;
-  var _swipeY = null;
-  var _swipeT = null;
-
-  document.addEventListener('touchstart', function(e){
-    var t = e.touches[0];
-    _swipeX = t.clientX;
-    _swipeY = t.clientY;
-    _swipeT = Date.now();
-  }, {passive:true});
-
-  document.addEventListener('touchend', function(e){
-    if(_swipeX === null) return;
-    var t = e.changedTouches[0];
-    var dx = t.clientX - _swipeX;
-    var dy = t.clientY - _swipeY;
-    var dt = Date.now() - _swipeT;
-    _swipeX = null; _swipeY = null; _swipeT = null;
-    // Must be fast (under 300ms), strongly horizontal, and at least 80px
-    if(dt > 300) return;
-    if(Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 2) return;
-    // Ignore if touch target is inside a scrollable table or overflow element
-    var target = e.target;
-    while(target && target !== document.body) {
-      var style = window.getComputedStyle(target);
-      if(style.overflowX === 'auto' || style.overflowX === 'scroll') return;
-      if(target.tagName === 'TABLE' || target.tagName === 'TD' || target.tagName === 'TH') return;
-      target = target.parentElement;
-    }
-    var dir = dx < 0 ? 1 : -1; // swipe left = next, swipe right = prev
-    var isIncome = _appMode === 'income';
-    var tabs = isIncome ? INC_TABS : EXP_TABS;
-    // Find current tab
-    var curTab = null;
-    var curIdx = -1;
-    tabs.forEach(function(t,i){
-      var panel = document.getElementById('panel-'+(isIncome?'':'') + t[0]);
-      if(!panel) panel = document.getElementById('panel-'+t[0]);
-      if(panel && panel.classList.contains('active')){ curTab=t[0]; curIdx=i; }
-    });
-    if(curIdx === -1) return;
-    var nextIdx = (curIdx + dir + tabs.length) % tabs.length;
-    var next = tabs[nextIdx];
-    if(isIncome){
-      burgerSwitchInc(next[0], next[1]);
-    } else {
-      burgerSwitch(next[0], next[1]);
-    }
-  }, {passive:true});
-})();
+// No need for Swipe navigation anymore
 
 // ── Biometric / Fingerprint ──────────────────────────────────
 var FP_KEY = 'fp_enabled';
@@ -9596,6 +9547,8 @@ function tryBiometricLogin(onSuccess) {
       onSuccess();
     }
   }).catch(function(){
+    var o = document.getElementById('_bio_overlay');
+    if(o) o.remove();
     showToast('Biometric failed — use PIN instead');
   });
   return true;
@@ -9771,6 +9724,8 @@ function openRadialMenu(x, y) {
   if(centerCircle) centerCircle.onclick = closeRadialMenu;
 
   menu.style.display = 'block';
+  var rsvg = document.getElementById('radial-svg');
+  if(rsvg) rsvg.style.visibility = 'visible';
   _radialOpen = true;
   document.getElementById('radial-backdrop').onclick = closeRadialMenu;
 }
@@ -9778,6 +9733,8 @@ function openRadialMenu(x, y) {
 function closeRadialMenu() {
   var menu = document.getElementById('radial-menu');
   if(menu) menu.style.display = 'none';
+  var rsvg = document.getElementById('radial-svg');
+  if(rsvg) rsvg.style.visibility = 'hidden';
   _radialOpen = false;
 }
 
@@ -11862,19 +11819,30 @@ function clearIncomeMonthData() {
   renderIncomeMonthPicker();
 }
 function loadIncomeSample() {
-  document.getElementById('inc-raw-input').value =
-    '01-03-2026' + String.fromCharCode(10) +
-    'Monthly salary: ₦70,000' + String.fromCharCode(10) +
-    'Freelance website job: $150' + String.fromCharCode(10) +
-    '' + String.fromCharCode(10) +
-    '15-03-2026' + String.fromCharCode(10) +
-    'Commission on closed deal: ₦8,500' + String.fromCharCode(10) +
-    'Tip from customer: ₦2,000' + String.fromCharCode(10) +
-    'Gift from uncle: ₦5,000';
-  incPickerYear = 2026; incPickerMonth = 3;
-  document.getElementById('inc-picker-year-display').textContent = 2026;
+  var now = new Date();
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var y = now.getFullYear();
+  incPickerYear = y; incPickerMonth = now.getMonth()+1;
+  if(document.getElementById('inc-picker-year-display')) document.getElementById('inc-picker-year-display').textContent = y;
   renderIncomeMonthPicker();
-  document.getElementById('inc-import-period-label').textContent = 'March 2026';
+  var incPeriodLabel = document.getElementById('inc-import-period-label');
+  var incStatus = document.getElementById('inc-import-status');
+  if(incStatus) incStatus.textContent = 'Sample data loaded — click Parse Income';
+  var _m=m, _y=y, _now=now;
+  setTimeout(function(){
+    incPickerYear = parseInt(_y); incPickerMonth = _now.getMonth()+1;
+    renderIncomeMonthPicker();
+    if(incPeriodLabel) incPeriodLabel.textContent = MONTHS_FULL[_now.getMonth()] + ' ' + _y;
+    document.getElementById('inc-raw-input').value =
+      ('01-'+_m+'-'+_y) + String.fromCharCode(10) +
+      'Monthly salary: \u20a670,000' + String.fromCharCode(10) +
+      'Freelance website job: $150' + String.fromCharCode(10) +
+      '' + String.fromCharCode(10) +
+      ('15-'+_m+'-'+_y) + String.fromCharCode(10) +
+      'Commission on closed deal: \u20a68,500' + String.fromCharCode(10) +
+      'Tip from customer: \u20a62,000' + String.fromCharCode(10) +
+      'Gift from uncle: \u20a65,000';
+  }, 300);
 }
 
 // -- Income auto-category --
@@ -15294,7 +15262,25 @@ function showLoginStep() {
   var fpBtn = document.getElementById('fp-login-btn');
   if(fpBtn) fpBtn.style.display = localStorage.getItem('fp_enabled')==='1' ? 'block' : 'none';
   if(localStorage.getItem('fp_enabled')==='1'){
-    setTimeout(function(){ tryBiometricLogin(function(){}); }, 800);
+    // Show blur overlay while authenticating
+    var _bioOverlay = document.getElementById('_bio_overlay');
+    if(!_bioOverlay){
+      _bioOverlay = document.createElement('div');
+      _bioOverlay.id = '_bio_overlay';
+      _bioOverlay.style.cssText = 'position:fixed;inset:0;z-index:99990;background:#1a1410;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
+      _bioOverlay.innerHTML =
+        '<div style="font-family:Playfair Display,serif;font-size:1.4rem;font-weight:900;color:#e8b84b;letter-spacing:2px;">MY EXPENSE LEDGER</div>'+
+        '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 32 32"><ellipse cx="16" cy="16" rx="2" ry="2" fill="none" stroke="#e8b84b" stroke-width="1.8"/><ellipse cx="16" cy="16" rx="5" ry="5" fill="none" stroke="#e8b84b" stroke-width="1.8"/><ellipse cx="16" cy="16" rx="8" ry="8" fill="none" stroke="#e8b84b" stroke-width="1.8"/><ellipse cx="16" cy="16" rx="11" ry="11" fill="none" stroke="#e8b84b" stroke-width="1.8"/><ellipse cx="16" cy="16" rx="14" ry="14" fill="none" stroke="#e8b84b" stroke-width="1.5"/></svg>'+
+        '<div style="font-family:DM Mono,monospace;font-size:0.75rem;color:#9e8e7e;letter-spacing:2px;">VERIFYING IDENTITY...</div>'+
+        '<button onclick="document.getElementById(\'_bio_overlay\').remove()" style="margin-top:10px;background:none;border:1px solid #6b5e50;border-radius:4px;padding:8px 20px;font-family:DM Mono,monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">Use PIN instead</button>';
+      document.body.appendChild(_bioOverlay);
+    }
+    setTimeout(function(){
+      tryBiometricLogin(function(){
+        var o = document.getElementById('_bio_overlay');
+        if(o) o.remove();
+      });
+    }, 500);
   }
   var hint = document.getElementById('reset-attempt-hint'); if(hint) hint.style.display = 'none';
   setTimeout(function(){ var el = document.getElementById('login-code'); if(el) el.focus(); }, 80);
