@@ -9549,7 +9549,7 @@ function tryBiometricLogin(onSuccess) {
   }).catch(function(){
     var o = document.getElementById('_bio_overlay');
     if(o) o.remove();
-    var ps = document.getElementById('pin-screen');
+    var ps = document.getElementById('pin-overlay');
     if(ps) ps.style.visibility = 'visible';
     showToast('Biometric failed — use PIN instead');
   });
@@ -15271,20 +15271,20 @@ function showLoginStep() {
       _bioOverlay.id = '_bio_overlay';
       _bioOverlay.style.cssText = 'position:fixed;inset:0;z-index:99990;background:#1a1410;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
       // Hide pin screen while biometric overlay shows
-      var pinScreen = document.getElementById('pin-screen');
+      var pinScreen = document.getElementById('pin-overlay');
       if(pinScreen) pinScreen.style.visibility = 'hidden';
       _bioOverlay.innerHTML =
         '<div style="font-family:Playfair Display,serif;font-size:1.4rem;font-weight:900;color:#e8b84b;letter-spacing:2px;">MY EXPENSE LEDGER</div>'+
         '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 32 32"><ellipse cx="16" cy="16" rx="2" ry="2" fill="none" stroke="#e8b84b" stroke-width="1.8"/><ellipse cx="16" cy="16" rx="5" ry="5" fill="none" stroke="#e8b84b" stroke-width="1.8"/><ellipse cx="16" cy="16" rx="8" ry="8" fill="none" stroke="#e8b84b" stroke-width="1.8"/><ellipse cx="16" cy="16" rx="11" ry="11" fill="none" stroke="#e8b84b" stroke-width="1.8"/><ellipse cx="16" cy="16" rx="14" ry="14" fill="none" stroke="#e8b84b" stroke-width="1.5"/></svg>'+
         '<div style="font-family:DM Mono,monospace;font-size:0.75rem;color:#9e8e7e;letter-spacing:2px;">VERIFYING IDENTITY...</div>'+
-        '<button onclick="(function(){var o=document.getElementById(\'_bio_overlay\');if(o)o.remove();var ps=document.getElementById(\'pin-screen\');if(ps)ps.style.visibility=\'visible\';})()" style="margin-top:10px;background:none;border:1px solid #6b5e50;border-radius:4px;padding:8px 20px;font-family:DM Mono,monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">Use PIN instead</button>';
+        '<button onclick="(function(){var o=document.getElementById(\'_bio_overlay\');if(o)o.remove();var ps=document.getElementById(\'pin-overlay\');if(ps)ps.style.visibility=\'visible\';})()" style="margin-top:10px;background:none;border:1px solid #6b5e50;border-radius:4px;padding:8px 20px;font-family:DM Mono,monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">Use PIN instead</button>';
       document.body.appendChild(_bioOverlay);
     }
     setTimeout(function(){
       tryBiometricLogin(function(){
         var o = document.getElementById('_bio_overlay');
         if(o) o.remove();
-        var ps = document.getElementById('pin-screen');
+        var ps = document.getElementById('pin-overlay');
         if(ps) ps.style.visibility = 'visible';
       });
     }, 500);
