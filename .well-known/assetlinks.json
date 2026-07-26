@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.vercel.my_expenses_neon.twa",
+    "sha256_cert_fingerprints": ["F4:79:D1:2B:30:D7:6E:FC:3C:9A:25:5D:92:D5:23:29:B1:00:E6:25:8F:67:D9:3F:93:47:91:78:9D:67:73:2E"]
+  }
+}]
