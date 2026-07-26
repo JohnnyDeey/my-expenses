@@ -368,6 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 var _db            = null;
+var _auth          = null;
 var _syncUnsubscribe = null;
 var _syncPushTimer   = null;
 var _isMerging       = false;
@@ -442,7 +443,8 @@ function syncLoadSDK(callback) {
   if (typeof firebase !== 'undefined' && firebase.firestore) { callback(); return; }
   var sdks = [
     'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js'
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js',
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'
   ];
   var i = 0;
   function next() {
@@ -460,6 +462,7 @@ function getDB(callback) {
   syncLoadSDK(function() {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     _db = firebase.firestore();
+    _auth = firebase.auth();
     callback(_db);
   });
 }
@@ -14648,6 +14651,20 @@ function showFullVerifyStep() {
 // -- _resumeSession: enter app immediately, fire Firebase sync in background --
 function _resumeSession(uid, name, phone) {
   _userId = uid; _userName = name; _userPhone = phone;
+  // Sign into Firebase Auth silently if we have credentials
+  if(_auth && !_auth.currentUser) {
+    var _fbEmail = localStorage.getItem('_pending_email') || localStorage.getItem('expense_user_email');
+    var _fbPin = localStorage.getItem('expense_pin_hash_local');
+    if(_fbEmail && _fbPin) {
+      // Try to sign in with stored credentials
+      _auth.signInWithEmailAndPassword(_fbEmail, _fbPin)
+        .then(function(cred){
+          localStorage.setItem('_firebase_uid', cred.user.uid);
+        }).catch(function(){
+          // Silent fail — app works without Firebase Auth for now
+        });
+    }
+  }
   // Clear any previous guest mode state
   _isGuestMode = false;
   localStorage.removeItem(GUEST_MODE_KEY);
@@ -15713,16 +15730,27 @@ function _doGenerateCode(name, dob, dial, number, phone, errEl) {
       }
       // Create registry entry with a NEW random UUID — not derived from PIN
       var newUID = generateUUID();
+      var _regEmail = (document.getElementById('reg-email')||{}).value.trim().toLowerCase();
       db.collection('user_registry').doc(_pendingPhone).set({
         name:      _pendingName,
         pin_hash:  hashPin(_generatedCode),
-        user_id:   newUID,          // <-- random UUID, data stored here
+        user_id:   newUID,
+        email:     _regEmail,
         created:   Date.now()
       }).then(function() {
         if(errEl) errEl.textContent = '';
         document.getElementById('generated-code-display').textContent = _generatedCode;
-        // Store UUID locally now so confirmCode can use it
         localStorage.setItem('_pending_uid', newUID);
+        localStorage.setItem('_pending_email', _regEmail);
+        // Create Firebase Auth account
+        if(_auth && _regEmail) {
+          _auth.createUserWithEmailAndPassword(_regEmail, _generatedCode)
+            .then(function(cred) {
+              localStorage.setItem('_firebase_uid', cred.user.uid);
+            }).catch(function(e) {
+              console.warn('Firebase Auth registration skipped:', e.message);
+            });
+        }
         showCodeStep();
       });
     }).catch(function(e) {
