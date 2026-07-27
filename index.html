@@ -15407,6 +15407,20 @@ function gPinPress(d){
   var dots = document.getElementById('g-pin-dots');
   if(dots) dots.innerHTML = _gPin.split('').map(function(){ return '<div style="width:14px;height:14px;border-radius:50%;background:var(--gold);"></div>'; }).join('');
 }
+
+// Keyboard support for Google PIN setup
+document.addEventListener('keydown', function(e){
+  var setupStep = document.getElementById('pin-step-google-setup');
+  if(!setupStep || setupStep.style.display === 'none') return;
+  if(e.key >= '0' && e.key <= '9') gPinPress(e.key);
+  else if(e.key === 'Backspace') gPinDelete();
+  else if(e.key === 'Enter') {
+    var uid = localStorage.getItem(UID_KEY);
+    var name = localStorage.getItem(NAME_KEY);
+    var email = localStorage.getItem('_pending_email');
+    gPinConfirm(uid, name, email);
+  }
+});
 function gPinDelete(){ _gPin = _gPin.slice(0,-1); gPinPress(''); _gPin = _gPin; var dots = document.getElementById('g-pin-dots'); if(dots) dots.innerHTML = _gPin.split('').map(function(){ return '<div style="width:14px;height:14px;border-radius:50%;background:var(--gold);"></div>'; }).join(''); }
 function gPinClear(){ _gPin = ''; var dots = document.getElementById('g-pin-dots'); if(dots) dots.innerHTML = ''; }
 function gPinConfirm(uid, displayName, email){
