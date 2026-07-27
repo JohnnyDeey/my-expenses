@@ -3444,7 +3444,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         </div>
         <!-- Manual Register -->
         <button onclick="showManualRegister()" style="width:100%;padding:14px;background:none;border:1.5px solid rgba(200,150,46,0.4);border-radius:6px;font-family:'DM Mono',monospace;font-size:0.82rem;color:#e8b84b;cursor:pointer;">
-          Register with Phone & PIN
+          Register
         </button>
         <div style="margin-top:16px;">
           <button onclick="showLoginStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Already have an account? Sign in</button>
@@ -3460,7 +3460,7 @@ input[type="password"]::-ms-clear { display:none !important; }
           <!-- Date of Birth -->
           <div style="margin-bottom:14px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Date of birth <span style="color:#b5451b;">*</span></label>
-            <input id="reg-dob" type="date" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')document.getElementById('reg-phone-number').focus()">
+            <input id="reg-dob" type="date" min="1900-01-01" max="2015-12-31" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')document.getElementById('reg-phone-number').focus()">
             <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:4px;">You must be at least 16 years old to use this app.</div>
           </div>
           <!-- Phone with country code -->
@@ -3490,10 +3490,11 @@ input[type="password"]::-ms-clear { display:none !important; }
           </div>
           <div id="reg-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
           <!-- T&C -->
-          <div style="margin-bottom:14px;">
-            <button onclick="openPrivacyFromPin(event)" style="width:100%;padding:10px 14px;background:rgba(200,150,46,0.1);border:1.5px solid rgba(200,150,46,0.4);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--gold);cursor:pointer;text-align:center;letter-spacing:1px;">&#128220; READ &amp; ACCEPT TERMS &amp; CONDITIONS</button>
+          <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" id="reg-terms-check" style="width:18px;height:18px;cursor:pointer;accent-color:var(--gold);flex-shrink:0;">
+            <label for="reg-terms-check" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#9e8e7e;cursor:pointer;">I have read and accept the <button onclick="openPrivacyFromPin(event)" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--gold);cursor:pointer;padding:0;text-decoration:underline;">Terms &amp; Conditions</button></label>
           </div>
-          <button onclick="showUsernameStep()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Next →</button>
+          <button onclick="(function(){ var chk=document.getElementById('reg-terms-check'); if(!chk.checked){ chk.parentElement.style.border='1px solid #b5451b'; chk.parentElement.style.borderRadius='4px'; chk.parentElement.style.padding='6px'; var err=document.getElementById('reg-error'); if(err){err.textContent='Please accept the Terms & Conditions to continue';err.style.color='#b5451b';} return; } showUsernameStep(); })()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Next &#8594;</button>
           <button onclick="showPinPadStep()" style="width:100%;padding:10px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;margin-top:8px;">← Back to Sign In</button>
         </div>
         <div id="reg-step-username" style="display:none;">
@@ -3629,12 +3630,12 @@ input[type="password"]::-ms-clear { display:none !important; }
       <button onclick="closeResetOverlay()" style="width:100%;padding:10px;background:none;border:1px solid rgba(200,150,46,0.25);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">&#8592; Back to Sign In</button>
     </div>
     <div id="reset-step-code" style="display:none;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:16px;line-height:1.7;">Identity verified. Here is your one-time reset code. It expires in <strong style="color:var(--gold);">15 minutes</strong>. Use it to sign in, then change your code immediately in Manage.</div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Your Temporary Code</div>
-      <div id="reset-code-display" style="font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:900;color:var(--gold2);letter-spacing:10px;text-align:center;padding:18px;background:#2a2018;border-radius:6px;margin-bottom:8px;border:1px solid rgba(200,150,46,0.3);"></div>
-      <div id="reset-code-timer" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--gold);text-align:center;margin-bottom:16px;"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#b5451b;background:rgba(181,69,27,0.1);border:1px solid rgba(181,69,27,0.3);border-radius:4px;padding:10px 12px;margin-bottom:16px;line-height:1.7;">&#9888; Screenshot this code now. For security it will not be shown again after you close this screen.</div>
-      <button onclick="useResetCodeNow()" style="width:100%;padding:13px;background:var(--sage);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px;">&#10003; Use This Code to Sign In</button>
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:16px;line-height:1.7;">A 6-digit OTP has been sent to your email. Enter it below. It expires in <strong style="color:var(--gold);">5 minutes</strong>.</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Enter OTP</div>
+      <input id="reset-otp-input" type="number" maxlength="6" placeholder="000000" style="width:100%;padding:14px;background:#2a2018;border:1.5px solid rgba(200,150,46,0.4);border-radius:6px;font-family:'DM Mono',monospace;font-size:1.5rem;color:var(--gold2);text-align:center;letter-spacing:8px;outline:none;margin-bottom:8px;box-sizing:border-box;">
+      <div id="reset-timer" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--gold);text-align:center;margin-bottom:16px;"></div>
+      <div id="reset-otp-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:18px;text-align:center;"></div>
+      <button onclick="verifyOTPReset()" style="width:100%;padding:13px;background:var(--sage);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px;">&#10003; Verify OTP</button>
       <button onclick="closeResetOverlay()" style="width:100%;padding:10px;background:none;border:1px solid rgba(200,150,46,0.25);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">Close</button>
     </div>
   </div>
@@ -8858,9 +8859,9 @@ function renderUserProfileCard() {
   if (userEl)    userEl.textContent    = '@' + username;
   if (countryEl) countryEl.textContent = country;
 
-  // Phone — dial code + last 2 digits (full number never stored as plain text)
-  if (phoneEl) phoneEl.textContent = dial ? dial + (tail ? ' ••••••' + tail : '') : '—';
-
+  /// Phone — show dial code + tail (full number not stored for privacy)
+  var plainPhone = sessionStorage.getItem('_plain_phone_' + (_userId||'default')) || '';
+  if (phoneEl) phoneEl.textContent = plainPhone ? plainPhone : (dial ? dial + (tail ? ' ••••••' + tail : '') : '—');
   // DOB — full date, no masking
   if (dobEl) {
     if (dob) {
@@ -14646,7 +14647,7 @@ function _showTcBox(boxId, labelId) {
     // Update button text — always READ & ACCEPT, never "I agree"
     var btn = document.getElementById(labelId);
     if (btn) {
-      btn.innerHTML = '&#128220; READ &amp; ACCEPT TERMS &amp; CONDITIONS';
+      btn.innerHTML = '&#128220; TERMS &amp; CONDITIONS';
       btn.style.background = 'rgba(200,150,46,0.1)';
       btn.style.borderColor = 'rgba(200,150,46,0.4)';
       btn.style.color = 'var(--gold)';
@@ -15457,6 +15458,7 @@ function signInWithGoogle() {
       db.collection('users').doc(uid).collection('settings').doc('profile').get().then(function(doc) {
         if(doc.exists && doc.data().pin_hash) {
           // Existing user with PIN — resume session
+          localStorage.setItem(PHONE_CONFIRM_KEY + '_' + uid, '1');
           _resumeSession(uid, displayName, '');
           showToast('Welcome back, ' + displayName + '!');
         } else if(doc.exists && !doc.data().pin_hash) {
@@ -15465,7 +15467,11 @@ function signInWithGoogle() {
           localStorage.setItem(UID_KEY, uid);
           localStorage.setItem(NAME_KEY, displayName);
           localStorage.setItem(FULL_NAME_KEY, displayName);
-          showGooglePinSetup(uid, displayName, doc.data().email || email);
+          // Mark phone and DOB as confirmed for Google users — no popup needed
+          localStorage.setItem(PHONE_CONFIRM_KEY + '_' + uid, '1');
+          localStorage.setItem('expense_user_dob_' + uid, '2000-01-01');
+          // Show PIN setup before entering app
+          showGooglePinSetup(uid, displayName, email);
         } else {
           // New user — create account
           localStorage.setItem('_pending_email', email);
@@ -15753,19 +15759,34 @@ function _realtimeEmailCheck(val) {
   if (!val || !val.includes('@')) { if (statusEl) statusEl.textContent = ''; return; }
   if (statusEl) { statusEl.textContent = '⏳ Checking...'; statusEl.style.color = '#6b5e50'; }
   _emailCheckTimer = setTimeout(function() {
-    if (!_db) return;
-    _db.collection('user_registry').where('email','==',val.trim().toLowerCase()).get().then(function(snap) {
+    getDB(function(db) {
+    db.collection('user_registry').where('email','==',val.trim().toLowerCase()).get().then(function(snap) {
       if (!snap.empty) {
-        if (statusEl) { statusEl.textContent = '✕ Email already registered.'; statusEl.style.color = '#b5451b'; }
+        if (statusEl) { statusEl.textContent = '\u2717 Email already registered.'; statusEl.style.color = '#b5451b'; }
         var inp = document.getElementById('reg-email'); if (inp) inp.style.borderColor = '#b5451b';
       } else {
-        if (statusEl) { statusEl.textContent = '✓ Email available'; statusEl.style.color = '#4a7c59'; }
-        var inp = document.getElementById('reg-email'); if (inp) inp.style.borderColor = '#4a7c59';
+        // Also check Firebase Auth
+        if(_auth) {
+          _auth.fetchSignInMethodsForEmail(val.trim().toLowerCase()).then(function(methods){
+            if(methods && methods.length > 0) {
+              if (statusEl) { statusEl.textContent = '\u2717 Email already registered.'; statusEl.style.color = '#b5451b'; }
+              var inp = document.getElementById('reg-email'); if (inp) inp.style.borderColor = '#b5451b';
+            } else {
+              if (statusEl) { statusEl.textContent = '\u2713 Email available'; statusEl.style.color = '#4a7c59'; }
+              var inp = document.getElementById('reg-email'); if (inp) inp.style.borderColor = '#4a7c59';
+            }
+          }).catch(function(){
+            if (statusEl) { statusEl.textContent = '\u2713 Email available'; statusEl.style.color = '#4a7c59'; }
+          });
+        } else {
+          if (statusEl) { statusEl.textContent = '\u2713 Email available'; statusEl.style.color = '#4a7c59'; }
+          var inp = document.getElementById('reg-email'); if (inp) inp.style.borderColor = '#4a7c59';
+        }
       }
     }).catch(function(){ if (statusEl) statusEl.textContent = ''; });
+  }); // end getDB
   }, 600);
 }
-
 // Open email overlay from profile card
 function openEmailVerifyOverlay() {
   var overlay = document.getElementById('email-verify-overlay');
@@ -16086,6 +16107,113 @@ function openResetOverlay() {
   if (inp) { inp.value = ''; setTimeout(function(){ inp.focus(); }, 100); }
   var err = document.getElementById('reset-phone-error');
   if (err) err.textContent = '';
+}
+
+function _tryEmailReset(email) {
+  var err = document.getElementById('reset-phone-error');
+  if(err) { err.textContent = 'Sending OTP to ' + email + '...'; err.style.color = 'var(--muted)'; }
+  getDB(function(db) {
+    // Find user by email in user_registry
+    db.collection('user_registry').where('email','==',email.toLowerCase()).get().then(function(snap) {
+      if(snap.empty) {
+        // Also check Firebase Auth
+        if(_auth) {
+          _auth.sendPasswordResetEmail(email).then(function(){
+            if(err) { err.textContent = 'Reset link sent to ' + email + '. Check your inbox.'; err.style.color = '#4a7c59'; }
+          }).catch(function(){
+            if(err) { err.textContent = 'No account found with this email.'; err.style.color = '#b5451b'; }
+          });
+        } else {
+          if(err) { err.textContent = 'No account found with this email.'; err.style.color = '#b5451b'; }
+        }
+        return;
+      }
+      // Generate 6-digit OTP
+      var otp = String(Math.floor(100000 + Math.random() * 900000));
+      var expiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+      var doc = snap.docs[0];
+      // Store OTP in Firestore
+      doc.ref.update({ reset_otp: otp, reset_otp_expiry: expiry }).then(function(){
+        // Send OTP via EmailJS
+        if(typeof emailjs !== 'undefined') {
+          emailjs.send('service_6a8t7as', 'template_8m1w9rj', {
+            name: doc.data().name || 'User',
+            email: email,
+            subject: 'Your PIN Reset Code',
+            message: 'Your My Expense Ledger PIN reset code is: ' + otp + '\n\nThis code expires in 5 minutes.\n\nIf you did not request this, please ignore.'
+          }).then(function(){
+            if(err) { err.textContent = 'OTP sent to ' + email + '. Check your inbox.'; err.style.color = '#4a7c59'; }
+            // Show OTP input
+            _showOTPInput(doc.data(), otp, expiry);
+          }).catch(function(){
+            if(err) { err.textContent = 'Failed to send OTP. Try again.'; err.style.color = '#b5451b'; }
+          });
+        }
+      });
+    }).catch(function(){
+      if(err) { err.textContent = 'Connection error. Try again.'; err.style.color = '#b5451b'; }
+    });
+  });
+  return true;
+}
+
+function _showOTPInput(userData, otp, expiry) {
+  var sa = document.getElementById('reset-step-phone');
+  var sb = document.getElementById('reset-step-code');
+  if(sa) sa.style.display = 'none';
+  if(sb) sb.style.display = 'block';
+  // Store for verification
+  sessionStorage.setItem('_reset_otp', otp);
+  sessionStorage.setItem('_reset_otp_expiry', String(expiry));
+  sessionStorage.setItem('_reset_uid', userData.user_id || '');
+  // Start 5 min countdown
+  var cd = document.getElementById('reset-code-display');
+  if(cd) cd.textContent = '● ● ● ● ● ●';
+  var timer = document.getElementById('reset-timer');
+  var remaining = 300;
+  if(timer) {
+    var iv = setInterval(function(){
+      remaining--;
+      var m = Math.floor(remaining/60);
+      var s = remaining % 60;
+      timer.textContent = m + ':' + (s<10?'0':'') + s;
+      if(remaining <= 0) { clearInterval(iv); timer.textContent = 'Expired'; }
+    }, 1000);
+  }
+}
+
+function verifyOTPReset() {
+  var inp = document.getElementById('reset-otp-input');
+  var err = document.getElementById('reset-otp-error');
+  var otp = inp ? inp.value.trim() : '';
+  var storedOtp = sessionStorage.getItem('_reset_otp');
+  var expiry = parseInt(sessionStorage.getItem('_reset_otp_expiry') || '0');
+  if(!otp){ if(err) err.textContent = 'Please enter the OTP'; return; }
+  if(Date.now() > expiry){ if(err) err.textContent = 'OTP expired. Request a new one.'; return; }
+  if(otp !== storedOtp){ if(err) err.textContent = 'Incorrect OTP. Try again.'; return; }
+  // OTP correct — allow PIN reset
+  sessionStorage.removeItem('_reset_otp');
+  sessionStorage.removeItem('_reset_otp_expiry');
+  var uid = sessionStorage.getItem('_reset_uid');
+  closeResetOverlay();
+  // Show PIN change screen
+  showPinScreen();
+  showLoginStep();
+  showToast('OTP verified! You are now signed in. Change your PIN in Manage settings.');
+  if(uid) {
+    localStorage.setItem(UID_KEY, uid);
+    getDB(function(db){
+      db.collection('user_registry').where('user_id','==',uid).get().then(function(snap){
+        if(!snap.empty){
+          var d = snap.docs[0].data();
+          _resumeSession(uid, d.name || uid, snap.docs[0].id);
+          setTimeout(function(){
+            burgerSwitch('manage','Manage');
+          }, 800);
+        }
+      });
+    });
+  }
 }
 
 function closeResetOverlay() {
@@ -16711,7 +16839,8 @@ function _showUpdateFlowStep4() {
   sessionStorage.removeItem('update_flow_step');
   // Unfreeze the app — all steps complete
   _unfreezeApp();
-  setTimeout(function() { showOnboardingPrompt(); }, 500);
+  // Auto onboarding prompt disabled — user can trigger from Help button
+  // setTimeout(function() { showOnboardingPrompt(); }, 500);
 }
 
 function showOnboardingPrompt() {
@@ -19379,8 +19508,21 @@ function confirmDeleteAccount() {
         if(_auth && _auth.currentUser) {
           _auth.currentUser.delete().catch(function(){});
         }
-        // Clear IndexedDB
-        try { indexedDB.deleteDatabase('expense_session'); } catch(e){}
+        // Unregister service workers
+        if(navigator.serviceWorker) {
+          navigator.serviceWorker.getRegistrations().then(function(regs){
+            regs.forEach(function(r){ r.unregister(); });
+          });
+        }
+        // Clear ALL IndexedDB databases
+        if(indexedDB.databases) {
+          indexedDB.databases().then(function(dbs){
+            dbs.forEach(function(db){ indexedDB.deleteDatabase(db.name); });
+          });
+        } else {
+          try { indexedDB.deleteDatabase('expense_session'); } catch(e){}
+          try { indexedDB.deleteDatabase('firebaseLocalStorageDb'); } catch(e){}
+        }
         // Clear ALL localStorage and sessionStorage
         localStorage.clear();
         sessionStorage.clear();
@@ -19394,7 +19536,17 @@ function confirmDeleteAccount() {
             // Hide overlay, show pin screen at register step (not login)
             var o = document.getElementById('delete-account-overlay');
             if (o) o.style.display = 'none';
-            showPinScreen();
+            document.body.classList.remove('app-ready');
+            var pinO = document.getElementById('pin-overlay');
+            if(pinO) { pinO.style.display = 'flex'; pinO.style.zIndex = '999999'; }
+            // Reset all reg steps to show choice screen
+            var regChoice = document.getElementById('reg-choice-screen');
+            var regForm = document.getElementById('reg-form-screen');
+            if(regChoice) regChoice.style.display = 'block';
+            if(regForm) regForm.style.display = 'none';
+            document.querySelectorAll('[id^="reg-step-"]').forEach(function(el){ el.style.display = 'none'; });
+            var regStepName = document.getElementById('reg-step-name');
+            if(regStepName) regStepName.style.display = 'block';
             showRegisterStep();
           }, 2500);
         }, 500);
