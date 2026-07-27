@@ -3586,7 +3586,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;line-height:1.7;">Just making sure it's still you — enter your username or phone number, and your PIN.</div>
         <div style="margin-bottom:14px;">
           <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Username or Phone number</label>
-          <input id="fv-username" type="text" placeholder="Username (e.g. 03my95) or phone" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter'){document.getElementById('fv-pin').focus();}">
+          <input id="fv-username" type="text" placeholder="Username or email address" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter'){document.getElementById('fv-pin').focus();}">
         </div>
         <div style="margin-bottom:16px;">
           <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">PIN</label>
@@ -9809,6 +9809,8 @@ document.addEventListener('contextmenu', function(e) {
 // Long press detection
 document.addEventListener('touchstart', function(e) {
   if(_radialOpen) return;
+  // Only show radial menu inside the app, not on login/register screens
+  if(!document.body.classList.contains('app-ready')) return;
   var tag = e.target.tagName;
   if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if(e.target.isContentEditable) return;
@@ -9830,6 +9832,7 @@ document.addEventListener('touchmove', function() {
 // Mouse long press (desktop testing)
 document.addEventListener('mousedown', function(e) {
   if(e.button !== 0) return;
+  if(!document.body.classList.contains('app-ready')) return;
   var tag = e.target.tagName;
   if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   var tx = e.clientX; var ty = e.clientY;
@@ -11600,8 +11603,8 @@ function selectMode(mode) {
   hideModeOverlay();
   hideSwitchPrompt();
   applyMode();
-  // Show onboarding tour the first time user enters each module
-  setTimeout(function(){ startOnboarding(mode, false); }, 400);
+  // Auto onboarding disabled — user can trigger from Help or Guide button
+  // setTimeout(function(){ startOnboarding(mode, false); }, 400);
 }
 
 // -- Inline switch prompt --
@@ -14489,7 +14492,7 @@ function submitFullVerify() {
   var errEl      = document.getElementById('fv-error');
   var identifier = usernameEl ? usernameEl.value.trim() : '';
   var pin        = pinEl      ? pinEl.value.trim()      : '';
-  if (!identifier) { if(errEl) errEl.textContent = 'Please enter your username or phone number'; return; }
+  if (!identifier) { if(errEl) errEl.textContent = 'Please enter your username or email address'; return; }
   if (pin.length < 4) { if(errEl) errEl.textContent = 'Please enter your PIN'; return; }
   if(errEl) errEl.textContent = 'Verifying...';
   var pinHash = hashPin(pin);
@@ -14550,9 +14553,11 @@ function submitFullVerify() {
 
   if (localPinHash && localUid && localName && localPhone) {
     // Check username/phone matches locally stored values
+    var localEmail = localStorage.getItem('_pending_email') || '';
     var localMatch = (identifier === localName) ||
       (localFullName && identifier.toLowerCase() === localFullName.toLowerCase()) ||
-      (hashPhone(identifier) === localPhone);
+      (hashPhone(identifier) === localPhone) ||
+      (localEmail && identifier.toLowerCase() === localEmail.toLowerCase());
     if (localMatch && pinHash === localPinHash) {
       // Offline verify success
       _loginAttempts = 0;
@@ -14625,7 +14630,9 @@ function showLoginStep() {
   var uid = localStorage.getItem(UID_KEY);
   // Skip full verify for users who just registered this session
   var justReg = sessionStorage.getItem('just_registered') === '1';
-  if (uid && needsFullVerify() && !justReg) {
+  var isGoogleUser = _auth && _auth.currentUser && _auth.currentUser.providerData && 
+    _auth.currentUser.providerData.some(function(p){ return p.providerId === 'google.com'; });
+  if (uid && needsFullVerify() && !justReg && !isGoogleUser) {
     showFullVerifyStep();
   } else {
     showPinPadStep();
@@ -15451,7 +15458,7 @@ function signInWithGoogle() {
   _auth.signInWithPopup(provider).then(function(result) {
     var user = result.user;
     var email = user.email;
-    var displayName = user.displayName || email.split('@')[0];
+    var displayName = (user.displayName || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,10) || email.split('@')[0].substring(0,10);
     var uid = user.uid;
     // Check if user already exists
     getDB(function(db) {
@@ -16111,45 +16118,45 @@ function openResetOverlay() {
 
 function _tryEmailReset(email) {
   var err = document.getElementById('reset-phone-error');
-  if(err) { err.textContent = 'Sending OTP to ' + email + '...'; err.style.color = 'var(--muted)'; }
+  if(err) { err.textContent = 'Checking email...'; err.style.color = 'var(--muted)'; }
   getDB(function(db) {
-    // Find user by email in user_registry
     db.collection('user_registry').where('email','==',email.toLowerCase()).get().then(function(snap) {
-      if(snap.empty) {
-        // Also check Firebase Auth
-        if(_auth) {
-          _auth.sendPasswordResetEmail(email).then(function(){
-            if(err) { err.textContent = 'Reset link sent to ' + email + '. Check your inbox.'; err.style.color = '#4a7c59'; }
-          }).catch(function(){
+      // Try Firebase Auth reset first (free, unlimited, secure)
+      if(_auth) {
+        _auth.sendPasswordResetEmail(email.toLowerCase()).then(function(){
+          if(err) { err.textContent = 'Reset link sent to ' + email + '. Check your inbox.'; err.style.color = '#4a7c59'; }
+        }).catch(function(e){
+          if(e.code === 'auth/user-not-found') {
             if(err) { err.textContent = 'No account found with this email.'; err.style.color = '#b5451b'; }
-          });
-        } else {
-          if(err) { err.textContent = 'No account found with this email.'; err.style.color = '#b5451b'; }
-        }
-        return;
+          } else {
+            // Fall back to OTP via EmailJS for PIN-only users
+            if(snap.empty) {
+              if(err) { err.textContent = 'No account found with this email.'; err.style.color = '#b5451b'; }
+              return;
+            }
+            var otp = String(Math.floor(100000 + Math.random() * 900000));
+            var expiry = Date.now() + 5 * 60 * 1000;
+            var docRef = snap.docs[0];
+            docRef.ref.update({ reset_otp: otp, reset_otp_expiry: expiry }).then(function(){
+              if(typeof emailjs !== 'undefined') {
+                emailjs.send('service_6a8t7as', 'template_058e96c', {
+                  name: docRef.data().name || 'User',
+                  email: email,
+                  ticket_no: 'OTP-' + otp,
+                  subject: 'Your PIN Reset Code — expires in 5 minutes — check spam folder'
+                }).then(function(){
+                  if(err) { err.textContent = 'OTP sent to ' + email + '. Check your inbox.'; err.style.color = '#4a7c59'; }
+                  _showOTPInput(docRef.data(), otp, expiry);
+                }).catch(function(){
+                  if(err) { err.textContent = 'Failed to send OTP. Try again.'; err.style.color = '#b5451b'; }
+                });
+              }
+            });
+          }
+        });
+      } else {
+        if(err) { err.textContent = 'Connection error. Try again.'; err.style.color = '#b5451b'; }
       }
-      // Generate 6-digit OTP
-      var otp = String(Math.floor(100000 + Math.random() * 900000));
-      var expiry = Date.now() + 5 * 60 * 1000; // 5 minutes
-      var doc = snap.docs[0];
-      // Store OTP in Firestore
-      doc.ref.update({ reset_otp: otp, reset_otp_expiry: expiry }).then(function(){
-        // Send OTP via EmailJS
-        if(typeof emailjs !== 'undefined') {
-          emailjs.send('service_6a8t7as', 'template_8m1w9rj', {
-            name: doc.data().name || 'User',
-            email: email,
-            subject: 'Your PIN Reset Code',
-            message: 'Your My Expense Ledger PIN reset code is: ' + otp + '\n\nThis code expires in 5 minutes.\n\nIf you did not request this, please ignore.'
-          }).then(function(){
-            if(err) { err.textContent = 'OTP sent to ' + email + '. Check your inbox.'; err.style.color = '#4a7c59'; }
-            // Show OTP input
-            _showOTPInput(doc.data(), otp, expiry);
-          }).catch(function(){
-            if(err) { err.textContent = 'Failed to send OTP. Try again.'; err.style.color = '#b5451b'; }
-          });
-        }
-      });
     }).catch(function(){
       if(err) { err.textContent = 'Connection error. Try again.'; err.style.color = '#b5451b'; }
     });
