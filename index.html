@@ -3406,7 +3406,31 @@ input[type="password"]::-ms-clear { display:none !important; }
 
     <!-- Step 1: Register -->
     <div id="pin-step-register" style="display:none;width:100%;box-sizing:border-box;">
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:24px;text-align:left;box-sizing:border-box;overflow:hidden;">
+      <!-- Sign Up Choice Screen -->
+      <div id="reg-choice-screen" style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px 24px;text-align:center;">
+        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;color:#e8b84b;margin-bottom:6px;">Create Account</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;margin-bottom:24px;">Choose how to sign up</div>
+        <!-- Google Sign In -->
+        <button onclick="signInWithGoogle()" style="width:100%;padding:14px;background:#fff;border:none;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;margin-bottom:14px;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:700;color:#1a1410;">
+          <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+        <!-- Divider -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="flex:1;height:1px;background:#3a3020;"></div>
+          <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;">or</span>
+          <div style="flex:1;height:1px;background:#3a3020;"></div>
+        </div>
+        <!-- Manual Register -->
+        <button onclick="showManualRegister()" style="width:100%;padding:14px;background:none;border:1.5px solid rgba(200,150,46,0.4);border-radius:6px;font-family:'DM Mono',monospace;font-size:0.82rem;color:#e8b84b;cursor:pointer;">
+          Register with Phone & PIN
+        </button>
+        <div style="margin-top:16px;">
+          <button onclick="showLoginStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Already have an account? Sign in</button>
+        </div>
+      </div>
+      <!-- Manual Register Form (hidden by default) -->
+      <div id="reg-form-screen" style="display:none;background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:24px;text-align:left;box-sizing:border-box;overflow:hidden;">
         <div id="reg-step-name">
           <div style="margin-bottom:14px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Full name</label>
@@ -3478,8 +3502,8 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;text-align:center;margin-bottom:20px;">You can change this to a PIN you prefer later in Manage settings.</div>
         <button onclick="confirmCode()" style="width:100%;padding:14px;background:var(--sage);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:white;font-weight:700;cursor:pointer;">I've saved it — Enter the app</button>
       </div>
+      </div><!-- end reg-form-screen -->
     </div>
-
     <!-- Step 3a: PIN-only login (normal, 90% of the time) -->
     <div id="pin-step-login" style="display:block;">
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:center;">
@@ -9529,8 +9553,17 @@ function toggleFingerprint() {
 }
 
 function tryBiometricLogin(onSuccess) {
-  if(localStorage.getItem(FP_KEY) !== '1') return false;
-  if(!window.PublicKeyCredential) return false;
+  if(localStorage.getItem(FP_KEY) !== '1') {
+    // FP not enabled — show toast and highlight PIN pad
+    showToast('Enter your PIN first — then enable fingerprint in Manage settings');
+    // Set flag to open manage/biometric after login
+    sessionStorage.setItem('_goto_biometric', '1');
+    return false;
+  }
+  if(!window.PublicKeyCredential) {
+    showToast('Biometric not supported on this device');
+    return false;
+  }
   var challenge = new Uint8Array(32);
   crypto.getRandomValues(challenge);
   var credId = localStorage.getItem('fp_cred_id');
@@ -14654,6 +14687,28 @@ function showFullVerifyStep() {
 // -- _resumeSession: enter app immediately, fire Firebase sync in background --
 function _resumeSession(uid, name, phone) {
   _userId = uid; _userName = name; _userPhone = phone;
+  // Auto-navigate to biometric settings if flagged
+  if(sessionStorage.getItem('_goto_biometric') === '1') {
+    sessionStorage.removeItem('_goto_biometric');
+    setTimeout(function(){
+      burgerSwitch('manage', 'Manage');
+      setTimeout(function(){
+        var fpCard = document.getElementById('fingerprint-card');
+        if(fpCard) {
+          // Open settings section first
+          var settingsBody = document.getElementById('mgmt-settings-body');
+          var settingsArr = document.getElementById('mgmt-settings-arr');
+          if(settingsBody && settingsBody.style.display === 'none') {
+            toggleMgmtSection('mgmt-settings-body', 'mgmt-settings-arr');
+          }
+          fpCard.scrollIntoView({behavior:'smooth', block:'center'});
+          fpCard.style.border = '2px solid var(--gold)';
+          fpCard.style.boxShadow = '0 0 12px rgba(200,150,46,0.4)';
+          setTimeout(function(){ fpCard.style.border=''; fpCard.style.boxShadow=''; }, 3000);
+        }
+      }, 500);
+    }, 800);
+  }
   // Sign into Firebase Auth silently if we have credentials
   if(_auth && !_auth.currentUser) {
     var _fbEmail = localStorage.getItem('_pending_email') || localStorage.getItem('expense_user_email');
@@ -15265,12 +15320,58 @@ function hidePinScreen() {
     sessionStorage.setItem('screen_state', 'app');
   }
 }
+function showManualRegister() {
+  document.getElementById('reg-choice-screen').style.display = 'none';
+  document.getElementById('reg-form-screen').style.display = 'block';
+  if (typeof _initCountrySelects === 'function') _initCountrySelects();
+}
+
+function signInWithGoogle() {
+  getDB(function(db) {
+    if(!_auth) { showToast('Unable to connect. Try again.'); return; }
+    var provider = new firebase.auth.GoogleAuthProvider();
+  _auth.signInWithPopup(provider).then(function(result) {
+    var user = result.user;
+    var email = user.email;
+    var displayName = user.displayName || email.split('@')[0];
+    var uid = user.uid;
+    // Check if user already exists
+    getDB(function(db) {
+      db.collection('users').doc(uid).collection('settings').doc('profile').get().then(function(doc) {
+        if(doc.exists) {
+          // Existing user — resume session
+          _resumeSession(uid, displayName, '');
+          showToast('Welcome back, ' + displayName + '!');
+        } else {
+          // New user — create account
+          localStorage.setItem('_pending_email', email);
+          localStorage.setItem('_firebase_uid', uid);
+          db.collection('users').doc(uid).collection('settings').doc('profile').set({
+            email: email, full_name: displayName, created: Date.now()
+          }).then(function() {
+            _userId = uid; _userName = displayName; _userPhone = '';
+            localStorage.setItem(UID_KEY, uid);
+            localStorage.setItem(NAME_KEY, displayName);
+            localStorage.setItem(FULL_NAME_KEY, displayName);
+            _resumeSession(uid, displayName, '');
+            showToast('Welcome, ' + displayName + '!');
+          });
+        }
+      });
+    });
+  }).catch(function(e) {
+    showToast('Google sign-in failed: ' + e.message);
+  });
+  });
+}
+
 function showRegisterStep() {
   document.getElementById('pin-step-register').style.display = 'block';
   document.getElementById('pin-step-code').style.display    = 'none';
   document.getElementById('pin-step-login').style.display   = 'none';
-  // Populate country code dropdown
-  if (typeof _initCountrySelects === 'function') _initCountrySelects();
+  // Show choice screen by default
+  document.getElementById('reg-choice-screen').style.display = 'block';
+  document.getElementById('reg-form-screen').style.display = 'none';
 }
 function showLoginStep() {
   document.getElementById('pin-step-register').style.display = 'none';
@@ -15282,7 +15383,7 @@ function showLoginStep() {
   _loginAttempts = 0;
   // Show FP button and auto-trigger if enabled
   var fpBtn = document.getElementById('fp-login-btn');
-  if(fpBtn) fpBtn.style.display = localStorage.getItem('fp_enabled')==='1' ? 'block' : 'none';
+  if(fpBtn) fpBtn.style.display = 'block';
   if(localStorage.getItem('fp_enabled')==='1'){
     // Show blur overlay while authenticating
     var _bioOverlay = document.getElementById('_bio_overlay');
