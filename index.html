@@ -15326,6 +15326,77 @@ function showManualRegister() {
   if (typeof _initCountrySelects === 'function') _initCountrySelects();
 }
 
+function showGooglePinSetup(uid, displayName, email) {
+  // Show PIN setup overlay
+  var overlay = document.getElementById('pin-overlay');
+  var steps = document.querySelectorAll('#pin-overlay [id^="pin-step-"]');
+  steps.forEach(function(s){ s.style.display='none'; });
+  // Create PIN setup step if not exists
+  var setupStep = document.getElementById('pin-step-google-setup');
+  if(!setupStep) {
+    setupStep = document.createElement('div');
+    setupStep.id = 'pin-step-google-setup';
+    setupStep.style.cssText = 'padding:28px;text-align:center;';
+    setupStep.innerHTML =
+      '<div style="font-family:Playfair Display,serif;font-size:1.2rem;font-weight:900;color:#e8b84b;margin-bottom:6px;">Welcome, '+displayName+'!</div>'+
+      '<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:#6b5e50;margin-bottom:20px;">Set a PIN to secure your account</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 10px;">'+
+        '<button onclick="gPinPress(\'1\')" class="pin-pad-btn">1</button>'+
+        '<button onclick="gPinPress(\'2\')" class="pin-pad-btn">2</button>'+
+        '<button onclick="gPinPress(\'3\')" class="pin-pad-btn">3</button>'+
+        '<button onclick="gPinPress(\'4\')" class="pin-pad-btn">4</button>'+
+        '<button onclick="gPinPress(\'5\')" class="pin-pad-btn">5</button>'+
+        '<button onclick="gPinPress(\'6\')" class="pin-pad-btn">6</button>'+
+        '<button onclick="gPinPress(\'7\')" class="pin-pad-btn">7</button>'+
+        '<button onclick="gPinPress(\'8\')" class="pin-pad-btn">8</button>'+
+        '<button onclick="gPinPress(\'9\')" class="pin-pad-btn">9</button>'+
+        '<button onclick="gPinClear()" class="pin-pad-btn" style="font-size:0.65rem;color:#6b5e50;">CLR</button>'+
+        '<button onclick="gPinPress(\'0\')" class="pin-pad-btn">0</button>'+
+        '<button onclick="gPinDelete()" class="pin-pad-btn" style="font-size:1.1rem;">⌫</button>'+
+      '</div>'+
+      '<div id="g-pin-dots" style="display:flex;justify-content:center;gap:10px;margin-bottom:16px;min-height:18px;"></div>'+
+      '<button onclick="gPinConfirm(\''+uid+'\',\''+displayName+'\',\''+email+'\')" style="width:100%;max-width:240px;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.88rem;font-weight:900;color:var(--ink);cursor:pointer;letter-spacing:3px;">✓ SET PIN</button>'+
+      '<div id="g-pin-error" style="font-family:DM Mono,monospace;font-size:0.7rem;color:#b5451b;margin-top:10px;min-height:18px;"></div>';
+    overlay.querySelector('.pin-card, div').appendChild(setupStep);
+  }
+  setupStep.style.display = 'block';
+  window._gPin = '';
+  window._gPinConfirmed = '';
+  window._gPinStage = 'set'; // 'set' or 'confirm'
+}
+
+var _gPin = '';
+var _gPinConfirmed = '';
+var _gPinStage = 'set';
+
+function gPinPress(d){
+  if(_gPin.length >= 6) return;
+  _gPin += d;
+  var dots = document.getElementById('g-pin-dots');
+  if(dots) dots.innerHTML = _gPin.split('').map(function(){ return '<div style="width:14px;height:14px;border-radius:50%;background:var(--gold);"></div>'; }).join('');
+}
+function gPinDelete(){ _gPin = _gPin.slice(0,-1); gPinPress(''); _gPin = _gPin; var dots = document.getElementById('g-pin-dots'); if(dots) dots.innerHTML = _gPin.split('').map(function(){ return '<div style="width:14px;height:14px;border-radius:50%;background:var(--gold);"></div>'; }).join(''); }
+function gPinClear(){ _gPin = ''; var dots = document.getElementById('g-pin-dots'); if(dots) dots.innerHTML = ''; }
+function gPinConfirm(uid, displayName, email){
+  if(_gPin.length < 4){ document.getElementById('g-pin-error').textContent='PIN must be at least 4 digits'; return; }
+  if(_gPinStage === 'set'){
+    _gPinConfirmed = _gPin; _gPin = ''; _gPinStage = 'confirm';
+    document.getElementById('g-pin-dots').innerHTML = '';
+    document.getElementById('g-pin-error').textContent = '';
+    showToast('Confirm your PIN');
+  } else {
+    if(_gPin !== _gPinConfirmed){ document.getElementById('g-pin-error').textContent='PINs do not match. Try again.'; _gPin=''; _gPinStage='set'; _gPinConfirmed=''; document.getElementById('g-pin-dots').innerHTML=''; return; }
+    // Save PIN and enter app
+    var pinHash = hashPin(_gPin);
+    localStorage.setItem('expense_pin_hash_local', pinHash);
+    getDB(function(db){
+      db.collection('users').doc(uid).collection('settings').doc('profile').update({ pin_hash: pinHash, email: email }).catch(function(){});
+      _resumeSession(uid, displayName, '');
+      showToast('PIN set! Welcome, '+displayName+'!');
+    });
+  }
+}
+
 function signInWithGoogle() {
   getDB(function(db) {
     if(!_auth) { showToast('Unable to connect. Try again.'); return; }
@@ -15353,8 +15424,8 @@ function signInWithGoogle() {
             localStorage.setItem(UID_KEY, uid);
             localStorage.setItem(NAME_KEY, displayName);
             localStorage.setItem(FULL_NAME_KEY, displayName);
-            _resumeSession(uid, displayName, '');
-            showToast('Welcome, ' + displayName + '!');
+            // Show PIN setup before entering app
+            showGooglePinSetup(uid, displayName, email);
           });
         }
       });
@@ -19251,10 +19322,14 @@ function confirmDeleteAccount() {
 
       Promise.all(regDeletions).then(function() {
         setP(90, 'Clearing local data...');
+        // Delete Firebase Auth account
+        if(_auth && _auth.currentUser) {
+          _auth.currentUser.delete().catch(function(){});
+        }
+        // Clear IndexedDB
+        try { indexedDB.deleteDatabase('expense_session'); } catch(e){}
         // Clear ALL localStorage and sessionStorage
-        var keys = [];
-        for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
-        keys.forEach(function(k){ localStorage.removeItem(k); });
+        localStorage.clear();
         sessionStorage.clear();
         setP(100, 'Account deleted successfully.');
 
