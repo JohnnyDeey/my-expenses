@@ -3583,9 +3583,9 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div id="pin-step-full-verify" style="display:none;">
       <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.35);border-radius:8px;padding:28px;text-align:left;">
         <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:4px;">Security Check</div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;line-height:1.7;">Just making sure it's still you — enter your username or phone number, and your PIN.</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;line-height:1.7;">Enter your username or email address and your PIN to switch accounts.</div>
         <div style="margin-bottom:14px;">
-          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Username or Phone number</label>
+          <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">USERNAME OR EMAIL</label>
           <input id="fv-username" type="text" placeholder="Username or email address" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter'){document.getElementById('fv-pin').focus();}">
         </div>
         <div style="margin-bottom:16px;">
@@ -3727,7 +3727,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <p style="margin-bottom:14px;">Your data is stored in Google Firebase Firestore, protected by security rules ensuring only you can read or write your data. We do not sell, share, or transfer your data to any third party. Email addresses are stored under your user account settings and also recorded in the user registry solely to enable account recovery by email.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">4. Authentication &amp; PIN Security</p>
-      <p style="margin-bottom:14px;">Your PIN is hashed before storage using a one-way algorithm and is never stored in plain text. The app uses a PIN pad for daily login. A periodic full identity check is triggered randomly every 1 to 2 weeks, requiring your username or phone number plus PIN. New users are exempt from the identity check immediately after registration.</p>
+      <p style="margin-bottom:14px;">Your PIN is hashed before storage using a one-way algorithm and is never stored in plain text. The app uses a PIN pad for daily login. A periodic full identity check is triggered randomly every 1 to 2 weeks, requiring your USERNAME OR EMAIL plus PIN. New users are exempt from the identity check immediately after registration.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">5. Registration &amp; Duplicate Detection</p>
       <p style="margin-bottom:14px;">During registration, the app checks your phone number, chosen username, and email address in real time against our Firebase user registry to detect duplicate accounts. A verification step (0–100% progress overlay) confirms all three before your account is created. This prevents multiple accounts being registered with the same identity details. The verification result is saved to your device and synced to the cloud.</p>
@@ -14283,15 +14283,7 @@ function needsFullVerify() {
 // Called after Firebase has restored last_full_verify — only NOW can we
 // reliably decide if a full verify is needed. This prevents laptop false triggers.
 function _checkFullVerifyAfterFirebase() {
-  if (!localStorage.getItem(FULL_VERIFY_KEY)) return; // no data even from Firebase — skip
-  if (needsFullVerify()) {
-    // Interval genuinely expired — show full verify now
-    // Only show if PIN overlay is currently visible (user hasn't logged in yet)
-    var pinO = document.getElementById('pin-overlay');
-    if (pinO && pinO.style.display !== 'none') {
-      showFullVerifyStep();
-    }
-  }
+  // Full verify disabled — PIN is the only login check
 }
 
 function recordFullVerify() {
@@ -14385,9 +14377,8 @@ function submitPinLogin() {
   var name  = localStorage.getItem(NAME_KEY);
   var phone = localStorage.getItem(PHONE_KEY);
   var savedHash = localStorage.getItem('expense_pin_hash_local');
-  if (!uid || !name || !phone || !savedHash) {
-    // No local session — truly new device, need full verify
-    showFullVerifyStep();
+  if (!uid || !name || !savedHash) {
+    showRegisterStep();
     return;
   }
   if (hashPin(_pinBuffer) !== savedHash) {
@@ -14514,14 +14505,15 @@ function submitFullVerify() {
     // Success
     _loginAttempts = 0;
     _fvRetryCount = 0;
-    var uid = data.user_id;
-    var name = data.name;
-    var phone = doc.id;
-    localStorage.setItem(UID_KEY,   uid);
-    localStorage.setItem(NAME_KEY,  name);
-    localStorage.setItem(PHONE_KEY, phone);
+    var uid  = data.user_id;
+    var name = data.username || data.name;
+    localStorage.setItem(UID_KEY,  uid);
+    localStorage.setItem(NAME_KEY, name);
     localStorage.setItem('expense_pin_hash_local', pinHash);
     if (data.full_name) localStorage.setItem(FULL_NAME_KEY, data.full_name);
+    if (data.email)     localStorage.setItem('expense_user_email_' + uid, data.email);
+    if (data.dob)       localStorage.setItem('expense_user_dob_' + uid, data.dob);
+    if (data.country)   localStorage.setItem('expense_user_country_' + uid, data.country);
     localStorage.removeItem('expense_user_title');
     // Capture registration date — already in doc.data()
     if (data.created && !localStorage.getItem('expense_joined_' + uid)) {
@@ -14539,7 +14531,7 @@ function submitFullVerify() {
     var fvE = document.getElementById('fv-error');    if(fvE) fvE.textContent = '';
     var dotsEl = document.getElementById('fv-pin-dots');
     if (dotsEl) dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
-    _resumeSession(uid, name, phone);
+    _resumeSession(uid, name, '');
     showToast('Identity confirmed. Welcome back, ' + name + '!');
     return true;
   }
@@ -14551,22 +14543,19 @@ function submitFullVerify() {
   var localPhone   = localStorage.getItem(PHONE_KEY);
   var localFullName = localStorage.getItem(FULL_NAME_KEY);
 
-  if (localPinHash && localUid && localName && localPhone) {
-    // Check username/phone matches locally stored values
-    var localEmail = localStorage.getItem('_pending_email') || '';
+  if (localPinHash && localUid && localName) {
+    var localEmail = localStorage.getItem('expense_user_email_' + localUid) || localStorage.getItem('_pending_email') || '';
     var localMatch = (identifier === localName) ||
       (localFullName && identifier.toLowerCase() === localFullName.toLowerCase()) ||
-      (hashPhone(identifier) === localPhone) ||
       (localEmail && identifier.toLowerCase() === localEmail.toLowerCase());
     if (localMatch && pinHash === localPinHash) {
-      // Offline verify success
       _loginAttempts = 0;
       if (localFullName) localStorage.setItem(FULL_NAME_KEY, localFullName);
       recordFullVerify();
       var fvU2 = document.getElementById('fv-username'); if(fvU2) fvU2.value='';
       var fvP2 = document.getElementById('fv-pin'); if(fvP2) fvP2.value='';
       var fvE2 = document.getElementById('fv-error'); if(fvE2) fvE2.textContent='';
-      _resumeSession(localUid, localName, localPhone);
+      _resumeSession(localUid, localName, '');
       showToast('Identity confirmed. Welcome back!');
       return;
     }
@@ -14574,26 +14563,30 @@ function submitFullVerify() {
   }
 
   getDB(function(db) {
-    var looksLikePhone = /^[+0-9\-\s()]+$/.test(identifier) && identifier.replace(/[^0-9]/g,'').length >= 7;
-    if (looksLikePhone) {
-      var phoneHash = hashPhone(identifier);
-      db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
+    var looksLikeEmail = identifier.indexOf('@') !== -1;
+    if (looksLikeEmail) {
+      // Try email as doc key (new accounts)
+      db.collection('user_registry').doc(identifier.toLowerCase()).get().then(function(doc) {
         if (!doVerify(doc)) {
-          db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
-            if (snap.empty) { if(errEl) errEl.textContent = 'Account not found. Check your username or phone.'; }
+          // Also try email field query
+          db.collection('user_registry').where('email', '==', identifier.toLowerCase()).get().then(function(snap) {
+            if (snap.empty) { if(errEl) errEl.textContent = 'Account not found. Check your email.'; }
             else doVerify(snap.docs[0]);
           }).catch(function() { autoRetryFullVerify(errEl); });
         }
       }).catch(function() { autoRetryFullVerify(errEl); });
     } else {
-      db.collection('user_registry').where('name', '==', identifier).get().then(function(snap) {
+      // Try username field
+      db.collection('user_registry').where('username', '==', identifier).get().then(function(snap) {
         if (!snap.empty) {
           doVerify(snap.docs[0]);
         } else {
-          var phoneHash = hashPhone(identifier);
-          db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
-            if (!doVerify(doc)) {
-              if(errEl) errEl.textContent = 'Account not found. Check your username or phone.';
+          // Fallback: try name field (old accounts)
+          db.collection('user_registry').where('name', '==', identifier).get().then(function(snap2) {
+            if (!snap2.empty) {
+              doVerify(snap2.docs[0]);
+            } else {
+              if(errEl) errEl.textContent = 'Account not found. Check your username or email.';
             }
           }).catch(function() { autoRetryFullVerify(errEl); });
         }
@@ -14709,7 +14702,7 @@ function showPinPadStep() {
   var o = document.getElementById('pin-overlay'); if(o) setTimeout(function(){ o.scrollTop = 0; }, 30);
 }
 
-function showFullVerifyStep() {
+function showFullVerifyStep() { showPinPadStep(); return;
   _fvRetryCount = 0;
   var el = document.getElementById('pin-step-full-verify');
   if (el) el.style.display = 'block';
@@ -14953,7 +14946,7 @@ function syncInit() {
 
   // Restore identity from IndexedDB in background (survives localStorage clear on laptop)
   _idbReadSession(function(session) {
-    if (session && session.uid && session.name && session.phone) {
+    if (session && session.uid && session.name) {
       if (!localStorage.getItem(UID_KEY))   localStorage.setItem(UID_KEY,   session.uid);
       if (!localStorage.getItem(NAME_KEY))  localStorage.setItem(NAME_KEY,  session.name);
       if (!localStorage.getItem(PHONE_KEY)) localStorage.setItem(PHONE_KEY, session.phone);
@@ -14982,24 +14975,20 @@ function _syncInitRun() {
   // 'app'  = user was inside the app (authenticated)
   var screenState = sessionStorage.getItem('screen_state');
 
-  if (uid && name && phone && pinHash) {
-    // User has credentials — decide based on screen state
+  if (uid && name && pinHash) {
+    // Set globals immediately so profile card and other functions work
+    _userId = uid; _userName = name; _userPhone = phone || '';
+    // Decide based on screen state
     if (screenState === 'app' && (isActiveSession || wasRecentlyActive)) {
       // Was inside the app and session still valid → resume directly
       var pinOv = document.getElementById('pin-overlay');
       if (pinOv) pinOv.style.display = 'none';
-      _resumeSession(uid, name, phone);
+      _resumeSession(uid, name, phone || '');
       return;
     }
-    // Was on PIN screen OR session expired → show PIN pad
+    // Show PIN pad
     sessionStorage.removeItem('screen_state');
-    var deploymentCheck = sessionStorage.getItem('run_security_check_once') === '1';
-    if (deploymentCheck) sessionStorage.removeItem('run_security_check_once');
-    if (needsFullVerify() || deploymentCheck) {
-      showFullVerifyStep();
-    } else {
-      showPinPadStep();
-    }
+    showPinPadStep();
     return;
   }
 
@@ -15366,142 +15355,329 @@ function showManualRegister() {
   if (typeof _initCountrySelects === 'function') _initCountrySelects();
 }
 
-function showGooglePinSetup(uid, displayName, email) {
-  // Show PIN setup overlay
+// ═══════════════════════════════════════════════════════════════════
+// GOOGLE SIGN-IN FLOW — Clean implementation
+// Flow: Gmail verify → Profile form (name/dob/country/username) → PIN → App
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Country list ──────────────────────────────────────────────────
+var _G_COUNTRIES = ['Afghanistan','Albania','Algeria','Andorra','Angola','Argentina','Armenia','Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi','Cambodia','Cameroon','Canada','Chad','Chile','China','Colombia','Costa Rica','Croatia','Cuba','Cyprus','Czech Republic','Denmark','Djibouti','Dominican Republic','Ecuador','Egypt','El Salvador','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Guatemala','Guinea','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Mauritania','Mauritius','Mexico','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Korea','North Macedonia','Norway','Oman','Pakistan','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria','Taiwan','Tajikistan','Tanzania','Thailand','Togo','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe'];
+
+function _gFilterCountries(val) {
+  var list = document.getElementById('g-country-list');
+  if (!list) return;
+  var q = val.trim().toLowerCase();
+  var matches = q ? _G_COUNTRIES.filter(function(c){ return c.toLowerCase().indexOf(q) === 0; }).slice(0,8) : _G_COUNTRIES.slice(0,8);
+  if (!matches.length) { list.style.display = 'none'; return; }
+  list.style.display = 'block';
+  list.innerHTML = matches.map(function(c){
+    return '<div onclick="document.getElementById(\'g-profile-country\').value=\''+c+'\';document.getElementById(\'g-country-list\').style.display=\'none\';" style="padding:9px 12px;font-family:DM Mono,monospace;font-size:0.82rem;color:var(--paper);cursor:pointer;border-bottom:1px solid #3a3020;" onmouseover="this.style.background=\'#3a3020\'" onmouseout="this.style.background=\'\'">'+c+'</div>';
+  }).join('');
+}
+
+// ── Step 1: Profile form ──────────────────────────────────────────
+function showGoogleProfileCompletion(uid, googleDisplayName, email) {
   var overlay = document.getElementById('pin-overlay');
-  var steps = document.querySelectorAll('#pin-overlay [id^="pin-step-"]');
-  steps.forEach(function(s){ s.style.display='none'; });
-  // Create PIN setup step if not exists
+  if (overlay) overlay.style.display = 'flex';
+  document.querySelectorAll('#pin-overlay [id^="pin-step-"]').forEach(function(s){ s.style.display = 'none'; });
+
+  var el = document.getElementById('pin-step-google-profile');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'pin-step-google-profile';
+    overlay.querySelector('div').appendChild(el);
+  }
+  el.style.cssText = 'padding:24px;width:100%;box-sizing:border-box;overflow-y:auto;max-height:88vh;';
+  el.innerHTML =
+    '<div style="font-family:Playfair Display,serif;font-size:1.15rem;font-weight:900;color:#e8b84b;margin-bottom:4px;">Complete Your Profile</div>' +
+    '<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Step 1 of 2 — stored securely</div>' +
+
+    '<div style="margin-bottom:13px;">' +
+      '<label style="font-family:DM Mono,monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Full Name</label>' +
+      '<input type="text" id="g-profile-fullname" placeholder="e.g. John Damilola" autocomplete="name" style="width:100%;padding:10px;border:1.5px solid #3a3020;border-radius:4px;font-family:DM Mono,monospace;font-size:0.85rem;background:#2a2018;color:var(--paper);outline:none;box-sizing:border-box;">' +
+    '</div>' +
+
+    '<div style="margin-bottom:13px;">' +
+      '<label style="font-family:DM Mono,monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Date of Birth</label>' +
+      '<input type="date" id="g-profile-dob" max="2015-12-31" style="width:100%;padding:10px;border:1.5px solid #3a3020;border-radius:4px;font-family:DM Mono,monospace;font-size:0.85rem;background:#2a2018;color:var(--paper);outline:none;box-sizing:border-box;">' +
+    '</div>' +
+
+    '<div style="margin-bottom:13px;">' +
+      '<label style="font-family:DM Mono,monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Country</label>' +
+      '<input type="text" id="g-profile-country" placeholder="Type to search..." autocomplete="off" oninput="_gFilterCountries(this.value)" onfocus="_gFilterCountries(this.value)" style="width:100%;padding:10px;border:1.5px solid #3a3020;border-radius:4px;font-family:DM Mono,monospace;font-size:0.85rem;background:#2a2018;color:var(--paper);outline:none;box-sizing:border-box;">' +
+      '<div id="g-country-list" style="max-height:150px;overflow-y:auto;border:1.5px solid #3a3020;border-top:none;border-radius:0 0 4px 4px;display:none;background:#2a2018;"></div>' +
+    '</div>' +
+
+    '<div style="margin-bottom:20px;">' +
+      '<label style="font-family:DM Mono,monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Username <span id="g-uname-status"></span></label>' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.6rem;color:#6b5e50;margin-bottom:5px;">4–10 characters, letters and numbers only</div>' +
+      '<input type="text" id="g-profile-username" maxlength="10" placeholder="e.g. john92" autocomplete="off" oninput="_gCheckUsername(this.value)" style="width:100%;padding:10px;border:1.5px solid #3a3020;border-radius:4px;font-family:DM Mono,monospace;font-size:0.9rem;background:#2a2018;color:var(--paper);outline:none;box-sizing:border-box;letter-spacing:2px;">' +
+    '</div>' +
+
+    '<div id="g-profile-error" style="font-family:DM Mono,monospace;font-size:0.7rem;color:#b5451b;min-height:16px;margin-bottom:10px;"></div>' +
+    '<button onclick="saveGoogleProfileStep(\''+uid+'\',\''+email+'\')" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Next &#8594;</button>';
+
+  el.style.display = 'block';
+}
+
+// ── Username availability check ───────────────────────────────────
+var _gUsernameAvailable = false;
+var _gUsernameTimer = null;
+function _gCheckUsername(val) {
+  val = val.toLowerCase().replace(/[^a-z0-9]/g, '');
+  var inp = document.getElementById('g-profile-username');
+  if (inp) inp.value = val;
+  var status = document.getElementById('g-uname-status');
+  _gUsernameAvailable = false;
+  if (val.length < 4) { if (status) status.textContent = ''; return; }
+  if (status) status.innerHTML = '<span style="color:#6b5e50;">checking...</span>';
+  clearTimeout(_gUsernameTimer);
+  _gUsernameTimer = setTimeout(function() {
+    getDB(function(db) {
+      db.collection('user_registry').where('username', '==', val).get().then(function(snap) {
+        if (!snap.empty) {
+          if (status) status.innerHTML = '<span style="color:#b5451b;">✗ taken</span>';
+          _gUsernameAvailable = false;
+        } else {
+          if (status) status.innerHTML = '<span style="color:#4a7c59;">✓ available</span>';
+          _selectedUsername = val;
+          _gUsernameAvailable = true;
+        }
+      }).catch(function() {
+        // Offline — allow
+        _selectedUsername = val;
+        _gUsernameAvailable = true;
+        if (status) status.innerHTML = '<span style="color:#6b5e50;">✓</span>';
+      });
+    });
+  }, 600);
+}
+
+// ── Save profile and go to PIN setup ─────────────────────────────
+function saveGoogleProfileStep(uid, email) {
+  var fullName = (document.getElementById('g-profile-fullname') || {}).value.trim();
+  var dob      = (document.getElementById('g-profile-dob')      || {}).value;
+  var country  = (document.getElementById('g-profile-country')  || {}).value.trim();
+  var username = (document.getElementById('g-profile-username') || {}).value.trim();
+  var errEl    = document.getElementById('g-profile-error');
+
+  if (!fullName)        { if (errEl) errEl.textContent = 'Please enter your full name.'; return; }
+  if (!dob)             { if (errEl) errEl.textContent = 'Please enter your date of birth.'; return; }
+  if (!country)         { if (errEl) errEl.textContent = 'Please select your country.'; return; }
+  if (username.length < 4) { if (errEl) errEl.textContent = 'Username must be at least 4 characters.'; return; }
+  if (!_gUsernameAvailable) { if (errEl) errEl.textContent = 'Please wait for username check or try a different one.'; return; }
+
+  // Store pending profile data
+  localStorage.setItem('_g_full_name', fullName);
+  localStorage.setItem('_g_dob',       dob);
+  localStorage.setItem('_g_country',   country);
+  localStorage.setItem('_g_username',  username);
+  _selectedUsername = username;
+
+  var el = document.getElementById('pin-step-google-profile');
+  if (el) el.style.display = 'none';
+  showGooglePinSetup(uid, fullName, email);
+}
+
+// ── Step 2: PIN setup ─────────────────────────────────────────────
+function showGooglePinSetup(uid, displayName, email) {
+  var overlay = document.getElementById('pin-overlay');
+  if (overlay) overlay.style.display = 'flex';
+  document.querySelectorAll('#pin-overlay [id^="pin-step-"]').forEach(function(s){ s.style.display = 'none'; });
+
   var setupStep = document.getElementById('pin-step-google-setup');
-  if(!setupStep) {
+  if (!setupStep) {
     setupStep = document.createElement('div');
     setupStep.id = 'pin-step-google-setup';
-    setupStep.style.cssText = 'padding:28px;text-align:center;';
-    setupStep.innerHTML =
-      '<div style="font-family:Playfair Display,serif;font-size:1.2rem;font-weight:900;color:#e8b84b;margin-bottom:6px;">Welcome, '+displayName+'!</div>'+
-      '<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:#6b5e50;margin-bottom:20px;">Set a PIN to secure your account</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 10px;">'+
-        '<button onclick="gPinPress(\'1\')" class="pin-pad-btn">1</button>'+
-        '<button onclick="gPinPress(\'2\')" class="pin-pad-btn">2</button>'+
-        '<button onclick="gPinPress(\'3\')" class="pin-pad-btn">3</button>'+
-        '<button onclick="gPinPress(\'4\')" class="pin-pad-btn">4</button>'+
-        '<button onclick="gPinPress(\'5\')" class="pin-pad-btn">5</button>'+
-        '<button onclick="gPinPress(\'6\')" class="pin-pad-btn">6</button>'+
-        '<button onclick="gPinPress(\'7\')" class="pin-pad-btn">7</button>'+
-        '<button onclick="gPinPress(\'8\')" class="pin-pad-btn">8</button>'+
-        '<button onclick="gPinPress(\'9\')" class="pin-pad-btn">9</button>'+
-        '<button onclick="gPinClear()" class="pin-pad-btn" style="font-size:0.65rem;color:#6b5e50;">CLR</button>'+
-        '<button onclick="gPinPress(\'0\')" class="pin-pad-btn">0</button>'+
-        '<button onclick="gPinDelete()" class="pin-pad-btn" style="font-size:1.1rem;">⌫</button>'+
-      '</div>'+
-      '<div id="g-pin-dots" style="display:flex;justify-content:center;gap:10px;margin-bottom:16px;min-height:18px;"></div>'+
-      '<button onclick="gPinConfirm(\''+uid+'\',\''+displayName+'\',\''+email+'\')" style="width:100%;max-width:240px;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.88rem;font-weight:900;color:var(--ink);cursor:pointer;letter-spacing:3px;">✓ SET PIN</button>'+
-      '<div id="g-pin-error" style="font-family:DM Mono,monospace;font-size:0.7rem;color:#b5451b;margin-top:10px;min-height:18px;"></div>';
-    overlay.querySelector('.pin-card, div').appendChild(setupStep);
+    overlay.querySelector('div').appendChild(setupStep);
   }
+  setupStep.style.cssText = 'padding:28px;text-align:center;';
+  setupStep.innerHTML =
+    '<div style="font-family:Playfair Display,serif;font-size:1.2rem;font-weight:900;color:#e8b84b;margin-bottom:6px;">Set Your PIN</div>' +
+    '<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:#6b5e50;margin-bottom:20px;">Step 2 of 2 — secures your account</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 10px;">' +
+      '<button onclick="gPinPress(\'1\')" class="pin-pad-btn">1</button>' +
+      '<button onclick="gPinPress(\'2\')" class="pin-pad-btn">2</button>' +
+      '<button onclick="gPinPress(\'3\')" class="pin-pad-btn">3</button>' +
+      '<button onclick="gPinPress(\'4\')" class="pin-pad-btn">4</button>' +
+      '<button onclick="gPinPress(\'5\')" class="pin-pad-btn">5</button>' +
+      '<button onclick="gPinPress(\'6\')" class="pin-pad-btn">6</button>' +
+      '<button onclick="gPinPress(\'7\')" class="pin-pad-btn">7</button>' +
+      '<button onclick="gPinPress(\'8\')" class="pin-pad-btn">8</button>' +
+      '<button onclick="gPinPress(\'9\')" class="pin-pad-btn">9</button>' +
+      '<button onclick="gPinClear()" class="pin-pad-btn" style="font-size:0.65rem;color:#6b5e50;">CLR</button>' +
+      '<button onclick="gPinPress(\'0\')" class="pin-pad-btn">0</button>' +
+      '<button onclick="gPinDelete()" class="pin-pad-btn" style="font-size:1.1rem;">⌫</button>' +
+    '</div>' +
+    '<div id="g-pin-dots" style="display:flex;justify-content:center;gap:10px;margin-bottom:16px;min-height:18px;"></div>' +
+    '<button id="g-pin-confirm-btn" onclick="gPinConfirm(\''+uid+'\',\''+displayName+'\',\''+email+'\')" style="width:100%;max-width:240px;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:DM Mono,monospace;font-size:0.88rem;font-weight:900;color:var(--ink);cursor:pointer;letter-spacing:3px;">✓ SET PIN</button>' +
+    '<div id="g-pin-error" style="font-family:DM Mono,monospace;font-size:0.7rem;color:#b5451b;margin-top:10px;min-height:18px;"></div>' +
+    '<button onclick="document.getElementById(\'pin-step-google-setup\').style.display=\'none\'; showGoogleProfileCompletion(\''+uid+'\',\'\',\''+email+'\')" style="width:100%;padding:10px;background:none;border:none;font-family:DM Mono,monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;margin-top:8px;">&#8592; Back</button>';
+
   setupStep.style.display = 'block';
-  window._gPin = '';
-  window._gPinConfirmed = '';
-  window._gPinStage = 'set'; // 'set' or 'confirm'
+  _gPin = ''; _gPinConfirmed = ''; _gPinStage = 'set';
 }
 
 var _gPin = '';
 var _gPinConfirmed = '';
 var _gPinStage = 'set';
 
-function gPinPress(d){
-  if(_gPin.length >= 6) return;
+function gPinPress(d) {
+  if (_gPin.length >= 6) return;
   _gPin += d;
   var dots = document.getElementById('g-pin-dots');
-  if(dots) dots.innerHTML = _gPin.split('').map(function(){ return '<div style="width:14px;height:14px;border-radius:50%;background:var(--gold);"></div>'; }).join('');
+  if (dots) dots.innerHTML = _gPin.split('').map(function(){ return '<div style="width:14px;height:14px;border-radius:50%;background:var(--gold);"></div>'; }).join('');
+}
+function gPinDelete() {
+  _gPin = _gPin.slice(0, -1);
+  var dots = document.getElementById('g-pin-dots');
+  if (dots) dots.innerHTML = _gPin.split('').map(function(){ return '<div style="width:14px;height:14px;border-radius:50%;background:var(--gold);"></div>'; }).join('');
+}
+function gPinClear() {
+  _gPin = '';
+  var dots = document.getElementById('g-pin-dots');
+  if (dots) dots.innerHTML = '';
 }
 
 // Keyboard support for Google PIN setup
-document.addEventListener('keydown', function(e){
+document.addEventListener('keydown', function(e) {
   var setupStep = document.getElementById('pin-step-google-setup');
-  if(!setupStep || setupStep.style.display === 'none') return;
-  if(e.key >= '0' && e.key <= '9') gPinPress(e.key);
-  else if(e.key === 'Backspace') gPinDelete();
-  else if(e.key === 'Enter') {
-    var uid = localStorage.getItem(UID_KEY);
-    var name = localStorage.getItem(NAME_KEY);
-    var email = localStorage.getItem('_pending_email');
-    gPinConfirm(uid, name, email);
+  if (!setupStep || setupStep.style.display === 'none') return;
+  if (e.key >= '0' && e.key <= '9') gPinPress(e.key);
+  else if (e.key === 'Backspace') gPinDelete();
+  else if (e.key === 'Enter') {
+    var btn = document.getElementById('g-pin-confirm-btn');
+    if (btn) btn.click();
   }
 });
-function gPinDelete(){ _gPin = _gPin.slice(0,-1); gPinPress(''); _gPin = _gPin; var dots = document.getElementById('g-pin-dots'); if(dots) dots.innerHTML = _gPin.split('').map(function(){ return '<div style="width:14px;height:14px;border-radius:50%;background:var(--gold);"></div>'; }).join(''); }
-function gPinClear(){ _gPin = ''; var dots = document.getElementById('g-pin-dots'); if(dots) dots.innerHTML = ''; }
-function gPinConfirm(uid, displayName, email){
-  if(_gPin.length < 4){ document.getElementById('g-pin-error').textContent='PIN must be at least 4 digits'; return; }
-  if(_gPinStage === 'set'){
+
+function gPinConfirm(uid, displayName, email) {
+  var errEl = document.getElementById('g-pin-error');
+  if (_gPin.length < 4) { if (errEl) errEl.textContent = 'PIN must be at least 4 digits'; return; }
+
+  if (_gPinStage === 'set') {
     _gPinConfirmed = _gPin; _gPin = ''; _gPinStage = 'confirm';
-    document.getElementById('g-pin-dots').innerHTML = '';
-    document.getElementById('g-pin-error').textContent = '';
-    showToast('Confirm your PIN');
-  } else {
-    if(_gPin !== _gPinConfirmed){ document.getElementById('g-pin-error').textContent='PINs do not match. Try again.'; _gPin=''; _gPinStage='set'; _gPinConfirmed=''; document.getElementById('g-pin-dots').innerHTML=''; return; }
-    // Save PIN and enter app
-    var pinHash = hashPin(_gPin);
-    localStorage.setItem('expense_pin_hash_local', pinHash);
-    getDB(function(db){
-      db.collection('users').doc(uid).collection('settings').doc('profile').update({ pin_hash: pinHash, email: email }).catch(function(){});
-      _resumeSession(uid, displayName, '');
-      showToast('PIN set! Welcome, '+displayName+'!');
-    });
+    var dots = document.getElementById('g-pin-dots');
+    if (dots) dots.innerHTML = '';
+    if (errEl) { errEl.textContent = '✓ PIN recorded — now repeat it to confirm'; errEl.style.color = '#4a7c59'; }
+    return;
   }
+
+  if (_gPin !== _gPinConfirmed) {
+    if (errEl) { errEl.textContent = 'PINs do not match. Try again.'; errEl.style.color = '#b5451b'; }
+    _gPin = ''; _gPinStage = 'set'; _gPinConfirmed = '';
+    var dots = document.getElementById('g-pin-dots');
+    if (dots) dots.innerHTML = '';
+    return;
+  }
+
+  // ── PINs match — commit everything to localStorage and Firestore ──
+  var pinHash    = hashPin(_gPin);
+  var finalName  = localStorage.getItem('_g_username')  || _selectedUsername || displayName;
+  var fullName   = localStorage.getItem('_g_full_name') || displayName;
+  var dob        = localStorage.getItem('_g_dob')       || '';
+  var country    = localStorage.getItem('_g_country')   || '';
+  var created    = Date.now();
+
+  // localStorage
+  localStorage.setItem(UID_KEY,                          uid);
+  localStorage.setItem(NAME_KEY,                         finalName);
+  localStorage.setItem(FULL_NAME_KEY,                    fullName);
+  localStorage.setItem('expense_pin_hash_local',         pinHash);
+  localStorage.setItem('expense_joined_' + uid,          String(created));
+  localStorage.setItem('expense_user_email_' + uid,      email);
+  localStorage.setItem('expense_user_dob_' + uid,        dob);
+  localStorage.setItem('expense_user_country_' + uid,    country);
+  if (dob) localStorage.setItem('expense_user_dob_default', dob);
+  if (typeof _privacyKey === 'function') localStorage.setItem(_privacyKey(), PRIVACY_VER);
+  recordFullVerify();
+  sessionStorage.setItem('just_registered', '1');
+
+  // Globals
+  _userId = uid; _userName = finalName; _userPhone = '';
+
+  // Firestore — profile doc
+  getDB(function(db) {
+    db.collection('users').doc(uid).collection('settings').doc('profile').set({
+      username:   finalName,
+      full_name:  fullName,
+      email:      email,
+      pin_hash:   pinHash,
+      dob:        dob,
+      country:    country,
+      created:    created
+    }).catch(function(e){ console.warn('profile write failed:', e.message); });
+
+    // Firestore — user_registry (keyed by email for switch user lookup)
+    db.collection('user_registry').doc(email).set({
+      user_id:    uid,
+      username:   finalName,
+      full_name:  fullName,
+      name:       finalName,
+      email:      email,
+      pin_hash:   pinHash,
+      created:    created
+    }).catch(function(e){ console.warn('registry write failed:', e.message); });
+
+    // Clean up pending keys
+    ['_g_full_name','_g_dob','_g_country','_g_username','_pending_email','_pending_google_uid','_pending_full_name','_firebase_uid'].forEach(function(k){ localStorage.removeItem(k); });
+
+    _resumeSession(uid, finalName, '');
+    showToast('Welcome, ' + finalName + '! 🎉');
+  });
 }
 
+// ── Main Google sign-in entry point ──────────────────────────────
 function signInWithGoogle() {
   getDB(function(db) {
-    if(!_auth) { showToast('Unable to connect. Try again.'); return; }
+    if (!_auth) { showToast('Unable to connect. Try again.'); return; }
     var provider = new firebase.auth.GoogleAuthProvider();
-  _auth.signInWithPopup(provider).then(function(result) {
-    var user = result.user;
-    var email = user.email;
-    var displayName = (user.displayName || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,10) || email.split('@')[0].substring(0,10);
-    var uid = user.uid;
-    // Check if user already exists
-    getDB(function(db) {
+    _auth.signInWithPopup(provider).then(function(result) {
+      var user        = result.user;
+      var email       = user.email;
+      var googleName  = user.displayName || email.split('@')[0];
+      var uid         = user.uid;
+
+      // Check Firestore for existing account
       db.collection('users').doc(uid).collection('settings').doc('profile').get().then(function(doc) {
-        if(doc.exists && doc.data().pin_hash) {
-          // Existing user with PIN — resume session
-          localStorage.setItem(PHONE_CONFIRM_KEY + '_' + uid, '1');
-          _resumeSession(uid, displayName, '');
-          showToast('Welcome back, ' + displayName + '!');
-        } else if(doc.exists && !doc.data().pin_hash) {
-          // Existing user without PIN — show PIN setup
-          _userId = uid; _userName = displayName; _userPhone = '';
-          localStorage.setItem(UID_KEY, uid);
-          localStorage.setItem(NAME_KEY, displayName);
-          localStorage.setItem(FULL_NAME_KEY, displayName);
-          // Mark phone and DOB as confirmed for Google users — no popup needed
-          localStorage.setItem(PHONE_CONFIRM_KEY + '_' + uid, '1');
-          localStorage.setItem('expense_user_dob_' + uid, '2000-01-01');
-          // Show PIN setup before entering app
-          showGooglePinSetup(uid, displayName, email);
+        if (doc.exists && doc.data().pin_hash) {
+          // ── Returning user ──
+          var storedName    = doc.data().username   || doc.data().full_name || googleName;
+          var storedEmail   = doc.data().email      || email;
+          var storedDob     = doc.data().dob        || '';
+          var storedCountry = doc.data().country    || '';
+          // Restore localStorage from Firestore
+          localStorage.setItem(UID_KEY,                       uid);
+          localStorage.setItem(NAME_KEY,                      storedName);
+          localStorage.setItem(FULL_NAME_KEY,                 doc.data().full_name || storedName);
+          localStorage.setItem('expense_pin_hash_local',      doc.data().pin_hash);
+          localStorage.setItem('expense_user_email_' + uid,   storedEmail);
+          if (storedDob)     localStorage.setItem('expense_user_dob_' + uid,     storedDob);
+          if (storedCountry) localStorage.setItem('expense_user_country_' + uid, storedCountry);
+          if (!localStorage.getItem('expense_joined_' + uid)) {
+            localStorage.setItem('expense_joined_' + uid, String(doc.data().created || Date.now()));
+          }
+          if (typeof _privacyKey === 'function') localStorage.setItem(_privacyKey(), PRIVACY_VER);
+          recordFullVerify();
+          _resumeSession(uid, storedName, '');
+          showToast('Welcome back, ' + storedName + '!');
+
         } else {
-          // New user — create account
+          // ── New user or incomplete registration — start full flow ──
           localStorage.setItem('_pending_email', email);
-          localStorage.setItem('_firebase_uid', uid);
-          db.collection('users').doc(uid).collection('settings').doc('profile').set({
-            email: email, full_name: displayName, created: Date.now()
-          }).then(function() {
-            _userId = uid; _userName = displayName; _userPhone = '';
-            localStorage.setItem(UID_KEY, uid);
-            localStorage.setItem(NAME_KEY, displayName);
-            localStorage.setItem(FULL_NAME_KEY, displayName);
-            // Show PIN setup before entering app
-            showGooglePinSetup(uid, displayName, email);
-          });
+          var pinO = document.getElementById('pin-overlay');
+          if (pinO) pinO.style.display = 'flex';
+          showGoogleProfileCompletion(uid, googleName, email);
         }
+      }).catch(function(e) {
+        showToast('Connection error. Please try again.');
+        console.error('Firestore check failed:', e);
       });
+    }).catch(function(e) {
+      showToast('Google sign-in failed: ' + e.message);
     });
-  }).catch(function(e) {
-    showToast('Google sign-in failed: ' + e.message);
-  });
   });
 }
-
 function showRegisterStep() {
   document.getElementById('pin-step-register').style.display = 'block';
   document.getElementById('pin-step-code').style.display    = 'none';
@@ -16576,8 +16752,12 @@ function switchUser() {
   // Unfreeze in case update flow was active
   _unfreezeApp();
   showPinScreen();
-  // Switch user goes straight to security check (full verify)
-  showFullVerifyStep();
+  // Show full verify so switching user must identify themselves
+  var pinO = document.getElementById('pin-overlay');
+  if (pinO) { pinO.style.display = 'flex'; }
+  document.querySelectorAll('#pin-overlay [id^="pin-step-"]').forEach(function(s){ s.style.display='none'; });
+  var fvEl = document.getElementById('pin-step-full-verify');
+  if (fvEl) fvEl.style.display = 'block';
   syncSetStatus('off');
   updateHeaderContext();
 }
@@ -17365,7 +17545,7 @@ var HELP_DATA = {
       'Moving the mouse does NOT reset the timer. Only actual clicks, taps, or key presses count as activity.',
       'If you minimize the browser, switch tabs, or your phone screen turns off, the timer keeps running. When you return after 10+ minutes the app shows the PIN pad.',
       'Every 1 to 2 weeks (randomly), the app shows a Security Check screen instead of the PIN pad.',
-      'On the Security Check screen enter your username OR phone number AND your PIN.',
+      'On the Security Check screen enter your USERNAME OR EMAIL AND your PIN.',
       'After passing the check the app returns to normal PIN-only login until the next random check.',
       'If you fail 3 times you will see a Reset PIN option.',
       'The Security Check also runs automatically the first time you log in on a new device.'
@@ -18086,7 +18266,7 @@ function openUserManual() {
   out += h3('Auto-lock','🔒');
   out += p('The app locks automatically after <strong>10 minutes of inactivity</strong>. It also locks when you minimise the browser, switch tabs, or turn off your phone screen. To unlock, enter your PIN.');
   out += h3('Periodic identity check','🛡️');
-  out += p('Every 1–2 weeks (randomly), the app asks you to confirm your identity by entering your username or phone number plus PIN. This is a security measure to protect your account if your device is accessed by someone else. New registrations are exempt immediately after signing up.');
+  out += p('Every 1–2 weeks (randomly), the app asks you to confirm your identity by entering your USERNAME OR EMAIL plus PIN. This is a security measure to protect your account if your device is accessed by someone else. New registrations are exempt immediately after signing up.');
   out += h3('Refresh behaviour','🔄');
   out += p('The app remembers which screen you were on when you last used it. If you were inside the app and refresh the page, you resume inside the app (if your session is still valid). If you were on the PIN screen and refresh, you return to the PIN screen. This is reliable across hard refreshes and browser restarts within the session window.');
   out += h3('Screen state tracking','📍');
