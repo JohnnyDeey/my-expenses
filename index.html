@@ -3622,9 +3622,9 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--gold2);margin-bottom:4px;">&#128274; Reset Access Code</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;margin-bottom:20px;">Verify your identity to get a new code</div>
     <div id="reset-step-phone">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:14px;line-height:1.7;">Enter the phone number or email address you registered with. We will verify your account and show you a temporary reset code.</div>
-      <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number or Email</label>
-      <input id="reset-phone-input" type="text" placeholder="e.g. 07012345678 or email@domain.com" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;margin-bottom:10px;" onkeydown="if(event.key==='Enter')submitResetRequest()">
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:14px;line-height:1.7;">Enter the email address you registered with. We will send you a reset code.</div>
+      <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;"> Email</label>
+      <input id="reset-phone-input" type="email" placeholder="e.g. john@gmail.com" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;margin-bottom:10px;" onkeydown="if(event.key==='Enter')submitResetRequest()">
       <div id="reset-phone-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:16px;"></div>
       <button onclick="submitResetRequest()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:10px;">Verify My Account</button>
       <button onclick="closeResetOverlay()" style="width:100%;padding:10px;background:none;border:1px solid rgba(200,150,46,0.25);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:#6b5e50;cursor:pointer;">&#8592; Back to Sign In</button>
@@ -3632,7 +3632,7 @@ input[type="password"]::-ms-clear { display:none !important; }
     <div id="reset-step-code" style="display:none;">
       <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#9e8e7e;margin-bottom:16px;line-height:1.7;">A 6-digit OTP has been sent to your email. Enter it below. It expires in <strong style="color:var(--gold);">5 minutes</strong>.</div>
       <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Enter OTP</div>
-      <input id="reset-otp-input" type="number" maxlength="6" placeholder="000000" style="width:100%;padding:14px;background:#2a2018;border:1.5px solid rgba(200,150,46,0.4);border-radius:6px;font-family:'DM Mono',monospace;font-size:1.5rem;color:var(--gold2);text-align:center;letter-spacing:8px;outline:none;margin-bottom:8px;box-sizing:border-box;">
+      <input id="reset-otp-input" type="tel" maxlength="6" placeholder="000000" pattern="[0-9]{6}" style="width:100%;padding:14px;background:#2a2018;border:1.5px solid rgba(200,150,46,0.4);border-radius:6px;font-family:'DM Mono',monospace;font-size:1.5rem;color:var(--gold2);text-align:center;letter-spacing:8px;outline:none;margin-bottom:8px;box-sizing:border-box;">
       <div id="reset-timer" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--gold);text-align:center;margin-bottom:16px;"></div>
       <div id="reset-otp-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:10px;min-height:18px;text-align:center;"></div>
       <button onclick="verifyOTPReset()" style="width:100%;padding:13px;background:var(--sage);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px;">&#10003; Verify OTP</button>
@@ -3721,22 +3721,22 @@ input[type="password"]::-ms-clear { display:none !important; }
       <p style="margin-bottom:14px;">All financial data you enter is stored in your personal Firebase account under a unique private ID. It is completely private. No other user can access your data. Your phone number is stored as a one-way hash that cannot be reversed or read by anyone, including the developer.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">2. Data We Collect</p>
-      <p style="margin-bottom:14px;">We collect the following data to operate the app: your full name, username, date of birth, hashed phone number, email address (optional), country code, PIN hash, expense and income entries, budget settings, avatar preference, and referral records. Your <strong>email address</strong>, if provided, is stored solely for account recovery and duplicate account detection. It is never shared with third parties or used for marketing.</p>
+      <p style="margin-bottom:14px;">We collect the following data to operate the app: your full name, username, date of birth, email address, country, PIN hash, expense and income entries, budget settings, and avatar preference. Your <strong>email address</strong> is required for account creation, PIN recovery, and duplicate account detection. It is never shared with third parties or used for marketing.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">3. Data Storage</p>
       <p style="margin-bottom:14px;">Your data is stored in Google Firebase Firestore, protected by security rules ensuring only you can read or write your data. We do not sell, share, or transfer your data to any third party. Email addresses are stored under your user account settings and also recorded in the user registry solely to enable account recovery by email.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">4. Authentication &amp; PIN Security</p>
-      <p style="margin-bottom:14px;">Your PIN is hashed before storage using a one-way algorithm and is never stored in plain text. The app uses a PIN pad for daily login. A periodic full identity check is triggered randomly every 1 to 2 weeks, requiring your USERNAME OR EMAIL plus PIN. New users are exempt from the identity check immediately after registration.</p>
+      <p style="margin-bottom:14px;">Your PIN must be exactly 6 digits and is hashed before storage using a one-way algorithm — it is never stored in plain text. The app uses a PIN pad for daily login. You may sign up and sign in with Google for a faster, passwordless experience. PIN reset is available via email — a 6-digit code valid for 5 minutes is sent to your registered email address.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">5. Registration &amp; Duplicate Detection</p>
-      <p style="margin-bottom:14px;">During registration, the app checks your phone number, chosen username, and email address in real time against our Firebase user registry to detect duplicate accounts. A verification step (0–100% progress overlay) confirms all three before your account is created. This prevents multiple accounts being registered with the same identity details. The verification result is saved to your device and synced to the cloud.</p>
+      <p style="margin-bottom:14px;">During registration, the app checks your chosen username and email address in real time against our Firebase user registry to detect duplicate accounts. This prevents multiple accounts being registered with the same identity details. You may register using Google Sign-In or manually with your email address.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">6. Session Security &amp; Auto-Lock</p>
       <p style="margin-bottom:14px;">The app automatically locks after 10 minutes of inactivity. The lock also triggers when you minimise the browser, switch tabs, or your phone screen turns off. The app remembers which screen you were on (PIN pad or inner app) when you last used it, so a page refresh always returns you to the correct screen.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">7. Account Recovery by Email</p>
-      <p style="margin-bottom:14px;">If you add an email address to your profile, you can use it to reset your PIN. Enter your email on the "Forgot your PIN?" screen. The system looks up your account and displays a temporary reset code on screen. No email is sent — the code is shown directly to you for security and cost reasons. Your email is also used to detect duplicate registrations.</p>
+      <p style="margin-bottom:14px;">If you forget your PIN, tap "Forgot your PIN?" on the login screen and enter your registered email address. A 6-digit reset code will be sent to your inbox — it expires in 5 minutes. Enter the code in the app, then set a new 6-digit PIN. Check your spam folder if the email does not arrive. Your email is also used to detect duplicate registrations.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">8. Account Deletion</p>
       <p style="margin-bottom:14px;">You have the right to permanently delete your account and all associated data at any time via <strong>Manage → Delete Account</strong>. A 4-step process guides you: (1) an exit questionnaire asking for your reason, (2) PIN confirmation, (3) a deletion progress indicator, and (4) a completion screen. Your exit reason and optional feedback message are saved anonymously to a Firebase collection to help improve the app. All personal data — expenses, income, settings, deleted items, user registry entry, and credentials — is permanently and irreversibly deleted. This data cannot be recovered.</p>
@@ -3781,7 +3781,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <p style="margin-bottom:14px;">My Expense Ledger was designed and built by <strong>John-de-Scholar</strong> (John Damilola Sunday). By using this app you accept that the developer name appears on the login screen, Help panel, and printed reports.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">22. Last Updated</p>
-      <p style="margin-bottom:14px;">This Privacy Policy and Terms of Service were last updated on <strong>25 March 2026</strong> (v2.4.0). We reserve the right to update these terms. All users will be required to re-accept updated terms upon next login.</p>
+      <p style="margin-bottom:14px;">This Privacy Policy and Terms of Service were last updated on <strong>28 July 2026</strong> (v2.5.0). We reserve the right to update these terms. All users will be required to re-accept updated terms upon next login.</p>
 
       <p style="font-weight:700;margin-bottom:6px;">23. Contact</p>
       <p style="margin-bottom:0;">Questions about your data or these terms? Contact us at myfinanceledgerapp [at] gmail.com. We aim to respond within 48 hours.</p>
@@ -3789,7 +3789,7 @@ input[type="password"]::-ms-clear { display:none !important; }
 
     <!-- Accept button at the very bottom of the scroll area -->
     <div id="privacy-accept-wrap" style="padding:20px 0 8px;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; MARCH 2026 &mdash; v2.4.1</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;text-align:center;margin-bottom:12px;" id="privacy-version-label">MY EXPENSE LEDGER &mdash; JULY 2026 &mdash; v2.5.0</div>
       <button onclick="acceptPrivacy()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.88rem;letter-spacing:2px;font-weight:900;color:var(--ink);cursor:pointer;">&#10003; I ACCEPT &mdash; CONTINUE</button>
       <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#4a3e30;text-align:center;margin-top:8px;">By tapping Accept you confirm you have read and agree to the above terms.</div>
     </div>
@@ -15561,7 +15561,7 @@ document.addEventListener('keydown', function(e) {
 
 function gPinConfirm(uid, displayName, email) {
   var errEl = document.getElementById('g-pin-error');
-  if (_gPin.length < 4) { if (errEl) errEl.textContent = 'PIN must be at least 4 digits'; return; }
+  if (_gPin.length !== 6) { if (errEl) errEl.textContent = 'PIN must be exactly 6 digits'; return; }
 
   if (_gPinStage === 'set') {
     _gPinConfirmed = _gPin; _gPin = ''; _gPinStage = 'confirm';
@@ -15581,8 +15581,32 @@ function gPinConfirm(uid, displayName, email) {
 
   // ── PINs match — commit everything to localStorage and Firestore ──
   var pinHash   = hashPin(_gPin);
-  var isRegFlow = (uid === '__reg__');
-  var finalUID  = isRegFlow ? generateUUID() : uid;
+  var isRegFlow   = (uid === '__reg__');
+  var isResetFlow = (uid === '__reset__');
+  var finalUID    = isRegFlow ? generateUUID() : (isResetFlow ? (window._resetPinUID || localStorage.getItem(UID_KEY)) : uid);
+  // Handle reset flow — just update PIN, don't create new account
+  if (isResetFlow) {
+    var resetUID = finalUID;
+    var newPinHash = hashPin(_gPin);
+    localStorage.setItem('expense_pin_hash_local', newPinHash);
+    getDB(function(db) {
+      // Update profile doc
+      db.collection('users').doc(resetUID).collection('settings').doc('profile').update({ pin_hash: newPinHash }).catch(function(){});
+      // Update registry
+      db.collection('user_registry').where('user_id','==',resetUID).get().then(function(snap){
+        snap.forEach(function(doc){ doc.ref.update({ pin_hash: newPinHash }).catch(function(){}); });
+      }).catch(function(){});
+      // Resume session
+      var name = localStorage.getItem(NAME_KEY) || '';
+      localStorage.setItem(UID_KEY, resetUID);
+      if (typeof _privacyKey === 'function') localStorage.setItem(_privacyKey(), PRIVACY_VER);
+      _resumeSession(resetUID, name, '');
+      showToast('PIN updated successfully!');
+      window._resetPinUID = null;
+    });
+    return;
+  }
+
   var finalName = isRegFlow
     ? (localStorage.getItem('_pending_reg_username') || _selectedUsername || displayName)
     : (localStorage.getItem('_g_username') || _selectedUsername || displayName);
@@ -16315,44 +16339,53 @@ function openResetOverlay() {
 
 function _tryEmailReset(email) {
   var err = document.getElementById('reset-phone-error');
-  if(err) { err.textContent = 'Checking email...'; err.style.color = 'var(--muted)'; }
+  if(err) { err.textContent = 'Checking...'; err.style.color = 'var(--muted)'; }
   getDB(function(db) {
-    db.collection('user_registry').where('email','==',email.toLowerCase()).get().then(function(snap) {
-      // Try Firebase Auth reset first (free, unlimited, secure)
-      if(_auth) {
-        _auth.sendPasswordResetEmail(email.toLowerCase()).then(function(){
-          if(err) { err.textContent = 'Reset link sent to ' + email + '. Check your inbox.'; err.style.color = '#4a7c59'; }
-        }).catch(function(e){
-          if(e.code === 'auth/user-not-found') {
-            if(err) { err.textContent = 'No account found with this email.'; err.style.color = '#b5451b'; }
-          } else {
-            // Fall back to OTP via EmailJS for PIN-only users
-            if(snap.empty) {
-              if(err) { err.textContent = 'No account found with this email.'; err.style.color = '#b5451b'; }
-              return;
-            }
-            var otp = String(Math.floor(100000 + Math.random() * 900000));
-            var expiry = Date.now() + 5 * 60 * 1000;
-            var docRef = snap.docs[0];
-            docRef.ref.update({ reset_otp: otp, reset_otp_expiry: expiry }).then(function(){
-              if(typeof emailjs !== 'undefined') {
-                emailjs.send('service_6a8t7as', 'template_058e96c', {
-                  name: docRef.data().name || 'User',
-                  email: email,
-                  ticket_no: 'OTP-' + otp,
-                  subject: 'Your PIN Reset Code — expires in 5 minutes — check spam folder'
-                }).then(function(){
-                  if(err) { err.textContent = 'OTP sent to ' + email + '. Check your inbox.'; err.style.color = '#4a7c59'; }
-                  _showOTPInput(docRef.data(), otp, expiry);
-                }).catch(function(){
-                  if(err) { err.textContent = 'Failed to send OTP. Try again.'; err.style.color = '#b5451b'; }
-                });
-              }
-            });
-          }
-        });
+    // Look up by email doc key first, then by field
+    db.collection('user_registry').doc(email.toLowerCase()).get().then(function(doc) {
+      var docRef = null;
+      var data   = null;
+      if(doc.exists) {
+        docRef = doc.ref;
+        data   = doc.data();
+        sendOTP();
       } else {
-        if(err) { err.textContent = 'Connection error. Try again.'; err.style.color = '#b5451b'; }
+        db.collection('user_registry').where('email','==',email.toLowerCase()).get().then(function(snap) {
+          if(snap.empty) {
+            if(err) { err.textContent = 'No account found with this email.'; err.style.color = '#b5451b'; }
+            return;
+          }
+          docRef = snap.docs[0].ref;
+          data   = snap.docs[0].data();
+          sendOTP();
+        }).catch(function(){
+          if(err) { err.textContent = 'Connection error. Try again.'; err.style.color = '#b5451b'; }
+        });
+      }
+
+      function sendOTP() {
+        var otp    = String(Math.floor(100000 + Math.random() * 900000));
+        var expiry = Date.now() + 5 * 60 * 1000;
+        sessionStorage.setItem('_reset_otp',        otp);
+        sessionStorage.setItem('_reset_otp_expiry', String(expiry));
+        sessionStorage.setItem('_reset_uid',        data.user_id || '');
+        docRef.update({ reset_otp: otp, reset_otp_expiry: expiry }).catch(function(){});
+        if(typeof emailjs === 'undefined') {
+          if(err) { err.textContent = 'Email service not ready. Try again.'; err.style.color = '#b5451b'; }
+          return;
+        }
+        emailjs.send('service_6a8t7as', 'template_058e96c', {
+          name:      data.full_name || data.name || 'User',
+          email:     email,
+          ticket_no: otp,
+          subject:   'PIN Reset Request',
+          message:   'Enter the 6-digit code above in the app to reset your PIN. It expires in 5 minutes. Do not share it with anyone.'
+        }).then(function(){
+          if(err) { err.textContent = '✓ Code sent to ' + email + '. Check your inbox (and spam).'; err.style.color = '#4a7c59'; }
+          _showOTPInput(data, otp, expiry);
+        }).catch(function(){
+          if(err) { err.textContent = 'Failed to send code. Try again.'; err.style.color = '#b5451b'; }
+        });
       }
     }).catch(function(){
       if(err) { err.textContent = 'Connection error. Try again.'; err.style.color = '#b5451b'; }
@@ -16395,29 +16428,22 @@ function verifyOTPReset() {
   if(!otp){ if(err) err.textContent = 'Please enter the OTP'; return; }
   if(Date.now() > expiry){ if(err) err.textContent = 'OTP expired. Request a new one.'; return; }
   if(otp !== storedOtp){ if(err) err.textContent = 'Incorrect OTP. Try again.'; return; }
-  // OTP correct — allow PIN reset
+  // OTP correct — show PIN setup pad
   sessionStorage.removeItem('_reset_otp');
   sessionStorage.removeItem('_reset_otp_expiry');
   var uid = sessionStorage.getItem('_reset_uid');
   closeResetOverlay();
-  // Show PIN change screen
+  // Show PIN setup using Google PIN pad reused for reset
+  window._resetPinUID = uid;
   showPinScreen();
-  showLoginStep();
-  showToast('OTP verified! You are now signed in. Change your PIN in Manage settings.');
-  if(uid) {
-    localStorage.setItem(UID_KEY, uid);
-    getDB(function(db){
-      db.collection('user_registry').where('user_id','==',uid).get().then(function(snap){
-        if(!snap.empty){
-          var d = snap.docs[0].data();
-          _resumeSession(uid, d.name || uid, snap.docs[0].id);
-          setTimeout(function(){
-            burgerSwitch('manage','Manage');
-          }, 800);
-        }
-      });
-    });
-  }
+  var pinO = document.getElementById('pin-overlay');
+  if(pinO) pinO.style.display = 'flex';
+  document.querySelectorAll('#pin-overlay [id^="pin-step-"]').forEach(function(s){ s.style.display='none'; });
+  // Reuse Google PIN setup screen
+  showGooglePinSetup('__reset__', 'New PIN', '');
+  // Override label
+  var label = document.querySelector('#pin-step-google-setup div:first-child');
+  if(label) label.textContent = 'Set Your New PIN';
 }
 
 function closeResetOverlay() {
@@ -16429,51 +16455,10 @@ function closeResetOverlay() {
 function submitResetRequest() {
   var inp = document.getElementById('reset-phone-input');
   var err = document.getElementById('reset-phone-error');
-  var input = inp ? inp.value.trim() : '';
-  if (!input) { if (err) err.textContent = 'Please enter your phone number or email'; return; }
-
-  // If it looks like an email — try email reset path
-  if (input.includes('@')) {
-    if (_tryEmailReset(input)); return;
-  }
-
-  var phone = input;
-  if (!phone || phone.replace(/[^0-9]/g,'').length < 7) {
-    if (err) err.textContent = 'Please enter a valid phone number or email'; return;
-  }
-  if (err) err.textContent = 'Checking...';
-  var phoneHash = hashPhone(phone);
-  getDB(function(db) {
-    db.collection('user_registry').doc(phoneHash).get().then(function(doc) {
-      if (!doc.exists) {
-        if (err) err.textContent = 'No account found with this phone number or email.'; return;
-      }
-      var data = doc.data();
-      _resetCode = String(Math.floor(100000 + Math.random() * 900000));
-      _resetCodeExpiry = Date.now() + 15 * 60 * 1000;
-      db.collection('user_registry').doc(phoneHash).update({
-        reset_code_hash: hashPin(_resetCode),
-        reset_code_expiry: _resetCodeExpiry
-      }).then(function() {
-        if (err) err.textContent = '';
-        _pendingResetPhone = phoneHash;
-        _pendingResetName  = data.name;
-        _pendingResetUID   = data.user_id;
-        var sa = document.getElementById('reset-step-phone');
-        var sb = document.getElementById('reset-step-code');
-        if (sa) sa.style.display = 'none';
-        if (sb) sb.style.display = 'block';
-        var cd = document.getElementById('reset-code-display');
-        if (cd) cd.textContent = _resetCode;
-        updateResetTimer();
-        _resetTimerInterval = setInterval(updateResetTimer, 1000);
-      }).catch(function() {
-        if (err) err.textContent = 'Connection error. Please try again.';
-      });
-    }).catch(function() {
-      if (err) err.textContent = 'Connection error. Please check your internet.';
-    });
-  });
+  var email = inp ? inp.value.trim().toLowerCase() : '';
+  if (!email) { if (err) { err.textContent = 'Please enter your email address'; err.style.color = '#b5451b'; } return; }
+  if (!email.includes('@')) { if (err) { err.textContent = 'Please enter a valid email address'; err.style.color = '#b5451b'; } return; }
+  _tryEmailReset(email);
 }
 
 function updateResetTimer() {
@@ -17431,16 +17416,16 @@ var HELP_DATA = {
   'login': {
     title: '🔓 Login & Registration',
     steps: [
-      'Every time you open the app you see the PIN pad — just tap your digits.',
-      'New user? Tap the SIGN UP button below the PIN pad to create your account.',
-      'Registration: enter your full name and phone number, choose a username (4–10 characters), and your access code is generated — screenshot it or write it down!',
-      'Returning user: tap your PIN digits and press ENTER, or wait for auto-submit after 6 digits.',
-      'On a laptop or tablet with a keyboard, just type your PIN digits directly — no need to click the number buttons.',
-      'Once every 1–2 weeks a Security Check will ask for your username AND PIN.',
-      'Change your PIN anytime in Manage → Change Access Code.'
+      'Every time you open the app you see the PIN pad — tap your 6 digits to log in.',
+      'Sign up with Google: tap "Sign in with Google", select your Gmail account, complete your profile (full name, date of birth, country, username), then set a 6-digit PIN.',
+      'Sign up manually: tap Register, enter your full name, date of birth, country, email address, and choose a username (4–10 characters), then set a 6-digit PIN.',
+      'Your PIN must be exactly 6 digits — no letters or symbols.',
+      'Forgot your PIN? Tap "Forgot your PIN?" on the login screen, enter your registered email, and a 6-digit reset code will be sent to your inbox — valid for 5 minutes.',
+      'Switch user: tap "Switch user" in the Manage tab, then enter your email or username and PIN to switch to a different account.',
+      'Change your PIN anytime in Manage → Settings → Change Access Code.'
     ],
-    example: 'New user mk0374 tapped SIGN UP.\nShe entered her name and phone number.\nUsername suggestions appeared — she chose mk0374.\nAccess code: 847291 — she screenshotted it.\n\nNext day she opened the app, typed 847291 on her keyboard, pressed Enter — in instantly.',
-    tip: 'Your phone number is stored as a one-way hash — nobody can read it, not even the developer. Keep your access code safe.'
+    example: 'New user John tapped "Sign in with Google" and selected his Gmail.\nHe filled in his name, date of birth, country, and chose username "jd0292".\nHe set PIN 847291 and was taken straight into the app.\n\nNext day he opened the app, tapped his 6-digit PIN — logged in instantly.',
+    tip: 'Use your registered email address to reset your PIN if you ever forget it. Check your spam folder if the code does not arrive.'
   },
   'pdf': {
     title: '📄 PDF Reports — Print & Save',
@@ -18685,7 +18670,8 @@ function sendSupport() {
           ticket_no: ticketNo,
           name:      fullName,
           subject:   subject,
-          email:     userEmail
+          email:     userEmail,
+          message:   'Thank you for reaching out. We have received your support request and will get back to you within 48 hours. Please keep your ticket number for reference.'
         }).catch(function(){});
       }
     }).catch(function(err) {

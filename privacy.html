@@ -15,34 +15,44 @@
 </head>
 <body>
   <h1>Privacy Policy</h1>
-  <p><strong>My Expense Ledger</strong> — Built by John-de-Scholar &nbsp;·&nbsp; Last updated: July 2026</p>
+  <p><strong>My Expense Ledger</strong> — Built by John-de-Scholar &nbsp;·&nbsp; Last updated: July 2026 (v2.5.0)</p>
 
   <h2>1. What We Collect</h2>
-  <p>We collect the information you provide during registration: your username, full name, date of birth, phone number (hashed), and email address. We also store your financial entries (expenses and income) that you input into the app.</p>
+  <p>We collect the information you provide during registration: your full name, username, date of birth, country, and email address. We also store your financial entries (expenses and income) that you input into the app. No phone number is collected or stored.</p>
 
   <h2>2. How We Use Your Data</h2>
-  <p>Your data is used solely to provide the expense tracking service. We do not sell, share, or transfer your personal data to third parties. Your financial data is stored securely in Google Firebase Firestore under your unique user ID.</p>
+  <p>Your data is used solely to provide the expense tracking service. We do not sell, share, or transfer your personal data to third parties. Your financial data is stored securely in Google Firebase Firestore under your unique user ID. Your email address is used for account creation, PIN recovery, and duplicate account detection only.</p>
 
   <h2>3. Data Storage & Security</h2>
-  <p>All data is stored in Google Firebase (Firestore). Your PIN is hashed and never stored in plain text. Biometric credentials are stored locally on your device only and never transmitted to our servers.</p>
+  <p>All data is stored in Google Firebase (Firestore). Your PIN must be exactly 6 digits and is hashed using a one-way algorithm before storage — it is never stored in plain text. You may sign up and sign in using Google Sign-In for a faster, passwordless experience. PIN reset is handled via a 6-digit code sent to your registered email address, valid for 5 minutes.</p>
 
-  <h2>4. Third-Party Services</h2>
+  <h2>4. Authentication & Account Recovery</h2>
+  <p>If you forget your PIN, tap "Forgot your PIN?" on the login screen and enter your registered email address. A 6-digit reset code will be sent to your inbox — it expires in 5 minutes. Enter the code in the app, then set a new 6-digit PIN. Your email is the only recovery method — keep it accurate in your profile.</p>
+
+  <h2>5. Third-Party Services</h2>
   <p>We use the following third-party services:</p>
   <p>— <strong>Google Firebase</strong> (data storage and authentication)<br>
-  — <strong>EmailJS</strong> (support ticket delivery)<br>
+  — <strong>Google Sign-In</strong> (optional sign-in method)<br>
+  — <strong>EmailJS</strong> (PIN reset codes and support ticket delivery)<br>
   — <strong>Google Analytics</strong> (anonymous usage statistics)</p>
 
-  <h2>5. Your Rights</h2>
-  <p>You can delete your account and all associated data at any time from the Manage tab → Data & Account → Delete My Account. Upon deletion, all your data is permanently removed from our servers within 30 days.</p>
+  <h2>6. Your Rights</h2>
+  <p>You can delete your account and all associated data at any time from the Manage tab → Delete Account. Upon deletion, all your personal data — expenses, income, settings, registry entry, and credentials — is permanently and irreversibly removed from our servers immediately. This data cannot be recovered.</p>
 
-  <h2>6. Children's Privacy</h2>
-  <p>This app is intended for users aged 16 and above. We do not knowingly collect data from children under 16.</p>
+  <h2>7. Children's Privacy</h2>
+  <p>This app is intended for users aged 16 and above, in line with GDPR recommendations. We do not knowingly collect data from children under 16. Users under 16 may use Guest Mode where no personal data is sent to our servers.</p>
 
-  <h2>7. Changes to This Policy</h2>
-  <p>We may update this policy from time to time. Continued use of the app after changes constitutes acceptance of the new policy.</p>
+  <h2>8. Session Security & Auto-Lock</h2>
+  <p>The app automatically locks after 10 minutes of inactivity. Local storage is cleared when you log out or delete your account. The app uses your device's local storage to remember your session, active tab, and preferences — no tracking cookies are used.</p>
 
-  <h2>8. Contact</h2>
-  <p>For privacy-related questions, contact us at: <a href="mailto:myfinanceledgerapp@gmail.com">myfinanceledgerapp@gmail.com</a></p>
+  <h2>9. Changes to This Policy</h2>
+  <p>We may update this policy from time to time. All users will be required to re-read and re-accept updated terms upon next login after a policy change.</p>
+
+  <h2>10. Governing Law</h2>
+  <p>These Terms and Privacy Policy are governed by the laws of the <strong>Federal Republic of Nigeria</strong> (Nigeria Data Protection Regulation — NDPR) and comply with the <strong>General Data Protection Regulation (GDPR)</strong> of the European Union where applicable.</p>
+
+  <h2>11. Contact</h2>
+  <p>For privacy-related questions, contact us at: <a href="mailto:myfinanceledgerapp@gmail.com">myfinanceledgerapp@gmail.com</a>. We aim to respond within 48 hours.</p>
 
   <div class="footer">
     <p>© 2026 John-de-Scholar · My Expense Ledger · All rights reserved.</p>
