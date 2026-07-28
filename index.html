@@ -3607,7 +3607,6 @@ input[type="password"]::-ms-clear { display:none !important; }
         <button onclick="submitFullVerify()" style="width:100%;padding:14px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700;cursor:pointer;">Confirm Identity</button>
         <div style="text-align:center;margin-top:12px;display:flex;flex-direction:column;gap:6px;">
           <button onclick="showPinPadStep()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--gold);cursor:pointer;text-decoration:underline;">← Back to Sign In</button>
-          <button onclick="switchUser()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Switch user</button>
           <button onclick="openResetOverlay()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#5a4e3e;cursor:pointer;text-decoration:underline;">Forgot your PIN?</button>
         </div>
       </div>
@@ -9801,16 +9800,18 @@ function closeRadialMenu() {
   _radialOpen = false;
 }
 
-// Prevent context menu on long press
+// Prevent context menu always inside the app
 document.addEventListener('contextmenu', function(e) {
-  if(_radialOpen || _radialTimer) e.preventDefault();
+  if(document.body.classList.contains('app-ready')) e.preventDefault();
 });
 
 // Long press detection
 document.addEventListener('touchstart', function(e) {
   if(_radialOpen) return;
-  // Only show radial menu inside the app, not on login/register screens
   if(!document.body.classList.contains('app-ready')) return;
+  // Don't trigger when app is locked (pin overlay visible)
+  var pinO = document.getElementById('pin-overlay');
+  if(pinO && pinO.style.display !== 'none') return;
   var tag = e.target.tagName;
   if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if(e.target.isContentEditable) return;
@@ -9833,6 +9834,8 @@ document.addEventListener('touchmove', function() {
 document.addEventListener('mousedown', function(e) {
   if(e.button !== 0) return;
   if(!document.body.classList.contains('app-ready')) return;
+  var pinO = document.getElementById('pin-overlay');
+  if(pinO && pinO.style.display !== 'none') return;
   var tag = e.target.tagName;
   if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   var tx = e.clientX; var ty = e.clientY;
