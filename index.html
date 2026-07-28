@@ -14539,6 +14539,7 @@ function submitFullVerify() {
     var fvE = document.getElementById('fv-error');    if(fvE) fvE.textContent = '';
     var dotsEl = document.getElementById('fv-pin-dots');
     if (dotsEl) dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
+    if (typeof _privacyKey === 'function') localStorage.setItem(_privacyKey(), PRIVACY_VER);
     _resumeSession(uid, name, '');
     showToast('Identity confirmed. Welcome back, ' + name + '!');
     return true;
@@ -16772,7 +16773,11 @@ function switchUser() {
   // Unfreeze in case update flow was active
   _unfreezeApp();
   showPinScreen();
-  showRegisterStep();
+  var pinO = document.getElementById('pin-overlay');
+  if (pinO) pinO.style.display = 'flex';
+  document.querySelectorAll('#pin-overlay [id^="pin-step-"]').forEach(function(s){ s.style.display='none'; });
+  var fvEl = document.getElementById('pin-step-full-verify');
+  if (fvEl) fvEl.style.display = 'block';
   syncSetStatus('off');
   updateHeaderContext();
 }
