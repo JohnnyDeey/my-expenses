@@ -2411,7 +2411,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       </div>
     </div>
     <!-- Profile details grid -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;">
         <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">COUNTRY</div>
         <div id="profile-country" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);">—</div>
@@ -2420,25 +2420,18 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">DATE OF BIRTH</div>
         <div id="profile-dob" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);">—</div>
       </div>
-      <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">PHONE</div>
-        <div id="profile-phone" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);">—</div>
-      </div>
-      <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MEMBER SINCE</div>
-        <div id="profile-member-cell" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);">—</div>
-      </div>
     </div>
-    <!-- Email row — full width -->
-    <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;margin-top:10px;">
+    <!-- Email row — full width, display only -->
+    <div style="background:var(--paper2);border-radius:6px;padding:10px 12px;">
       <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">EMAIL</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-        <div style="min-width:0;flex:1;">
-          <div id="profile-email" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
-          <div id="profile-email-badge" style="display:none;margin-top:3px;"></div>
-        </div>
-        <button id="profile-email-btn" onclick="openEmailVerifyOverlay()" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:4px 10px;border-radius:4px;border:1px solid var(--gold);background:none;color:var(--gold);cursor:pointer;white-space:nowrap;flex-shrink:0;"></button>
-      </div>
+      <div id="profile-email" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
+      <div id="profile-email-badge" style="display:none;margin-top:3px;"></div>
+    </div>
+    <!-- Hidden elements kept for JS compatibility -->
+    <div style="display:none;">
+      <div id="profile-phone"></div>
+      <div id="profile-member-cell"></div>
+      <button id="profile-email-btn"></button>
     </div>
   </div>
 
@@ -3457,29 +3450,30 @@ input[type="password"]::-ms-clear { display:none !important; }
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Full name</label>
             <input id="reg-name" type="text" placeholder="e.g. John David" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--paper);outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('reg-dob').focus()">
           </div>
-          <!-- Date of Birth -->
-          <div style="margin-bottom:14px;">
-            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Date of birth <span style="color:#b5451b;">*</span></label>
-            <input id="reg-dob" type="date" min="1900-01-01" max="2015-12-31" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')document.getElementById('reg-email').focus()">
-            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:4px;">You must be at least 16 years old to use this app.</div>
+          <!-- DOB + Country row -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+            <div>
+              <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">DOB <span style="color:#b5451b;">*</span></label>
+              <input id="reg-dob" type="date" min="1900-01-01" max="2015-12-31" style="width:100%;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--paper);outline:none;box-sizing:border-box;">
+            </div>
+            <div style="position:relative;">
+              <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Country <span style="color:#b5451b;">*</span></label>
+              <input type="text" id="reg-country-input" placeholder="Search..." autocomplete="off" oninput="_regFilterCountries(this.value)" onfocus="_regFilterCountries(this.value)" style="width:100%;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--paper);outline:none;box-sizing:border-box;">
+              <div id="reg-country-list" style="max-height:150px;overflow-y:auto;border:1.5px solid #3a3020;border-top:none;border-radius:0 0 4px 4px;display:none;background:#2a2018;position:absolute;width:100%;z-index:99;"></div>
+            </div>
           </div>
-          
-          <!-- Email -->
-          <div style="margin-bottom:20px;">
-            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Email address <span style="color:#b5451b;">*</span></label>
-            <input id="reg-email" type="email" placeholder="e.g. john@gmail.com" autocomplete="email"
-              style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.88rem;color:var(--paper);outline:none;box-sizing:border-box;"
-              oninput="_realtimeEmailCheck(this.value)" onkeydown="if(event.key==='Enter')showUsernameStep()">
-            <div id="reg-email-status" style="font-family:'DM Mono',monospace;font-size:0.65rem;margin-top:4px;min-height:16px;"></div>
-            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:2px;">Used for account recovery. Will be verified after registration.</div>
+          <!-- Email + Username row -->
+          <div style="display:grid;grid-template-columns:3fr 2fr;gap:10px;margin-bottom:14px;">
+            <div>
+              <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Email <span style="color:#b5451b;">*</span></label>
+              <input id="reg-email" type="email" placeholder="john@email.com" autocomplete="email" oninput="_realtimeEmailCheck(this.value)" style="width:100%;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--paper);outline:none;box-sizing:border-box;">
+              <div id="reg-email-status" style="font-family:'DM Mono',monospace;font-size:0.6rem;margin-top:3px;min-height:14px;"></div>
+            </div>
+            <div>
+              <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Username <span id="reg-uname-status"></span></label>
+              <input type="text" id="reg-username-input" maxlength="10" placeholder="e.g. john92" autocomplete="off" oninput="_regCheckUsername(this.value)" style="width:100%;padding:10px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--paper);outline:none;box-sizing:border-box;letter-spacing:1px;">
+            </div>
           </div>
-          <!-- Username -->
-          <div style="margin-bottom:14px;">
-            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Username <span id="reg-uname-status"></span></label>
-            <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#6b5e50;margin-bottom:5px;">4–10 characters, letters and numbers only</div>
-            <input type="text" id="reg-username-input" maxlength="10" placeholder="e.g. john92" autocomplete="off" oninput="_regCheckUsername(this.value)" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;letter-spacing:2px;">
-          </div>
-          <div id="reg-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
           <!-- T&C -->
           <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;">
             <input type="checkbox" id="reg-terms-check" style="width:18px;height:18px;cursor:pointer;accent-color:var(--gold);flex-shrink:0;">
@@ -11111,7 +11105,9 @@ function showUsernameStep() {
     showUnderageScreen();
     return;
   }
+  var country = (document.getElementById('reg-country-input')||{}).value.trim();
   if (!email || !email.includes('@')) { if(errEl) errEl.textContent='Please enter a valid email address'; return; }
+  if (!country) { if(errEl) errEl.textContent='Please select your country'; return; }
 
   if (_db) {
     if(errEl) { errEl.textContent = 'Checking...'; errEl.style.color = '#6b5e50'; }
@@ -11150,6 +11146,7 @@ function _proceedToUsernameStep(name, dob, dial, number, phone, errEl) {
   // Store pending data and go straight to PIN
   localStorage.setItem('_pending_reg_name',    name);
   localStorage.setItem('_pending_reg_dob',     dob);
+  localStorage.setItem('_pending_reg_country', (document.getElementById('reg-country-input')||{}).value.trim());
   localStorage.setItem('_pending_reg_email',   (document.getElementById('reg-email')||{}).value.trim().toLowerCase());
   localStorage.setItem('_pending_reg_username', username);
 
@@ -11158,6 +11155,17 @@ function _proceedToUsernameStep(name, dob, dial, number, phone, errEl) {
   showGooglePinSetup('__reg__', name, localStorage.getItem('_pending_reg_email') || '');
 }
 
+function _regFilterCountries(val) {
+  var list = document.getElementById('reg-country-list');
+  if (!list) return;
+  var q = val.trim().toLowerCase();
+  var matches = q ? _G_COUNTRIES.filter(function(c){ return c.toLowerCase().indexOf(q)===0; }).slice(0,8) : _G_COUNTRIES.slice(0,8);
+  if (!matches.length) { list.style.display='none'; return; }
+  list.style.display='block';
+  list.innerHTML = matches.map(function(c){
+    return '<div onclick="document.getElementById(\'reg-country-input\').value=\''+c+'\';document.getElementById(\'reg-country-list\').style.display=\'none\';" style="padding:9px 12px;font-family:DM Mono,monospace;font-size:0.82rem;color:var(--paper);cursor:pointer;border-bottom:1px solid #3a3020;" onmouseover="this.style.background=\'#3a3020\'" onmouseout="this.style.background=\'\'">'+c+'</div>';
+  }).join('');
+}
 var _regUsernameAvailable = false;
 var _regUsernameTimer = null;
 function _regCheckUsername(val) {
@@ -14838,12 +14846,11 @@ function _resumeSession(uid, name, phone) {
       sessionStorage.removeItem('run_update_flow');
       localStorage.removeItem(_privacyKey());
       privacyNeeded = true;
-    } else if (!isEstablishedUser && localStorage.getItem(_privacyKey()) !== PRIVACY_VER) {
-      privacyNeeded = true; // brand new user who hasn't signed yet
     }
+    // Never force privacy overlay on switch user or returning users
 
-    var tourNeeded    = !isEstablishedUser && localStorage.getItem(_tourKey()) !== '1';
-    var confirmNeeded = !isEstablishedUser && localStorage.getItem(PHONE_CONFIRM_KEY + '_' + (_userId || 'default')) !== '1';
+    var tourNeeded    = false; // tour disabled
+    var confirmNeeded = false; // phone confirm disabled
 
     if (!privacyNeeded && !tourNeeded && !confirmNeeded) return; // nothing to do
 
@@ -15587,7 +15594,7 @@ function gPinConfirm(uid, displayName, email) {
   var dob       = isRegFlow
     ? (localStorage.getItem('_pending_reg_dob') || '')
     : (localStorage.getItem('_g_dob') || '');
-  var country   = isRegFlow ? '' : (localStorage.getItem('_g_country') || '');
+  var country   = isRegFlow ? (localStorage.getItem('_pending_reg_country') || '') : (localStorage.getItem('_g_country') || '');
   var created   = Date.now();
   uid = finalUID;
   email = emailAddr;
@@ -15633,7 +15640,7 @@ function gPinConfirm(uid, displayName, email) {
     }).catch(function(e){ console.warn('registry write failed:', e.message); });
 
     // Clean up all pending keys
-    ['_g_full_name','_g_dob','_g_country','_g_username','_pending_email','_pending_google_uid','_pending_full_name','_firebase_uid','_pending_reg_name','_pending_reg_dob','_pending_reg_email','_pending_reg_username'].forEach(function(k){ localStorage.removeItem(k); });
+    ['_g_full_name','_g_dob','_g_country','_g_username','_pending_email','_pending_google_uid','_pending_full_name','_firebase_uid','_pending_reg_name','_pending_reg_dob','_pending_reg_country','_pending_reg_email','_pending_reg_username'].forEach(function(k){ localStorage.removeItem(k); });
 
     _resumeSession(uid, finalName, '');
     showToast('Welcome, ' + finalName + '! 🎉');
@@ -16729,8 +16736,8 @@ function logOut() {
   var dotsEl = document.getElementById('fv-pin-dots');
   if (dotsEl) dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
   showPinScreen();
-  // Show PIN pad only — hide all other steps to prevent cascade
-  ['pin-step-register','pin-step-code','pin-step-full-verify'].forEach(function(id){
+  // Hide all steps including dynamically created Google flow steps
+  ['pin-step-register','pin-step-code','pin-step-full-verify','pin-step-google-setup','pin-step-google-profile','pin-step-google-username'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.style.display = 'none';
   });
   showPinPadStep();
@@ -16765,12 +16772,7 @@ function switchUser() {
   // Unfreeze in case update flow was active
   _unfreezeApp();
   showPinScreen();
-  // Show full verify so switching user must identify themselves
-  var pinO = document.getElementById('pin-overlay');
-  if (pinO) { pinO.style.display = 'flex'; }
-  document.querySelectorAll('#pin-overlay [id^="pin-step-"]').forEach(function(s){ s.style.display='none'; });
-  var fvEl = document.getElementById('pin-step-full-verify');
-  if (fvEl) fvEl.style.display = 'block';
+  showRegisterStep();
   syncSetStatus('off');
   updateHeaderContext();
 }
@@ -19692,12 +19694,21 @@ function confirmDeleteAccount() {
       setP(70, 'Removing from registry...');
       var regDeletions = [];
       if (_db) {
-        // Delete by phone hash (direct doc — always works, no rules issue)
-        if (phone) {
-          regDeletions.push(_db.collection('user_registry').doc(phone).delete().catch(function(){}));
+        // Delete registry by email (new flow — keyed by email)
+        var delEmail = localStorage.getItem('expense_user_email_' + uid) || localStorage.getItem('_pending_email') || '';
+        if (delEmail) {
+          regDeletions.push(_db.collection('user_registry').doc(delEmail).delete().catch(function(){}));
         }
-        // Delete main user document
+        // Delete registry by user_id field (catches any other registry entries)
         if (uid) {
+          regDeletions.push(
+            _db.collection('user_registry').where('user_id','==',uid).get().then(function(snap){
+              snap.forEach(function(doc){ doc.ref.delete().catch(function(){}); });
+            }).catch(function(){})
+          );
+          // Delete profile doc explicitly
+          regDeletions.push(_db.collection('users').doc(uid).collection('settings').doc('profile').delete().catch(function(){}));
+          // Delete main user document
           regDeletions.push(_db.collection('users').doc(uid).delete().catch(function(){}));
         }
       }
