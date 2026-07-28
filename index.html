@@ -3460,25 +3460,10 @@ input[type="password"]::-ms-clear { display:none !important; }
           <!-- Date of Birth -->
           <div style="margin-bottom:14px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Date of birth <span style="color:#b5451b;">*</span></label>
-            <input id="reg-dob" type="date" min="1900-01-01" max="2015-12-31" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')document.getElementById('reg-phone-number').focus()">
+            <input id="reg-dob" type="date" min="1900-01-01" max="2015-12-31" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')document.getElementById('reg-email').focus()">
             <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:4px;">You must be at least 16 years old to use this app.</div>
           </div>
-          <!-- Phone with country code -->
-          <div style="margin-bottom:20px;">
-            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Phone number <span style="color:#b5451b;">*</span></label>
-            <div style="display:flex;gap:6px;box-sizing:border-box;width:100%;">
-              <div style="position:relative;width:105px;min-width:105px;max-width:105px;flex-shrink:0;">
-                <input id="reg-country-code-input" type="text" placeholder="+234" autocomplete="off"
-                  style="width:100%;padding:12px 4px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--paper);outline:none;box-sizing:border-box;cursor:pointer;"
-                  oninput="_filterCountryDrop('reg',this.value)" onfocus="_openCountryDrop('reg')" onblur="_closeCountryDropDelay('reg')">
-                <input id="reg-country-code" type="hidden" value="+234">
-                <div id="reg-country-drop" style="display:none;position:absolute;top:100%;left:0;width:220px;max-height:200px;overflow-y:auto;background:#1a1410;border:1.5px solid #c8962e;border-radius:4px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.5);margin-top:2px;"></div>
-              </div>
-              <input id="reg-phone-number" type="tel" placeholder="e.g. 8012345678" style="flex:1;min-width:0;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')showUsernameStep()" onblur="_realtimePhoneCheck()">
-              <div id="reg-phone-status" style="font-family:'DM Mono',monospace;font-size:0.65rem;margin-top:4px;min-height:16px;"></div>
-            </div>
-            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:4px;">Select your country code then enter your number.</div>
-          </div>
+          
           <!-- Email -->
           <div style="margin-bottom:20px;">
             <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Email address <span style="color:#b5451b;">*</span></label>
@@ -3487,6 +3472,12 @@ input[type="password"]::-ms-clear { display:none !important; }
               oninput="_realtimeEmailCheck(this.value)" onkeydown="if(event.key==='Enter')showUsernameStep()">
             <div id="reg-email-status" style="font-family:'DM Mono',monospace;font-size:0.65rem;margin-top:4px;min-height:16px;"></div>
             <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#6b5e50;margin-top:2px;">Used for account recovery. Will be verified after registration.</div>
+          </div>
+          <!-- Username -->
+          <div style="margin-bottom:14px;">
+            <label style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Username <span id="reg-uname-status"></span></label>
+            <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#6b5e50;margin-bottom:5px;">4–10 characters, letters and numbers only</div>
+            <input type="text" id="reg-username-input" maxlength="10" placeholder="e.g. john92" autocomplete="off" oninput="_regCheckUsername(this.value)" style="width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--paper);outline:none;box-sizing:border-box;letter-spacing:2px;">
           </div>
           <div id="reg-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-bottom:12px;min-height:18px;"></div>
           <!-- T&C -->
@@ -3515,14 +3506,29 @@ input[type="password"]::-ms-clear { display:none !important; }
       </div>
     </div>
 
-    <!-- Step 2: Show generated code -->
+    <!-- Step 2: PIN setup -->
     <div id="pin-step-code" style="display:none;">
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:left;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">Your access code</div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Write this down or screenshot it — you'll need it to sign in.</div>
-        <div id="generated-code-display" style="font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:900;color:var(--gold2);letter-spacing:12px;text-align:center;padding:20px;background:#1a1410;border-radius:6px;margin-bottom:8px;"></div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;text-align:center;margin-bottom:20px;">You can change this to a PIN you prefer later in Manage settings.</div>
-        <button onclick="confirmCode()" style="width:100%;padding:14px;background:var(--sage);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:white;font-weight:700;cursor:pointer;">I've saved it — Enter the app</button>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(200,150,46,0.2);border-radius:8px;padding:28px;text-align:center;">
+        <div id="reg-pin-stage-label" style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">Choose a PIN to secure your account</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#6b5e50;margin-bottom:20px;">Minimum 4 digits</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 10px;">
+          <button onclick="regPinPress('1')" class="pin-pad-btn">1</button>
+          <button onclick="regPinPress('2')" class="pin-pad-btn">2</button>
+          <button onclick="regPinPress('3')" class="pin-pad-btn">3</button>
+          <button onclick="regPinPress('4')" class="pin-pad-btn">4</button>
+          <button onclick="regPinPress('5')" class="pin-pad-btn">5</button>
+          <button onclick="regPinPress('6')" class="pin-pad-btn">6</button>
+          <button onclick="regPinPress('7')" class="pin-pad-btn">7</button>
+          <button onclick="regPinPress('8')" class="pin-pad-btn">8</button>
+          <button onclick="regPinPress('9')" class="pin-pad-btn">9</button>
+          <button onclick="regPinClear()" class="pin-pad-btn" style="font-size:0.65rem;color:#6b5e50;">CLR</button>
+          <button onclick="regPinPress('0')" class="pin-pad-btn">0</button>
+          <button onclick="regPinDelete()" class="pin-pad-btn" style="font-size:1.1rem;">⌫</button>
+        </div>
+        <div id="reg-pin-dots" style="display:flex;justify-content:center;gap:10px;margin-bottom:16px;min-height:18px;"></div>
+        <button onclick="regPinConfirm()" style="width:100%;max-width:240px;padding:13px;background:var(--gold);border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.88rem;font-weight:900;color:var(--ink);cursor:pointer;letter-spacing:3px;">✓ CONFIRM</button>
+        <div id="reg-pin-error" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#b5451b;margin-top:10px;min-height:18px;"></div>
+        <button onclick="document.getElementById('pin-step-code').style.display='none'; document.getElementById('reg-step-name').style.display='block';" style="width:100%;padding:10px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:#6b5e50;cursor:pointer;margin-top:8px;">&#8592; Back</button>
       </div>
       </div><!-- end reg-form-screen -->
     </div>
@@ -11092,59 +11098,38 @@ function generateUsernameOptions(fullName) {
 }
 
 function showUsernameStep() {
-  var name   = (document.getElementById('reg-name')  ||{}).value.trim();
-  var dob    = (document.getElementById('reg-dob')   ||{}).value;
-  var dial   = (document.getElementById('reg-country-code') ||{}).value || (document.getElementById('reg-country-code-input')||{}).value || '';
-  var number = (document.getElementById('reg-phone-number') ||{}).value.trim();
-  var phone  = dial + number;
-  var errEl  = document.getElementById('reg-error');
+  var name  = (document.getElementById('reg-name') ||{}).value.trim();
+  var dob   = (document.getElementById('reg-dob')  ||{}).value;
+  var email = (document.getElementById('reg-email')||{}).value.trim().toLowerCase();
+  var errEl = document.getElementById('reg-error');
 
   if (!name)  { if(errEl) errEl.textContent='Please enter your full name'; return; }
-
-  // Age check
-  if (!dob) { if(errEl) errEl.textContent='Please enter your date of birth'; return; }
+  if (!dob)   { if(errEl) errEl.textContent='Please enter your date of birth'; return; }
   if (_isUnderage(dob)) {
     if(errEl) errEl.textContent = '';
-    // Hide register form and show underage screen
     document.getElementById('pin-step-register').style.display = 'none';
     showUnderageScreen();
     return;
   }
+  if (!email || !email.includes('@')) { if(errEl) errEl.textContent='Please enter a valid email address'; return; }
 
-  // Phone check
-  if (!number || number.replace(/\D/g,'').length < 5) {
-    if(errEl) errEl.textContent='Please enter a valid phone number'; return;
-  }
-
-  // Duplicate phone check — check Firebase registry
-  var fullPhone = dial + number;
   if (_db) {
-    if(errEl) errEl.textContent = 'Checking...';
-    _db.collection('user_registry').doc(fullPhone).get().then(function(doc) {
+    if(errEl) { errEl.textContent = 'Checking...'; errEl.style.color = '#6b5e50'; }
+    // Silently check if email already registered
+    _db.collection('user_registry').doc(email).get().then(function(doc) {
       if (doc.exists) {
-        if(errEl) { errEl.textContent = '⚠ This phone number is already registered. Please sign in instead.'; errEl.style.color='#b5451b'; }
+        if(errEl) { errEl.textContent = '⚠ This email is already registered. Please sign in instead.'; errEl.style.color='#b5451b'; }
         return;
       }
-      // Check similar names — warn but don't block
-      _db.collection('user_registry').where('name','==',name).get().then(function(snap){
-        if(errEl) errEl.textContent = '';
-        if (!snap.empty) {
-          // Warn user but allow to proceed
-          if(errEl) { errEl.textContent = '⚠ A similar name already exists. Make sure this is your account.'; errEl.style.color='#c8962e'; }
-        }
-        _proceedToUsernameStep(name, dob, dial, number, phone, errEl);
-      }).catch(function() {
-        _proceedToUsernameStep(name, dob, dial, number, phone, errEl);
-      });
+      if(errEl) errEl.textContent = '';
+      _proceedToUsernameStep(name, dob, '', '', email, errEl);
     }).catch(function() {
       // Offline — proceed without check
-      _proceedToUsernameStep(name, dob, dial, number, phone, errEl);
+      _proceedToUsernameStep(name, dob, '', '', email, errEl);
     });
-    return; // async — don't fall through
+    return;
   }
-
-  // If not checking Firebase, proceed directly
-  _proceedToUsernameStep(name, dob, dial, number, phone, errEl);
+  _proceedToUsernameStep(name, dob, '', '', email, errEl);
 }
 
 function _proceedToUsernameStep(name, dob, dial, number, phone, errEl) {
@@ -11153,41 +11138,56 @@ function _proceedToUsernameStep(name, dob, dial, number, phone, errEl) {
   var tcAccepted = localStorage.getItem(_privacyKey()) === PRIVACY_VER
     || sessionStorage.getItem('tc_signed_this_session') === '1'
     || (regTc && regTc.checked);
-  if (_tcRequired() && !tcAccepted) {
-    if(errEl) errEl.textContent='Please read and accept the Terms & Conditions first';
-    _showPrivacyOverlay();
-    return;
-  }
+  // T&C handled by checkbox — no forced overlay
   if(errEl) errEl.textContent = '';
 
-  // Generate 3 suggestions
-  var suggestions = generateUsernameOptions(name);
-  var sugDiv = document.getElementById('reg-username-suggestions');
-  sugDiv.innerHTML = '';
-  suggestions.forEach(function(s) {
-    var btn = document.createElement('button');
-    btn.style.cssText = 'width:100%;padding:12px;background:#2a2018;border:1.5px solid #3a3020;border-radius:4px;font-family:DM Mono,monospace;font-size:0.9rem;color:var(--gold2);cursor:pointer;letter-spacing:3px;text-align:center;transition:border-color 0.2s;';
-    btn.textContent = s;
-    btn.addEventListener('click', function() {
-      _selectedUsername = s;
-      // Highlight selected
-      sugDiv.querySelectorAll('button').forEach(function(b){ b.style.borderColor='#3a3020'; b.style.background='#2a2018'; });
-      btn.style.borderColor = 'var(--gold)';
-      btn.style.background = 'rgba(200,150,46,0.15)';
-      var selDiv = document.getElementById('reg-selected-username');
-      selDiv.textContent = '✓ ' + s;
-      selDiv.style.display = 'block';
-    });
-    sugDiv.appendChild(btn);
-  });
+  // Get username from the form field
+  var username = (document.getElementById('reg-username-input')||{}).value.trim().toLowerCase();
+  if (username.length < 4) { if(errEl) errEl.textContent = 'Please enter a username (min 4 characters)'; return; }
+  if (!_regUsernameAvailable) { if(errEl) errEl.textContent = 'Please wait for username check or try a different one'; return; }
+  _selectedUsername = username;
 
-  _selectedUsername = suggestions[0]; // default first
-  sugDiv.querySelectorAll('button')[0].click();
+  // Store pending data and go straight to PIN
+  localStorage.setItem('_pending_reg_name',    name);
+  localStorage.setItem('_pending_reg_dob',     dob);
+  localStorage.setItem('_pending_reg_email',   (document.getElementById('reg-email')||{}).value.trim().toLowerCase());
+  localStorage.setItem('_pending_reg_username', username);
 
   document.getElementById('reg-step-name').style.display = 'none';
-  document.getElementById('reg-step-username').style.display = 'block';
+  // Reuse Google PIN setup — pass a temp uid placeholder, final uid generated on confirm
+  showGooglePinSetup('__reg__', name, localStorage.getItem('_pending_reg_email') || '');
 }
 
+var _regUsernameAvailable = false;
+var _regUsernameTimer = null;
+function _regCheckUsername(val) {
+  val = val.toLowerCase().replace(/[^a-z0-9]/g, '');
+  var inp = document.getElementById('reg-username-input');
+  if (inp) inp.value = val;
+  var status = document.getElementById('reg-uname-status');
+  _regUsernameAvailable = false;
+  if (val.length < 4) { if (status) status.textContent = ''; return; }
+  if (status) status.innerHTML = '<span style="color:#6b5e50;">checking...</span>';
+  clearTimeout(_regUsernameTimer);
+  _regUsernameTimer = setTimeout(function() {
+    getDB(function(db) {
+      db.collection('user_registry').where('username', '==', val).get().then(function(snap) {
+        if (!snap.empty) {
+          if (status) status.innerHTML = '<span style="color:#b5451b;">✗ taken</span>';
+          _regUsernameAvailable = false;
+        } else {
+          if (status) status.innerHTML = '<span style="color:#4a7c59;">✓ available</span>';
+          _selectedUsername = val;
+          _regUsernameAvailable = true;
+        }
+      }).catch(function() {
+        _selectedUsername = val;
+        _regUsernameAvailable = true;
+        if (status) status.innerHTML = '<span style="color:#6b5e50;">✓</span>';
+      });
+    });
+  }, 600);
+}
 function validateCustomUsername(inp) {
   var val = inp.value.toLowerCase().replace(/[^a-z0-9]/g,'');
   inp.value = val;
@@ -15572,12 +15572,25 @@ function gPinConfirm(uid, displayName, email) {
   }
 
   // ── PINs match — commit everything to localStorage and Firestore ──
-  var pinHash    = hashPin(_gPin);
-  var finalName  = localStorage.getItem('_g_username')  || _selectedUsername || displayName;
-  var fullName   = localStorage.getItem('_g_full_name') || displayName;
-  var dob        = localStorage.getItem('_g_dob')       || '';
-  var country    = localStorage.getItem('_g_country')   || '';
-  var created    = Date.now();
+  var pinHash   = hashPin(_gPin);
+  var isRegFlow = (uid === '__reg__');
+  var finalUID  = isRegFlow ? generateUUID() : uid;
+  var finalName = isRegFlow
+    ? (localStorage.getItem('_pending_reg_username') || _selectedUsername || displayName)
+    : (localStorage.getItem('_g_username') || _selectedUsername || displayName);
+  var fullName  = isRegFlow
+    ? (localStorage.getItem('_pending_reg_name') || displayName)
+    : (localStorage.getItem('_g_full_name') || displayName);
+  var emailAddr = isRegFlow
+    ? (localStorage.getItem('_pending_reg_email') || email)
+    : email;
+  var dob       = isRegFlow
+    ? (localStorage.getItem('_pending_reg_dob') || '')
+    : (localStorage.getItem('_g_dob') || '');
+  var country   = isRegFlow ? '' : (localStorage.getItem('_g_country') || '');
+  var created   = Date.now();
+  uid = finalUID;
+  email = emailAddr;
 
   // localStorage
   localStorage.setItem(UID_KEY,                          uid);
@@ -15585,7 +15598,7 @@ function gPinConfirm(uid, displayName, email) {
   localStorage.setItem(FULL_NAME_KEY,                    fullName);
   localStorage.setItem('expense_pin_hash_local',         pinHash);
   localStorage.setItem('expense_joined_' + uid,          String(created));
-  localStorage.setItem('expense_user_email_' + uid,      email);
+  localStorage.setItem('expense_user_email_' + uid,      emailAddr);
   localStorage.setItem('expense_user_dob_' + uid,        dob);
   localStorage.setItem('expense_user_country_' + uid,    country);
   if (dob) localStorage.setItem('expense_user_dob_default', dob);
@@ -15601,26 +15614,26 @@ function gPinConfirm(uid, displayName, email) {
     db.collection('users').doc(uid).collection('settings').doc('profile').set({
       username:   finalName,
       full_name:  fullName,
-      email:      email,
+      email:      emailAddr,
       pin_hash:   pinHash,
       dob:        dob,
       country:    country,
       created:    created
     }).catch(function(e){ console.warn('profile write failed:', e.message); });
 
-    // Firestore — user_registry (keyed by email for switch user lookup)
-    db.collection('user_registry').doc(email).set({
+    // Firestore — user_registry (keyed by email)
+    db.collection('user_registry').doc(emailAddr).set({
       user_id:    uid,
       username:   finalName,
       full_name:  fullName,
       name:       finalName,
-      email:      email,
+      email:      emailAddr,
       pin_hash:   pinHash,
       created:    created
     }).catch(function(e){ console.warn('registry write failed:', e.message); });
 
-    // Clean up pending keys
-    ['_g_full_name','_g_dob','_g_country','_g_username','_pending_email','_pending_google_uid','_pending_full_name','_firebase_uid'].forEach(function(k){ localStorage.removeItem(k); });
+    // Clean up all pending keys
+    ['_g_full_name','_g_dob','_g_country','_g_username','_pending_email','_pending_google_uid','_pending_full_name','_firebase_uid','_pending_reg_name','_pending_reg_dob','_pending_reg_email','_pending_reg_username'].forEach(function(k){ localStorage.removeItem(k); });
 
     _resumeSession(uid, finalName, '');
     showToast('Welcome, ' + finalName + '! 🎉');
