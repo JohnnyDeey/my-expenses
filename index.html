@@ -9800,18 +9800,26 @@ function closeRadialMenu() {
   _radialOpen = false;
 }
 
-// Prevent context menu always inside the app
+// Prevent context menu except on text content
 document.addEventListener('contextmenu', function(e) {
-  if(document.body.classList.contains('app-ready')) e.preventDefault();
+  if(!document.body.classList.contains('app-ready')) return;
+  var tag = e.target.tagName;
+  var isText = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'A';
+  var isTextNode = e.target.closest('p, td, .ledger-row, .entry-amount, .entry-desc, span');
+  if(isText || isTextNode) return; // allow native copy menu on text
+  e.preventDefault();
 });
 
 // Long press detection
 document.addEventListener('touchstart', function(e) {
   if(_radialOpen) return;
   if(!document.body.classList.contains('app-ready')) return;
-  // Don't trigger when app is locked (pin overlay visible)
   var pinO = document.getElementById('pin-overlay');
   if(pinO && pinO.style.display !== 'none') return;
+  // Don't trigger on text content — allow native copy/select
+  var tag = e.target.tagName;
+  if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'A') return;
+  if(e.target.closest('p, td, .ledger-row, .entry-amount, .entry-desc, span')) return;
   var tag = e.target.tagName;
   if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if(e.target.isContentEditable) return;
