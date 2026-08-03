@@ -9601,8 +9601,8 @@ function tryBiometricLogin(onSuccess) {
     var name  = localStorage.getItem('expense_user_name');
     var phone = localStorage.getItem('expense_user_phone');
     if(uid && name) {
-      _resumeSession(uid, name, phone);
-      showToast('Welcome back!');
+      _resumeSession(uid, name, phone || '');
+      showToast('Welcome back, ' + name + '!');
     } else if(onSuccess) {
       onSuccess();
     }
@@ -14848,8 +14848,7 @@ function _resumeSession(uid, name, phone) {
     // and run_security_check_once — NOT by this sequence.
     var isEstablishedUser = !!(
       localStorage.getItem(UID_KEY) &&
-      localStorage.getItem(NAME_KEY) &&
-      localStorage.getItem(PHONE_CONFIRM_KEY + '_' + (_userId || localStorage.getItem(UID_KEY) || 'default')) === '1'
+      localStorage.getItem(NAME_KEY)
     );
 
     // Privacy: only if PRIVACY_VER bumped (run_update_flow set manually in code)
@@ -15697,12 +15696,11 @@ function signInWithGoogle() {
       // Check Firestore for existing account
       db.collection('users').doc(uid).collection('settings').doc('profile').get().then(function(doc) {
         if (doc.exists && doc.data().pin_hash) {
-          // ── Returning user ──
+          // ── Returning user — restore localStorage then show PIN pad ──
           var storedName    = doc.data().username   || doc.data().full_name || googleName;
           var storedEmail   = doc.data().email      || email;
           var storedDob     = doc.data().dob        || '';
           var storedCountry = doc.data().country    || '';
-          // Restore localStorage from Firestore
           localStorage.setItem(UID_KEY,                       uid);
           localStorage.setItem(NAME_KEY,                      storedName);
           localStorage.setItem(FULL_NAME_KEY,                 doc.data().full_name || storedName);
@@ -15714,9 +15712,11 @@ function signInWithGoogle() {
             localStorage.setItem('expense_joined_' + uid, String(doc.data().created || Date.now()));
           }
           if (typeof _privacyKey === 'function') localStorage.setItem(_privacyKey(), PRIVACY_VER);
-          recordFullVerify();
-          _resumeSession(uid, storedName, '');
-          showToast('Welcome back, ' + storedName + '!');
+          // Show PIN pad — don't auto-login
+          var pinO = document.getElementById('pin-overlay');
+          if (pinO) pinO.style.display = 'flex';
+          showToast('Account found — enter your PIN to continue');
+          setTimeout(showPinPadStep, 1500);
 
         } else {
           // ── New user or incomplete registration — start full flow ──
