@@ -14422,6 +14422,19 @@ function submitPinLogin() {
   _loginAttempts = 0;
   _pinBuffer = '';
   updatePinDots();
+  // Silently restore or create Firebase Auth session for manual users
+  if (_auth && !_auth.currentUser) {
+    var _authEmail = localStorage.getItem('expense_user_email_' + uid);
+    var _authHash  = savedHash;
+    if (_authEmail && _authHash) {
+      _auth.signInWithEmailAndPassword(_authEmail, _authHash).catch(function(e) {
+        if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+          // Create Firebase Auth account silently for existing manual users
+          _auth.createUserWithEmailAndPassword(_authEmail, _authHash).catch(function(){});
+        }
+      });
+    }
+  }
   // T&C already saved via acceptPrivacy() — nothing extra needed here
   // Set globals from localStorage
   _userId    = uid;
@@ -15676,6 +15689,18 @@ function gPinConfirm(uid, displayName, email) {
 
     // Clean up all pending keys
     ['_g_full_name','_g_dob','_g_country','_g_username','_pending_email','_pending_google_uid','_pending_full_name','_firebase_uid','_pending_reg_name','_pending_reg_dob','_pending_reg_country','_pending_reg_email','_pending_reg_username'].forEach(function(k){ localStorage.removeItem(k); });
+
+    // Silently create Firebase Auth account for manual register users
+    if (isRegFlow && _auth && emailAddr) {
+      _auth.createUserWithEmailAndPassword(emailAddr, pinHash).then(function() {
+        console.log('Firebase Auth account created for manual user');
+      }).catch(function(e) {
+        // Account may already exist — try signing in instead
+        if (e.code === 'auth/email-already-in-use') {
+          _auth.signInWithEmailAndPassword(emailAddr, pinHash).catch(function(){});
+        }
+      });
+    }
 
     _resumeSession(uid, finalName, '');
     showToast('Welcome, ' + finalName + '! 🎉');
