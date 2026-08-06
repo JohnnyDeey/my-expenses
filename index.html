@@ -100,7 +100,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.5.1')) {
+          if (!key.startsWith('mel-v2.5.2')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -464,6 +464,12 @@ function getDB(callback) {
     _db = firebase.firestore();
     _auth = firebase.auth();
     _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
+    // Re-trigger sync when Firebase Auth session restores
+    _auth.onAuthStateChanged(function(user) {
+      if (user && _userId && !_syncUnsubscribe) {
+        if (typeof syncStartListener === 'function') syncStartListener();
+      }
+    });
     callback(_db);
   });
 }
@@ -14401,6 +14407,26 @@ function submitPinLogin() {
     showRegisterStep();
     return;
   }
+  // Verify account still exists in Firestore before granting access
+  if (hashPin(_pinBuffer) === savedHash) {
+    getDB(function(db) {
+      db.collection('users').doc(uid).collection('settings').doc('profile').get().then(function(doc) {
+        if (!doc.exists) {
+          // Account deleted — wipe everything and force signup
+          localStorage.clear();
+          sessionStorage.clear();
+          showToast('This account no longer exists. Please sign up again.');
+          showRegisterStep();
+          return;
+        }
+        _continueAfterPinLogin(uid, name, phone, savedHash);
+      }).catch(function() {
+        // Offline — trust local PIN
+        _continueAfterPinLogin(uid, name, phone, savedHash);
+      });
+    });
+    return;
+  }
   if (hashPin(_pinBuffer) !== savedHash) {
     _loginAttempts++;
     var er = document.getElementById('login-error');
@@ -14419,7 +14445,9 @@ function submitPinLogin() {
     setTimeout(updatePinDots, 350);
     return;
   }
-  // Correct PIN — set globals and enter app
+  // Correct PIN — set globals and enter app (called after Firestore check)
+}
+function _continueAfterPinLogin(uid, name, phone, savedHash) {
   _loginAttempts = 0;
   _pinBuffer = '';
   updatePinDots();
@@ -15031,8 +15059,7 @@ function _syncInitRun() {
 function startSync() {
   syncSetStatus('connecting');
   getDB(function() {
-    if (_userPhone && _userId) {
-      // Load data and start listeners — skip re-validation to prevent showPinScreen() race
+    if (_userId) {
       syncLoadFromFirebase(function() {
         renderSyncSetupUI();
         syncStartListener();
