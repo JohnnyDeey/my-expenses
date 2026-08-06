@@ -100,7 +100,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.4.1')) {
+          if (!key.startsWith('mel-v2.5.1')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -463,6 +463,7 @@ function getDB(callback) {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     _db = firebase.firestore();
     _auth = firebase.auth();
+    _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
     callback(_db);
   });
 }
