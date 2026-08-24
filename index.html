@@ -100,7 +100,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.5.2')) {
+          if (!key.startsWith('mel-v%%APP_VERSION%%')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -157,7 +157,7 @@ function _showUpdateBanner(newVer) {
   if (document.getElementById('update-banner')) return; // already showing
   var banner = document.createElement('div');
   banner.id = 'update-banner';
-  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a3a28;border-bottom:2px solid var(--gold);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,0.4);';
+  banner.style.cssText = 'position:fixed;bottom:80px;left:16px;right:16px;z-index:999999;background:#1a3a28;border:2px solid var(--gold);border-radius:12px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
   banner.innerHTML =
     '<div style="display:flex;align-items:center;gap:8px;">' +
       '<span style="font-size:1rem;">✨</span>' +
@@ -167,7 +167,7 @@ function _showUpdateBanner(newVer) {
       '<button onclick="_applyUpdate()" style="background:var(--gold);border:none;border-radius:4px;padding:6px 14px;font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--ink);cursor:pointer;">Update now</button>' +
       '<button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#8dd4a8;cursor:pointer;font-size:1rem;padding:4px;">✕</button>' +
     '</div>';
-  document.body.prepend(banner);
+  document.body.appendChild(banner);
 }
 
 function _applyUpdate() {
@@ -2667,7 +2667,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- -- App Version & Copyright -- -->
   <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;" id="app-version-display">Version 2.4.1</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;" id="app-version-display">Version %%APP_VERSION%%</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
   </div>
@@ -3136,7 +3136,7 @@ input[type="password"]::-ms-clear { display:none !important; }
   <!-- -- App Version & Copyright -- -->
   <div style="margin-top:24px;padding:16px;text-align:center;border-top:1px solid var(--border);">
     <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">MY EXPENSE LEDGER</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;" id="app-version-display">Version 2.4.1</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--gold);letter-spacing:2px;margin-bottom:4px;" id="app-version-display">Version %%APP_VERSION%%</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);">© 2026 John-de-Scholar. All rights reserved.</div>
     <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;opacity:0.6;">Built with ❤️ for financial literacy</div>
   </div>
@@ -9557,6 +9557,27 @@ function toggleFingerprint() {
     initFingerprintCard();
   } else {
     // Register biometric
+    if(window.Capacitor && window.Capacitor.isNativePlatform()) {
+      // Use Capacitor biometric plugin
+      const { BiometricAuthNative } = Capacitor.Plugins;
+      if(!BiometricAuthNative) { showToast('Biometric plugin not available'); return; }
+      BiometricAuthNative.checkBiometry().then(function(result) {
+        if(!result.isAvailable) { showToast('Biometric not available: ' + result.reason); return; }
+        BiometricAuthNative.internalAuthenticate({
+          reason: 'Verify your identity to enable biometric login',
+          cancelTitle: 'Cancel',
+          allowDeviceCredential: false
+        }).then(function() {
+          localStorage.setItem(FP_KEY, '1');
+          showToast('✅ Biometric login enabled');
+          initFingerprintCard();
+        }).catch(function(e) {
+          showToast('Biometric setup failed: ' + e.message);
+        });
+      });
+      return;
+    }
+    // PWA fallback — WebAuthn
     if(!window.PublicKeyCredential){ showToast('Not supported on this device'); return; }
     var challenge = new Uint8Array(32);
     crypto.getRandomValues(challenge);
@@ -9582,12 +9603,45 @@ function toggleFingerprint() {
 
 function tryBiometricLogin(onSuccess) {
   if(localStorage.getItem(FP_KEY) !== '1') {
-    // FP not enabled — show toast and highlight PIN pad
     showToast('Enter your PIN first — then enable fingerprint in Manage settings');
-    // Set flag to open manage/biometric after login
     sessionStorage.setItem('_goto_biometric', '1');
     return false;
   }
+
+  function doSuccess() {
+    var uid   = localStorage.getItem('expense_user_uid');
+    var name  = localStorage.getItem('expense_user_name');
+    var phone = localStorage.getItem('expense_user_phone');
+    if(uid && name) {
+      _resumeSession(uid, name, phone || '');
+      showToast('Welcome back, ' + name + '!');
+    } else if(onSuccess) {
+      onSuccess();
+    }
+  }
+
+  function doFail() {
+    var o = document.getElementById('_bio_overlay');
+    if(o) o.remove();
+    var ps = document.getElementById('pin-overlay');
+    if(ps) ps.style.visibility = 'visible';
+    showToast('Biometric failed — use PIN instead');
+  }
+
+  // Use Capacitor biometric plugin if available
+  if(window.Capacitor && window.Capacitor.isNativePlatform()) {
+          const { BiometricAuthNative } = Capacitor.Plugins;
+      if(BiometricAuthNative) {
+                BiometricAuthNative.internalAuthenticate({
+          reason: 'Sign in to My Expense Ledger',
+        cancelTitle: 'Use PIN instead',
+        allowDeviceCredential: false
+      }).then(doSuccess).catch(doFail);
+      return true;
+    }
+  }
+
+  // Fallback to WebAuthn for PWA
   if(!window.PublicKeyCredential) {
     showToast('Biometric not supported on this device');
     return false;
@@ -9602,24 +9656,7 @@ function tryBiometricLogin(onSuccess) {
   }
   navigator.credentials.get({
     publicKey: { challenge: challenge, userVerification: 'required', timeout: 60000, allowCredentials: allowCreds }
-  }).then(function(){
-    // Resume session with stored credentials
-    var uid   = localStorage.getItem('expense_user_uid');
-    var name  = localStorage.getItem('expense_user_name');
-    var phone = localStorage.getItem('expense_user_phone');
-    if(uid && name) {
-      _resumeSession(uid, name, phone || '');
-      showToast('Welcome back, ' + name + '!');
-    } else if(onSuccess) {
-      onSuccess();
-    }
-  }).catch(function(){
-    var o = document.getElementById('_bio_overlay');
-    if(o) o.remove();
-    var ps = document.getElementById('pin-overlay');
-    if(ps) ps.style.visibility = 'visible';
-    showToast('Biometric failed — use PIN instead');
-  });
+  }).then(doSuccess).catch(doFail);
   return true;
 }
 
@@ -9994,7 +10031,7 @@ function populateFilters(){
 // ================================
 //  INACTIVITY AUTO-LOCK — silent, timestamp-based
 // ================================
-var INACTIVE_MS      = 10 * 60 * 1000; // 10 minutes — silent lock, no countdown
+var INACTIVE_MS      = 5 * 60 * 1000; // 5 minutes — silent lock, no countdown
 var _inactivityTimer = null; // unused but kept for compatibility
 
 function lockApp() {
@@ -15350,6 +15387,15 @@ function showPinScreen() {
     setTimeout(function(){ o.scrollTop = 0; }, 50);
     setTimeout(function(){ o.scrollTop = 0; }, 200);
   }
+  // Auto-trigger biometric — only if enabled and not manual logout
+  if (localStorage.getItem(FP_KEY) === '1' && 
+      window.Capacitor && window.Capacitor.isNativePlatform() && 
+      sessionStorage.getItem('manual_logout') !== '1') {
+    setTimeout(function() { 
+      tryBiometricLogin(function(){ closePinScreen(); }); 
+    }, 800);
+  }
+  sessionStorage.removeItem('manual_logout');
 }
 
 // ── Prompt existing users to add email on next login ─────────────────────
@@ -15769,7 +15815,13 @@ function signInWithGoogle() {
           var pinO = document.getElementById('pin-overlay');
           if (pinO) pinO.style.display = 'flex';
           showToast('Account found — enter your PIN to continue');
-          setTimeout(showPinPadStep, 1500);
+          setTimeout(function() {
+            showPinPadStep();
+            // Auto-trigger biometric if enabled
+            if(localStorage.getItem(FP_KEY) === '1' && window.Capacitor && window.Capacitor.isNativePlatform()) {
+              setTimeout(function() { tryBiometricLogin(function(){ closePinScreen(); }); }, 500);
+            }
+          }, 1500);
 
         } else {
           // ── New user or incomplete registration — start full flow ──
@@ -16785,6 +16837,7 @@ function logOut() {
   var fvE = document.getElementById('fv-error');    if(fvE) fvE.textContent = '';
   var dotsEl = document.getElementById('fv-pin-dots');
   if (dotsEl) dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
+  sessionStorage.setItem('manual_logout', '1'); // Flag to skip biometric auto-trigger
   showPinScreen();
   // Hide all steps including dynamically created Google flow steps
   ['pin-step-register','pin-step-code','pin-step-full-verify','pin-step-google-setup','pin-step-google-profile','pin-step-google-username'].forEach(function(id){
@@ -16991,7 +17044,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.5.2';
+var APP_VERSION = '%%APP_VERSION%%';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
