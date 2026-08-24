@@ -138,19 +138,35 @@ function _checkForceUpdate() {
 }
 
 function _checkForUpdate() {
-  // Simple direct fetch — no service worker needed
-  fetch('/?_v=' + Date.now(), { cache: 'no-store' })
-    .then(function(resp) { return resp.text(); })
-    .then(function(html) {
-      var m = html.match(/var APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
-      if (!m) return;
-      var remoteVer = m[1];
-      var localVer  = typeof APP_VERSION !== 'undefined' ? APP_VERSION : null;
-      if (remoteVer && localVer && remoteVer !== localVer) {
-        _showUpdateBanner(remoteVer);
-      }
-    })
-    .catch(function() {});
+  if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+    // Native APK — check GitHub releases API
+    fetch('https://api.github.com/repos/JohnnyDeey/my-expenses/releases/latest', { cache: 'no-store' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var remoteVer = data.tag_name ? data.tag_name.replace('v','') : null;
+        var localVer = typeof APP_VERSION !== 'undefined' ? APP_VERSION : null;
+        if (remoteVer && localVer && remoteVer !== localVer) {
+          // Store for next login
+          sessionStorage.setItem('_pending_update', remoteVer);
+          sessionStorage.setItem('_pending_update_url', data.assets?.[0]?.browser_download_url || data.html_url);
+        }
+      })
+      .catch(function() {});
+  } else {
+    // PWA — check Vercel
+    fetch('/?_v=' + Date.now(), { cache: 'no-store' })
+      .then(function(resp) { return resp.text(); })
+      .then(function(html) {
+        var m = html.match(/var APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+        if (!m) return;
+        var remoteVer = m[1];
+        var localVer = typeof APP_VERSION !== 'undefined' ? APP_VERSION : null;
+        if (remoteVer && localVer && remoteVer !== localVer) {
+          _showUpdateBanner(remoteVer);
+        }
+      })
+      .catch(function() {});
+  }
 }
 
 function _showUpdateBanner(newVer) {
@@ -164,7 +180,7 @@ function _showUpdateBanner(newVer) {
       '<span style="font-family:DM Mono,monospace;font-size:0.72rem;color:#8dd4a8;"><strong>v'+newVer+' available</strong> — new features ready</span>' +
     '</div>' +
     '<div style="display:flex;align-items:center;gap:8px;">' +
-      '<button onclick="_applyUpdate()" style="background:var(--gold);border:none;border-radius:4px;padding:6px 14px;font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--ink);cursor:pointer;">Update now</button>' +
+      '<button onclick="window.Capacitor&&window.Capacitor.isNativePlatform()?window.open(sessionStorage.getItem(\'_pending_update_url\')||\'https://github.com/JohnnyDeey/my-expenses/releases/latest\',\'_system\'):_applyUpdate()" style="background:var(--gold);border:none;border-radius:4px;padding:6px 14px;font-family:DM Mono,monospace;font-size:0.72rem;font-weight:700;color:var(--ink);cursor:pointer;">Update now</button>' +
       '<button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#8dd4a8;cursor:pointer;font-size:1rem;padding:4px;">✕</button>' +
     '</div>';
   document.body.appendChild(banner);
@@ -15387,7 +15403,12 @@ function showPinScreen() {
     setTimeout(function(){ o.scrollTop = 0; }, 50);
     setTimeout(function(){ o.scrollTop = 0; }, 200);
   }
-  // Auto-trigger biometric — only if enabled and not manual logout
+  // Show pending update banner after login
+  if (sessionStorage.getItem('_pending_update')) {
+    setTimeout(function() {
+      _showUpdateBanner(sessionStorage.getItem('_pending_update'));
+    }, 2000);
+  }
   if (localStorage.getItem(FP_KEY) === '1' && 
       window.Capacitor && window.Capacitor.isNativePlatform() && 
       sessionStorage.getItem('manual_logout') !== '1') {
