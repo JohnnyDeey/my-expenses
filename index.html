@@ -11688,10 +11688,13 @@ function selectMode(mode) {
 
 // -- Inline switch prompt --
 function showModeSwitchPrompt() {
+  // Auto-switch to the other mode directly
+  var isIncome = _appMode === 'income';
+  selectMode(isIncome ? 'expenses' : 'income');
+  return;
+
   var existing = document.getElementById('mode-switch-prompt');
   if (existing) { existing.remove(); return; } // toggle off
-
-  var isIncome = _appMode === 'income';
   var prompt = document.createElement('div');
   prompt.id  = 'mode-switch-prompt';
   prompt.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99997;background:rgba(26,20,16,0.92);display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 20px;border-bottom:2px solid var(--gold);';
@@ -15403,18 +15406,19 @@ function showPinScreen() {
     setTimeout(function(){ o.scrollTop = 0; }, 50);
     setTimeout(function(){ o.scrollTop = 0; }, 200);
   }
-  // Show pending update banner after login
-  if (sessionStorage.getItem('_pending_update')) {
-    setTimeout(function() {
-      _showUpdateBanner(sessionStorage.getItem('_pending_update'));
-    }, 2000);
-  }
+  // Auto-trigger biometric — only if enabled, not manual logout, and not already triggered
   if (localStorage.getItem(FP_KEY) === '1' && 
       window.Capacitor && window.Capacitor.isNativePlatform() && 
-      sessionStorage.getItem('manual_logout') !== '1') {
+      sessionStorage.getItem('manual_logout') !== '1' &&
+      !window._bioTriggered) {
+    window._bioTriggered = true;
     setTimeout(function() { 
-      tryBiometricLogin(function(){ closePinScreen(); }); 
+      tryBiometricLogin(function(){ 
+        window._bioTriggered = false;
+        closePinScreen(); 
+      });
     }, 800);
+    setTimeout(function() { window._bioTriggered = false; }, 10000);
   }
   sessionStorage.removeItem('manual_logout');
 }
@@ -17065,7 +17069,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.9.15';
+var APP_VERSION = '2.6.1';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
