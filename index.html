@@ -2219,9 +2219,9 @@ input[type="password"]::-ms-clear { display:none !important; }
       <span id="cat-desc-match" style="display:none;"></span>
     </div>
 
-        <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;align-items:center;margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:center;margin-bottom:12px;">
       <div class="parsed-count" style="white-space:nowrap;font-size:0.72rem;margin:0;">Showing <strong id="cat-count">0</strong> items</div>
-      <button class="btn" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--gold);color:var(--ink);border:none;font-weight:700;" onclick="autoCategorizePending()">&#9889; Auto-Assign</button>
+      
       <button class="btn btn-primary" id="btn-save-pending" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="saveAllPending()">Save to ledger</button>
     </div>
     <div class="ledger-wrap">
@@ -2909,10 +2909,10 @@ input[type="password"]::-ms-clear { display:none !important; }
       </div>
       <span id="inc-cat-desc-match" style="display:none;"></span>
     </div>
-    <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;align-items:center;margin-bottom:12px;">
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:center;margin-bottom:12px;">
       <div class="parsed-count" style="white-space:nowrap;font-size:0.72rem;margin:0;">Showing <strong id="inc-cat-count">0</strong> items</div>
-      <button class="btn" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--gold);color:var(--ink);border:none;font-weight:700;" onclick="autoCategorizePendingIncome()">&#9889; Auto-Assign</button>
-      <button class="btn btn-primary" id="inc-btn-save-pending" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="saveAllPendingIncome()">Save to Ledger</button>
+      
+      <button class="btn btn-primary" id="inc-btn-save-pending" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="saveAllPendingIncome()">Save</button>
     </div>
     <div class="ledger-wrap">
       <table style="table-layout:fixed;width:100%;">
@@ -5407,7 +5407,7 @@ function applyCatFilter() {
     catViewMode = 'pending';
     catEditItems = pendingItems;
     document.getElementById('cat-month-filter').style.display = 'none';
-    document.getElementById('btn-save-pending').textContent = 'Save to Ledger';
+    document.getElementById('btn-save-pending').textContent = 'Save to ledger';
   } else {
     var monthSel = document.getElementById('cat-month-filter').value;
     document.getElementById('cat-month-filter').style.display = 'inline-block';
@@ -10304,7 +10304,8 @@ function closeRadialMenu() {
 // -- Radial menu: open by DOUBLE TAP (long press is free for other gestures) --
 var _RADIAL_BLOCK = 'button,a,input,select,textarea,label,table,[onclick],[contenteditable="true"],.cat-wrapper,.lb-bar,.cf-bar';
 function _radialAllowed(el) {
-  if (!document.body.classList.contains('app-ready')) return false;
+  var _pin = document.getElementById('pin-overlay');
+  if (!_userId || (_pin && getComputedStyle(_pin).display !== 'none')) return false;
   if (_radialOpen) return false;
   return !(el && el.closest && el.closest(_RADIAL_BLOCK));
 }
@@ -10383,13 +10384,44 @@ function syncBurgerMode(mode){
   document.getElementById('burger-exp-items').style.display=mode==='expenses'?'block':'none';
   document.getElementById('burger-inc-items').style.display=mode==='income'?'block':'none';
 }
+// Silent refresh: save pending changes, then redraw the current tab in place (no reload, no splash)
 function appRefresh() {
   if (window._appRefreshing) return;
   window._appRefreshing = true;
   var ic = document.getElementById('hdr-refresh-icon');
   if (ic) ic.style.animation = 'hdrSpin .7s linear infinite';
+  var sy = window.scrollY;
+
   try { if (typeof syncPushNow === 'function') syncPushNow(); } catch(e) {}
-  setTimeout(function(){ location.reload(); }, 1200);
+  try { if (typeof syncIncomeToFirebase === 'function') syncIncomeToFirebase(); } catch(e) {}
+
+  setTimeout(function() {
+    try {
+      if (typeof _appMode !== 'undefined' && _appMode === 'income') {
+        var ip = document.querySelector('#income-main .panel.active');
+        var iname = ip ? ip.id.replace('panel-', '') : null;
+        if (iname && typeof switchIncomeTab === 'function') switchIncomeTab(iname, null);
+        if (typeof updateIncomeHeaderContext === 'function') updateIncomeHeaderContext();
+        if (typeof renderIncomeMonthPicker === 'function') renderIncomeMonthPicker();
+      } else {
+        var ep = document.querySelector('main > .panel.active');
+        var name = ep ? ep.id.replace('panel-', '') : null;
+        if (name === 'import') {
+          // Keep parsed-but-unsaved items; otherwise reload the month from saved data
+          var hasUnsaved = typeof pendingItems !== 'undefined' && pendingItems && pendingItems.length > 0;
+          if (!hasUnsaved && typeof loadMonthIntoTextarea === 'function') loadMonthIntoTextarea();
+        } else if (name && typeof switchTab === 'function') {
+          switchTab(name, null);
+        }
+        if (typeof updateHeader === 'function') updateHeader();
+        if (typeof renderMonthPicker === 'function') renderMonthPicker();
+      }
+    } catch(e) { console.error('Refresh error:', e); }
+    window.scrollTo(0, sy);
+    if (ic) ic.style.animation = '';
+    window._appRefreshing = false;
+    if (typeof showToast === 'function') showToast('Refreshed');
+  }, 600);
 }
 function switchTab(name,btn){
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
@@ -17863,7 +17895,7 @@ var HELP_DATA = {
   },
   'categorize': {
     title: '🏷️ Categorize — Assigning Categories',
-    steps: ['After parsing click Go to Categorize.','Each item shows description, date, amount and suggested category.','Tap any category dropdown to change it.','Use the ⇅ sort button to switch between Newest first and Oldest first — your latest entries will be at the top.','Use Search to filter items by keyword.','Use Assign All to bulk-assign a category to all matching items.','Click Auto-Assign All for smart suggestions based on your history.','Click Save to Ledger when done.'],
+    steps: ['After parsing click Go to Categorize.','Each item shows description, date, amount and suggested category.','Tap any category dropdown to change it.','Use the ⇅ sort button to switch between Newest first and Oldest first — your latest entries will be at the top.','Use Search to filter items by keyword.','Use Assign All to bulk-assign a category to all matching items.','Click Save to Ledger when done.'],
     example: 'User sa0819 had 45 items parsed. She switched sort to Newest first to find her latest entries quickly, then searched bread and assigned all 12 matches to Food & Groceries in one click.',
     tip: 'Sort Newest first to find the entries you just typed. Sort Oldest first to review from the beginning of the month.'
   },
