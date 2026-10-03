@@ -1923,11 +1923,13 @@ input[type="password"]::-ms-clear { display:none !important; }
         </div>
       </div>
     </div>
-    <!-- Centered: date lookup + help + manual -->
+        <!-- Centered: date lookup + help + manual + refresh -->
     <div style="flex:1;display:flex;justify-content:center;gap:6px;">
-      <button onclick="openDateLookup()" title="Date lookup [F2]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#128467;</button>
-      <button onclick="openHelp()" title="Help &amp; Support [F1]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#10067;</button>
-      <button onclick="toggleManualOverlay()" id="hdr-manual-btn" title="User Manual [F3]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 12px;font-size:1.05rem;line-height:1;">&#128218;</button>
+      <button onclick="openDateLookup()" title="Date lookup [F2]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 8px;font-size:1.05rem;line-height:1;">&#128467;</button>
+      <button onclick="openHelp()" title="Help &amp; Support [F1]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 8px;font-size:1.05rem;line-height:1;">&#10067;</button>
+      <button onclick="toggleManualOverlay()" id="hdr-manual-btn" title="User Manual [F3]" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 8px;font-size:1.05rem;line-height:1;">&#128218;</button>
+      <button onclick="appRefresh()" id="hdr-refresh-btn" title="Refresh &amp; sync" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 8px;font-size:1.05rem;line-height:1;"><span id="hdr-refresh-icon" style="display:inline-block;">&#8635;</span></button>
+      <style>@keyframes hdrSpin{to{transform:rotate(360deg)}}</style>
     </div>
     <button id="theme-toggle-btn" onclick="toggleAppTheme()" title="Switch theme">🌙</button>
     <button id="hdr-collapse-btn" onclick="toggleHeaderCollapse()" title="Show/Hide header" style="background:none;border:1px solid rgba(200,150,46,0.35);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128065;</button>
@@ -8473,6 +8475,127 @@ function clearLedgerFilters() {
   var m = document.getElementById('led-bulk-match'); if(m) m.textContent = '';
   renderLedger();
 }
+// -- Ledger table: adds DATE column (dd/mm/yy) + finger-resizable columns, widths remembered --
+// tbl  = the <table>, wrap = its scroll container, key = localStorage key, rows = data items in row order
+// Expected columns before: DESCRIPTION | AMOUNT | CATEGORY | checkbox
+function enhanceLedgerTable(tbl, wrap, key, rows) {
+  if (!tbl || tbl._enhanced) return;
+  tbl._enhanced = true;
+  var MIN = 36;
+  var cw0 = (wrap && wrap.clientWidth) || 340;
+  key = key + (cw0 > 768 ? '_d' : '_m');   // separate mobile / desktop memory
+
+  // DATE header after DESCRIPTION
+  var hr = tbl.querySelector('thead tr');
+  if (!hr) return;
+  var dth = document.createElement('th');
+  dth.textContent = 'DATE';
+  dth.style.cssText = 'padding:6px 8px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;';
+  hr.insertBefore(dth, hr.children[1]);
+  if (hr.children[3]) hr.children[3].style.textAlign = 'left';
+  if (hr.children[4]) hr.children[4].style.textAlign = 'center';
+
+  // DATE cells + let every cell shrink with its column
+  var trs = tbl.querySelectorAll('tbody tr');
+  Array.prototype.forEach.call(trs, function(tr, i) {
+    var d = (rows && rows[i] && rows[i].date) ? rows[i].date.split('-') : [];
+    var td = document.createElement('td');
+    td.textContent = d.length === 3 ? d[2] + '/' + d[1] + '/' + d[0].slice(2) : '';
+    td.style.cssText = 'font-family:DM Mono,monospace;color:var(--muted);border-right:1px solid #eee;';
+    tr.insertBefore(td, tr.children[1]);
+    Array.prototype.forEach.call(tr.children, function(c) {
+      c.style.overflow = 'hidden'; c.style.textOverflow = 'ellipsis'; c.style.whiteSpace = 'nowrap'; c.style.maxWidth = '0';
+    });
+    if (tr.children[3]) tr.children[3].style.textAlign = 'left';    // CATEGORY
+    if (tr.children[4]) tr.children[4].style.textAlign = 'center';  // checkbox
+    var pill = tr.children[3] && tr.children[3].querySelector('span');
+    if (pill) pill.style.maxWidth = '100%';
+  });
+
+  // Widths: saved or defaults
+  var ths = hr.children;
+  var saved = null; try { saved = JSON.parse(localStorage.getItem(key)); } catch(e) {}
+  var hasSaved = !!(saved && saved.length === ths.length);
+  var widths = hasSaved ? saved : [100, 62, 78, 90, 32];
+
+  var cg = document.createElement('colgroup');
+  widths.forEach(function() { cg.appendChild(document.createElement('col')); });
+  tbl.insertBefore(cg, tbl.firstChild);
+  var cols = cg.children;
+
+  function apply() {
+    var cw = (wrap && wrap.clientWidth) || 340;
+    var sum = 0; widths.forEach(function(w){ sum += w; });
+    var extra = Math.max(0, cw - sum);
+    // share extra across DESCRIPTION, DATE, AMOUNT, CATEGORY (not checkbox), weighted by size
+    var share = 0; for (var k = 0; k < widths.length - 1; k++) share += widths[k];
+    var total = 0;
+    for (var i = 0; i < widths.length; i++) {
+      var w = widths[i];
+      if (i < widths.length - 1 && extra > 0) w += Math.floor(extra * widths[i] / share);
+      cols[i].style.width = w + 'px';
+      ths[i].style.width = w + 'px';
+      total += w;
+    }
+    tbl.style.setProperty('display', 'table', 'important');
+    tbl.style.setProperty('table-layout', 'fixed', 'important');
+    tbl.style.setProperty('min-width', '0', 'important');
+    tbl.style.setProperty('width', Math.max(total, cw) + 'px', 'important');
+  }
+  apply();
+
+  // Auto-fit DATE so dd/mm/yy is never cut (until the user resizes)
+  if (!hasSaved) {
+    var need = 0;
+    Array.prototype.forEach.call(trs, function(tr){
+      var c = tr.children[1];
+      if (c && c.scrollWidth > need) need = c.scrollWidth;
+    });
+    need = Math.max(need, ths[1].scrollWidth) + 4;
+    if (need > widths[1]) { widths[1] = need; apply(); }
+  }
+
+  tbl._apply = apply;
+  if (wrap) wrap.style.overflowX = 'auto';
+
+  // Drag grips on every column except the checkbox
+  for (var i = 0; i < ths.length - 1; i++) (function(i) {
+    var th = ths[i];
+    th.style.position = 'relative';
+    th.style.overflow = 'visible';
+    var h = document.createElement('div');
+    h.style.cssText = 'position:absolute;top:0;right:-8px;width:16px;height:100%;cursor:col-resize;touch-action:none;z-index:5;display:flex;justify-content:center;';
+    h.innerHTML = '<div style="width:2px;height:60%;margin-top:20%;background:var(--gold);opacity:0.8;border-radius:1px;pointer-events:none;"></div>';
+    h.addEventListener('pointerdown', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      h.setPointerCapture(e.pointerId);
+      for (var k = 0; k < widths.length; k++) widths[k] = parseFloat(ths[k].style.width) || widths[k];
+      var sx = e.clientX, sw = widths[i];
+      function mv(ev) { widths[i] = Math.max(MIN, Math.round(sw + ev.clientX - sx)); apply(); }
+      function up() {
+        h.removeEventListener('pointermove', mv);
+        h.removeEventListener('pointerup', up);
+        h.removeEventListener('pointercancel', up);
+        try { localStorage.setItem(key, JSON.stringify(widths)); } catch(e) {}
+      }
+      h.addEventListener('pointermove', mv);
+      h.addEventListener('pointerup', up);
+      h.addEventListener('pointercancel', up);
+    });
+    th.appendChild(h);
+  })(i);
+}
+// Re-fit resizable tables on window resize / rotate
+(function(){
+  var rt;
+  window.addEventListener('resize', function(){
+    clearTimeout(rt);
+    rt = setTimeout(function(){
+      document.querySelectorAll('table').forEach(function(t){ if (t._apply) t._apply(); });
+    }, 150);
+  });
+})();
+
 function renderLedger(){
   var allData = loadData();
   var year     = document.getElementById('led-year').value;
@@ -8646,6 +8769,7 @@ function renderLedger(){
   });
   tbl.appendChild(tbody);
   acc.appendChild(tbl);
+  enhanceLedgerTable(tbl, acc, 'led_col_widths_exp', pageData);
 
   // -- Pagination bar --
   if (data.length > PAGE) {
@@ -9947,60 +10071,48 @@ function closeRadialMenu() {
   _radialOpen = false;
 }
 
-// Prevent context menu except on text content
-document.addEventListener('contextmenu', function(e) {
-  if(!document.body.classList.contains('app-ready')) return;
-  var tag = e.target.tagName;
-  var isText = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'A';
-  var isTextNode = e.target.closest('p, td, .ledger-row, .entry-amount, .entry-desc, span');
-  if(isText || isTextNode) return; // allow native copy menu on text
-  e.preventDefault();
+// -- Radial menu: open by DOUBLE TAP (long press is free for other gestures) --
+var _RADIAL_BLOCK = 'button,a,input,select,textarea,label,table,[onclick],[contenteditable="true"],.cat-wrapper,.lb-bar,.cf-bar';
+function _radialAllowed(el) {
+  if (!document.body.classList.contains('app-ready')) return false;
+  if (_radialOpen) return false;
+  return !(el && el.closest && el.closest(_RADIAL_BLOCK));
+}
+var _dtLastT = 0, _dtLastX = 0, _dtLastY = 0;
+document.addEventListener('touchend', function(e) {
+  var t = e.changedTouches[0];
+  var now = Date.now();
+  if (now - _dtLastT < 300 && Math.abs(t.clientX - _dtLastX) < 30 && Math.abs(t.clientY - _dtLastY) < 30 && _radialAllowed(e.target)) {
+    _dtLastT = 0;
+    openRadialMenu(t.clientX, t.clientY);
+    e.preventDefault();
+  } else {
+    _dtLastT = now; _dtLastX = t.clientX; _dtLastY = t.clientY;
+  }
 });
-
-// Long press detection
-document.addEventListener('touchstart', function(e) {
-  if(_radialOpen) return;
-  if(!document.body.classList.contains('app-ready')) return;
-  var pinO = document.getElementById('pin-overlay');
-  if(pinO && pinO.style.display !== 'none') return;
-  // Don't trigger on text content — allow native copy/select
-  var tag = e.target.tagName;
-  if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'A') return;
-  if(e.target.closest('p, td, .ledger-row, .entry-amount, .entry-desc, span')) return;
-  var tag = e.target.tagName;
-  if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-  if(e.target.isContentEditable) return;
-  var t = e.touches[0];
-  var tx = t.clientX; var ty = t.clientY;
-  _radialTimer = setTimeout(function() {
-    openRadialMenu(tx, ty);
-  }, 500);
-}, {passive:true});
-
-document.addEventListener('touchend', function() {
-  if(_radialTimer){ clearTimeout(_radialTimer); _radialTimer=null; }
-}, {passive:true});
-
-document.addEventListener('touchmove', function() {
-  if(_radialTimer){ clearTimeout(_radialTimer); _radialTimer=null; }
-}, {passive:true});
-
-// Mouse long press (desktop testing)
-document.addEventListener('mousedown', function(e) {
-  if(e.button !== 0) return;
-  if(!document.body.classList.contains('app-ready')) return;
-  var pinO = document.getElementById('pin-overlay');
-  if(pinO && pinO.style.display !== 'none') return;
-  var tag = e.target.tagName;
-  if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-  var tx = e.clientX; var ty = e.clientY;
-  _radialTimer = setTimeout(function() {
-    openRadialMenu(tx, ty);
-  }, 500);
+// Desktop: double-click
+document.addEventListener('dblclick', function(e) {
+  if (!_radialAllowed(e.target)) return;
+  openRadialMenu(e.clientX, e.clientY);
 });
-document.addEventListener('mouseup', function() {
-  if(_radialTimer){ clearTimeout(_radialTimer); _radialTimer=null; }
-});
+// Close when tapping outside the icon slices
+(function(){
+  var menu = document.getElementById('radial-menu');
+  if (!menu) return;
+  menu.addEventListener('click', function(e) {
+    var t = e.target;
+    if (t === menu || t.id === 'radial-backdrop' || t.id === 'radial-svg' || t.id === 'radial-inner-g' || t.id === 'radial-outer-g') {
+      closeRadialMenu();
+    }
+  });
+})();
+// Esc closes (capture phase, runs before other key handlers)
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && _radialOpen) {
+    e.preventDefault(); e.stopPropagation();
+    closeRadialMenu();
+  }
+}, true);
 
 // Hide splash screen when app is ready
 function hideSplashScreen(){
@@ -10040,6 +10152,14 @@ function burgerSwitchInc(name,label){
 function syncBurgerMode(mode){
   document.getElementById('burger-exp-items').style.display=mode==='expenses'?'block':'none';
   document.getElementById('burger-inc-items').style.display=mode==='income'?'block':'none';
+}
+function appRefresh() {
+  if (window._appRefreshing) return;
+  window._appRefreshing = true;
+  var ic = document.getElementById('hdr-refresh-icon');
+  if (ic) ic.style.animation = 'hdrSpin .7s linear infinite';
+  try { if (typeof syncPushNow === 'function') syncPushNow(); } catch(e) {}
+  setTimeout(function(){ location.reload(); }, 1200);
 }
 function switchTab(name,btn){
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
