@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Nigeria Transfers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1410; --paper:#f5f0e8; --paper2:#ede6d8; --white:#fff;
+  --gold:#c8962e; --gold2:#e8b84b; --border:#d8cfc0; --muted:#8a7d6e;
+  --sage:#4a7c59; --rust:#b5451b; --blue:#2980b9; --amber:#f0b429;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:15px;-webkit-tap-highlight-color:transparent;}
+button{font-family:inherit;}
+input,select,textarea{font-family:inherit;font-size:0.85rem;padding:7px 9px;border:1.5px solid var(--border);border-radius:3px;background:var(--white);color:var(--ink);outline:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+.mono{font-family:'DM Mono',monospace;}
+
+/* Header */
+#hdr{position:sticky;top:0;z-index:50;background:var(--ink);color:var(--paper);padding:10px 14px 0;padding-top:max(10px,env(safe-area-inset-top));box-shadow:0 2px 8px rgba(0,0,0,0.35);}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.brand{font-family:'Playfair Display',serif;font-weight:900;font-size:1.15rem;color:var(--gold2);letter-spacing:0.5px;}
+.brand small{display:block;font-family:'DM Mono',monospace;font-weight:400;font-size:0.58rem;letter-spacing:2px;color:#9e8e7e;text-transform:uppercase;}
+.mnav{display:flex;align-items:center;gap:6px;}
+.mnav button{background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:4px 9px;font-size:0.85rem;}
+#mlabel{font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--gold2);min-width:74px;text-align:center;}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px;scrollbar-width:none;}
+nav.tabs::-webkit-scrollbar{display:none;}
+nav.tabs button{flex:1 0 auto;background:none;border:none;border-bottom:3px solid transparent;color:#9e8e7e;font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;padding:8px 10px;cursor:pointer;white-space:nowrap;}
+nav.tabs button.active{color:var(--gold2);border-bottom-color:var(--gold);}
+
+main{padding:14px;max-width:1100px;margin:0 auto;padding-bottom:80px;}
+.panel{display:none;}
+.panel.active{display:block;}
+.section-title{font-family:'Playfair Display',serif;font-weight:900;font-size:1.25rem;margin:4px 0 12px;}
+
+/* Cards */
+.card{background:var(--white);border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 rgba(0,0,0,0.06);padding:12px 14px;margin-bottom:12px;}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.kpi{background:var(--white);border:1px solid var(--border);border-radius:4px;padding:10px 12px;}
+.kpi .l{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.kpi .v{font-family:'DM Mono',monospace;font-size:1rem;font-weight:500;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.kpi.rem{background:var(--ink);border-color:var(--ink);}
+.kpi.rem .l{color:#9e8e7e;}
+.kpi.rem .v{color:var(--gold2);font-size:1.1rem;}
+@media(max-width:640px){ .kpis{grid-template-columns:1fr 1fr;} }
+
+/* Buttons */
+.btn{border:none;border-radius:3px;padding:7px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btn-gold{background:var(--gold);color:var(--ink);}
+.btn-ink{background:var(--ink);color:var(--gold2);}
+.btn-sage{background:var(--sage);color:#fff;}
+.btn-rust{background:var(--rust);color:#fff;}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-amber{background:var(--amber);color:var(--ink);}
+.btn-ghost{background:var(--white);color:var(--ink);border:1.5px solid var(--border);}
+.btn:active{opacity:0.8;}
+.btn-sm{padding:4px 8px;font-size:0.7rem;}
+
+/* Add form */
+.addform{display:grid;grid-template-columns:2fr 1fr 2fr auto auto;gap:6px;align-items:center;}
+.addform .newrec{grid-column:1/-1;display:none;gap:6px;}
+.addform .newrec.show{display:flex;}
+@media(max-width:640px){
+  .addform{grid-template-columns:1fr 1fr;}
+  .addform #af-name,.addform #af-amt{grid-column:1/-1;}
+  .addform #af-note{grid-column:1/-1;}
+  .addform .newrec{flex-wrap:wrap;}
+  .addform .newrec input{flex:1 1 45%;}
+}
+
+/* Transfer list */
+.grp-h{display:flex;justify-content:space-between;align-items:baseline;font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:14px 2px 6px;}
+.grp-h b{color:var(--ink);font-weight:500;}
+.trow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;background:var(--white);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:3px;padding:8px 10px;margin-bottom:6px;}
+.trow.planned{border-left-color:var(--gold);}
+.trow.early{border-left-color:var(--blue);}
+.trow.sent{border-left-color:var(--sage);}
+.trow .nm{font-weight:700;font-size:0.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.trow .am{font-family:'DM Mono',monospace;font-weight:500;font-size:0.9rem;text-align:right;white-space:nowrap;}
+.trow .sub{grid-column:1/-1;font-size:0.72rem;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.trow .acts{grid-column:1/-1;display:flex;gap:5px;flex-wrap:wrap;margin-top:2px;}
+.badge{font-family:'DM Mono',monospace;font-size:0.6rem;padding:1px 6px;border-radius:9px;border:1px solid;letter-spacing:0.5px;white-space:nowrap;}
+.b-push{color:var(--rust);border-color:var(--rust);}
+.b-early{color:var(--blue);border-color:var(--blue);}
+.b-proj{color:#6b3d8c;border-color:#6b3d8c;}
+.acct{font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);}
+.empty{text-align:center;color:var(--muted);font-size:0.85rem;padding:24px 10px;}
+
+/* Grid */
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+.toolbar input[type=text]{flex:1;min-width:140px;}
+.toolbar label{font-size:0.75rem;color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.gridwrap{overflow-x:auto;background:var(--white);border:1px solid var(--border);border-radius:4px;-webkit-overflow-scrolling:touch;}
+table.grid{border-collapse:collapse;font-size:0.72rem;min-width:100%;}
+table.grid th{background:var(--ink);color:var(--paper);font-family:'DM Mono',monospace;font-weight:400;font-size:0.62rem;letter-spacing:1px;padding:6px 8px;text-align:right;white-space:nowrap;position:sticky;top:0;}
+table.grid th:first-child,table.grid td:first-child{position:sticky;left:0;text-align:left;z-index:2;}
+table.grid th:first-child{z-index:3;}
+table.grid td{padding:5px 8px;border-bottom:1px solid #eee;border-right:1px solid #f3efe7;text-align:right;font-family:'DM Mono',monospace;white-space:nowrap;}
+table.grid td:first-child{background:var(--white);font-family:'DM Sans',sans-serif;font-weight:500;max-width:170px;overflow:hidden;text-overflow:ellipsis;border-right:1px solid var(--border);}
+table.grid tr:nth-child(even) td{background:#faf7f1;}
+table.grid tr:nth-child(even) td:first-child{background:#faf7f1;}
+table.grid td.has{cursor:pointer;color:var(--ink);}
+table.grid td.has:hover{background:rgba(200,150,46,0.15);}
+table.grid td.pl{color:var(--gold);font-style:italic;cursor:pointer;}
+table.grid td.tot{font-weight:500;background:var(--paper2)!important;}
+table.grid tfoot td{background:var(--ink)!important;color:var(--gold2);font-weight:500;border:none;}
+table.grid tfoot td:first-child{font-family:'DM Mono',monospace;letter-spacing:1px;font-size:0.65rem;}
+
+/* Recipients */
+.rrow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;background:var(--white);border:1px solid var(--border);border-radius:3px;padding:8px 10px;margin-bottom:6px;cursor:pointer;}
+.rrow.arch{opacity:0.5;}
+.rrow .nm{font-weight:700;font-size:0.88rem;}
+.rrow .tt{font-family:'DM Mono',monospace;font-size:0.8rem;text-align:right;}
+.rrow .sub{grid-column:1/-1;font-size:0.72rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+/* Summary bars */
+.bars{display:flex;flex-direction:column;gap:5px;}
+.bar{display:grid;grid-template-columns:110px 1fr 110px;gap:8px;align-items:center;font-size:0.75rem;}
+.bar .lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bar .tr{background:var(--paper2);border-radius:2px;height:14px;overflow:hidden;}
+.bar .fl{background:var(--gold);height:100%;}
+.bar .vl{font-family:'DM Mono',monospace;text-align:right;white-space:nowrap;}
+@media(max-width:640px){ .bar{grid-template-columns:80px 1fr 90px;} }
+.split{display:flex;height:16px;border-radius:3px;overflow:hidden;margin:6px 0;}
+.split div{height:100%;}
+
+/* Modal */
+#modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(26,20,16,0.6);align-items:flex-start;justify-content:center;padding:16px;padding-top:60px;overflow-y:auto;}
+#modal.show{display:flex;}
+#modal .box{background:var(--paper);border:2px solid var(--gold);border-radius:6px;width:100%;max-width:440px;padding:16px;}
+#modal h3{font-family:'Playfair Display',serif;margin:0 0 12px;font-size:1.05rem;}
+.frm{display:flex;flex-direction:column;gap:8px;}
+.frm label{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:-4px;}
+.frm .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.frm .btns{display:flex;gap:6px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap;}
+.mlist{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto;}
+.mlist .it{background:var(--white);border:1px solid var(--border);border-radius:3px;padding:7px 9px;font-size:0.8rem;}
+.mlist .it .a{font-family:'DM Mono',monospace;float:right;font-weight:500;}
+.mlist .it .n{color:var(--muted);font-size:0.72rem;margin-top:3px;white-space:pre-wrap;}
+
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);background:var(--ink);color:var(--gold2);font-family:'DM Mono',monospace;font-size:0.75rem;padding:9px 16px;border-radius:4px;z-index:300;transition:transform .25s;pointer-events:none;max-width:90vw;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+.hint{font-size:0.75rem;color:var(--muted);line-height:1.5;}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hdr-row">
+    <div class="brand">Nigeria Transfers<small>Monthly support · ₦</small></div>
+    <div class="mnav">
+      <button onclick="shiftMonth(-1)" title="Previous month">&#9664;</button>
+      <span id="mlabel"></span>
+      <button onclick="shiftMonth(1)" title="Next month">&#9654;</button>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="month" class="active">This Month</button>
+    <button data-tab="payday">Payday</button>
+    <button data-tab="grid">Year Grid</button>
+    <button data-tab="recipients">Recipients</button>
+    <button data-tab="summary">Summary</button>
+    <button data-tab="data">Data</button>
+  </nav>
+</header>
+
+<main>
+  <!-- THIS MONTH -->
+  <section class="panel active" id="p-month">
+    <div class="kpis" id="m-kpis"></div>
+    <div class="card">
+      <form class="addform" id="addform" onsubmit="addTransfer(event)">
+        <input id="af-name" list="dl-names" placeholder="Recipient name" autocomplete="off" oninput="checkNewRec()">
+        <input id="af-amt" placeholder="₦ amount" inputmode="decimal" autocomplete="off" title="You can type 20000+5000">
+        <input id="af-note" placeholder="Note (what for)" autocomplete="off">
+        <select id="af-status">
+          <option value="planned">Planned</option>
+          <option value="early">Sent early</option>
+          <option value="sent">Sent</option>
+        </select>
+        <button class="btn btn-gold" type="submit">+ Add</button>
+        <div class="newrec" id="af-newrec">
+          <input id="af-acct" placeholder="Account no (new recipient)" inputmode="numeric" autocomplete="off">
+          <input id="af-bank" placeholder="Bank (e.g. OPay, GTB)" list="dl-banks" autocomplete="off">
+          <select id="af-type"><option value="person">Person</option><option value="project">Project</option></select>
+        </div>
+      </form>
+    </div>
+    <div id="m-list"></div>
+  </section>
+
+  <!-- PAYDAY -->
+  <section class="panel" id="p-payday">
+    <div class="section-title" id="pd-title">Payday</div>
+    <div class="kpis" id="pd-kpis"></div>
+    <div id="pd-list"></div>
+  </section>
+
+  <!-- YEAR GRID -->
+  <section class="panel" id="p-grid">
+    <div class="toolbar">
+      <select id="g-year" onchange="renderGrid()"></select>
+      <input type="text" id="g-search" placeholder="Search recipient…" oninput="renderGrid()">
+      <select id="g-sort" onchange="renderGrid()">
+        <option value="order">Original order</option>
+        <option value="name">Name A–Z</option>
+        <option value="total">Highest total</option>
+      </select>
+      <label><input type="checkbox" id="g-hide0" checked onchange="renderGrid()"> Hide empty</label>
+      <label><input type="checkbox" id="g-plan" onchange="renderGrid()"> Include planned</label>
+    </div>
+    <div class="gridwrap"><table class="grid" id="grid"></table></div>
+    <p class="hint">Tap any amount to see the individual transfers and notes behind it.</p>
+  </section>
+
+  <!-- RECIPIENTS -->
+  <section class="panel" id="p-recipients">
+    <div class="toolbar">
+      <input type="text" id="r-search" placeholder="Search name, bank or account…" oninput="renderRecipients()">
+      <label><input type="checkbox" id="r-arch" onchange="renderRecipients()"> Show archived</label>
+      <button class="btn btn-gold" onclick="editRecipient(null)">+ New</button>
+    </div>
+    <div id="r-list"></div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="panel" id="p-summary">
+    <div class="toolbar"><select id="s-year" onchange="renderSummary()"></select></div>
+    <div class="kpis" id="s-kpis"></div>
+    <div class="card"><div class="grp-h" style="margin-top:0;">By month</div><div class="bars" id="s-months"></div></div>
+    <div class="card"><div class="grp-h" style="margin-top:0;">People vs projects</div><div id="s-split"></div></div>
+    <div class="card"><div class="grp-h" style="margin-top:0;">Top recipients</div><div class="bars" id="s-top"></div></div>
+  </section>
+
+  <!-- DATA -->
+  <section class="panel" id="p-data">
+    <div class="section-title">Data</div>
+    <div class="card">
+      <div class="grp-h" style="margin-top:0;">Import prepared file (.json)</div>
+      <p class="hint">Loads the cleaned 2025–2026 history: transfers split from your formulas, real notes kept, stale notes removed. <b>This replaces everything currently in this module.</b></p>
+      <input type="file" id="d-file" accept=".json,application/json" onchange="importJSON(this)">
+    </div>
+    <div class="card">
+      <div class="grp-h" style="margin-top:0;">Paste from Excel / Google Sheets</div>
+      <p class="hint">Copy the rows (Names, Account No, Bank, January … December) and paste below. Each non-empty month cell becomes one <b>Sent</b> transfer. Existing recipients are matched by name. Adds to what's already here.</p>
+      <div class="toolbar"><select id="d-year"></select></div>
+      <textarea id="d-paste" rows="6" style="width:100%;" placeholder="Paste rows here…"></textarea>
+      <div style="margin-top:6px;"><button class="btn btn-gold" onclick="importPaste()">Import pasted rows</button></div>
+    </div>
+    <div class="card">
+      <div class="grp-h" style="margin-top:0;">Backup</div>
+      <p class="hint" id="d-stats"></p>
+      <div class="toolbar">
+        <button class="btn btn-ink" onclick="exportJSON()">&#11015; Export backup</button>
+        <button class="btn btn-rust" onclick="clearAll()">Clear all data</button>
+      </div>
+      <p class="hint">Data in this preview is stored on this device only. Cloud sync is added when the module joins the main app.</p>
+    </div>
+  </section>
+</main>
+
+<datalist id="dl-names"></datalist>
+<datalist id="dl-banks">
+  <option value="ACC">Access</option><option value="FBN">First Bank</option><option value="FCM">FCMB</option>
+  <option value="GTB">GTBank</option><option value="KDA">Kuda</option><option value="MNP">Moniepoint</option>
+  <option value="PAY">OPay</option><option value="PPY">PalmPay</option><option value="PRV">Providus</option>
+  <option value="STB">Stanbic</option><option value="UBA">UBA</option><option value="WMA">Wema</option>
+  <option value="ZNT">Zenith</option>
+</datalist>
+
+<div id="modal" onclick="if(event.target===this)closeModal()"><div class="box" id="mbox"></div></div>
+<div id="toast"></div>
+
+<script>
+// ===================== STORE =====================
+var KEY = 'ngt_data_v1';
+var S = load();
+function load() {
+  try { var d = JSON.parse(localStorage.getItem(KEY)); if (d && d.recipients && d.transfers) return d; } catch(e) {}
+  return { version: 1, recipients: [], transfers: [] };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { toast('Could not save on this device'); } renderAll(); }
+function uid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+// ===================== HELPERS =====================
+var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmt(n) {
+  n = Math.round((+n || 0) * 100) / 100;
+  var dec = (n % 1 !== 0) ? 2 : 0;
+  return '₦' + n.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: 2 });
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function today() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function mLabel(m) { var p = m.split('-'); return MON[+p[1]-1] + ' ' + p[0]; }
+function addMonths(m, k) { var p = m.split('-'); var d = new Date(+p[0], +p[1]-1+k, 1); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function rec(id) { for (var i = 0; i < S.recipients.length; i++) if (S.recipients[i].id === id) return S.recipients[i]; return null; }
+function recByName(n) { n = String(n).trim().toLowerCase().replace(/\s+/g,' '); for (var i = 0; i < S.recipients.length; i++) if (S.recipients[i].name.toLowerCase().replace(/\s+/g,' ') === n) return S.recipients[i]; return null; }
+function tr(id) { for (var i = 0; i < S.transfers.length; i++) if (S.transfers[i].id === id) return S.transfers[i]; return null; }
+function parseAmt(s) {
+  s = String(s || '').replace(/[₦#,\s]/g, '');
+  if (!s) return NaN;
+  if (/^[\d.]+(\+[\d.]+)*$/.test(s)) return s.split('+').reduce(function(a, x){ return a + parseFloat(x); }, 0);
+  return parseFloat(s);
+}
+function years() {
+  var ys = {}; ys[today().slice(0,4)] = 1;
+  S.transfers.forEach(function(t){ ys[t.month.slice(0,4)] = 1; });
+  return Object.keys(ys).sort().reverse();
+}
+function sum(a) { return a.reduce(function(x, t){ return x + (+t.amount || 0); }, 0); }
+function toast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove('show'); }, 2200); }
+function copyText(s, label) {
+  s = String(s || '');
+  if (!s) { toast('No account number saved'); return; }
+  var done = function(){ toast((label || 'Copied') + ': ' + s); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(s).then(done, fallback); else fallback();
+  function fallback() { var ta = document.createElement('textarea'); ta.value = s; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch(e) {} ta.remove(); }
+}
+
+// ===================== NAV =====================
+var CUR = today();
+var TAB = 'month';
+try { var _t = localStorage.getItem('ngt_tab'); if (_t) TAB = _t; } catch(e) {}
+document.getElementById('tabs').addEventListener('click', function(e){
+  var b = e.target.closest('button[data-tab]'); if (!b) return;
+  showTab(b.getAttribute('data-tab'));
+});
+function showTab(t) {
+  TAB = t;
+  try { localStorage.setItem('ngt_tab', t); } catch(e) {}
+  document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tab') === t); });
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'p-' + t); });
+  window.scrollTo(0, 0);
+  renderAll();
+}
+function shiftMonth(k) {
+  CUR = addMonths(CUR, k);
+  var y = CUR.slice(0,4);
+  ['g-year','s-year'].forEach(function(id){ var el = document.getElementById(id); if (el) el.setAttribute('data-want', y); });
+  renderAll();
+}
+
+// ===================== THIS MONTH =====================
+function monthTransfers(m) { return S.transfers.filter(function(t){ return t.month === m; }); }
+function kpiHTML(list) {
+  var planned = list.filter(function(t){ return t.status === 'planned'; });
+  var early = list.filter(function(t){ return t.status === 'early'; });
+  var sent = list.filter(function(t){ return t.status === 'sent'; });
+  return '<div class="kpi"><div class="l">Committed</div><div class="v">' + fmt(sum(list)) + '</div></div>' +
+         '<div class="kpi"><div class="l">Sent early</div><div class="v" style="color:var(--blue)">' + fmt(sum(early)) + '</div></div>' +
+         '<div class="kpi"><div class="l">Sent</div><div class="v" style="color:var(--sage)">' + fmt(sum(sent)) + '</div></div>' +
+         '<div class="kpi rem"><div class="l">Remaining to send</div><div class="v">' + fmt(sum(planned)) + '</div></div>';
+}
+function rowHTML(t, mode) {
+  var r = rec(t.rid) || { name: '(deleted)', bank: '', account: '' };
+  var badges = '';
+  if (t.pushedFrom) badges += '<span class="badge b-push">pushed from ' + esc(mLabel(t.pushedFrom)) + '</span>';
+  if (r.type === 'project') badges += '<span class="badge b-proj">project</span>';
+  var acct = (r.bank || r.account) ? '<span class="acct">' + esc(r.bank) + ' ' + esc(r.account) + '</span>' : '';
+  var acts = '';
+  if (mode === 'payday') {
+    acts = '<button class="btn btn-ghost btn-sm" onclick="copyText(\'' + esc(r.account) + '\',\'Account copied\')">&#128203; Copy acct</button>' +
+           '<button class="btn btn-sage btn-sm" onclick="setStatus(\'' + t.id + '\',\'sent\')">&#10003; Sent</button>' +
+           '<button class="btn btn-amber btn-sm" onclick="pushNext(\'' + t.id + '\')">&#8594; Push</button>';
+  } else {
+    if (t.status === 'planned') {
+      acts += '<button class="btn btn-blue btn-sm" onclick="setStatus(\'' + t.id + '\',\'early\')">Sent early</button>' +
+              '<button class="btn btn-sage btn-sm" onclick="setStatus(\'' + t.id + '\',\'sent\')">&#10003; Sent</button>' +
+              '<button class="btn btn-amber btn-sm" onclick="pushNext(\'' + t.id + '\')">&#8594; Push</button>';
+    } else {
+      acts += '<button class="btn btn-ghost btn-sm" onclick="setStatus(\'' + t.id + '\',\'planned\')">&#8634; Undo</button>';
+    }
+    acts += '<button class="btn btn-ghost btn-sm" onclick="editTransfer(\'' + t.id + '\')">&#9998; Edit</button>';
+  }
+  return '<div class="trow ' + t.status + '">' +
+    '<div class="nm">' + esc(r.name) + '</div><div class="am">' + fmt(t.amount) + '</div>' +
+    '<div class="sub">' + acct + badges + (t.note ? '<span>' + esc(t.note) + '</span>' : '') + '</div>' +
+    '<div class="acts">' + acts + '</div></div>';
+}
+function renderMonth() {
+  var list = monthTransfers(CUR);
+  document.getElementById('m-kpis').innerHTML = kpiHTML(list);
+  var st = document.getElementById('af-status');
+  if (!st._touched) st.value = (CUR < today()) ? 'sent' : 'planned';
+  var groups = [['planned','Remaining to send'],['early','Sent early'],['sent','Sent']];
+  var html = '';
+  groups.forEach(function(g){
+    var items = list.filter(function(t){ return t.status === g[0]; });
+    if (!items.length) return;
+    html += '<div class="grp-h"><span>' + g[1] + ' · ' + items.length + '</span><b>' + fmt(sum(items)) + '</b></div>';
+    items.forEach(function(t){ html += rowHTML(t, 'month'); });
+  });
+  document.getElementById('m-list').innerHTML = html || '<div class="empty">Nothing for ' + mLabel(CUR) + ' yet.<br>Add the first planned transfer above.</div>';
+}
+function checkNewRec() {
+  var n = document.getElementById('af-name').value.trim();
+  document.getElementById('af-newrec').classList.toggle('show', !!n && !recByName(n));
+}
+document.getElementById('af-status').addEventListener('change', function(){ this._touched = true; });
+function addTransfer(e) {
+  e.preventDefault();
+  var name = document.getElementById('af-name').value.trim();
+  var amt = parseAmt(document.getElementById('af-amt').value);
+  if (!name) { toast('Enter a recipient'); return; }
+  if (!(amt > 0)) { toast('Enter a valid amount'); return; }
+  var r = recByName(name);
+  if (!r) {
+    r = { id: uid('r'), name: name, account: document.getElementById('af-acct').value.trim(),
+          bank: document.getElementById('af-bank').value.trim().toUpperCase(),
+          type: document.getElementById('af-type').value, note: '', archived: false };
+    S.recipients.push(r);
+  }
+  S.transfers.push({ id: uid('t'), rid: r.id, month: CUR, amount: Math.round(amt*100)/100,
+    status: document.getElementById('af-status').value, note: document.getElementById('af-note').value.trim(), date: '' });
+  ['af-name','af-amt','af-note','af-acct','af-bank'].forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('af-newrec').classList.remove('show');
+  save();
+  toast('Added ' + fmt(amt) + ' for ' + r.name);
+  document.getElementById('af-name').focus();
+}
+function setStatus(id, s) {
+  var t = tr(id); if (!t) return;
+  t.status = s;
+  if (s !== 'planned' && !t.date) { var d = new Date(); t.date = d.toISOString().slice(0,10); }
+  if (s === 'planned') t.date = '';
+  save();
+}
+function pushNext(id) {
+  var t = tr(id); if (!t) return;
+  if (!t.pushedFrom) t.pushedFrom = t.month;
+  t.month = addMonths(t.month, 1);
+  t.status = 'planned';
+  save();
+  toast('Pushed to ' + mLabel(t.month));
+}
+
+// ===================== PAYDAY =====================
+function renderPayday() {
+  var list = monthTransfers(CUR);
+  var planned = list.filter(function(t){ return t.status === 'planned'; });
+  document.getElementById('pd-title').textContent = 'Payday · ' + mLabel(CUR);
+  document.getElementById('pd-kpis').innerHTML = kpiHTML(list);
+  var html = '';
+  if (planned.length) {
+    html += '<div class="grp-h"><span>To send · ' + planned.length + '</span><b>' + fmt(sum(planned)) + '</b></div>';
+    planned.forEach(function(t){ html += rowHTML(t, 'payday'); });
+  } else {
+    html = '<div class="empty">Nothing left to send for ' + mLabel(CUR) + '. &#10003;</div>';
+  }
+  document.getElementById('pd-list').innerHTML = html;
+}
+
+// ===================== YEAR GRID =====================
+function fillYears(id) {
+  var el = document.getElementById(id); if (!el) return;
+  var want = el.getAttribute('data-want') || el.value || CUR.slice(0,4);
+  el.innerHTML = years().map(function(y){ return '<option>' + y + '</option>'; }).join('');
+  el.value = (years().indexOf(want) !== -1) ? want : years()[0];
+  el.removeAttribute('data-want');
+}
+function renderGrid() {
+  var y = document.getElementById('g-year').value;
+  var q = document.getElementById('g-search').value.trim().toLowerCase();
+  var hide0 = document.getElementById('g-hide0').checked;
+  var incPlan = document.getElementById('g-plan').checked;
+  var sort = document.getElementById('g-sort').value;
+  var cells = {}, planCells = {};
+  S.transfers.forEach(function(t){
+    if (t.month.slice(0,4) !== y) return;
+    var m = +t.month.slice(5,7) - 1;
+    var bucket = (t.status === 'planned') ? planCells : cells;
+    if (!bucket[t.rid]) bucket[t.rid] = [0,0,0,0,0,0,0,0,0,0,0,0];
+    bucket[t.rid][m] += +t.amount;
+  });
+  var rows = S.recipients.map(function(r, idx){
+    var c = cells[r.id] || [0,0,0,0,0,0,0,0,0,0,0,0];
+    var p = planCells[r.id] || [0,0,0,0,0,0,0,0,0,0,0,0];
+    var tot = c.reduce(function(a,b){ return a+b; }, 0) + (incPlan ? p.reduce(function(a,b){ return a+b; }, 0) : 0);
+    return { r: r, c: c, p: p, tot: tot, idx: idx };
+  }).filter(function(x){
+    if (q && (x.r.name + ' ' + x.r.bank + ' ' + x.r.account).toLowerCase().indexOf(q) === -1) return false;
+    var any = x.c.some(function(v){ return v; }) || (incPlan && x.p.some(function(v){ return v; }));
+    if (hide0 && !any) return false;
+    if (x.r.archived && !any) return false;
+    return true;
+  });
+  if (sort === 'name') rows.sort(function(a,b){ return a.r.name.localeCompare(b.r.name); });
+  else if (sort === 'total') rows.sort(function(a,b){ return b.tot - a.tot; });
+  var colTot = [0,0,0,0,0,0,0,0,0,0,0,0], grand = 0;
+  var h = '<thead><tr><th>NAME</th>' + MON.map(function(m){ return '<th>' + m.toUpperCase() + '</th>'; }).join('') + '<th>TOTAL</th></tr></thead><tbody>';
+  rows.forEach(function(x){
+    h += '<tr><td title="' + esc(x.r.name) + '">' + esc(x.r.name) + '</td>';
+    for (var i = 0; i < 12; i++) {
+      var v = x.c[i], pv = incPlan ? x.p[i] : 0;
+      colTot[i] += v + pv;
+      if (v || pv) h += '<td class="' + (v ? 'has' : 'pl') + '" onclick="cellDetail(\'' + x.r.id + '\',\'' + y + '-' + String(i+1).padStart(2,'0') + '\')">' + fmt(v + pv).replace('₦','') + '</td>';
+      else h += '<td></td>';
+    }
+    grand += x.tot;
+    h += '<td class="tot">' + fmt(x.tot).replace('₦','') + '</td></tr>';
+  });
+  h += '</tbody><tfoot><tr><td>TOTAL ₦</td>' + colTot.map(function(v){ return '<td>' + (v ? fmt(v).replace('₦','') : '') + '</td>'; }).join('') + '<td>' + fmt(grand).replace('₦','') + '</td></tr></tfoot>';
+  document.getElementById('grid').innerHTML = rows.length ? h : '<tbody><tr><td class="empty" style="position:static;">No transfers for ' + y + '.</td></tr></tbody>';
+}
+function cellDetail(rid, m) {
+  var r = rec(rid);
+  var list = S.transfers.filter(function(t){ return t.rid === rid && t.month === m; });
+  var st = { planned: 'Planned', early: 'Sent early', sent: 'Sent' };
+  var html = '<h3>' + esc(r ? r.name : '') + ' · ' + mLabel(m) + '</h3><div class="mlist">' +
+    list.map(function(t){
+      return '<div class="it"><span class="a">' + fmt(t.amount) + '</span>' + st[t.status] + (t.date ? ' · ' + esc(t.date) : '') +
+        (t.pushedFrom ? ' · <span style="color:var(--rust)">pushed from ' + esc(mLabel(t.pushedFrom)) + '</span>' : '') +
+        (t.note ? '<div class="n">' + esc(t.note) + '</div>' : '') +
+        '<div style="margin-top:5px;"><button class="btn btn-ghost btn-sm" onclick="editTransfer(\'' + t.id + '\')">&#9998; Edit</button></div></div>';
+    }).join('') + '</div><div class="frm"><div class="btns"><b class="mono" style="margin-right:auto;align-self:center;">' + fmt(sum(list)) + '</b><button class="btn btn-ghost" onclick="closeModal()">Close</button></div></div>';
+  openModal(html);
+}
+
+// ===================== RECIPIENTS =====================
+function renderRecipients() {
+  var q = document.getElementById('r-search').value.trim().toLowerCase();
+  var showArch = document.getElementById('r-arch').checked;
+  var totals = {}, counts = {};
+  S.transfers.forEach(function(t){ if (t.status === 'planned') return; totals[t.rid] = (totals[t.rid]||0) + (+t.amount); counts[t.rid] = (counts[t.rid]||0) + 1; });
+  var list = S.recipients.filter(function(r){
+    if (r.archived && !showArch) return false;
+    return !q || (r.name + ' ' + r.bank + ' ' + r.account).toLowerCase().indexOf(q) !== -1;
+  }).sort(function(a,b){ return a.name.localeCompare(b.name); });
+  document.getElementById('r-list').innerHTML = list.length ? list.map(function(r){
+    return '<div class="rrow' + (r.archived ? ' arch' : '') + '" onclick="editRecipient(\'' + r.id + '\')">' +
+      '<div class="nm">' + esc(r.name) + '</div><div class="tt">' + fmt(totals[r.id] || 0) + '</div>' +
+      '<div class="sub"><span class="acct">' + esc(r.bank) + ' ' + esc(r.account) + '</span>' +
+      (r.type === 'project' ? '<span class="badge b-proj">project</span>' : '') +
+      (r.archived ? '<span class="badge" style="color:var(--muted);border-color:var(--muted)">archived</span>' : '') +
+      '<span>' + (counts[r.id] || 0) + ' transfers</span>' +
+      (r.note ? '<span>· ' + esc(r.note) + '</span>' : '') + '</div></div>';
+  }).join('') : '<div class="empty">No recipients' + (q ? ' match "' + esc(q) + '"' : ' yet') + '.</div>';
+}
+function editRecipient(id) {
+  var r = id ? rec(id) : { id: null, name: '', account: '', bank: '', type: 'person', note: '', archived: false };
+  var used = id ? S.transfers.some(function(t){ return t.rid === id; }) : false;
+  openModal('<h3>' + (id ? 'Edit recipient' : 'New recipient') + '</h3><div class="frm">' +
+    '<label>Name</label><input id="er-name" value="' + esc(r.name) + '">' +
+    '<div class="row2"><div class="frm"><label>Account no</label><input id="er-acct" inputmode="numeric" value="' + esc(r.account) + '"></div>' +
+    '<div class="frm"><label>Bank</label><input id="er-bank" list="dl-banks" value="' + esc(r.bank) + '"></div></div>' +
+    '<label>Type</label><select id="er-type"><option value="person"' + (r.type !== 'project' ? ' selected' : '') + '>Person</option><option value="project"' + (r.type === 'project' ? ' selected' : '') + '>Project</option></select>' +
+    '<label>Note</label><input id="er-note" value="' + esc(r.note) + '">' +
+    '<label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:0.8rem;color:var(--ink);"><input type="checkbox" id="er-arch"' + (r.archived ? ' checked' : '') + '> Archived (hidden from lists, history kept)</label>' +
+    '<div class="btns">' +
+    (id && r.account ? '<button class="btn btn-ghost" style="margin-right:auto" onclick="copyText(\'' + esc(r.account) + '\',\'Account copied\')">&#128203; Copy acct</button>' : '') +
+    (id && !used ? '<button class="btn btn-rust" onclick="deleteRecipient(\'' + id + '\')">Delete</button>' : '') +
+    '<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>' +
+    '<button class="btn btn-gold" onclick="saveRecipient(' + (id ? '\'' + id + '\'' : 'null') + ')">Save</button></div></div>');
+}
+function saveRecipient(id) {
+  var name = document.getElementById('er-name').value.trim();
+  if (!name) { toast('Name is required'); return; }
+  var dup = recByName(name);
+  if (dup && dup.id !== id) { toast('A recipient with this name already exists'); return; }
+  var r = id ? rec(id) : { id: uid('r') };
+  r.name = name;
+  r.account = document.getElementById('er-acct').value.trim();
+  r.bank = document.getElementById('er-bank').value.trim().toUpperCase();
+  r.type = document.getElementById('er-type').value;
+  r.note = document.getElementById('er-note').value.trim();
+  r.archived = document.getElementById('er-arch').checked;
+  if (!id) S.recipients.push(r);
+  closeModal(); save(); toast('Saved');
+}
+function deleteRecipient(id) {
+  if (!confirm('Delete this recipient?')) return;
+  S.recipients = S.recipients.filter(function(r){ return r.id !== id; });
+  closeModal(); save();
+}
+
+// ===================== EDIT TRANSFER =====================
+function editTransfer(id) {
+  var t = tr(id); if (!t) return;
+  var opts = S.recipients.slice().sort(function(a,b){ return a.name.localeCompare(b.name); }).map(function(r){
+    return '<option value="' + r.id + '"' + (r.id === t.rid ? ' selected' : '') + '>' + esc(r.name) + '</option>';
+  }).join('');
+  openModal('<h3>Edit transfer</h3><div class="frm">' +
+    '<label>Recipient</label><select id="et-rid">' + opts + '</select>' +
+    '<div class="row2"><div class="frm"><label>Amount ₦</label><input id="et-amt" inputmode="decimal" value="' + t.amount + '"></div>' +
+    '<div class="frm"><label>Month</label><input id="et-month" type="month" value="' + t.month + '"></div></div>' +
+    '<div class="row2"><div class="frm"><label>Status</label><select id="et-status">' +
+      [['planned','Planned'],['early','Sent early'],['sent','Sent']].map(function(o){ return '<option value="' + o[0] + '"' + (t.status === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') +
+    '</select></div><div class="frm"><label>Date sent</label><input id="et-date" type="date" value="' + esc(t.date) + '"></div></div>' +
+    '<label>Note</label><textarea id="et-note" rows="3">' + esc(t.note) + '</textarea>' +
+    '<div class="btns"><button class="btn btn-rust" style="margin-right:auto" onclick="deleteTransfer(\'' + id + '\')">Delete</button>' +
+    '<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>' +
+    '<button class="btn btn-gold" onclick="saveTransfer(\'' + id + '\')">Save</button></div></div>');
+}
+function saveTransfer(id) {
+  var t = tr(id); if (!t) return;
+  var amt = parseAmt(document.getElementById('et-amt').value);
+  if (!(amt > 0)) { toast('Enter a valid amount'); return; }
+  var m = document.getElementById('et-month').value;
+  if (!/^\d{4}-\d{2}$/.test(m)) { toast('Pick a month'); return; }
+  t.rid = document.getElementById('et-rid').value;
+  t.amount = Math.round(amt*100)/100;
+  t.month = m;
+  t.status = document.getElementById('et-status').value;
+  t.date = document.getElementById('et-date').value;
+  t.note = document.getElementById('et-note').value.trim();
+  closeModal(); save(); toast('Saved');
+}
+function deleteTransfer(id) {
+  if (!confirm('Delete this transfer?')) return;
+  S.transfers = S.transfers.filter(function(t){ return t.id !== id; });
+  closeModal(); save();
+}
+
+// ===================== SUMMARY =====================
+function renderSummary() {
+  var y = document.getElementById('s-year').value;
+  var list = S.transfers.filter(function(t){ return t.month.slice(0,4) === y && t.status !== 'planned'; });
+  var total = sum(list);
+  var months = [0,0,0,0,0,0,0,0,0,0,0,0];
+  list.forEach(function(t){ months[+t.month.slice(5,7)-1] += +t.amount; });
+  var active = months.filter(function(v){ return v; }).length || 1;
+  var people = {};
+  list.forEach(function(t){ people[t.rid] = (people[t.rid]||0) + (+t.amount); });
+  document.getElementById('s-kpis').innerHTML =
+    '<div class="kpi"><div class="l">Sent in ' + y + '</div><div class="v">' + fmt(total) + '</div></div>' +
+    '<div class="kpi"><div class="l">Transfers</div><div class="v">' + list.length + '</div></div>' +
+    '<div class="kpi"><div class="l">Recipients</div><div class="v">' + Object.keys(people).length + '</div></div>' +
+    '<div class="kpi rem"><div class="l">Avg / active month</div><div class="v">' + fmt(total / active) + '</div></div>';
+  var mx = Math.max.apply(null, months.concat([1]));
+  document.getElementById('s-months').innerHTML = months.map(function(v, i){
+    return '<div class="bar"><span class="lb mono">' + MON[i] + '</span><div class="tr"><div class="fl" style="width:' + (v/mx*100) + '%"></div></div><span class="vl">' + (v ? fmt(v) : '–') + '</span></div>';
+  }).join('');
+  var pp = 0, pj = 0;
+  list.forEach(function(t){ var r = rec(t.rid); if (r && r.type === 'project') pj += +t.amount; else pp += +t.amount; });
+  var tt = (pp + pj) || 1;
+  document.getElementById('s-split').innerHTML =
+    '<div class="split"><div style="width:' + (pp/tt*100) + '%;background:var(--gold)"></div><div style="width:' + (pj/tt*100) + '%;background:#6b3d8c"></div></div>' +
+    '<div class="hint"><span style="color:var(--gold)">&#9632;</span> People ' + fmt(pp) + ' (' + Math.round(pp/tt*100) + '%) &nbsp; <span style="color:#6b3d8c">&#9632;</span> Projects ' + fmt(pj) + ' (' + Math.round(pj/tt*100) + '%)</div>';
+  var top = Object.keys(people).map(function(id){ return [id, people[id]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0, 10);
+  var tmx = top.length ? top[0][1] : 1;
+  document.getElementById('s-top').innerHTML = top.map(function(x){
+    var r = rec(x[0]);
+    return '<div class="bar"><span class="lb" title="' + esc(r ? r.name : '') + '">' + esc(r ? r.name : '') + '</span><div class="tr"><div class="fl" style="width:' + (x[1]/tmx*100) + '%;' + (r && r.type === 'project' ? 'background:#6b3d8c' : '') + '"></div></div><span class="vl">' + fmt(x[1]) + '</span></div>';
+  }).join('') || '<div class="empty">No sent transfers in ' + y + '.</div>';
+}
+
+// ===================== DATA =====================
+function renderData() {
+  var dy = document.getElementById('d-year');
+  var cy = +today().slice(0,4), ys = [];
+  for (var y = cy + 1; y >= cy - 6; y--) ys.push(y);
+  var keep = dy.value || String(cy);
+  dy.innerHTML = ys.map(function(y){ return '<option>' + y + '</option>'; }).join('');
+  dy.value = keep;
+  var byYear = {};
+  S.transfers.forEach(function(t){ var y = t.month.slice(0,4); byYear[y] = byYear[y] || [0,0]; byYear[y][0]++; if (t.status !== 'planned') byYear[y][1] += +t.amount; });
+  document.getElementById('d-stats').innerHTML = S.recipients.length + ' recipients · ' + S.transfers.length + ' transfers<br>' +
+    Object.keys(byYear).sort().map(function(y){ return y + ': ' + byYear[y][0] + ' transfers, ' + fmt(byYear[y][1]) + ' sent'; }).join('<br>');
+}
+function importJSON(input) {
+  var f = input.files && input.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function() {
+    try {
+      var d = JSON.parse(rd.result);
+      if (!d.recipients || !d.transfers) throw new Error('Not a transfers file');
+      if (S.transfers.length && !confirm('Replace the ' + S.transfers.length + ' transfers currently here with this file?')) { input.value = ''; return; }
+      S = { version: 1, recipients: d.recipients, transfers: d.transfers };
+      save();
+      toast('Imported ' + d.recipients.length + ' recipients, ' + d.transfers.length + ' transfers');
+    } catch(e) { toast('Import failed: ' + e.message); }
+    input.value = '';
+  };
+  rd.readAsText(f);
+}
+function importPaste() {
+  var y = document.getElementById('d-year').value;
+  var txt = document.getElementById('d-paste').value;
+  if (!txt.trim()) { toast('Paste some rows first'); return; }
+  var lines = txt.split(/\r?\n/), nR = 0, nT = 0, skipped = 0;
+  lines.forEach(function(line){
+    if (!line.trim()) return;
+    var c = line.split('\t');
+    var name = (c[0] || '').trim();
+    if (!name || /^names?$/i.test(name) || /^total$/i.test(name)) { skipped++; return; }
+    var r = recByName(name);
+    if (!r) {
+      r = { id: uid('r'), name: name.replace(/\s+/g,' '), account: (c[1]||'').trim(), bank: (c[2]||'').trim().toUpperCase(),
+            type: /wedding|invest|visa|project/i.test(name) ? 'project' : 'person', note: '', archived: false };
+      S.recipients.push(r); nR++;
+    } else {
+      if (!r.account && c[1]) r.account = c[1].trim();
+      if (!r.bank && c[2]) r.bank = c[2].trim().toUpperCase();
+    }
+    for (var i = 0; i < 12; i++) {
+      var a = parseAmt(c[3 + i]);
+      if (a > 0) { S.transfers.push({ id: uid('t'), rid: r.id, month: y + '-' + String(i+1).padStart(2,'0'), amount: Math.round(a*100)/100, status: 'sent', note: '', date: '' }); nT++; }
+    }
+  });
+  document.getElementById('d-paste').value = '';
+  save();
+  toast('Imported ' + nT + ' transfers, ' + nR + ' new recipients');
+}
+function exportJSON() {
+  var blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'nigeria-transfers-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function clearAll() {
+  if (!confirm('Delete ALL recipients and transfers in this module?')) return;
+  if (!confirm('Are you sure? Export a backup first if unsure.')) return;
+  S = { version: 1, recipients: [], transfers: [] };
+  save();
+}
+
+// ===================== MODAL =====================
+function openModal(html) { document.getElementById('mbox').innerHTML = html; document.getElementById('modal').classList.add('show'); }
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
+
+// ===================== RENDER =====================
+function renderAll() {
+  document.getElementById('mlabel').textContent = mLabel(CUR);
+  document.getElementById('dl-names').innerHTML = S.recipients.filter(function(r){ return !r.archived; }).map(function(r){ return '<option value="' + esc(r.name) + '">'; }).join('');
+  fillYears('g-year'); fillYears('s-year');
+  if (TAB === 'month') renderMonth();
+  if (TAB === 'payday') renderPayday();
+  if (TAB === 'grid') renderGrid();
+  if (TAB === 'recipients') renderRecipients();
+  if (TAB === 'summary') renderSummary();
+  if (TAB === 'data') renderData();
+}
+showTab(TAB);
+</script>
+</body>
+</html>
