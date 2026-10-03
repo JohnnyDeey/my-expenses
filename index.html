@@ -2222,7 +2222,7 @@ input[type="password"]::-ms-clear { display:none !important; }
         <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;align-items:center;margin-bottom:12px;">
       <div class="parsed-count" style="white-space:nowrap;font-size:0.72rem;margin:0;">Showing <strong id="cat-count">0</strong> items</div>
       <button class="btn" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--gold);color:var(--ink);border:none;font-weight:700;" onclick="autoCategorizePending()">&#9889; Auto-Assign</button>
-      <button class="btn btn-primary" id="btn-save-pending" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="saveAllPending()">Save to Ledger</button>
+      <button class="btn btn-primary" id="btn-save-pending" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="saveAllPending()">Save to ledger</button>
     </div>
     <div class="ledger-wrap">
       <table style="table-layout:fixed;width:100%;">
@@ -5424,6 +5424,173 @@ function applyCatFilter() {
   renderCategorizeTable();
 }
 
+// -- Categorize tables: split into DESCRIPTION | DATE | AMOUNT | CATEGORY | ☐, resizable --
+// Same save (✓) / reset (↺) / mobile-desktop behaviour as the ledger tables.
+// tbl = <table>, baseKey = storage key, countId = id of the "Showing N" number, rerender = fn to redraw
+function enhanceCatTable(tbl, baseKey, countId, rerender) {
+  if (!tbl) return;
+  window._ledColSession = window._ledColSession || {};
+  var MIN = 36;
+  var wrap = tbl.parentElement;
+  var isDesk = window.innerWidth > 768;
+  var key = baseKey + (isDesk ? '_d' : '_m');
+
+  // Header: 5 columns
+  var hr = tbl.querySelector('thead tr');
+  if (!hr) return;
+  var thCss = 'padding:5px 8px;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:1px;background:var(--ink);color:var(--paper);border-right:1px solid #4a3e35;text-align:left;white-space:nowrap;overflow:hidden;';
+  hr.innerHTML =
+    '<th style="' + thCss + '">DESCRIPTION</th>' +
+    '<th style="' + thCss + '">DATE</th>' +
+    '<th style="' + thCss + '">AMOUNT</th>' +
+    '<th style="' + thCss + '">CATEGORY</th>' +
+    '<th style="' + thCss + 'text-align:center;border-right:none;">&#9744;</th>';
+  var ths = hr.children, n = ths.length;
+
+  // Split each row
+  tbl.querySelectorAll('tbody tr').forEach(function(tr) {
+    if (tr._split) return;
+    tr._split = true;
+    var main = tr.children[0];
+    var line1 = main.children[0], line2 = main.children[1];
+    var desc = line1 ? (line1.title || line1.childNodes[0].textContent.trim()) : '';
+    var amtSpan = line1 ? line1.querySelector('span') : null;
+    var amt = amtSpan ? amtSpan.textContent : '';
+    var amtColor = amtSpan ? amtSpan.style.color : 'var(--ink)';
+    var raw = line2 ? line2.textContent.trim().split('-') : [];
+    var dTxt = raw.length === 3 ? raw[2] + '/' + raw[1] + '/' + raw[0].slice(2) : (line2 ? line2.textContent : '');
+
+    var cellCss = 'padding:4px 7px;border-right:1px solid #eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0;';
+    main.style.cssText = cellCss + 'font-size:0.75rem;font-weight:500;';
+    main.textContent = desc; main.title = desc;
+
+    var dTd = document.createElement('td');
+    dTd.style.cssText = cellCss + 'font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);';
+    dTd.textContent = dTxt;
+    var aTd = document.createElement('td');
+    aTd.style.cssText = cellCss + 'font-family:DM Mono,monospace;font-size:0.7rem;font-weight:700;color:' + amtColor + ';';
+    aTd.textContent = amt;
+    tr.insertBefore(aTd, tr.children[1]);
+    tr.insertBefore(dTd, aTd);
+
+    var cat = tr.children[3];   // CATEGORY: never clip its dropdown
+    cat.style.cssText = 'padding:3px 5px;border-right:1px solid #eee;overflow:visible;position:relative;';
+    var cb = tr.children[4];    // checkbox: never "…"
+    cb.style.setProperty('padding', '0 4px', 'important');
+    cb.style.textAlign = 'center'; cb.style.overflow = 'visible';
+  });
+
+  // Widths: unsaved this session -> last saved -> defaults
+  function valid(a) { return a && a.length === n; }
+  var saved = null; try { saved = JSON.parse(localStorage.getItem(key)); } catch(e) {}
+  var sess = window._ledColSession[key];
+  var widths = valid(sess) ? sess.slice() : valid(saved) ? saved.slice() : [110, 62, 72, 110, 30];
+
+  var old = tbl.querySelector('colgroup'); if (old) old.remove();
+  var cg = document.createElement('colgroup');
+  widths.forEach(function() { cg.appendChild(document.createElement('col')); });
+  tbl.insertBefore(cg, tbl.firstChild);
+  var cols = cg.children;
+
+  function apply() {
+    var cw = (wrap && wrap.clientWidth) || 340;
+    var sum = 0; widths.forEach(function(w) { sum += w; });
+    var extra = Math.max(0, cw - sum);
+    var share = 0; for (var k = 0; k < n - 1; k++) share += widths[k];
+    var total = 0;
+    for (var i = 0; i < n; i++) {
+      var w = widths[i];
+      if (i < n - 1 && extra > 0) w += Math.floor(extra * widths[i] / share);
+      cols[i].style.width = w + 'px'; ths[i].style.width = w + 'px'; total += w;
+    }
+    tbl.style.setProperty('display', 'table', 'important');
+    tbl.style.setProperty('table-layout', 'fixed', 'important');
+    tbl.style.setProperty('min-width', '0', 'important');
+    tbl.style.setProperty('width', Math.max(total, cw) + 'px', 'important');
+  }
+  apply();
+  tbl._apply = apply;
+  if (wrap) wrap.style.overflowX = 'auto';
+
+  // ✓ / ↺ next to "Showing N items"
+  var bS = null;
+  var btnCss = 'border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:0.72rem;line-height:1.2;cursor:pointer;font-weight:700;';
+  function setDirty(on) {
+    if (bS) bS.style.cssText = btnCss + (on ? 'background:var(--gold);color:var(--ink);border-color:var(--gold);' : 'background:white;color:var(--muted);');
+  }
+  var cnt = document.getElementById(countId);
+  var host = cnt && cnt.parentElement;
+  if (host) {
+    var oldT = host.querySelector('.col-tools'); if (oldT) oldT.remove();
+    var tools = document.createElement('span');
+    tools.className = 'col-tools';
+    tools.style.cssText = 'display:inline-flex;gap:3px;margin-left:6px;vertical-align:middle;';
+    bS = document.createElement('button');
+    var bR = document.createElement('button');
+    bS.innerHTML = '&#10003;'; bR.innerHTML = '&#8634;';
+    bS.title = 'Save column widths'; bR.title = 'Reset column widths';
+    bR.style.cssText = btnCss + 'background:white;color:var(--muted);';
+    setDirty(valid(sess) && JSON.stringify(sess) !== JSON.stringify(saved));
+    bS.onclick = function(e) {
+      e.stopPropagation();
+      try { localStorage.setItem(key, JSON.stringify(widths)); } catch(err) {}
+      delete window._ledColSession[key]; setDirty(false);
+      if (typeof showToast === 'function') showToast('Column widths saved (' + (window.innerWidth > 768 ? 'desktop' : 'mobile') + ')');
+    };
+    bR.onclick = function(e) {
+      e.stopPropagation();
+      localStorage.removeItem(key); delete window._ledColSession[key];
+      if (typeof showToast === 'function') showToast('Column widths reset (' + (window.innerWidth > 768 ? 'desktop' : 'mobile') + ')');
+      if (typeof rerender === 'function') rerender();
+    };
+    tools.append(bS, bR);
+    host.appendChild(tools);
+  }
+
+  // Drag grips on every column except the checkbox
+  for (var i = 0; i < n - 1; i++) (function(i) {
+    var th = ths[i];
+    th.style.position = 'relative'; th.style.overflow = 'visible';
+    var h = document.createElement('div');
+    h.style.cssText = 'position:absolute;top:0;right:-8px;width:16px;height:100%;cursor:col-resize;touch-action:none;z-index:5;display:flex;justify-content:center;';
+    h.innerHTML = '<div style="width:2px;height:60%;margin-top:20%;background:var(--gold);opacity:0.8;border-radius:1px;pointer-events:none;"></div>';
+    h.addEventListener('pointerdown', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      h.setPointerCapture(e.pointerId);
+      for (var k = 0; k < n; k++) widths[k] = parseFloat(ths[k].style.width) || widths[k];
+      var sx = e.clientX, sw = widths[i];
+      function mv(ev) { widths[i] = Math.max(MIN, Math.round(sw + ev.clientX - sx)); apply(); }
+      function up() {
+        h.removeEventListener('pointermove', mv);
+        h.removeEventListener('pointerup', up);
+        h.removeEventListener('pointercancel', up);
+        window._ledColSession[key] = widths.slice();
+        setDirty(true);
+      }
+      h.addEventListener('pointermove', mv);
+      h.addEventListener('pointerup', up);
+      h.addEventListener('pointercancel', up);
+    });
+    th.appendChild(h);
+  })(i);
+}
+// Categorize: redraw when crossing mobile <-> desktop so the right saved layout loads
+(function() {
+  var rt, mode = window.innerWidth > 768;
+  window.addEventListener('resize', function() {
+    clearTimeout(rt);
+    rt = setTimeout(function() {
+      var now = window.innerWidth > 768;
+      if (now === mode) return;
+      mode = now;
+      var ep = document.getElementById('panel-categorize');
+      if (ep && ep.classList.contains('active') && typeof renderCategorizeTable === 'function') renderCategorizeTable();
+      var ip = document.getElementById('panel-inc-categorize');
+      if (ip && ip.classList.contains('active') && typeof renderIncomeCatTable === 'function') renderIncomeCatTable();
+    }, 200);
+  });
+})();
+
 function renderCategorizeTable() {
   // populate cat year filter with saved years
   var data = loadData();
@@ -5468,6 +5635,7 @@ function renderCategorizeTable() {
   });
 
   var tbody = document.getElementById('categorize-tbody');
+  Promise.resolve().then(function(){ enhanceCatTable(tbody.closest('table'), 'cat_col_widths_exp', 'cat-count', renderCategorizeTable); });
   tbody.innerHTML = '';
   filteredItems.forEach(function(item, idx) {
     var tr = document.createElement('tr');
@@ -8475,15 +8643,18 @@ function clearLedgerFilters() {
   var m = document.getElementById('led-bulk-match'); if(m) m.textContent = '';
   renderLedger();
 }
-// -- Ledger table: adds DATE column (dd/mm/yy) + finger-resizable columns, widths remembered --
-// tbl  = the <table>, wrap = its scroll container, key = localStorage key, rows = data items in row order
+// -- Ledger table: DATE column (dd/mm/yy) + finger-resizable columns --
+// Widths: unsaved edits last until reload; ✓ saves, ↺ resets. Mobile and desktop saved separately.
+// tbl = <table>, wrap = scroll container, key = storage key, rows = data items in row order
 // Expected columns before: DESCRIPTION | AMOUNT | CATEGORY | checkbox
+window._ledColSession = window._ledColSession || {};
+function _ledIsDesk() { return window.innerWidth > 768; }
 function enhanceLedgerTable(tbl, wrap, key, rows) {
   if (!tbl || tbl._enhanced) return;
   tbl._enhanced = true;
   var MIN = 36;
-  var cw0 = (wrap && wrap.clientWidth) || 340;
-  key = key + (cw0 > 768 ? '_d' : '_m');   // separate mobile / desktop memory
+  var isDesk = _ledIsDesk();
+  key = key + (isDesk ? '_d' : '_m');
 
   // DATE header after DESCRIPTION
   var hr = tbl.querySelector('thead tr');
@@ -8495,7 +8666,7 @@ function enhanceLedgerTable(tbl, wrap, key, rows) {
   if (hr.children[3]) hr.children[3].style.textAlign = 'left';
   if (hr.children[4]) hr.children[4].style.textAlign = 'center';
 
-  // DATE cells + let every cell shrink with its column
+  // DATE cells; text cells shrink with "…", checkbox cell never does
   var trs = tbl.querySelectorAll('tbody tr');
   Array.prototype.forEach.call(trs, function(tr, i) {
     var d = (rows && rows[i] && rows[i].date) ? rows[i].date.split('-') : [];
@@ -8503,20 +8674,28 @@ function enhanceLedgerTable(tbl, wrap, key, rows) {
     td.textContent = d.length === 3 ? d[2] + '/' + d[1] + '/' + d[0].slice(2) : '';
     td.style.cssText = 'font-family:DM Mono,monospace;color:var(--muted);border-right:1px solid #eee;';
     tr.insertBefore(td, tr.children[1]);
-    Array.prototype.forEach.call(tr.children, function(c) {
-      c.style.overflow = 'hidden'; c.style.textOverflow = 'ellipsis'; c.style.whiteSpace = 'nowrap'; c.style.maxWidth = '0';
+    var last = tr.children.length - 1;
+    Array.prototype.forEach.call(tr.children, function(c, ci) {
+      if (ci === last) {
+        c.style.overflow = 'visible'; c.style.maxWidth = 'none'; c.style.textAlign = 'center';
+        c.style.setProperty('padding', '0 4px', 'important');
+      } else {
+        c.style.overflow = 'hidden'; c.style.textOverflow = 'ellipsis'; c.style.whiteSpace = 'nowrap'; c.style.maxWidth = '0';
+      }
     });
-    if (tr.children[3]) tr.children[3].style.textAlign = 'left';    // CATEGORY
-    if (tr.children[4]) tr.children[4].style.textAlign = 'center';  // checkbox
+    if (tr.children[3]) tr.children[3].style.textAlign = 'left';
     var pill = tr.children[3] && tr.children[3].querySelector('span');
     if (pill) pill.style.maxWidth = '100%';
   });
 
-  // Widths: saved or defaults
+  // Widths: unsaved this session -> last saved -> defaults
   var ths = hr.children;
+  var n = ths.length;
+  function valid(a) { return a && a.length === n; }
   var saved = null; try { saved = JSON.parse(localStorage.getItem(key)); } catch(e) {}
-  var hasSaved = !!(saved && saved.length === ths.length);
-  var widths = hasSaved ? saved : [100, 62, 78, 90, 32];
+  var sess = window._ledColSession[key];
+  var widths = valid(sess) ? sess.slice() : valid(saved) ? saved.slice() : [100, 62, 78, 90, 32];
+  var autoFit = !valid(sess) && !valid(saved);
 
   var cg = document.createElement('colgroup');
   widths.forEach(function() { cg.appendChild(document.createElement('col')); });
@@ -8525,14 +8704,13 @@ function enhanceLedgerTable(tbl, wrap, key, rows) {
 
   function apply() {
     var cw = (wrap && wrap.clientWidth) || 340;
-    var sum = 0; widths.forEach(function(w){ sum += w; });
+    var sum = 0; widths.forEach(function(w) { sum += w; });
     var extra = Math.max(0, cw - sum);
-    // share extra across DESCRIPTION, DATE, AMOUNT, CATEGORY (not checkbox), weighted by size
-    var share = 0; for (var k = 0; k < widths.length - 1; k++) share += widths[k];
+    var share = 0; for (var k = 0; k < n - 1; k++) share += widths[k];
     var total = 0;
-    for (var i = 0; i < widths.length; i++) {
+    for (var i = 0; i < n; i++) {
       var w = widths[i];
-      if (i < widths.length - 1 && extra > 0) w += Math.floor(extra * widths[i] / share);
+      if (i < n - 1 && extra > 0) w += Math.floor(extra * widths[i] / share);
       cols[i].style.width = w + 'px';
       ths[i].style.width = w + 'px';
       total += w;
@@ -8544,22 +8722,64 @@ function enhanceLedgerTable(tbl, wrap, key, rows) {
   }
   apply();
 
-  // Auto-fit DATE so dd/mm/yy is never cut (until the user resizes)
-  if (!hasSaved) {
+  // Auto-fit DATE so dd/mm/yy is never cut (first time only)
+  if (autoFit) {
     var need = 0;
-    Array.prototype.forEach.call(trs, function(tr){
+    Array.prototype.forEach.call(trs, function(tr) {
       var c = tr.children[1];
       if (c && c.scrollWidth > need) need = c.scrollWidth;
     });
     need = Math.max(need, ths[1].scrollWidth) + 4;
     if (need > widths[1]) { widths[1] = need; apply(); }
   }
-
   tbl._apply = apply;
   if (wrap) wrap.style.overflowX = 'auto';
 
+  // Save (✓) and Reset (↺)
+  var bar = tbl.previousElementSibling;
+  var tools = document.createElement('span');
+  tools.style.cssText = 'display:inline-flex;gap:4px;align-items:center;margin-left:auto;';
+  var bS = document.createElement('button');
+  var bR = document.createElement('button');
+  var btnCss = 'border:1px solid var(--border);border-radius:3px;padding:2px 8px;font-size:0.8rem;line-height:1.2;cursor:pointer;font-weight:700;';
+  bS.innerHTML = '&#10003;'; bR.innerHTML = '&#8634;';
+  bS.title = 'Save column widths'; bR.title = 'Reset column widths to default';
+  bR.style.cssText = btnCss + 'background:white;color:var(--muted);';
+  function setDirty(on) {
+    bS.style.cssText = btnCss + (on ? 'background:var(--gold);color:var(--ink);border-color:var(--gold);' : 'background:white;color:var(--muted);');
+  }
+  setDirty(valid(sess) && JSON.stringify(sess) !== JSON.stringify(saved));
+  function rerender() {
+    if (wrap && wrap.id === 'ledger-accordion' && typeof renderLedger === 'function') renderLedger();
+    else if (wrap && wrap.id === 'inc-ledger-accordion' && typeof renderIncomeLedger === 'function') renderIncomeLedger();
+  }
+  bS.onclick = function(e) {
+    e.stopPropagation();
+    try { localStorage.setItem(key, JSON.stringify(widths)); } catch(err) {}
+    delete window._ledColSession[key];
+    setDirty(false);
+    if (typeof showToast === 'function') showToast('Column widths saved (' + (_ledIsDesk() ? 'desktop' : 'mobile') + ')');
+  };
+  bR.onclick = function(e) {
+    e.stopPropagation();
+    localStorage.removeItem(key);
+    delete window._ledColSession[key];
+    if (typeof showToast === 'function') showToast('Column widths reset (' + (_ledIsDesk() ? 'desktop' : 'mobile') + ')');
+    rerender();
+  };
+  tools.append(bS, bR);
+  if (bar && bar.tagName !== 'TABLE') {
+    bar.style.display = 'flex'; bar.style.alignItems = 'center'; bar.style.flexWrap = 'wrap'; bar.style.gap = '6px';
+    bar.appendChild(tools);
+  } else {
+    var tb = document.createElement('div');
+    tb.style.cssText = 'display:flex;justify-content:flex-end;padding:4px 0;';
+    tb.appendChild(tools);
+    tbl.parentNode.insertBefore(tb, tbl);
+  }
+
   // Drag grips on every column except the checkbox
-  for (var i = 0; i < ths.length - 1; i++) (function(i) {
+  for (var i = 0; i < n - 1; i++) (function(i) {
     var th = ths[i];
     th.style.position = 'relative';
     th.style.overflow = 'visible';
@@ -8569,14 +8789,15 @@ function enhanceLedgerTable(tbl, wrap, key, rows) {
     h.addEventListener('pointerdown', function(e) {
       e.preventDefault(); e.stopPropagation();
       h.setPointerCapture(e.pointerId);
-      for (var k = 0; k < widths.length; k++) widths[k] = parseFloat(ths[k].style.width) || widths[k];
+      for (var k = 0; k < n; k++) widths[k] = parseFloat(ths[k].style.width) || widths[k];
       var sx = e.clientX, sw = widths[i];
       function mv(ev) { widths[i] = Math.max(MIN, Math.round(sw + ev.clientX - sx)); apply(); }
       function up() {
         h.removeEventListener('pointermove', mv);
         h.removeEventListener('pointerup', up);
         h.removeEventListener('pointercancel', up);
-        try { localStorage.setItem(key, JSON.stringify(widths)); } catch(e) {}
+        window._ledColSession[key] = widths.slice();
+        setDirty(true);
       }
       h.addEventListener('pointermove', mv);
       h.addEventListener('pointerup', up);
@@ -8585,13 +8806,22 @@ function enhanceLedgerTable(tbl, wrap, key, rows) {
     th.appendChild(h);
   })(i);
 }
-// Re-fit resizable tables on window resize / rotate
-(function(){
-  var rt;
-  window.addEventListener('resize', function(){
+// Resize/rotate: re-fit; when crossing mobile<->desktop, redraw so the right layout loads
+(function() {
+  var rt, mode = _ledIsDesk();
+  window.addEventListener('resize', function() {
     clearTimeout(rt);
-    rt = setTimeout(function(){
-      document.querySelectorAll('table').forEach(function(t){ if (t._apply) t._apply(); });
+    rt = setTimeout(function() {
+      var now = _ledIsDesk();
+      if (now !== mode) {
+        mode = now;
+        var lp = document.getElementById('panel-ledger');
+        if (lp && lp.classList.contains('active') && typeof renderLedger === 'function') renderLedger();
+        var ip = document.getElementById('panel-inc-ledger');
+        if (ip && ip.classList.contains('active') && typeof renderIncomeLedger === 'function') renderIncomeLedger();
+      } else {
+        document.querySelectorAll('table').forEach(function(t) { if (t._apply) t._apply(); });
+      }
     }, 150);
   });
 })();
@@ -12781,6 +13011,7 @@ function renderIncomeCatTable() {
   });
 
   var tbody = document.getElementById('inc-categorize-tbody');
+  Promise.resolve().then(function(){ enhanceCatTable(tbody.closest('table'), 'cat_col_widths_inc', 'inc-cat-count', renderIncomeCatTable); });
   tbody.innerHTML = '';
   var allCats = getAllIncomeCats();
 
@@ -13759,6 +13990,8 @@ function renderIncomeLedger() {
   });
   tbl.appendChild(tbody);
   acc.appendChild(tbl);
+
+  enhanceLedgerTable(tbl, acc, 'led_col_widths_inc', pageData);
 
   // Pagination buttons for income ledger
   var totalIncPages = Math.ceil(data.length / PAGE);
