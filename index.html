@@ -2149,56 +2149,78 @@ input[type="password"]::-ms-clear { display:none !important; }
       style="width:100%;text-align:left;background:var(--paper2);border:1px solid var(--border);border-radius:3px;padding:7px 12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
       <span class="cat-fil-arrow">▸</span> ▼ Filters &nbsp;<span id="cat-filter-count" style="font-size:0.68rem;color:var(--muted);font-weight:400;"></span>
     </button>
-    <div class="cat-filter-bar" style="display:none;border-top:none;border-radius:0 0 3px 3px;flex-wrap:wrap;gap:6px;padding:10px 12px;">
-      <span class="filter-label" style="font-size:0.72rem;">Period:</span>
-      <select id="cat-year-filter" onchange="applyCatFilter()" style="font-size:0.75rem;padding:5px 8px;"><option value="pending">Pending (just parsed)</option></select>
-      <select id="cat-month-filter" onchange="applyCatFilter()" style="display:none;font-size:0.75rem;padding:5px 8px;"><option value="all">All Months</option></select>
-      <span class="filter-label" style="font-size:0.72rem;margin-left:4px;">Currency:</span>
-      <select id="cat-currency-filter" onchange="applyCatFilter()" style="font-size:0.75rem;padding:5px 8px;max-width:80px;">
-        <option value="all">All</option>
-        <option value="NGN">NGN</option>
-        <option value="EUR">EUR</option>
-        <option value="USD">USD</option>
-        <option value="GBP">GBP</option>
-      </select>
-      <span class="filter-label" style="font-size:0.72rem;margin-left:4px;">Category:</span>
-      <select id="cat-cat-filter" onchange="applyCatFilter()" style="font-size:0.75rem;padding:5px 8px;">
-        <option value="all">All Categories</option>
-        <option value="Other">Other only</option>
-      </select>
-      <button id="cat-sort-btn" onclick="toggleCatSort()" class="btn btn-ghost" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;display:flex;align-items:center;gap:5px;white-space:nowrap;margin-left:auto;">&#8645; Newest first</button>
+    <div class="cat-filter-bar cf-bar" style="display:none;border-top:none;border-radius:0 0 3px 3px;">
+      <div class="cf-r1">
+        <select id="cat-year-filter" onchange="applyCatFilter()"><option value="pending">Pending (just parsed)</option></select>
+        <select id="cat-month-filter" onchange="applyCatFilter()" style="display:none;"><option value="all">All Months</option></select>
+      </div>
+      <div class="cf-r2">
+        <select id="cat-currency-filter" onchange="applyCatFilter()">
+          <option value="all">All</option>
+          <option value="NGN">NGN</option>
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
+          <option value="GBP">GBP</option>
+        </select>
+        <select id="cat-cat-filter" onchange="applyCatFilter()">
+          <option value="all">All Categories</option>
+          <option value="Other">Other only</option>
+        </select>
+        <button id="cat-sort-btn" onclick="toggleCatSort()" class="btn btn-ghost cf-sort">&#8645; Newest first</button>
+      </div>
     </div>
+    <style>
+      .cf-bar{flex-wrap:nowrap !important;gap:6px;padding:10px 12px;}
+      .cf-r1{display:flex;gap:6px;flex:1;min-width:0;}
+      .cf-r1 select{flex:1;min-width:0;font-size:0.75rem;padding:5px 8px;}
+      .cf-r2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;flex:1.5;min-width:0;}
+      .cf-r2 select{width:100%;min-width:0;font-size:0.75rem;padding:5px 8px;}
+      .cf-r2 .cf-sort{width:100%;margin:0;font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 6px;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;}
+      @media(max-width:768px){
+        .cf-bar{flex-direction:column;}
+        .cf-r1,.cf-r2{width:100%;flex:none;}
+      }
+    </style>
   </div>
-
     <div id="categorize-empty" class="empty-state">
     <div class="big">&#9645;</div>
     <p>No items to categorize.<br>Parse new expenses from Import, or select a saved year above to re-categorize.</p>
   </div>
   <div id="categorize-content" style="display:none;">
-    <!-- Description search + bulk assign -->
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
-      <span class="filter-label" style="font-size:0.72rem;">Search:</span>
-      <input type="text" id="cat-desc-search" placeholder="Filter by description..." oninput="applyCatDescSearch()"
-        style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
-      <span id="cat-desc-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
-      <span class="filter-label" style="font-size:0.72rem;">Assign to:</span>
-      <div class="cat-wrapper" id="bulk-cat-wrap" style="width:160px;">
-        <input type="text" class="cat-input" id="bulk-cat-input" placeholder="Pick or type..." autocomplete="off"
-          onfocus="this.setAttribute('data-prev',this.value);this.value='';filterBulkCatDropdown()" oninput="filterBulkCatDropdown()">
-        <span class="cat-input-arrow">&#9662;</span>
-        <div class="cat-dropdown" id="bulk-cat-drop"></div>
+        <!-- Description search + bulk assign -->
+    <div class="lb-bar">
+      <div class="lb-r1">
+        <div class="lb-search-wrap">
+          <input type="text" id="cat-desc-search" placeholder="" autocomplete="off"
+            oninput="document.getElementById('exp-cat-bulk-ph').style.display=this.value?'none':'flex';applyCatDescSearch()"
+            onfocus="if(!this.value)document.getElementById('exp-cat-bulk-ph').style.opacity='0.4'"
+            onblur="if(!this.value)document.getElementById('exp-cat-bulk-ph').style.opacity='1'"
+            style="width:100%;box-sizing:border-box;font-size:0.78rem;padding:5px 8px;">
+          <div class="lb-ph" id="exp-cat-bulk-ph"><span>rice, water &nbsp;|&nbsp; -exclude &nbsp;|&nbsp; &gt;1000 &nbsp;|&nbsp; &lt;=500 &nbsp;|&nbsp; &gt;=50 &nbsp;|&nbsp; &lt;10 &nbsp;&nbsp;&nbsp;&nbsp;rice, water &nbsp;|&nbsp; -exclude &nbsp;|&nbsp; &gt;1000 &nbsp;|&nbsp; &lt;=500 &nbsp;|&nbsp; &gt;=50 &nbsp;|&nbsp; &lt;10 &nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+        </div>
+        <button class="btn btn-danger" style="padding:5px 10px;font-size:0.75rem;white-space:nowrap;" onclick="clearCatDescSearch()">Clear</button>
       </div>
-      <button class="btn btn-success" style="padding:8px 16px;font-size:0.8rem;white-space:nowrap;" onclick="bulkAssignFiltered()">&#10003; Assign</button>
-      <button class="cb-action-btn cb-hide-btn" title="Hide selected rows" onclick="catHideSelected()">&#8212; Hide</button>
-      <button class="cb-action-btn cb-del-btn" title="Delete selected rows" onclick="catDeleteSelected()">&#10005; Delete</button>
-      <button class="cb-action-btn cb-sel-btn" id="cat-selall-btn" title="Select / deselect all" onclick="catToggleSelectAll()">&#9634; All</button>
-      <button class="btn btn-ghost" style="padding:8px 10px;font-size:0.8rem;" onclick="clearCatDescSearch()">&#10005;</button>
+      <div class="lb-r2">
+        <div class="cat-wrapper" id="bulk-cat-wrap" style="flex:1;min-width:0;">
+          <input type="text" class="cat-input" id="bulk-cat-input" placeholder="Pick or type..." autocomplete="off"
+            onfocus="this.setAttribute('data-prev',this.value);this.value='';filterBulkCatDropdown()" oninput="filterBulkCatDropdown()">
+          <span class="cat-input-arrow">&#9662;</span>
+          <div class="cat-dropdown" id="bulk-cat-drop"></div>
+        </div>
+      </div>
+      <div class="lb-r3">
+        <button class="btn btn-success" onclick="bulkAssignFiltered()">&#10003; Assign</button>
+        <button class="cb-action-btn cb-hide-btn" title="Hide selected rows" onclick="catHideSelected()">&#8212; Hide</button>
+        <button class="cb-action-btn cb-del-btn" title="Delete selected rows" onclick="catDeleteSelected()">&#10005; Delete</button>
+        <button class="cb-action-btn cb-sel-btn" id="cat-selall-btn" title="Select / deselect all" onclick="catToggleSelectAll()">&#9634; All</button>
+      </div>
+      <span id="cat-desc-match" style="display:none;"></span>
     </div>
 
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-      <div class="parsed-count">Showing <strong id="cat-count">0</strong> items</div>
-      <button class="btn btn-ghost" style="margin-left:auto;" onclick="autoCategorizePending()">&#9889; Auto-Assign All</button>
-      <button class="btn btn-primary" id="btn-save-pending" onclick="saveAllPending()">&#10003; Save to Ledger</button>
+        <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;align-items:center;margin-bottom:12px;">
+      <div class="parsed-count" style="white-space:nowrap;font-size:0.72rem;margin:0;">Showing <strong id="cat-count">0</strong> items</div>
+      <button class="btn" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--gold);color:var(--ink);border:none;font-weight:700;" onclick="autoCategorizePending()">&#9889; Auto-Assign</button>
+      <button class="btn btn-primary" id="btn-save-pending" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="saveAllPending()">Save to Ledger</button>
     </div>
     <div class="ledger-wrap">
       <table style="table-layout:fixed;width:100%;">
@@ -2386,28 +2408,52 @@ input[type="password"]::-ms-clear { display:none !important; }
     </div>
   </div>
 
-  <!-- Ledger bulk assign bar -->
-  <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
-    <span class="filter-label" style="font-size:0.72rem;">Desc:</span>
-    <input type="text" id="led-bulk-search" placeholder="Filter by description... (commas=multiple, -minus=exclude)" oninput="debouncedLedgerSearch()"
-      style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
-    <span id="led-bulk-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
-    <span class="filter-label" style="font-size:0.72rem;">Category:</span>
-    <select id="led-bulk-cat-filter" onchange="renderLedger()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;max-width:160px;">
-      <option value="all">All Categories</option>
-    </select>
-    <span class="filter-label" style="font-size:0.72rem;">Assign to:</span>
-    <div class="cat-wrapper" id="led-bulk-cat-wrap" style="width:160px;">
-      <input type="text" class="cat-input" id="led-bulk-cat-input" placeholder="Pick or type..." autocomplete="off"
-        onfocus="this.setAttribute('data-prev',this.value);this.value='';filterLedgerBulkCatDropdown()" oninput="filterLedgerBulkCatDropdown()">
-      <span class="cat-input-arrow">&#9662;</span>
-      <div class="cat-dropdown" id="led-bulk-cat-drop"></div>
+    <!-- Ledger bulk assign bar -->
+  <style>
+    .lb-bar{display:flex;flex-wrap:nowrap;gap:6px;padding:10px 12px;align-items:stretch;}
+    .lb-r1{display:flex;gap:6px;flex:1.5;min-width:0;}
+    .lb-r2{display:flex;gap:6px;flex:1.5;min-width:0;}
+    .lb-r3{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:1.5;}
+    .lb-r3 button{width:100%;margin:0;padding:6px 4px;font-size:0.75rem;white-space:nowrap;box-shadow:none;}
+    .lb-search-wrap{position:relative;flex:1;min-width:120px;overflow:hidden;}
+    .lb-ph{position:absolute;inset:0;display:flex;align-items:center;pointer-events:none;overflow:hidden;padding:0 8px;color:var(--muted);font-size:0.78rem;font-family:'DM Mono',monospace;transition:opacity .2s;}
+    .lb-ph span{display:inline-block;white-space:nowrap;animation:ledPhScroll 14s linear infinite;}
+    @keyframes ledPhScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+    @media(max-width:768px){
+      .lb-bar{flex-direction:column;}
+      .lb-r1,.lb-r2,.lb-r3{width:100%;flex:none;}
+    }
+  </style>
+  <div class="lb-bar">
+    <div class="lb-r1">
+      <div class="lb-search-wrap">
+        <input type="text" id="led-bulk-search" placeholder="" autocomplete="off"
+          oninput="document.getElementById('led-bulk-ph').style.display=this.value?'none':'flex';debouncedLedgerSearch()"
+          onfocus="if(!this.value)document.getElementById('led-bulk-ph').style.opacity='0.4'"
+          onblur="if(!this.value)document.getElementById('led-bulk-ph').style.opacity='1'"
+          style="width:100%;box-sizing:border-box;font-size:0.78rem;padding:5px 8px;">
+        <div class="lb-ph" id="led-bulk-ph"><span>rice, water &nbsp;|&nbsp; -exclude &nbsp;|&nbsp; &gt;1000 &nbsp;|&nbsp; &lt;=500 &nbsp;|&nbsp; &gt;=50 &nbsp;|&nbsp; &lt;10 &nbsp;&nbsp;&nbsp;&nbsp;rice, water &nbsp;|&nbsp; -exclude &nbsp;|&nbsp; &gt;1000 &nbsp;|&nbsp; &lt;=500 &nbsp;|&nbsp; &gt;=50 &nbsp;|&nbsp; &lt;10 &nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+      </div>
+      <button class="btn btn-danger" style="padding:5px 10px;font-size:0.75rem;white-space:nowrap;" onclick="clearLedgerBulkSearch()">Clear</button>
     </div>
-    <button class="btn btn-success" id="led-assign-btn" style="padding:8px 16px;font-size:0.8rem;white-space:nowrap;" onclick="ledgerBulkAssign()">&#10003; Assign</button>
-    <button class="cb-action-btn cb-hide-btn" title="Hide selected rows from view" onclick="ledHideSelected()">&#8212; Hide</button>
-    <button class="cb-action-btn cb-del-btn" title="Delete selected rows permanently" onclick="ledDeleteSelected()">&#10005; Delete</button>
-    <button class="cb-action-btn cb-sel-btn" id="led-selall-btn" title="Select all / deselect all" onclick="ledToggleSelectAll()">&#9634; All</button>
-    <button class="btn btn-ghost" style="padding:8px 10px;font-size:0.8rem;" onclick="clearLedgerBulkSearch()">&#10005;</button>
+    <div class="lb-r2">
+      <select id="led-bulk-cat-filter" onchange="renderLedger()" style="flex:1;min-width:0;font-size:0.75rem;padding:5px 8px;">
+        <option value="all">All Categories</option>
+      </select>
+      <div class="cat-wrapper" id="led-bulk-cat-wrap" style="flex:1;min-width:0;">
+        <input type="text" class="cat-input" id="led-bulk-cat-input" placeholder="Pick or type..." autocomplete="off"
+          onfocus="this.setAttribute('data-prev',this.value);this.value='';filterLedgerBulkCatDropdown()" oninput="filterLedgerBulkCatDropdown()">
+        <span class="cat-input-arrow">&#9662;</span>
+        <div class="cat-dropdown" id="led-bulk-cat-drop"></div>
+      </div>
+    </div>
+    <div class="lb-r3">
+      <button class="btn btn-success" id="led-assign-btn" onclick="ledgerBulkAssign()">&#10003; Assign</button>
+      <button class="cb-action-btn cb-hide-btn" title="Hide selected rows from view" onclick="ledHideSelected()">&#8212; Hide</button>
+      <button class="cb-action-btn cb-del-btn" title="Delete selected rows permanently" onclick="ledDeleteSelected()">&#10005; Delete</button>
+      <button class="cb-action-btn cb-sel-btn" id="led-selall-btn" title="Select all / deselect all" onclick="ledToggleSelectAll()">&#9634; All</button>
+    </div>
+    <span id="led-bulk-match" style="display:none;"></span>
   </div>
 
   <div id="ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No saved entries yet.</p></div>
@@ -2812,46 +2858,59 @@ input[type="password"]::-ms-clear { display:none !important; }
       style="width:100%;text-align:left;background:var(--paper2);border:1px solid var(--border);border-radius:3px;padding:7px 12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
       <span class="inc-cat-fil-arrow">▸</span> ▼ Filters &nbsp;<span id="inc-cat-filter-count" style="font-size:0.68rem;color:var(--muted);font-weight:400;"></span>
     </button>
-    <div class="cat-filter-bar" style="display:none;border-top:none;border-radius:0 0 3px 3px;flex-wrap:wrap;gap:6px;padding:10px 12px;">
-      <span class="filter-label" style="font-size:0.72rem;">Period:</span>
-      <select id="inc-cat-year-filter" onchange="applyIncomeCatFilter()" style="font-size:0.75rem;padding:5px 8px;"><option value="pending">Pending (just parsed)</option></select>
-      <select id="inc-cat-month-filter" onchange="applyIncomeCatFilter()" style="display:none;font-size:0.75rem;padding:5px 8px;"><option value="all">All Months</option></select>
-      <span class="filter-label" style="font-size:0.72rem;margin-left:4px;">Currency:</span>
-      <select id="inc-cat-currency-filter" onchange="applyIncomeCatFilter()" style="font-size:0.75rem;padding:5px 8px;max-width:80px;">
-        <option value="all">All</option>
-        <option value="NGN">NGN</option>
-        <option value="EUR">EUR</option>
-        <option value="USD">USD</option>
-        <option value="GBP">GBP</option>
-      </select>
-      <span class="filter-label" style="font-size:0.72rem;margin-left:4px;">Category:</span>
-      <select id="inc-cat-cat-filter" onchange="applyIncomeCatFilter()" style="font-size:0.75rem;padding:5px 8px;">
-        <option value="all">All Categories</option>
-        <option value="Other">Other only</option>
-      </select>
-      <button id="inc-cat-sort-btn" onclick="toggleIncCatSort()" class="btn btn-ghost" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:5px 10px;display:flex;align-items:center;gap:5px;white-space:nowrap;margin-left:auto;">&#8645; Newest first</button>
+        <div class="cat-filter-bar cf-bar" style="display:none;border-top:none;border-radius:0 0 3px 3px;">
+      <div class="cf-r1">
+        <select id="inc-cat-year-filter" onchange="applyIncomeCatFilter()"><option value="pending">Pending (just parsed)</option></select>
+        <select id="inc-cat-month-filter" onchange="applyIncomeCatFilter()" style="display:none;"><option value="all">All Months</option></select>
+      </div>
+      <div class="cf-r2">
+        <select id="inc-cat-currency-filter" onchange="applyIncomeCatFilter()">
+          <option value="all">All</option>
+          <option value="NGN">NGN</option>
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
+          <option value="GBP">GBP</option>
+        </select>
+        <select id="inc-cat-cat-filter" onchange="applyIncomeCatFilter()">
+          <option value="all">All Categories</option>
+          <option value="Other">Other only</option>
+        </select>
+        <button id="inc-cat-sort-btn" onclick="toggleIncCatSort()" class="btn btn-ghost cf-sort">&#8645; Newest first</button>
+      </div>
     </div>
   </div>
-  <!-- Bulk assign bar -->
-  <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:12px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
-    <input type="text" id="inc-cat-desc-search" placeholder="Filter by description..." oninput="incCatDescSearch(this.value)"
-      style="flex:1;min-width:150px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
-    <span id="inc-cat-desc-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
-    <select id="inc-cat-bulk-sel" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;min-width:160px;">
-      <option value="">Assign all to...</option>
-    </select>
-    <button class="btn btn-success" style="padding:8px 14px;" onclick="incBulkAssignCat()">&#10003; Assign All</button>
-    <button class="cb-action-btn cb-hide-btn" title="Hide selected rows" onclick="incCatHideSelected()">&#8212; Hide</button>
-    <button class="cb-action-btn cb-del-btn" title="Delete selected rows" onclick="incCatDeleteSelected()">&#10005; Delete</button>
-    <button class="cb-action-btn cb-sel-btn" id="inc-cat-selall-btn" title="Select / deselect all" onclick="incCatToggleSelectAll()">&#9634; All</button>
-    <button class="btn btn-ghost" style="padding:8px 10px;" onclick="incCatDescSearch('');document.getElementById('inc-cat-desc-search').value='';">&#10005;</button>
-  </div>
-  <div id="inc-categorize-empty" class="empty-state"><div class="big">&#9645;</div><p>No income items to categorize.</p></div>
+    <div id="inc-categorize-empty" class="empty-state"><div class="big">&#9645;</div><p>No income items to categorize.</p></div>
   <div id="inc-categorize-content" style="display:none;">
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-      <div class="parsed-count">Showing <strong id="inc-cat-count">0</strong> items</div>
-      <button class="btn btn-ghost" style="margin-left:auto;" onclick="autoCategorizePendingIncome()">&#9889; Auto-Assign All</button>
-      <button class="btn btn-primary" id="inc-btn-save-pending" onclick="saveAllPendingIncome()">&#10003; Save to Ledger</button>
+    <!-- Income bulk assign bar -->
+    <div class="lb-bar">
+      <div class="lb-r1">
+        <div class="lb-search-wrap">
+          <input type="text" id="inc-cat-desc-search" placeholder="" autocomplete="off"
+            oninput="document.getElementById('inc-cat-bulk-ph').style.display=this.value?'none':'flex';incCatDescSearch(this.value)"
+            onfocus="if(!this.value)document.getElementById('inc-cat-bulk-ph').style.opacity='0.4'"
+            onblur="if(!this.value)document.getElementById('inc-cat-bulk-ph').style.opacity='1'"
+            style="width:100%;box-sizing:border-box;font-size:0.78rem;padding:5px 8px;">
+          <div class="lb-ph" id="inc-cat-bulk-ph"><span>salary, bonus &nbsp;|&nbsp; -exclude &nbsp;|&nbsp; &gt;1000 &nbsp;|&nbsp; &lt;=500 &nbsp;|&nbsp; &gt;=50 &nbsp;|&nbsp; &lt;10 &nbsp;&nbsp;&nbsp;&nbsp;salary, bonus &nbsp;|&nbsp; -exclude &nbsp;|&nbsp; &gt;1000 &nbsp;|&nbsp; &lt;=500 &nbsp;|&nbsp; &gt;=50 &nbsp;|&nbsp; &lt;10 &nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+        </div>
+        <button class="btn btn-danger" style="padding:5px 10px;font-size:0.75rem;white-space:nowrap;" onclick="document.getElementById('inc-cat-desc-search').value='';var p=document.getElementById('inc-cat-bulk-ph');p.style.display='flex';p.style.opacity='1';incCatDescSearch('');">Clear</button>
+      </div>
+      <div class="lb-r2">
+        <select id="inc-cat-bulk-sel" style="flex:1;min-width:0;font-size:0.75rem;padding:5px 8px;">
+          <option value="">Assign all to...</option>
+        </select>
+      </div>
+      <div class="lb-r3">
+        <button class="btn btn-success" onclick="incBulkAssignCat()">&#10003; Assign</button>
+        <button class="cb-action-btn cb-hide-btn" title="Hide selected rows" onclick="incCatHideSelected()">&#8212; Hide</button>
+        <button class="cb-action-btn cb-del-btn" title="Delete selected rows" onclick="incCatDeleteSelected()">&#10005; Delete</button>
+        <button class="cb-action-btn cb-sel-btn" id="inc-cat-selall-btn" title="Select / deselect all" onclick="incCatToggleSelectAll()">&#9634; All</button>
+      </div>
+      <span id="inc-cat-desc-match" style="display:none;"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;align-items:center;margin-bottom:12px;">
+      <div class="parsed-count" style="white-space:nowrap;font-size:0.72rem;margin:0;">Showing <strong id="inc-cat-count">0</strong> items</div>
+      <button class="btn" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--gold);color:var(--ink);border:none;font-weight:700;" onclick="autoCategorizePendingIncome()">&#9889; Auto-Assign</button>
+      <button class="btn btn-primary" id="inc-btn-save-pending" style="width:100%;margin:0;padding:6px 6px;font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="saveAllPendingIncome()">Save to Ledger</button>
     </div>
     <div class="ledger-wrap">
       <table style="table-layout:fixed;width:100%;">
@@ -3024,31 +3083,43 @@ input[type="password"]::-ms-clear { display:none !important; }
       <button class="btn btn-danger" onclick="clearIncomeLedgerFilters()" style="padding:5px 10px;font-size:0.75rem;">Clear</button>
     </div>
   </div>
-  <!-- Bulk assign bar -->
-  <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:14px 16px;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:2px 2px 0 var(--shadow);">
-    <span class="filter-label" style="font-size:0.72rem;">Desc:</span>
-    <input type="text" id="inc-bulk-search" placeholder="Filter by description... (commas=multiple, -minus=exclude)" oninput="renderIncomeLedger()"
-      style="flex:1;min-width:160px;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:3px;outline:none;">
-    <span id="inc-bulk-match" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;"></span>
-    <span class="filter-label" style="font-size:0.72rem;">Category:</span>
-    <select id="inc-bulk-cat-filter" onchange="renderIncomeLedger()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 10px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;max-width:160px;">
-      <option value="all">All Categories</option>
-    </select>
-    <span class="filter-label" style="font-size:0.72rem;">Assign to:</span>
-    <select id="inc-bulk-cat-sel" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;min-width:160px;">
-      <option value="">Pick category...</option>
-    </select>
-    <button class="btn btn-success" id="inc-assign-btn" style="padding:8px 16px;font-size:0.8rem;" onclick="incomeBulkAssign()">&#10003; Assign</button>
-    <button class="cb-action-btn cb-hide-btn" title="Hide selected rows from view" onclick="incLedHideSelected()">&#8212; Hide</button>
-    <button class="cb-action-btn cb-del-btn" title="Delete selected rows permanently" onclick="incLedDeleteSelected()">&#10005; Delete</button>
-    <button class="cb-action-btn cb-sel-btn" id="inc-led-selall-btn" title="Select all / deselect all" onclick="incLedToggleSelectAll()">&#9634; All</button>
-    <button class="btn btn-ghost" style="padding:8px 10px;" onclick="_incExcludedIds={};document.getElementById('inc-bulk-search').value='';renderIncomeLedger();">&#10005;</button>
+
+    <!-- Bulk assign bar -->
+  <div class="lb-bar">
+    <div class="lb-r1">
+      <div class="lb-search-wrap">
+        <input type="text" id="inc-bulk-search" placeholder="" autocomplete="off"
+          oninput="document.getElementById('inc-led-bulk-ph').style.display=this.value?'none':'flex';renderIncomeLedger()"
+          onfocus="if(!this.value)document.getElementById('inc-led-bulk-ph').style.opacity='0.4'"
+          onblur="if(!this.value)document.getElementById('inc-led-bulk-ph').style.opacity='1'"
+          style="width:100%;box-sizing:border-box;font-size:0.78rem;padding:5px 8px;">
+        <div class="lb-ph" id="inc-led-bulk-ph"><span>salary, bonus &nbsp;|&nbsp; -exclude &nbsp;|&nbsp; &gt;1000 &nbsp;|&nbsp; &lt;=500 &nbsp;|&nbsp; &gt;=50 &nbsp;|&nbsp; &lt;10 &nbsp;&nbsp;&nbsp;&nbsp;salary, bonus &nbsp;|&nbsp; -exclude &nbsp;|&nbsp; &gt;1000 &nbsp;|&nbsp; &lt;=500 &nbsp;|&nbsp; &gt;=50 &nbsp;|&nbsp; &lt;10 &nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+      </div>
+      <button class="btn btn-danger" style="padding:5px 10px;font-size:0.75rem;white-space:nowrap;" onclick="_incExcludedIds={};document.getElementById('inc-bulk-search').value='';var p=document.getElementById('inc-led-bulk-ph');p.style.display='flex';p.style.opacity='1';document.getElementById('inc-bulk-cat-filter').value='all';renderIncomeLedger();">Clear</button>
+    </div>
+    <div class="lb-r2">
+      <select id="inc-bulk-cat-filter" onchange="renderIncomeLedger()" style="flex:1;min-width:0;font-size:0.75rem;padding:5px 8px;">
+        <option value="all">All Categories</option>
+      </select>
+      <select id="inc-bulk-cat-sel" style="flex:1;min-width:0;font-size:0.75rem;padding:5px 8px;">
+        <option value="">Pick category...</option>
+      </select>
+    </div>
+    <div class="lb-r3">
+      <button class="btn btn-success" id="inc-assign-btn" onclick="incomeBulkAssign()">&#10003; Assign</button>
+      <button class="cb-action-btn cb-hide-btn" title="Hide selected rows from view" onclick="incLedHideSelected()">&#8212; Hide</button>
+      <button class="cb-action-btn cb-del-btn" title="Delete selected rows permanently" onclick="incLedDeleteSelected()">&#10005; Delete</button>
+      <button class="cb-action-btn cb-sel-btn" id="inc-led-selall-btn" title="Select all / deselect all" onclick="incLedToggleSelectAll()">&#9634; All</button>
+    </div>
+    <span id="inc-bulk-match" style="display:none;"></span>
   </div>
-  <div id="inc-ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No income entries yet.</p></div>
+    <div id="inc-ledger-empty" class="empty-state"><div class="big">&#8801;</div><p>No income entries yet.</p></div>
   <div id="inc-ledger-wrap" style="display:none;">
     <div id="inc-ledger-accordion"></div>
   </div>
-</div>
+  </div>
+
+<!-- INCOME MANAGE -->
 
 <!-- INCOME MANAGE -->
 <div class="panel" id="panel-inc-manage">
@@ -4390,30 +4461,42 @@ function loadData() {
 // Commas also work: "ice, cream, -rice, -beatrice"
 function applySearchFilter(data, query) {
   if (!query) return data;
-  // Split by comma OR space-before-minus to get terms
-  var raw = query.split(',').map(function(t){ return t.trim(); }).filter(Boolean);
-  var include = [], exclude = [];
-  raw.forEach(function(t) {
-    if (t.charAt(0) === '-' && t.length > 1) {
-      exclude.push(t.substring(1).trim());
-    } else {
-      include.push(t);
-    }
+  // Amount operators: >50  <10  >=50  <=10
+  var ops = [];
+  query = query.replace(/(>=|<=|>|<)\s*(\d+(?:\.\d+)?)/g, function(m, op, n){
+    ops.push({ op: op, val: parseFloat(n) });
+    return ',';
   });
-  // Must match at least one include term (if any include terms given)
+  // Split by comma OR space-before-minus
+  var raw = [];
+  query.split(',').forEach(function(p){
+    p.split(/\s+(?=-)/).forEach(function(t){ t = t.trim(); if (t) raw.push(t); });
+  });
+  var include = [], exclude = [];
+  raw.forEach(function(t){
+    if (t.charAt(0) === '-' && t.length > 1) exclude.push(t.substring(1).trim());
+    else include.push(t);
+  });
   if (include.length) {
-    data = data.filter(function(i) {
-      var d = i.desc.toLowerCase();
-      var c = (i.category || '').toLowerCase();
+    data = data.filter(function(i){
+      var d = (i.desc || '').toLowerCase(), c = (i.category || '').toLowerCase();
       return include.some(function(t){ return d.indexOf(t) !== -1 || c.indexOf(t) !== -1; });
     });
   }
-  // Must NOT match any exclude term
   if (exclude.length) {
-    data = data.filter(function(i) {
-      var d = i.desc.toLowerCase();
-      var c = (i.category || '').toLowerCase();
+    data = data.filter(function(i){
+      var d = (i.desc || '').toLowerCase(), c = (i.category || '').toLowerCase();
       return !exclude.some(function(t){ return d.indexOf(t) !== -1 || c.indexOf(t) !== -1; });
+    });
+  }
+  if (ops.length) {
+    data = data.filter(function(i){
+      var a = Math.abs(parseFloat(i.amount) || 0);
+      return ops.every(function(o){
+        return o.op === '>'  ? a >  o.val :
+               o.op === '<'  ? a <  o.val :
+               o.op === '>=' ? a >= o.val : a <= o.val;
+      });
     });
   }
   return data;
@@ -5333,7 +5416,7 @@ function applyCatFilter() {
     if (currSel !== 'all') filtered = filtered.filter(function(i){ return i.currency === currSel; });
     catEditItems = filtered.map(function(i){ return Object.assign({},i); });
     catViewMode = yearSel + (monthSel !== 'all' ? '-' + monthSel : '') + (currSel !== 'all' ? '-' + currSel : '');
-    document.getElementById('btn-save-pending').textContent = 'Update Categories';
+    document.getElementById('btn-save-pending').textContent = 'Update';
   }
   populateCatCategoryFilter();
   renderCategorizeTable();
@@ -5361,7 +5444,7 @@ function renderCategorizeTable() {
   var filteredItems = (catFilter === 'all') ? items : items.filter(function(i){ return i.category === catFilter; });
   // Apply description search filter
   if (catDescFilter) {
-    filteredItems = filteredItems.filter(function(i){ return i.desc.toLowerCase().indexOf(catDescFilter) !== -1; });
+    filteredItems = applySearchFilter(filteredItems, catDescFilter);
   }
   var matchLabel = catDescFilter ? (filteredItems.length + ' match' + (filteredItems.length===1?'':'es')) : '';
   var descMatchEl = document.getElementById('cat-desc-match');
@@ -7594,7 +7677,7 @@ function _getCatCheckedItemObjects() {
   var items = (catViewMode === 'pending') ? pendingItems : catEditItems;
   var catFilter = getCatCategoryFilter ? getCatCategoryFilter() : 'all';
   var filtered = catFilter === 'all' ? items.slice() : items.filter(function(i){ return i.category === catFilter; });
-  if (catDescFilter) filtered = filtered.filter(function(i){ return i.desc.toLowerCase().indexOf(catDescFilter) !== -1; });
+  if (catDescFilter) filtered = applySearchFilter(filtered, catDescFilter);
   filtered = filtered.slice().sort(function(a,b){ return _catSortNewest ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date); });
   var result = [];
   document.querySelectorAll('#categorize-tbody .cat-row-cb:checked').forEach(function(cb) {
@@ -7671,7 +7754,7 @@ function _getIncCatCheckedItemObjects() {
   var items = incCatViewMode === 'pending' ? incPendingItems : incCatEditItems;
   var catFilterVal = document.getElementById('inc-cat-cat-filter') ? document.getElementById('inc-cat-cat-filter').value : 'all';
   var filtered = catFilterVal === 'all' ? items.slice() : items.filter(function(i){ return i.category === catFilterVal; });
-  if (_incCatDescFilter) filtered = filtered.filter(function(i){ return i.desc.toLowerCase().indexOf(_incCatDescFilter) !== -1; });
+  if (_incCatDescFilter) filtered = applySearchFilter(filtered, _incCatDescFilter);
   filtered = filtered.slice().sort(function(a,b){ return _incCatSortNewest ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date); });
   var result = [];
   document.querySelectorAll('#inc-categorize-tbody .cat-row-cb:checked').forEach(function(cb) {
@@ -7851,6 +7934,7 @@ function applyCatDescSearch() {
 
 function clearCatDescSearch() {
   document.getElementById('cat-desc-search').value = '';
+  var cph = document.getElementById('exp-cat-bulk-ph'); if (cph) { cph.style.display = 'flex'; cph.style.opacity = '1'; }
   catDescFilter = '';
   renderCategorizeTable();
 }
@@ -7913,7 +7997,7 @@ function bulkAssignFiltered() {
   if (checked.length > 0) {
     toUpdate = checked;
   } else if (catDescFilter) {
-    toUpdate = items.filter(function(i){ return i.desc.toLowerCase().indexOf(catDescFilter) !== -1; });
+    toUpdate = applySearchFilter(items, catDescFilter);
   } else {
     toUpdate = items;
   }
@@ -7995,6 +8079,7 @@ function clearLedgerBulkSearch() {
   ledgerBulkFilter = '';
   _ledExcludedIds = {};
   var el = document.getElementById('led-bulk-search'); if (el) el.value = '';
+  var lph = document.getElementById('led-bulk-ph'); if (lph) { lph.style.display = 'flex'; lph.style.opacity = '1'; }
   var bf = document.getElementById('led-bulk-cat-filter'); if (bf) bf.value = 'all';
   renderLedger();
 }
@@ -8382,6 +8467,7 @@ function clearLedgerFilters() {
   document.getElementById('led-cat').value      = 'all';
   var s = document.getElementById('led-search'); if(s) s.value = '';
   var b = document.getElementById('led-bulk-search'); if(b) b.value = '';
+  var lph2 = document.getElementById('led-bulk-ph'); if (lph2) { lph2.style.display = 'flex'; lph2.style.opacity = '1'; }
   ledgerBulkFilter = '';
   _ledExcludedIds = {};
   var m = document.getElementById('led-bulk-match'); if(m) m.textContent = '';
@@ -12523,7 +12609,7 @@ function applyIncomeCatFilter() {
     if (incCurrSel !== 'all') data = data.filter(function(i){ return i.currency === incCurrSel; });
     incCatEditItems = data.map(function(i){ return Object.assign({},i); });
     incCatViewMode = yearVal + (monthVal !== 'all' ? '-' + monthVal : '') + (incCurrSel !== 'all' ? '-' + incCurrSel : '');
-    document.getElementById('inc-btn-save-pending').textContent = 'Update Categories';
+    document.getElementById('inc-btn-save-pending').textContent = 'Save to ledger';
   }
   renderIncomeCatTable();
 }
@@ -12556,7 +12642,7 @@ function renderIncomeCatTable() {
   var catFilterVal = document.getElementById('inc-cat-cat-filter') ? document.getElementById('inc-cat-cat-filter').value : 'all';
   var filteredItems = items.slice();
   if (catFilterVal !== 'all') filteredItems = filteredItems.filter(function(i){ return i.category === catFilterVal; });
-  if (_incCatDescFilter) filteredItems = filteredItems.filter(function(i){ return i.desc.toLowerCase().indexOf(_incCatDescFilter)!==-1; });
+  if (_incCatDescFilter) filteredItems = applySearchFilter(filteredItems, _incCatDescFilter);
   var matchEl = document.getElementById('inc-cat-desc-match');
   if (matchEl) matchEl.textContent = _incCatDescFilter ? filteredItems.length+' match'+(filteredItems.length===1?'':'es') : '';
   document.getElementById('inc-cat-filter-count').textContent = items.length + ' items';
@@ -12652,7 +12738,7 @@ function incBulkAssignCat() {
   if (checked.length > 0) {
     toUpdate = checked;
   } else if (_incCatDescFilter) {
-    toUpdate = items.filter(function(i){ return i.desc.toLowerCase().indexOf(_incCatDescFilter) !== -1; });
+    toUpdate = applySearchFilter(items, _incCatDescFilter);
   } else {
     toUpdate = items;
   }
@@ -13643,6 +13729,7 @@ function incomeBulkAssign() {
   });
   saveIncomeData(data);
   document.getElementById('inc-bulk-search').value = '';
+  var iph = document.getElementById('inc-led-bulk-ph'); if (iph) { iph.style.display = 'flex'; iph.style.opacity = '1'; }
   renderIncomeLedger();
   showToast(count + ' income entr'+(count===1?'y':'ies')+' assigned to "'+newCat+'"');
 }
@@ -13725,6 +13812,7 @@ function clearIncomeLedgerFilters() {
   document.getElementById('inc-led-cat').value = 'all';
   var s = document.getElementById('inc-led-search'); if(s) s.value = '';
   var b = document.getElementById('inc-bulk-search'); if(b) b.value = '';
+  var iph2 = document.getElementById('inc-led-bulk-ph'); if (iph2) { iph2.style.display = 'flex'; iph2.style.opacity = '1'; }
   _incExcludedIds = {};
   renderIncomeLedger();
 }
