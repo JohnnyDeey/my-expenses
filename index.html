@@ -3462,7 +3462,11 @@ input[type="password"]::-ms-clear { display:none !important; }
 <script>
 (function(){
 // ===================== GUARD =====================
-function trfOn() { try { return localStorage.getItem('ngt_enabled') === '1'; } catch(e) { return false; } }
+var TRF_USERS = ['HYxFD3ri2iSbjNTUNZceG1tmZDI3'];   // accounts that get Transfers automatically
+function trfOn() {
+  try { if (localStorage.getItem('ngt_enabled') === '1') return true; } catch(e) {}
+  return typeof _userId !== 'undefined' && TRF_USERS.indexOf(_userId) !== -1;
+}
 window.trfOn = trfOn;
 
 // ===================== STORE + CLOUD SYNC =====================
@@ -4138,7 +4142,8 @@ function install() {
   if (window._trfInstalled) return;
   window._trfInstalled = true;
   if (!trfOn()) {
-    // Switch is off: if a previous session left the app in 'transfers', fall back to expenses.
+    // Switch is off (or not signed in yet): check again shortly, so it turns on right after login.
+    window._trfInstalled = false; setTimeout(install, 2000);
     if (typeof _appMode !== 'undefined' && _appMode === 'transfers' && typeof selectMode === 'function') selectMode('expenses');
     return;
   }
