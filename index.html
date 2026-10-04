@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  
   <!-- Google Analytics (invisible to users) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-GYDLHGMNGB"></script>
 <script>
@@ -1887,6 +1888,28 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
 </style>
 </head>
 <body>
+<script>
+// Boot: no splash on in-tab refresh when signed in; keep other modules hidden if last mode was Transfers
+(function(){
+  try {
+    var h = document.documentElement, css = '';
+    if (localStorage.getItem('expense_user_uid') && sessionStorage.getItem('screen_state') === 'app') {
+      h.classList.add('no-splash'); h.classList.add('pin-hold');
+      setTimeout(function(){ h.classList.remove('pin-hold'); }, 1500);
+      css += 'html.no-splash #splash-screen{display:none!important;}' +
+             'html.pin-hold body:not(.app-ready) #pin-overlay{visibility:hidden!important;}' +
+             'html.no-splash body{background:var(--paper)!important;}';
+    }
+    if (localStorage.getItem('expense_app_mode') === 'transfers') {
+      h.classList.add('trf-boot');
+      css += 'html.trf-boot main > .panel, html.trf-boot #income-main{display:none!important;}' +
+             'html.trf-boot #transfers-main{display:block!important;}';
+      setTimeout(function(){ h.classList.remove('trf-boot'); }, 8000);
+    }
+    if (css) { var s = document.createElement('style'); s.id = 'boot-css'; s.textContent = css; document.head.appendChild(s); }
+  } catch(e) {}
+})();
+</script>
 <!-- Splash Screen -->
 <div id="splash-screen" style="position:fixed;inset:0;z-index:999999;background:#1a1410;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity 0.4s;">
   <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:#e8b84b;letter-spacing:3px;">MY EXPENSE</div>
@@ -3318,12 +3341,12 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
   .trf-rrow .tt{font-family:'DM Mono',monospace;font-size:0.8rem;text-align:right;color:var(--ink);}
   .trf-rrow .sub{grid-column:1/-1;font-size:0.72rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .trf-bars{display:flex;flex-direction:column;gap:5px;}
-  .trf-bar{display:grid;grid-template-columns:110px 1fr 110px;gap:8px;align-items:center;font-size:0.75rem;color:var(--ink);}
+  .trf-bar{display:grid;grid-template-columns:minmax(70px,110px) 1fr auto;gap:8px;align-items:center;font-size:0.75rem;color:var(--ink);}
   .trf-bar .lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .trf-bar .tr{background:var(--paper2);border-radius:2px;height:14px;overflow:hidden;}
   .trf-bar .fl{background:var(--gold);height:100%;}
   .trf-bar .vl{font-family:'DM Mono',monospace;text-align:right;white-space:nowrap;}
-  @media(max-width:640px){ .trf-bar{grid-template-columns:80px 1fr 90px;} }
+  @media(max-width:640px){ .trf-bar{grid-template-columns:minmax(56px,80px) 1fr auto;gap:6px;font-size:0.72rem;} }
   #trf-modal{display:none;position:fixed;inset:0;z-index:99990;background:rgba(26,20,16,0.6);align-items:flex-start;justify-content:center;padding:16px;padding-top:80px;overflow-y:auto;}
   #trf-modal.show{display:flex;}
   #trf-modal .box{background:var(--paper);border:2px solid var(--gold);border-radius:6px;width:100%;max-width:440px;padding:16px;color:var(--ink);}
@@ -3484,7 +3507,7 @@ window.trfOn = trfOn;
 // Newer stamp wins per record. Deletions leave a tombstone {deleted:true,u}. Offline edits queue in META.dirty.
 var BASE = 'ngt_data_v1';
 var META = { dead: {}, dirty: {} };
-var PREV = {};
+var PREV = {}; var LOADED_KEY = null;
 function key() { return (typeof _userId !== 'undefined' && _userId && _userId !== 'guest_local') ? BASE + '_' + _userId : BASE; }
 function readJSON(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v || d; } catch(e) { return d; } }
 function sig(o) { return JSON.stringify(o, function(k, v){ return k === 'u' ? undefined : v; }); }
@@ -3505,7 +3528,7 @@ function load() {
   if (!d || !d.recipients || !d.transfers) d = { version: 1, recipients: [], transfers: [] };
   META = readJSON(k + '_meta', { dead: {}, dirty: {} });
   META.dead = META.dead || {}; META.dirty = META.dirty || {};
-  snapPrev(d);
+  snapPrev(d); LOADED_KEY = k;
   return d;
 }
 var S = load();
@@ -3858,15 +3881,35 @@ window.trfFillTypes = function() {
   TYPE_DEFAULTS.concat(S.recipients.map(function(r){ return trfNormType(r.type); })).forEach(function(t){ if (!seen[t]) { seen[t] = 1; all.push(t); } });
   dl.innerHTML = all.map(function(t){ return '<option value="' + esc(typeLabel(t)) + '">'; }).join('');
 };
+window.trfTypeView = function(v) { try { localStorage.setItem('ngt_type_view', v); } catch(e) {} trfRenderSummary(); };
 window.trfTypeBars = function(list) {
   var by = {}, total = 0;
   list.forEach(function(t){ var r = rec(t.rid); var k = trfNormType(r && r.type); by[k] = (by[k] || 0) + (+t.amount); total += +t.amount; });
   var keys = Object.keys(by).sort(function(a, b){ return by[b] - by[a]; });
   if (!keys.length) return '<div class="trf-empty">Nothing sent yet.</div>';
-  var mx = by[keys[0]];
-  return '<div class="trf-bars">' + keys.map(function(k){
-    return '<div class="trf-bar"><span class="lb">' + esc(typeLabel(k)) + '</span><div class="tr"><div class="fl" style="width:' + (by[k] / mx * 100) + '%;background:' + typeColor(k) + '"></div></div><span class="vl">' + fmt(by[k]) + ' (' + Math.round(by[k] / (total || 1) * 100) + '%)</span></div>';
-  }).join('') + '</div>';
+  var view = 'list'; try { view = localStorage.getItem('ngt_type_view') || 'list'; } catch(e) {}
+  var tb = function(v, txt){ var on = view === v; return '<button onclick="trfTypeView(\'' + v + '\')" style="padding:3px 10px;font-size:0.68rem;border:1px solid var(--border);border-radius:3px;cursor:pointer;font-family:DM Mono,monospace;' + (on ? 'background:var(--gold);color:var(--ink);font-weight:700;' : 'background:none;color:var(--muted);') + '">' + txt + '</button>'; };
+  var html = '<div style="display:flex;gap:4px;justify-content:flex-end;margin:-22px 0 8px;">' + tb('list', '&#9776; List') + tb('donut', '&#9711; Donut') + '</div>';
+  if (view === 'list') {
+    var mx = by[keys[0]];
+    html += '<div class="trf-bars">' + keys.map(function(k){
+      return '<div class="trf-bar"><span class="lb">' + esc(typeLabel(k)) + '</span><div class="tr"><div class="fl" style="width:' + (by[k] / mx * 100) + '%;background:' + typeColor(k) + '"></div></div><span class="vl">' + fmt(by[k]) + ' (' + Math.round(by[k] / (total || 1) * 100) + '%)</span></div>';
+    }).join('') + '</div>';
+  } else {
+    html += '<div style="position:relative;height:220px;max-width:260px;margin:0 auto;"><canvas id="trf-type-donut"></canvas>' +
+      '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;"><div style="font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:1px;color:var(--muted);">TOTAL</div><div style="font-family:DM Mono,monospace;font-weight:700;font-size:0.95rem;">' + fmt(total) + '</div></div></div>' +
+      '<div style="margin-top:10px;">' + keys.map(function(k){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;"><span style="width:10px;height:10px;border-radius:50%;background:' + typeColor(k) + ';flex-shrink:0;"></span><span style="flex:1;font-size:0.8rem;">' + esc(typeLabel(k)) + '</span><span style="font-family:DM Mono,monospace;font-size:0.78rem;white-space:nowrap;">' + fmt(by[k]) + '</span><span style="font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);width:44px;text-align:right;">' + (by[k] / (total || 1) * 100).toFixed(1) + '%</span></div>';
+      }).join('') + '</div>';
+    setTimeout(function(){
+      var c = el('trf-type-donut'); if (!c || typeof Chart === 'undefined') return;
+      var ex = Chart.getChart(c); if (ex) ex.destroy();
+      new Chart(c, { type: 'doughnut',
+        data: { labels: keys.map(typeLabel), datasets: [{ data: keys.map(function(k){ return by[k]; }), backgroundColor: keys.map(function(k){ return typeColor(k) + 'cc'; }), borderColor: keys.map(typeColor), borderWidth: 2, hoverOffset: 8 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(x){ return ' ' + fmt(x.parsed) + ' (' + (x.parsed / (total || 1) * 100).toFixed(1) + '%)'; } } } } } });
+    }, 0);
+  }
+  return html;
 };
 
 // ----- Recipient history view (tap a recipient) -----
@@ -4094,6 +4137,7 @@ function headerContext(selY, selM) {
 // ===================== RENDER =====================
 window.trfRenderAll = function() {
   if (typeof _appMode === 'undefined' || _appMode !== 'transfers') return;
+  if (key() !== LOADED_KEY) S = load();   // signed in since the page started: use this account's data
   var dl = el('trf-dl-names'); if (dl) dl.innerHTML = S.recipients.filter(function(r){ return !r.archived; }).map(function(r){ return '<option value="' + esc(r.name) + '">'; }).join('');
   fillYears('trf-g-year', CUR.slice(0,4)); fillYears('trf-s-year', CUR.slice(0,4));
   document.querySelectorAll('#transfers-main .trf-panel').forEach(function(p){ p.classList.toggle('trf-on', p.id === 'trf-p-' + TAB); });
@@ -4155,6 +4199,7 @@ function showTransfers() {
   hide('main-nav'); hide('income-nav'); hide('income-main');
   document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = 'none'; });
   var tm = el('transfers-main'); if (tm) tm.style.display = 'block';
+  document.documentElement.classList.remove('trf-boot');
   if (typeof syncBurgerMode === 'function') syncBurgerMode('transfers');
   var ml = el('hdr-mode-label');
   if (ml) { ml.innerHTML = '&#128228; TRANSFERS'; ml.style.background = 'rgba(41,128,185,0.2)'; ml.style.color = '#8ec5f0'; }
@@ -4179,8 +4224,9 @@ function install() {
   window._trfInstalled = true;
   if (!trfOn()) {
     // Switch is off (or not signed in yet): check again shortly, so it turns on right after login.
-    window._trfInstalled = false; setTimeout(install, 2000);
-    if (typeof _appMode !== 'undefined' && _appMode === 'transfers' && typeof selectMode === 'function') selectMode('expenses');
+    window._trfInstalled = false; setTimeout(install, 300);
+    if (typeof _userId !== 'undefined' && _userId && TRF_USERS.indexOf(_userId) === -1) document.documentElement.classList.remove('trf-boot');
+    if (typeof _appMode !== 'undefined' && _appMode === 'transfers' && typeof _userId !== 'undefined' && _userId && TRF_USERS.indexOf(_userId) === -1 && typeof selectMode === 'function') selectMode('expenses');
     return;
   }
   injectBurger();
@@ -4193,6 +4239,7 @@ function install() {
     var tm = el('transfers-main');
     if (_appMode === 'transfers') return showTransfers();
     if (tm) tm.style.display = 'none';
+    document.documentElement.classList.remove('trf-boot');
     return oApply.apply(this, arguments);
   };
   var oBurger = window.syncBurgerMode;
@@ -4251,8 +4298,15 @@ function install() {
   }, true);
   if (typeof _appMode !== 'undefined' && _appMode === 'transfers') applyMode();
 }
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(install, 0); });
-else setTimeout(install, 0);
+// Start Transfers the instant the session resumes (no waiting for the retry timer)
+function hookResume() {
+  var o = window._resumeSession;
+  if (typeof o !== 'function' || o._trfHooked) return;
+  window._resumeSession = function() { var r = o.apply(this, arguments); if (!window._trfInstalled) install(); return r; };
+  window._resumeSession._trfHooked = true;
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ hookResume(); setTimeout(install, 0); });
+else { hookResume(); setTimeout(install, 0); }
 })();
 </script>
 <!-- ===================== END TRANSFERS MODULE ===================== -->
