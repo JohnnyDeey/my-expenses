@@ -3236,6 +3236,874 @@ input[type="password"]::-ms-clear { display:none !important; }
 </div>
 </div><!-- end income-main -->
 
+<!-- ===================== TRANSFERS MODULE (3rd mode) =====================
+     Self-contained. Inactive unless localStorage.ngt_enabled === '1'.
+     Uses its own class names (trf-*) so existing .panel logic is never affected.
+     Data: localStorage 'ngt_data_v1' (cloud sync added later). -->
+<div id="transfers-main" style="display:none;">
+<style>
+  .trf-panel{display:none;}
+  .trf-panel.trf-on{display:block;}
+  .trf-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+  .trf-kpi{background:white;border:1px solid var(--border);border-radius:4px;padding:10px 12px;box-shadow:2px 2px 0 var(--shadow, rgba(0,0,0,0.06));}
+  .trf-kpi .l{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+  .trf-kpi .v{font-family:'DM Mono',monospace;font-size:1rem;font-weight:500;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);}
+  .trf-kpi.rem{background:var(--ink);border-color:var(--ink);}
+  .trf-kpi.rem .l{color:#9e8e7e;}
+  .trf-kpi.rem .v{color:var(--gold2);font-size:1.1rem;}
+  @media(max-width:640px){ .trf-kpis{grid-template-columns:1fr 1fr;} }
+  .trf-add{display:grid;grid-template-columns:2fr 1fr 2fr auto auto;gap:6px;align-items:center;}
+  .trf-add input,.trf-add select{font-size:0.85rem;padding:7px 9px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);outline:none;min-width:0;}
+  .trf-add .trf-newrec{grid-column:1/-1;display:none;gap:6px;}
+  .trf-add .trf-newrec.show{display:flex;}
+  @media(max-width:640px){
+    .trf-add{grid-template-columns:1fr 1fr;}
+    .trf-add #trf-af-name,.trf-add #trf-af-amt,.trf-add #trf-af-note{grid-column:1/-1;}
+    .trf-add .trf-newrec{flex-wrap:wrap;}
+    .trf-add .trf-newrec input{flex:1 1 45%;}
+  }
+  .trf-grp{display:flex;justify-content:space-between;align-items:baseline;font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:14px 2px 6px;}
+  .trf-grp b{color:var(--ink);font-weight:500;}
+  .trf-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;background:white;border:1px solid var(--border);border-left:4px solid var(--border);border-radius:3px;padding:8px 10px;margin-bottom:6px;}
+  .trf-row.planned{border-left-color:var(--gold);}
+  .trf-row.early{border-left-color:#2980b9;}
+  .trf-row.sent{border-left-color:var(--sage);}
+  .trf-row .nm{font-weight:700;font-size:0.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);}
+  .trf-row .am{font-family:'DM Mono',monospace;font-weight:500;font-size:0.9rem;text-align:right;white-space:nowrap;color:var(--ink);}
+  .trf-row .sub{grid-column:1/-1;font-size:0.72rem;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .trf-row .acts{grid-column:1/-1;display:flex;gap:5px;flex-wrap:wrap;margin-top:2px;}
+  .trf-b{border:none;border-radius:3px;padding:4px 9px;font-size:0.7rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .trf-b.blue{background:#2980b9;color:#fff;} .trf-b.sage{background:var(--sage);color:#fff;}
+  .trf-b.amber{background:#f0b429;color:#1a1410;} .trf-b.ghost{background:white;color:var(--ink);border:1.5px solid var(--border);}
+  .trf-b.rust{background:var(--rust);color:#fff;} .trf-b.gold{background:var(--gold);color:var(--ink);}
+  .trf-b.ink{background:var(--ink);color:var(--gold2);}
+  .trf-badge{font-family:'DM Mono',monospace;font-size:0.6rem;padding:1px 6px;border-radius:9px;border:1px solid;white-space:nowrap;}
+  .trf-badge.push{color:var(--rust);border-color:var(--rust);}
+  .trf-badge.proj{color:#6b3d8c;border-color:#6b3d8c;}
+  .trf-acct{font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);}
+  .trf-empty{text-align:center;color:var(--muted);font-size:0.85rem;padding:24px 10px;}
+  .trf-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+  .trf-tools input[type=text]{flex:1;min-width:140px;font-size:0.85rem;padding:7px 9px;border:1.5px solid var(--border);border-radius:3px;outline:none;}
+  .trf-tools select{font-size:0.8rem;padding:6px 8px;border:1.5px solid var(--border);border-radius:3px;background:white;}
+  .trf-tools label{font-size:0.75rem;color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap;}
+  .trf-gridwrap{overflow-x:auto;background:white;border:1px solid var(--border);border-radius:4px;-webkit-overflow-scrolling:touch;}
+  table.trf-grid{border-collapse:collapse;font-size:0.72rem;min-width:100%;}
+  table.trf-grid th{background:var(--ink);color:var(--paper);font-family:'DM Mono',monospace;font-weight:400;font-size:0.62rem;letter-spacing:1px;padding:6px 8px;text-align:right;white-space:nowrap;}
+  table.trf-grid th:first-child,table.trf-grid td:first-child{position:sticky;left:0;text-align:left;z-index:2;}
+  table.trf-grid td{padding:5px 8px;border-bottom:1px solid #eee;border-right:1px solid #f3efe7;text-align:right;font-family:'DM Mono',monospace;white-space:nowrap;color:var(--ink);}
+  table.trf-grid td:first-child{background:white;font-family:'DM Sans',sans-serif;font-weight:500;max-width:170px;overflow:hidden;text-overflow:ellipsis;border-right:1px solid var(--border);}
+  table.trf-grid tr:nth-child(even) td{background:#faf7f1;}
+  table.trf-grid td.has{cursor:pointer;}
+  table.trf-grid td.has:hover{background:rgba(200,150,46,0.15);}
+  table.trf-grid td.pl{color:var(--gold);font-style:italic;cursor:pointer;}
+  table.trf-grid td.tot{font-weight:500;background:var(--paper2)!important;}
+  table.trf-grid tfoot td{background:var(--ink)!important;color:var(--gold2);font-weight:500;border:none;}
+  /* Mobile: keep grid at full width so it swipes sideways (overrides app-wide table rules) */
+  #trf-p-grid{max-width:100%;min-width:0;}
+  #trf-p-grid .trf-gridwrap{width:100%;max-width:100%;overflow-x:auto!important;touch-action:pan-x pan-y!important;-webkit-overflow-scrolling:touch;}
+  table.trf-grid{display:table!important;width:max-content!important;min-width:100%;}
+  .trf-rrow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;background:white;border:1px solid var(--border);border-radius:3px;padding:8px 10px;margin-bottom:6px;cursor:pointer;}
+  .trf-rrow.arch{opacity:0.5;}
+  .trf-rrow .nm{font-weight:700;font-size:0.88rem;color:var(--ink);}
+  .trf-rrow .tt{font-family:'DM Mono',monospace;font-size:0.8rem;text-align:right;color:var(--ink);}
+  .trf-rrow .sub{grid-column:1/-1;font-size:0.72rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .trf-bars{display:flex;flex-direction:column;gap:5px;}
+  .trf-bar{display:grid;grid-template-columns:110px 1fr 110px;gap:8px;align-items:center;font-size:0.75rem;color:var(--ink);}
+  .trf-bar .lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .trf-bar .tr{background:var(--paper2);border-radius:2px;height:14px;overflow:hidden;}
+  .trf-bar .fl{background:var(--gold);height:100%;}
+  .trf-bar .vl{font-family:'DM Mono',monospace;text-align:right;white-space:nowrap;}
+  @media(max-width:640px){ .trf-bar{grid-template-columns:80px 1fr 90px;} }
+  #trf-modal{display:none;position:fixed;inset:0;z-index:99990;background:rgba(26,20,16,0.6);align-items:flex-start;justify-content:center;padding:16px;padding-top:80px;overflow-y:auto;}
+  #trf-modal.show{display:flex;}
+  #trf-modal .box{background:var(--paper);border:2px solid var(--gold);border-radius:6px;width:100%;max-width:440px;padding:16px;color:var(--ink);}
+  #trf-modal h3{font-family:'Playfair Display',serif;margin:0 0 12px;font-size:1.05rem;}
+  .trf-frm{display:flex;flex-direction:column;gap:8px;}
+  .trf-frm label{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:-4px;}
+  .trf-frm input,.trf-frm select,.trf-frm textarea{font-size:0.85rem;padding:7px 9px;border:1.5px solid var(--border);border-radius:3px;background:white;color:var(--ink);outline:none;font-family:inherit;}
+  .trf-frm .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .trf-frm .btns{display:flex;gap:6px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap;}
+  .trf-mlist{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto;}
+  .trf-mlist .it{background:white;border:1px solid var(--border);border-radius:3px;padding:7px 9px;font-size:0.8rem;}
+  .trf-mlist .it .a{font-family:'DM Mono',monospace;float:right;font-weight:500;}
+  .trf-mlist .it .n{color:var(--muted);font-size:0.72rem;margin-top:3px;white-space:pre-wrap;}
+  .trf-hint{font-size:0.75rem;color:var(--muted);line-height:1.5;}
+  /* Burger menu: only as wide as its longest item (all modes) */
+  #burger-sidebar{width:auto!important;min-width:170px;max-width:80vw;}
+  #burger-sidebar .bmenu-item{padding-right:28px;white-space:nowrap;}
+</style>
+
+<!-- THIS MONTH -->
+<div class="trf-panel" id="trf-p-month">
+  <div class="section-title">Monthly Transfers</div>
+  <div class="import-layout">
+    <div class="card month-picker-card">
+      <div style="display:flex;align-items:center;justify-content:center;gap:24px;padding:4px 0 8px;"><label style="margin:0;">Select Period</label></div>
+      <div class="year-nav">
+        <button onclick="trfChangeYear(-1)">&#8592;</button>
+        <div class="year-display" id="trf-year-display">2026</div>
+        <button onclick="trfChangeYear(1)">&#8594;</button>
+      </div>
+      <div class="months-grid" id="trf-months-grid"></div>
+    </div>
+    <div class="import-right">
+      <div class="trf-kpis" id="trf-m-kpis"></div>
+      <div class="card">
+        <form class="trf-add" onsubmit="trfAdd(event)">
+          <input id="trf-af-name" list="trf-dl-names" placeholder="Recipient name" autocomplete="off" oninput="trfCheckNew()">
+          <input id="trf-af-amt" placeholder="&#8358; amount" inputmode="decimal" autocomplete="off" title="You can type 20000+5000">
+          <input id="trf-af-note" placeholder="Note (what for)" autocomplete="off">
+          <select id="trf-af-status" onchange="this._touched=true">
+            <option value="planned">Planned</option>
+            <option value="early">Sent early</option>
+            <option value="sent">Sent</option>
+          </select>
+          <button class="trf-b gold" type="submit" style="padding:8px 14px;font-size:0.78rem;">+ Add</button>
+          <div class="trf-newrec" id="trf-af-newrec">
+            <input id="trf-af-acct" placeholder="Account no (new recipient)" inputmode="numeric" autocomplete="off">
+            <input id="trf-af-bank" placeholder="Bank (e.g. PAY, GTB)" list="trf-dl-banks" autocomplete="off">
+            <input id="trf-af-type" list="trf-dl-types" placeholder="Type (e.g. Family)" autocomplete="off" onfocus="trfFillTypes()">
+          </div>
+        </form>
+      </div>
+      <div id="trf-m-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYDAY -->
+<div class="trf-panel" id="trf-p-payday">
+  <div class="section-title" id="trf-pd-title">Payday</div>
+  <div class="trf-tools">
+    <button class="trf-b ghost" onclick="trfShiftMonth(-1)">&#9664;</button>
+    <b class="trf-acct" id="trf-pd-month" style="min-width:80px;text-align:center;"></b>
+    <button class="trf-b ghost" onclick="trfShiftMonth(1)">&#9654;</button>
+  </div>
+  <div class="trf-kpis" id="trf-pd-kpis"></div>
+  <div id="trf-pd-list"></div>
+</div>
+
+<!-- YEAR GRID -->
+<div class="trf-panel" id="trf-p-grid">
+  <div class="section-title">Year Grid</div>
+  <div class="trf-tools">
+    <select id="trf-g-year" onchange="trfRenderGrid()"></select>
+    <input type="text" id="trf-g-search" placeholder="Search recipient…" oninput="trfRenderGrid()">
+    <select id="trf-g-sort" onchange="trfRenderGrid()">
+      <option value="order">Original order</option>
+      <option value="name">Name A–Z</option>
+      <option value="total">Highest total</option>
+    </select>
+    <label><input type="checkbox" id="trf-g-hide0" checked onchange="trfRenderGrid()"> Hide empty</label>
+    <label><input type="checkbox" id="trf-g-plan" onchange="trfRenderGrid()"> Include planned</label>
+  </div>
+  <div class="trf-gridwrap"><table class="trf-grid" id="trf-grid"></table></div>
+  <p class="trf-hint">Tap any amount to see the individual transfers and notes behind it.</p>
+</div>
+
+<!-- RECIPIENTS -->
+<div class="trf-panel" id="trf-p-recipients">
+  <div class="section-title">Recipients</div>
+  <div class="trf-tools">
+    <input type="text" id="trf-r-search" placeholder="Search name, bank or account…" oninput="trfRenderRecipients()">
+    <label><input type="checkbox" id="trf-r-arch" onchange="trfRenderRecipients()"> Show archived</label>
+    <button class="trf-b gold" style="padding:7px 12px;" onclick="trfEditRecipient(null)">+ New</button>
+  </div>
+  <div id="trf-r-list"></div>
+</div>
+
+<!-- SUMMARY -->
+<div class="trf-panel" id="trf-p-summary">
+  <div class="section-title">Summary</div>
+  <div class="trf-tools"><select id="trf-s-year" onchange="trfRenderSummary()"></select></div>
+  <div class="trf-kpis" id="trf-s-kpis"></div>
+  <div class="card"><div class="trf-grp" style="margin-top:0;">By month</div><div class="trf-bars" id="trf-s-months"></div></div>
+  <div class="card"><div class="trf-grp" style="margin-top:0;">By type</div><div id="trf-s-split"></div></div>
+  <div class="card"><div class="trf-grp" style="margin-top:0;">Top recipients</div><div class="trf-bars" id="trf-s-top"></div></div>
+</div>
+
+<!-- DATA -->
+<div class="trf-panel" id="trf-p-data">
+  <div class="section-title">Transfers Data</div>
+  <div class="card">
+    <div class="trf-grp" style="margin-top:0;">Import prepared file (.json)</div>
+    <p class="trf-hint">Replaces everything currently in this module.</p>
+    <input type="file" accept=".json,application/json" onchange="trfImportJSON(this)">
+  </div>
+  <div class="card">
+    <div class="trf-grp" style="margin-top:0;">Paste from Excel / Google Sheets</div>
+    <p class="trf-hint">Rows: Names, Account No, Bank, January … December. Each non-empty month becomes one Sent transfer. Adds to existing data.</p>
+    <div class="trf-tools"><select id="trf-d-year"></select></div>
+    <textarea id="trf-d-paste" rows="6" style="width:100%;font-family:inherit;font-size:0.85rem;padding:7px 9px;border:1.5px solid var(--border);border-radius:3px;" placeholder="Paste rows here…"></textarea>
+    <div style="margin-top:6px;"><button class="trf-b gold" style="padding:7px 12px;" onclick="trfImportPaste()">Import pasted rows</button></div>
+  </div>
+  <div class="card">
+    <div class="trf-grp" style="margin-top:0;">Backup</div>
+    <p class="trf-hint" id="trf-d-stats"></p>
+    <div class="trf-tools">
+      <button class="trf-b ink" style="padding:7px 12px;" onclick="trfExportJSON()">&#11015; Export backup</button>
+      <button class="trf-b rust" style="padding:7px 12px;" onclick="trfClearAll()">Clear all data</button>
+    </div>
+    <p class="trf-hint">Stored on this device only for now. Cloud sync comes in a later step.</p>
+  </div>
+</div>
+
+<datalist id="trf-dl-names"></datalist>
+<datalist id="trf-dl-banks">
+  <option value="ACC">Access</option><option value="FBN">First Bank</option><option value="FCM">FCMB</option>
+  <option value="GTB">GTBank</option><option value="KDA">Kuda</option><option value="MNP">Moniepoint</option>
+  <option value="PAY">OPay</option><option value="PPY">PalmPay</option><option value="PRV">Providus</option>
+  <option value="STB">Stanbic</option><option value="UBA">UBA</option><option value="WMA">Wema</option>
+  <option value="ZNT">Zenith</option>
+</datalist>
+<div id="trf-modal" onclick="if(event.target===this)trfCloseModal()"><div class="box" id="trf-mbox"></div></div>
+</div><!-- end transfers-main -->
+
+<script>
+(function(){
+// ===================== GUARD =====================
+function trfOn() { try { return localStorage.getItem('ngt_enabled') === '1'; } catch(e) { return false; } }
+window.trfOn = trfOn;
+
+// ===================== STORE =====================
+var KEY = 'ngt_data_v1';
+var S = load();
+function load() {
+  try { var d = JSON.parse(localStorage.getItem(KEY)); if (d && d.recipients && d.transfers) return d; } catch(e) {}
+  return { version: 1, recipients: [], transfers: [] };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { say('Could not save on this device'); } trfRenderAll(); }
+function uid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function say(m) { if (typeof showToast === 'function') showToast(m); }
+
+// ===================== HELPERS =====================
+var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmt(n) { n = Math.round((+n || 0) * 100) / 100; var d = (n % 1 !== 0) ? 2 : 0; return '₦' + n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: 2 }); }
+function fmtNo(n) { return fmt(n).replace('₦', ''); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function nowM() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function mLabel(m) { var p = m.split('-'); return MON[+p[1]-1] + ' ' + p[0]; }
+function addM(m, k) { var p = m.split('-'); var d = new Date(+p[0], +p[1]-1+k, 1); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function rec(id) { for (var i = 0; i < S.recipients.length; i++) if (S.recipients[i].id === id) return S.recipients[i]; return null; }
+function norm(s) { return String(s).trim().toLowerCase().replace(/\s+/g,' '); }
+function recByName(n) { n = norm(n); for (var i = 0; i < S.recipients.length; i++) if (norm(S.recipients[i].name) === n) return S.recipients[i]; return null; }
+function tr(id) { for (var i = 0; i < S.transfers.length; i++) if (S.transfers[i].id === id) return S.transfers[i]; return null; }
+function parseAmt(s) {
+  s = String(s || '').replace(/[₦#,\s]/g, '');
+  if (!s) return NaN;
+  if (/^[\d.]+(\+[\d.]+)*$/.test(s)) return s.split('+').reduce(function(a, x){ return a + parseFloat(x); }, 0);
+  return parseFloat(s);
+}
+function years() { var ys = {}; ys[nowM().slice(0,4)] = 1; S.transfers.forEach(function(t){ ys[t.month.slice(0,4)] = 1; }); return Object.keys(ys).sort().reverse(); }
+function sum(a) { return a.reduce(function(x, t){ return x + (+t.amount || 0); }, 0); }
+function el(id) { return document.getElementById(id); }
+window.trfCopy = function(s) {
+  s = String(s || ''); if (!s) { say('No account number saved'); return; }
+  var done = function(){ say('Account copied: ' + s); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(s).then(done, fb); else fb();
+  function fb() { var ta = document.createElement('textarea'); ta.value = s; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch(e) {} ta.remove(); }
+};
+
+// ===================== STATE / NAV =====================
+var CUR = nowM();
+var TAB = 'month';
+try { TAB = localStorage.getItem('ngt_tab') || 'month'; } catch(e) {}
+var TABS = [['month','&#128197;','This Month'],['payday','&#128176;','Payday'],['grid','&#128202;','Year Grid'],['recipients','&#128101;','Recipients'],['summary','&#128200;','Summary'],['data','&#9881;&#65039;','Data']];
+
+window.trfSwitch = function(t) {
+  TAB = t;
+  try { localStorage.setItem('ngt_tab', t); } catch(e) {}
+  document.querySelectorAll('#transfers-main .trf-panel').forEach(function(p){ p.classList.toggle('trf-on', p.id === 'trf-p-' + t); });
+  document.querySelectorAll('#burger-trf-items .bmenu-item').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-trf') === t); });
+  if (typeof closeBurgerMenu === 'function') closeBurgerMenu();
+  window.scrollTo(0, 0);
+  trfRenderAll();
+};
+window.trfChangeYear = function(k) { CUR = (+CUR.slice(0,4) + k) + CUR.slice(4); trfRenderAll(); };
+window.trfShiftMonth = function(k) { CUR = addM(CUR, k); trfRenderAll(); };
+function selectM(mn) { CUR = CUR.slice(0,4) + '-' + String(mn).padStart(2,'0'); trfRenderAll(); }
+
+function renderPicker() {
+  var yd = el('trf-year-display'); if (yd) yd.textContent = CUR.slice(0,4);
+  var grid = el('trf-months-grid'); if (!grid) return;
+  var has = {}; S.transfers.forEach(function(t){ has[t.month] = 1; });
+  grid.innerHTML = '';
+  MON.forEach(function(m, i){
+    var key = CUR.slice(0,4) + '-' + String(i+1).padStart(2,'0');
+    var b = document.createElement('button');
+    b.className = 'month-btn' + (has[key] ? ' has-data' : '') + (key === CUR ? ' selected' : '');
+    b.textContent = m;
+    b.addEventListener('click', function(){ selectM(i+1); });
+    grid.appendChild(b);
+  });
+}
+
+// ===================== THIS MONTH / PAYDAY =====================
+function monthT(m) { return S.transfers.filter(function(t){ return t.month === m; }); }
+function kpis(list) {
+  var by = function(s){ return list.filter(function(t){ return t.status === s; }); };
+  return '<div class="trf-kpi"><div class="l">Committed</div><div class="v">' + fmt(sum(list)) + '</div></div>' +
+    '<div class="trf-kpi"><div class="l">Sent early</div><div class="v" style="color:#2980b9">' + fmt(sum(by('early'))) + '</div></div>' +
+    '<div class="trf-kpi"><div class="l">Sent</div><div class="v" style="color:var(--sage)">' + fmt(sum(by('sent'))) + '</div></div>' +
+    '<div class="trf-kpi rem"><div class="l">Remaining to send</div><div class="v">' + fmt(sum(by('planned'))) + '</div></div>';
+}
+function row(t, mode) {
+  var r = rec(t.rid) || { name: '(deleted)', bank: '', account: '' };
+  var badges = (t.pushedFrom ? '<span class="trf-badge push">pushed from ' + esc(mLabel(t.pushedFrom)) + '</span>' : '') +
+               typeBadge(r);
+  var acct = (r.bank || r.account) ? '<span class="trf-acct">' + esc(r.bank) + ' ' + esc(r.account) + '</span>' : '';
+  var a = '';
+  if (mode === 'payday') {
+    a = '<button class="trf-b ghost" onclick="trfCopy(\'' + esc(r.account) + '\')">&#128203; Copy acct</button>' +
+        '<button class="trf-b sage" onclick="trfSet(\'' + t.id + '\',\'sent\')">&#10003; Sent</button>' +
+        '<button class="trf-b amber" onclick="trfPush(\'' + t.id + '\')">&#8594; Push</button>';
+  } else {
+    if (t.status === 'planned') a = '<button class="trf-b blue" onclick="trfSet(\'' + t.id + '\',\'early\')">Sent early</button>' +
+        '<button class="trf-b sage" onclick="trfSet(\'' + t.id + '\',\'sent\')">&#10003; Sent</button>' +
+        '<button class="trf-b amber" onclick="trfPush(\'' + t.id + '\')">&#8594; Push</button>';
+    else a = '<button class="trf-b ghost" onclick="trfSet(\'' + t.id + '\',\'planned\')">&#8634; Undo</button>';
+    a += '<button class="trf-b ghost" onclick="trfEditTransfer(\'' + t.id + '\')">&#9998; Edit</button>';
+  }
+  return '<div class="trf-row ' + t.status + '"><div class="nm">' + esc(r.name) + '</div><div class="am">' + fmt(t.amount) + '</div>' +
+    '<div class="sub">' + acct + badges + (t.note ? '<span>' + esc(t.note) + '</span>' : '') + '</div><div class="acts">' + a + '</div></div>';
+}
+function renderMonth() {
+  renderPicker();
+  var list = monthT(CUR);
+  el('trf-m-kpis').innerHTML = kpis(list);
+  var st = el('trf-af-status'); if (!st._touched) st.value = (CUR < nowM()) ? 'sent' : 'planned';
+  var html = '';
+  [['planned','Remaining to send'],['early','Sent early'],['sent','Sent']].forEach(function(g){
+    var it = list.filter(function(t){ return t.status === g[0]; });
+    if (!it.length) return;
+    html += '<div class="trf-grp"><span>' + g[1] + ' · ' + it.length + '</span><b>' + fmt(sum(it)) + '</b></div>';
+    it.forEach(function(t){ html += row(t, 'month'); });
+  });
+  el('trf-m-list').innerHTML = html || '<div class="trf-empty">Nothing for ' + mLabel(CUR) + ' yet. Add the first planned transfer above.</div>';
+}
+function renderPayday() {
+  var list = monthT(CUR), pl = list.filter(function(t){ return t.status === 'planned'; });
+  el('trf-pd-title').textContent = 'Payday · ' + mLabel(CUR);
+  el('trf-pd-month').textContent = mLabel(CUR);
+  el('trf-pd-kpis').innerHTML = kpis(list);
+  var html = '';
+  if (pl.length) { html = '<div class="trf-grp"><span>To send · ' + pl.length + '</span><b>' + fmt(sum(pl)) + '</b></div>'; pl.forEach(function(t){ html += row(t, 'payday'); }); }
+  else html = '<div class="trf-empty">Nothing left to send for ' + mLabel(CUR) + '. &#10003;</div>';
+  el('trf-pd-list').innerHTML = html;
+}
+window.trfCheckNew = function() { var n = el('trf-af-name').value.trim(); el('trf-af-newrec').classList.toggle('show', !!n && !recByName(n)); };
+window.trfAdd = function(e) {
+  e.preventDefault();
+  var name = el('trf-af-name').value.trim(), amt = parseAmt(el('trf-af-amt').value);
+  if (!name) { say('Enter a recipient'); return; }
+  if (!(amt > 0)) { say('Enter a valid amount'); return; }
+  var r = recByName(name);
+  if (!r) { r = { id: uid('r'), name: name, account: el('trf-af-acct').value.trim(), bank: el('trf-af-bank').value.trim().toUpperCase(), type: trfNormType(el('trf-af-type').value), note: '', archived: false }; S.recipients.push(r); }
+  S.transfers.push({ id: uid('t'), rid: r.id, month: CUR, amount: Math.round(amt*100)/100, status: el('trf-af-status').value, note: el('trf-af-note').value.trim(), date: '' });
+  ['trf-af-name','trf-af-amt','trf-af-note','trf-af-acct','trf-af-bank'].forEach(function(id){ el(id).value = ''; });
+  el('trf-af-newrec').classList.remove('show');
+  save(); say('Added ' + fmt(amt) + ' for ' + r.name);
+};
+window.trfSet = function(id, s) { var t = tr(id); if (!t) return; t.status = s; if (s !== 'planned' && !t.date) t.date = new Date().toISOString().slice(0,10); if (s === 'planned') t.date = ''; save(); };
+window.trfPush = function(id) {
+  var t = tr(id); if (!t) return;
+  var r = rec(t.rid), nxt = addM(t.month, 1);
+  var quick = [1, 2, 3, 6].map(function(k){
+    var m = addM(t.month, k);
+    return '<button class="trf-b ghost" onclick="trfDoPush(\'' + id + '\',\'' + m + '\')">' + mLabel(m) + '</button>';
+  }).join('');
+  openModal('<h3>Push ' + esc(r ? r.name : '') + ' · ' + fmt(t.amount) + '</h3><div class="trf-frm">' +
+    '<label>Quick</label><div style="display:flex;gap:6px;flex-wrap:wrap;">' + quick + '</div>' +
+    '<label>Or pick any month</label><input id="trf-push-month" type="month" value="' + nxt + '" min="' + nxt + '">' +
+    '<div class="btns"><button class="trf-b ghost" onclick="trfCloseModal()">Cancel</button>' +
+    '<button class="trf-b amber" onclick="trfDoPush(\'' + id + '\',document.getElementById(\'trf-push-month\').value)">&#8594; Push</button></div></div>');
+};
+window.trfDoPush = function(id, m) {
+  var t = tr(id); if (!t) return;
+  if (!/^\d{4}-\d{2}$/.test(m) || m <= t.month) { say('Pick a later month'); return; }
+  if (!t.pushedFrom) t.pushedFrom = t.month;
+  t.month = m; t.status = 'planned';
+  trfCloseModal(); save(); say('Pushed to ' + mLabel(m));
+};
+
+// ===================== YEAR GRID =====================
+function fillYears(id, want) {
+  var s = el(id); if (!s) return;
+  var ys = years(), w = s.value || want || CUR.slice(0,4);
+  s.innerHTML = ys.map(function(y){ return '<option>' + y + '</option>'; }).join('');
+  s.value = ys.indexOf(w) !== -1 ? w : ys[0];
+}
+window.trfRenderGrid = function() {
+  var y = el('trf-g-year').value, q = el('trf-g-search').value.trim().toLowerCase();
+  var hide0 = el('trf-g-hide0').checked, incP = el('trf-g-plan').checked, sort = el('trf-g-sort').value;
+  var Z = function(){ return [0,0,0,0,0,0,0,0,0,0,0,0]; };
+  var cells = {}, plan = {};
+  S.transfers.forEach(function(t){ if (t.month.slice(0,4) !== y) return; var b = t.status === 'planned' ? plan : cells; (b[t.rid] = b[t.rid] || Z())[+t.month.slice(5,7)-1] += +t.amount; });
+  var rows = S.recipients.map(function(r){
+    var c = cells[r.id] || Z(), p = plan[r.id] || Z();
+    var tot = c.reduce(function(a,b){return a+b;},0) + (incP ? p.reduce(function(a,b){return a+b;},0) : 0);
+    return { r: r, c: c, p: p, tot: tot };
+  }).filter(function(x){
+    if (q && (x.r.name + ' ' + x.r.bank + ' ' + x.r.account).toLowerCase().indexOf(q) === -1) return false;
+    var any = x.c.some(Boolean) || (incP && x.p.some(Boolean));
+    return !((hide0 || x.r.archived) && !any);
+  });
+  if (sort === 'name') rows.sort(function(a,b){ return a.r.name.localeCompare(b.r.name); });
+  else if (sort === 'total') rows.sort(function(a,b){ return b.tot - a.tot; });
+  var col = Z(), grand = 0;
+  var h = '<thead><tr><th>NAME</th>' + MON.map(function(m){ return '<th>' + m.toUpperCase() + '</th>'; }).join('') + '<th>TOTAL</th></tr></thead><tbody>';
+  rows.forEach(function(x){
+    h += '<tr><td title="' + esc(x.r.name) + '">' + esc(x.r.name) + '</td>';
+    for (var i = 0; i < 12; i++) {
+      var v = x.c[i], pv = incP ? x.p[i] : 0; col[i] += v + pv;
+      h += (v || pv) ? '<td class="' + (v ? 'has' : 'pl') + '" onclick="trfCell(\'' + x.r.id + '\',\'' + y + '-' + String(i+1).padStart(2,'0') + '\')">' + fmtNo(v + pv) + '</td>' : '<td></td>';
+    }
+    grand += x.tot;
+    h += '<td class="tot">' + fmtNo(x.tot) + '</td></tr>';
+  });
+  h += '</tbody><tfoot><tr><td>TOTAL &#8358;</td>' + col.map(function(v){ return '<td>' + (v ? fmtNo(v) : '') + '</td>'; }).join('') + '<td>' + fmtNo(grand) + '</td></tr></tfoot>';
+  el('trf-grid').innerHTML = rows.length ? h : '<tbody><tr><td class="trf-empty" style="position:static;">No transfers for ' + y + '.</td></tr></tbody>';
+};
+window.trfCell = function(rid, m) {
+  var r = rec(rid), list = S.transfers.filter(function(t){ return t.rid === rid && t.month === m; });
+  var st = { planned: 'Planned', early: 'Sent early', sent: 'Sent' };
+  openModal('<h3>' + esc(r ? r.name : '') + ' · ' + mLabel(m) + '</h3><div class="trf-mlist">' + list.map(function(t){
+    return '<div class="it"><span class="a">' + fmt(t.amount) + '</span>' + st[t.status] + (t.date ? ' · ' + esc(t.date) : '') +
+      (t.pushedFrom ? ' · <span style="color:var(--rust)">pushed from ' + esc(mLabel(t.pushedFrom)) + '</span>' : '') +
+      (t.note ? '<div class="n">' + esc(t.note) + '</div>' : '') +
+      '<div style="margin-top:5px;"><button class="trf-b ghost" onclick="trfEditTransfer(\'' + t.id + '\')">&#9998; Edit</button></div></div>';
+  }).join('') + '</div><div class="trf-frm"><div class="btns"><b class="trf-acct" style="margin-right:auto;align-self:center;">' + fmt(sum(list)) + '</b><button class="trf-b ghost" onclick="trfCloseModal()">Close</button></div></div>');
+};
+
+// ===================== RECIPIENTS =====================
+window.trfRenderRecipients = function() {
+  var q = el('trf-r-search').value.trim().toLowerCase(), arch = el('trf-r-arch').checked;
+  var tot = {}, cnt = {};
+  S.transfers.forEach(function(t){ if (t.status === 'planned') return; tot[t.rid] = (tot[t.rid]||0) + (+t.amount); cnt[t.rid] = (cnt[t.rid]||0) + 1; });
+  var list = S.recipients.filter(function(r){ return (arch || !r.archived) && (!q || (r.name + ' ' + r.bank + ' ' + r.account).toLowerCase().indexOf(q) !== -1); })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); });
+  el('trf-r-list').innerHTML = list.length ? list.map(function(r){
+    return '<div class="trf-rrow' + (r.archived ? ' arch' : '') + '" onclick="trfRecipientView(\'' + r.id + '\')"><div class="nm">' + esc(r.name) + '</div><div class="tt">' + fmt(tot[r.id] || 0) + '</div>' +
+      '<div class="sub"><span class="trf-acct">' + esc(r.bank) + ' ' + esc(r.account) + '</span>' + typeBadge(r) +
+      (r.archived ? '<span class="trf-badge" style="color:var(--muted);border-color:var(--muted)">archived</span>' : '') +
+      '<span>' + (cnt[r.id] || 0) + ' transfers</span>' + '</div></div>';
+  }).join('') : '<div class="trf-empty">No recipients' + (q ? ' match "' + esc(q) + '"' : ' yet') + '.</div>';
+};
+window.trfEditRecipient = function(id) {
+  var r = id ? rec(id) : { name: '', account: '', bank: '', type: 'person', note: '', archived: false };
+  var used = id ? S.transfers.some(function(t){ return t.rid === id; }) : false;
+  openModal('<h3>' + (id ? 'Edit recipient' : 'New recipient') + '</h3><div class="trf-frm">' +
+    '<label>Name</label><input id="trf-er-name" value="' + esc(r.name) + '">' +
+    '<div class="row2"><div class="trf-frm"><label>Account no</label><input id="trf-er-acct" inputmode="numeric" value="' + esc(r.account) + '"></div>' +
+    '<div class="trf-frm"><label>Bank</label><input id="trf-er-bank" list="trf-dl-banks" value="' + esc(r.bank) + '"></div></div>' +
+    '<label>Type</label><input id="trf-er-type" list="trf-dl-types" placeholder="e.g. Family, Investment" autocomplete="off" value="' + esc(typeLabel(r.type)) + '">' +
+    '<label>Note</label><input id="trf-er-note" value="' + esc(r.note) + '">' +
+    '<label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:0.8rem;color:var(--ink);"><input type="checkbox" id="trf-er-arch"' + (r.archived ? ' checked' : '') + '> Archived (hidden, history kept)</label>' +
+    '<div class="btns">' + (id && r.account ? '<button class="trf-b ghost" style="margin-right:auto" onclick="trfCopy(\'' + esc(r.account) + '\')">&#128203; Copy acct</button>' : '') +
+    (id && !used ? '<button class="trf-b rust" onclick="trfDeleteRecipient(\'' + id + '\')">Delete</button>' : '') +
+    '<button class="trf-b ghost" onclick="trfCloseModal()">Cancel</button><button class="trf-b gold" onclick="trfSaveRecipient(' + (id ? '\'' + id + '\'' : 'null') + ')">Save</button></div></div>');
+};
+window.trfSaveRecipient = function(id) {
+  var name = el('trf-er-name').value.trim(); if (!name) { say('Name is required'); return; }
+  var dup = recByName(name); if (dup && dup.id !== id) { say('A recipient with this name already exists'); return; }
+  var r = id ? rec(id) : { id: uid('r') };
+  r.name = name; r.account = el('trf-er-acct').value.trim(); r.bank = el('trf-er-bank').value.trim().toUpperCase();
+  r.type = trfNormType(el('trf-er-type').value); r.note = el('trf-er-note').value.trim(); r.archived = el('trf-er-arch').checked; reopenView();
+  if (!id) S.recipients.push(r);
+  trfCloseModal(); save(); say('Saved');
+};
+// ----- Types (free text, user-defined) -----
+var TYPE_DEFAULTS = ['person', 'project', 'family', 'investment'];
+var TYPE_COLORS = ['#c8962e', '#2980b9', '#4a7c59', '#b5451b', '#2e7d8a', '#8b5e3c', '#5a6b3d', '#7a3d6b'];
+window.trfNormType = function(s) { s = String(s || '').trim().replace(/\s+/g, ' ').toLowerCase(); return s || 'person'; };
+function typeLabel(t) { t = trfNormType(t); return t.charAt(0).toUpperCase() + t.slice(1); }
+function typeColor(t) {
+  t = trfNormType(t);
+  if (t === 'project') return '#6b3d8c';
+  var h = 0; for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+  return TYPE_COLORS[h % TYPE_COLORS.length];
+}
+function typeBadge(r) {
+  if (!r || trfNormType(r.type) === 'person') return '';
+  var c = typeColor(r.type);
+  return '<span class="trf-badge" style="color:' + c + ';border-color:' + c + ';">' + esc(typeLabel(r.type)) + '</span>';
+}
+window.trfFillTypes = function() {
+  var dl = el('trf-dl-types');
+  if (!dl) { dl = document.createElement('datalist'); dl.id = 'trf-dl-types'; document.body.appendChild(dl); }
+  var seen = {}, all = [];
+  TYPE_DEFAULTS.concat(S.recipients.map(function(r){ return trfNormType(r.type); })).forEach(function(t){ if (!seen[t]) { seen[t] = 1; all.push(t); } });
+  dl.innerHTML = all.map(function(t){ return '<option value="' + esc(typeLabel(t)) + '">'; }).join('');
+};
+window.trfTypeBars = function(list) {
+  var by = {}, total = 0;
+  list.forEach(function(t){ var r = rec(t.rid); var k = trfNormType(r && r.type); by[k] = (by[k] || 0) + (+t.amount); total += +t.amount; });
+  var keys = Object.keys(by).sort(function(a, b){ return by[b] - by[a]; });
+  if (!keys.length) return '<div class="trf-empty">Nothing sent yet.</div>';
+  var mx = by[keys[0]];
+  return '<div class="trf-bars">' + keys.map(function(k){
+    return '<div class="trf-bar"><span class="lb">' + esc(typeLabel(k)) + '</span><div class="tr"><div class="fl" style="width:' + (by[k] / mx * 100) + '%;background:' + typeColor(k) + '"></div></div><span class="vl">' + fmt(by[k]) + ' (' + Math.round(by[k] / (total || 1) * 100) + '%)</span></div>';
+  }).join('') + '</div>';
+};
+
+// ----- Recipient history view (tap a recipient) -----
+window.trfRecipientView = function(rid) {
+  var r = rec(rid); if (!r) return;
+  window._trfViewRid = rid;
+  var STV = { planned:['Planned','#c8962e'], early:['Sent early','#2980b9'], sent:['Sent','#4a7c59'] };
+  var list = S.transfers.filter(function(t){ return t.rid === rid; }).sort(function(a, b){ return b.month.localeCompare(a.month); });
+  var total = sum(list.filter(function(t){ return t.status !== 'planned'; }));
+  var byYear = {};
+  list.forEach(function(t){ var y = t.month.slice(0,4); (byYear[y] = byYear[y] || []).push(t); });
+  var years = Object.keys(byYear).sort().reverse();
+  var yTot = years.map(function(y){ return '<span style="white-space:nowrap;">' + y + ': <b>' + fmt(sum(byYear[y].filter(function(t){ return t.status !== 'planned'; }))) + '</b></span>'; }).join(' &nbsp; ');
+  var body = years.map(function(y){
+    return '<div class="trf-grp" style="margin:12px 2px 4px;"><span>' + y + '</span></div>' + byYear[y].map(function(t){
+      var s = STV[t.status] || STV.sent;
+      return '<div onclick="trfEditTransfer(\'' + t.id + '\')" style="background:white;border:1px solid var(--border);border-radius:3px;padding:7px 10px;margin-bottom:5px;cursor:pointer;">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span style="font-family:DM Mono,monospace;font-size:0.75rem;width:34px;">' + MON[+t.month.slice(5,7)-1] + '</span>' +
+          '<span style="font-size:0.66rem;padding:1px 7px;border-radius:10px;background:' + s[1] + '18;color:' + s[1] + ';border:1px solid ' + s[1] + '40;white-space:nowrap;">' + s[0] + '</span>' +
+          (t.note ? '<button onclick="event.stopPropagation();var n=this.parentNode.nextElementSibling;n.style.display=(n.style.display===\'none\')?\'block\':\'none\';" style="font-size:0.62rem;padding:1px 7px;border-radius:10px;border:1px solid var(--border);background:var(--paper2);color:var(--muted);cursor:pointer;white-space:nowrap;">&#128172; Note</button>' : '') +
+          '<span style="margin-left:auto;font-family:DM Mono,monospace;font-weight:600;">' + fmt(t.amount) + '</span>' +
+        '</div>' + (t.note ? '<div style="display:none;font-size:0.72rem;color:var(--muted);margin-top:4px;white-space:pre-wrap;">' + esc(t.note) + '</div>' : '') +
+      '</div>';
+    }).join('');
+  }).join('');
+  openModal(
+    '<div style="display:flex;align-items:flex-start;gap:8px;"><h3 style="margin:0 0 4px;flex:1;">' + esc(r.name) + ' ' + typeBadge(r) + '</h3>' +
+    '<button class="trf-b ghost" onclick="trfEditRecipient(\'' + rid + '\')">&#9998; Details</button></div>' +
+    '<div style="font-family:DM Mono,monospace;font-size:0.8rem;">' + fmt(total) + ' sent · ' + list.length + ' transfer' + (list.length === 1 ? '' : 's') + '</div>' +
+    '<div class="trf-hint" style="margin:4px 0 6px;">' + (yTot || 'No transfers yet') + '</div>' +
+    '<div class="trf-mlist" style="max-height:55vh;">' + (body || '<div class="trf-empty">No transfers yet.</div>') + '</div>' +
+    '<div class="trf-frm"><div class="btns"><span class="trf-hint" style="margin-right:auto;align-self:center;">Tap a transfer to edit it or its note</span>' +
+    '<button class="trf-b ghost" onclick="window._trfViewRid=null;trfCloseModal()">Close</button></div></div>');
+};
+function reopenView() { setTimeout(function(){ if (window._trfViewRid) trfRecipientView(window._trfViewRid); }, 0); }
+var _oEditRec = window.trfEditRecipient;
+window.trfEditRecipient = function(id) { trfFillTypes(); return _oEditRec(id); };
+
+window.trfDeleteRecipient = function(id) { if (!confirm('Delete this recipient?')) return; S.recipients = S.recipients.filter(function(r){ return r.id !== id; }); trfCloseModal(); save(); };
+
+// ===================== EDIT TRANSFER =====================
+window.trfEditTransfer = function(id) {
+  var t = tr(id); if (!t) return;
+  var opts = S.recipients.slice().sort(function(a,b){ return a.name.localeCompare(b.name); }).map(function(r){ return '<option value="' + r.id + '"' + (r.id === t.rid ? ' selected' : '') + '>' + esc(r.name) + '</option>'; }).join('');
+  openModal('<h3>Edit transfer</h3><div class="trf-frm"><label>Recipient</label><select id="trf-et-rid">' + opts + '</select>' +
+    '<div class="row2"><div class="trf-frm"><label>Amount &#8358;</label><input id="trf-et-amt" inputmode="decimal" value="' + t.amount + '"></div>' +
+    '<div class="trf-frm"><label>Month</label><input id="trf-et-month" type="month" value="' + t.month + '"></div></div>' +
+    '<div class="row2"><div class="trf-frm"><label>Status</label><select id="trf-et-status">' + [['planned','Planned'],['early','Sent early'],['sent','Sent']].map(function(o){ return '<option value="' + o[0] + '"' + (t.status === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
+    '<div class="trf-frm"><label>Date sent</label><input id="trf-et-date" type="date" value="' + esc(t.date) + '"></div></div>' +
+    '<label>Note</label><textarea id="trf-et-note" rows="3">' + esc(t.note) + '</textarea>' +
+    '<div class="btns"><button class="trf-b rust" style="margin-right:auto" onclick="trfDeleteTransfer(\'' + id + '\')">Delete</button><button class="trf-b ghost" onclick="trfCloseModal()">Cancel</button><button class="trf-b gold" onclick="trfSaveTransfer(\'' + id + '\')">Save</button></div></div>');
+};
+window.trfSaveTransfer = function(id) {
+  var t = tr(id); if (!t) return;
+  var amt = parseAmt(el('trf-et-amt').value); if (!(amt > 0)) { say('Enter a valid amount'); return; }
+  var m = el('trf-et-month').value; if (!/^\d{4}-\d{2}$/.test(m)) { say('Pick a month'); return; }
+  t.rid = el('trf-et-rid').value; t.amount = Math.round(amt*100)/100; t.month = m;
+  t.status = el('trf-et-status').value; t.date = el('trf-et-date').value; t.note = el('trf-et-note').value.trim(); reopenView();
+  trfCloseModal(); save(); say('Saved');
+};
+window.trfDeleteTransfer = function(id) { if (!confirm('Delete this transfer?')) return; S.transfers = S.transfers.filter(function(t){ return t.id !== id; }); trfCloseModal(); save(); };
+
+// ===================== SUMMARY =====================
+window.trfRenderSummary = function() {
+  var y = el('trf-s-year').value;
+  var list = S.transfers.filter(function(t){ return t.month.slice(0,4) === y && t.status !== 'planned'; });
+  var total = sum(list), months = [0,0,0,0,0,0,0,0,0,0,0,0], ppl = {};
+  list.forEach(function(t){ months[+t.month.slice(5,7)-1] += +t.amount; ppl[t.rid] = (ppl[t.rid]||0) + (+t.amount); });
+  var act = months.filter(Boolean).length || 1;
+  el('trf-s-kpis').innerHTML = '<div class="trf-kpi"><div class="l">Sent in ' + y + '</div><div class="v">' + fmt(total) + '</div></div>' +
+    '<div class="trf-kpi"><div class="l">Transfers</div><div class="v">' + list.length + '</div></div>' +
+    '<div class="trf-kpi"><div class="l">Recipients</div><div class="v">' + Object.keys(ppl).length + '</div></div>' +
+    '<div class="trf-kpi rem"><div class="l">Avg / active month</div><div class="v">' + fmt(total / act) + '</div></div>';
+  var mx = Math.max.apply(null, months.concat([1]));
+  el('trf-s-months').innerHTML = months.map(function(v, i){ return '<div class="trf-bar"><span class="lb trf-acct">' + MON[i] + '</span><div class="tr"><div class="fl" style="width:' + (v/mx*100) + '%"></div></div><span class="vl">' + (v ? fmt(v) : '–') + '</span></div>'; }).join('');
+    el('trf-s-split').innerHTML = trfTypeBars(list);
+  var top = Object.keys(ppl).map(function(id){ return [id, ppl[id]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0, 10);
+  var tmx = top.length ? top[0][1] : 1;
+  el('trf-s-top').innerHTML = top.map(function(x){ var r = rec(x[0]); return '<div class="trf-bar"><span class="lb" title="' + esc(r ? r.name : '') + '">' + esc(r ? r.name : '') + '</span><div class="tr"><div class="fl" style="width:' + (x[1]/tmx*100) + '%;' + (r && r.type === 'project' ? 'background:#6b3d8c' : '') + '"></div></div><span class="vl">' + fmt(x[1]) + '</span></div>'; }).join('') || '<div class="trf-empty">No sent transfers in ' + y + '.</div>';
+};
+
+// ===================== DATA =====================
+function renderData() {
+  var dy = el('trf-d-year'), cy = +nowM().slice(0,4), keep = dy.value || String(cy), ys = [];
+  for (var y = cy + 1; y >= cy - 6; y--) ys.push(y);
+  dy.innerHTML = ys.map(function(y){ return '<option>' + y + '</option>'; }).join(''); dy.value = keep;
+  var by = {}; S.transfers.forEach(function(t){ var y = t.month.slice(0,4); by[y] = by[y] || [0,0]; by[y][0]++; if (t.status !== 'planned') by[y][1] += +t.amount; });
+  el('trf-d-stats').innerHTML = S.recipients.length + ' recipients · ' + S.transfers.length + ' transfers<br>' + Object.keys(by).sort().map(function(y){ return y + ': ' + by[y][0] + ' transfers, ' + fmt(by[y][1]) + ' sent'; }).join('<br>');
+}
+window.trfImportJSON = function(input) {
+  var f = input.files && input.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function() {
+    try {
+      var d = JSON.parse(rd.result); if (!d.recipients || !d.transfers) throw new Error('Not a transfers file');
+      if (S.transfers.length && !confirm('Replace the ' + S.transfers.length + ' transfers currently here with this file?')) { input.value = ''; return; }
+      S = { version: 1, recipients: d.recipients, transfers: d.transfers }; save();
+      say('Imported ' + d.recipients.length + ' recipients, ' + d.transfers.length + ' transfers');
+    } catch(e) { say('Import failed: ' + e.message); }
+    input.value = '';
+  };
+  rd.readAsText(f);
+};
+window.trfImportPaste = function() {
+  var y = el('trf-d-year').value, txt = el('trf-d-paste').value; if (!txt.trim()) { say('Paste some rows first'); return; }
+  var nR = 0, nT = 0;
+  txt.split(/\r?\n/).forEach(function(line){
+    if (!line.trim()) return;
+    var c = line.split('\t'), name = (c[0] || '').trim();
+    if (!name || /^names?$/i.test(name) || /^total$/i.test(name)) return;
+    var r = recByName(name);
+    if (!r) { r = { id: uid('r'), name: name.replace(/\s+/g,' '), account: (c[1]||'').trim(), bank: (c[2]||'').trim().toUpperCase(), type: /wedding|invest|visa|project/i.test(name) ? 'project' : 'person', note: '', archived: false }; S.recipients.push(r); nR++; }
+    else { if (!r.account && c[1]) r.account = c[1].trim(); if (!r.bank && c[2]) r.bank = c[2].trim().toUpperCase(); }
+    for (var i = 0; i < 12; i++) { var a = parseAmt(c[3+i]); if (a > 0) { S.transfers.push({ id: uid('t'), rid: r.id, month: y + '-' + String(i+1).padStart(2,'0'), amount: Math.round(a*100)/100, status: 'sent', note: '', date: '' }); nT++; } }
+  });
+  el('trf-d-paste').value = ''; save(); say('Imported ' + nT + ' transfers, ' + nR + ' new recipients');
+};
+window.trfExportJSON = function() {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' }));
+  a.download = 'nigeria-transfers-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+};
+window.trfClearAll = function() {
+  if (!confirm('Delete ALL recipients and transfers in this module?')) return;
+  if (!confirm('Are you sure? Export a backup first if unsure.')) return;
+  S = { version: 1, recipients: [], transfers: [] }; save();
+};
+
+// ===================== MODAL =====================
+function openModal(h) { el('trf-mbox').innerHTML = h; el('trf-modal').classList.add('show'); }
+window.trfCloseModal = function() { el('trf-modal').classList.remove('show'); };
+
+// ===================== MONTHLY CALENDAR (Transfers version of Date Lookup) =====================
+var MONF = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var STC = { planned:['Planned','#c8962e'], early:['Sent early','#2980b9'], sent:['Sent','#4a7c59'] };
+function calOverlay() {
+  var o = el('trf-cal-overlay'); if (o) return o;
+  o = document.createElement('div');
+  o.id = 'trf-cal-overlay';
+  o.style.cssText = 'display:none;position:fixed;inset:0;z-index:99990;background:rgba(26,20,16,0.7);align-items:flex-start;justify-content:center;padding:80px 20px 20px;overflow-y:auto;';
+  var btn = 'background:none;border:1.5px solid var(--border);border-radius:4px;color:var(--gold);cursor:pointer;padding:8px 14px;font-size:1rem;font-weight:700;line-height:1;flex-shrink:0;';
+  o.innerHTML =
+    '<div style="background:var(--paper);border:2px solid var(--gold);border-radius:8px;width:100%;max-width:600px;box-shadow:0 8px 32px rgba(0,0,0,0.4);">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--ink);border-radius:6px 6px 0 0;">' +
+        '<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:1.2rem;">\uD83D\uDCC5</span><span style="font-family:\'Playfair Display\',serif;font-size:1.1rem;font-weight:700;color:var(--gold2);">Monthly Transfers</span></div>' +
+        '<button onclick="trfCloseCal()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;padding:0 4px;line-height:1;">\u2715</button>' +
+      '</div>' +
+      '<div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">' +
+        '<button onclick="trfCalShift(-1)" style="' + btn + '">\u2190</button>' +
+        '<input type="month" id="trf-cal-month" onchange="trfCalRun()" style="flex:1;min-width:140px;padding:10px 14px;border:1.5px solid var(--gold);border-radius:4px;font-family:\'DM Mono\',monospace;font-size:0.9rem;background:white;color:var(--ink);outline:none;cursor:pointer;">' +
+        '<button onclick="trfCalShift(1)" style="' + btn + '">\u2192</button>' +
+      '</div>' +
+      '<div id="trf-cal-results" style="padding:16px 20px;min-height:80px;"></div>' +
+    '</div>';
+  o.addEventListener('click', function(e){ if (e.target === o) trfCloseCal(); });
+  document.body.appendChild(o);
+  return o;
+}
+window.trfOpenCal = function() {
+  var o = calOverlay(), i = el('trf-cal-month');
+  if (!i.value) i.value = CUR;
+  o.style.display = 'flex'; trfCalRun();
+};
+window.trfCloseCal = function() { var o = el('trf-cal-overlay'); if (o) o.style.display = 'none'; };
+window.trfCalShift = function(k) { var i = el('trf-cal-month'); i.value = addM(i.value || CUR, k); trfCalRun(); };
+window.trfCalCycle = function(id) {
+  var t = tr(id); if (!t) return;
+  var next = { planned:'early', early:'sent', sent:'planned' }[t.status] || 'planned';
+  t.status = next;
+  t.date = (next === 'planned') ? '' : (t.date || new Date().toISOString().slice(0,10));
+  save(); trfCalRun();
+  say(((rec(t.rid) || {}).name || '') + ': ' + STC[next][0]);
+};
+window.trfCalRun = function() {
+  var i = el('trf-cal-month'); if (!i) return;
+  var m = i.value || CUR, p = m.split('-'), label = MONF[+p[1]-1] + ' ' + p[0];
+  var order = { planned:0, early:1, sent:2 };
+  var list = S.transfers.filter(function(t){ return t.month === m; }).sort(function(a, b){
+    return (order[a.status] - order[b.status]) || ((rec(a.rid)||{}).name||'').localeCompare((rec(b.rid)||{}).name||'');
+  });
+  var box = el('trf-cal-results');
+  if (!list.length) { box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:0.85rem;">No transfers in ' + label + '.</div>'; return; }
+  var td = 'padding:8px 8px;', th = 'padding:7px 8px;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:1px;';
+  var tot = 0, sent = 0, rem = 0;
+  var rows = list.map(function(t, idx){
+    var r = rec(t.rid) || { name:'(deleted)' }, s = STC[t.status] || STC.sent;
+    tot += +t.amount; if (t.status === 'planned') rem += +t.amount; else sent += +t.amount;
+    return '<tr style="border-bottom:1px solid var(--border);background:' + (idx % 2 ? '#faf6ee' : 'white') + ';">' +
+      '<td style="' + td + 'max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(r.name) + '">' + esc(r.name) +
+         '</td>' +
+      '<td style="' + td + '"><span onclick="trfCalCycle(\'' + t.id + '\')" title="Tap to change" style="font-size:0.7rem;padding:2px 8px;border-radius:10px;background:' + s[1] + '18;color:' + s[1] + ';border:1px solid ' + s[1] + '40;white-space:nowrap;cursor:pointer;">' + s[0] + '</span></td>' +
+      '<td style="' + td + 'text-align:right;font-family:DM Mono,monospace;font-weight:600;color:var(--ink);white-space:nowrap;">' + fmt(t.amount) + '</td></tr>';
+  }).join('');
+  box.innerHTML =
+    '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table style="width:100%;min-width:320px;border-collapse:collapse;font-size:0.82rem;">' +
+    '<thead><tr style="background:var(--ink);color:var(--paper);"><th style="' + th + 'text-align:left;">DESCRIPTION</th><th style="' + th + 'text-align:left;">STATUS</th><th style="' + th + 'text-align:right;">AMOUNT</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody>' +
+    '<tfoot><tr style="background:var(--ink);color:var(--gold2);"><td colspan="2" style="padding:8px 8px;font-family:DM Mono,monospace;font-size:0.7rem;letter-spacing:1px;">TOTAL \u00B7 ' + list.length + '</td><td style="padding:8px 8px;text-align:right;font-family:DM Mono,monospace;font-weight:700;">' + fmt(tot) + '</td></tr></tfoot></table></div>' +
+    '<div style="margin-top:8px;font-family:DM Mono,monospace;font-size:0.72rem;color:var(--muted);text-align:right;"><span style="color:#4a7c59">Sent ' + fmt(sent) + '</span> \u00B7 <span style="color:#c8962e">Remaining ' + fmt(rem) + '</span></div>';
+};
+document.addEventListener('keydown', function(e){
+  var o = el('trf-cal-overlay');
+  if (e.key === 'Escape' && o && o.style.display === 'flex') { e.preventDefault(); e.stopPropagation(); trfCloseCal(); }
+}, true);
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && el('trf-modal') && el('trf-modal').classList.contains('show')) { e.stopPropagation(); trfCloseModal(); } }, true);
+
+// ===================== HEADER (big header pills) =====================
+function headerContext(selY, selM) {
+  var lbl = el('hdr-context-label'), pills = el('hdr-context-pills');
+  var sent = S.transfers.filter(function(t){ return t.status !== 'planned'; });
+  var pill = function(v){ return '<span class="hdr-pill" style="' + (typeof getPillStyle === 'function' ? getPillStyle('NGN') : '') + '">' + fmt(v) + ' <span style="font-size:0.65em;opacity:0.8;">NGN</span></span>'; };
+  if (lbl) lbl.textContent = 'All Time Sent';
+  if (pills) pills.innerHTML = sent.length ? pill(sum(sent)) : '<span style="font-family:DM Mono,monospace;font-size:0.78rem;color:#6b5e50;">No transfers yet</span>';
+  var ys = el('hdr-filter-year'), ms = el('hdr-filter-month');
+  if (ys) { var yl = years(); var keep = selY || CUR.slice(0,4); ys.innerHTML = yl.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join(''); ys.value = yl.indexOf(keep) !== -1 ? keep : yl[0]; }
+  if (ms) { if (ms.options.length < 12) ms.innerHTML = MON.map(function(m, i){ return '<option value="' + String(i+1).padStart(2,'0') + '">' + m + '</option>'; }).join(''); ms.value = selM || CUR.slice(5,7); }
+  var key = (ys ? ys.value : CUR.slice(0,4)) + '-' + (ms ? ms.value : CUR.slice(5,7));
+  var fp = el('hdr-filter-pills');
+  var mt = sent.filter(function(t){ return t.month === key; });
+  if (fp) fp.innerHTML = mt.length ? pill(sum(mt)) : '<span style="font-family:DM Mono,monospace;font-size:0.78rem;color:#6b5e50;">No data</span>';
+}
+
+// ===================== RENDER =====================
+window.trfRenderAll = function() {
+  if (typeof _appMode === 'undefined' || _appMode !== 'transfers') return;
+  var dl = el('trf-dl-names'); if (dl) dl.innerHTML = S.recipients.filter(function(r){ return !r.archived; }).map(function(r){ return '<option value="' + esc(r.name) + '">'; }).join('');
+  fillYears('trf-g-year', CUR.slice(0,4)); fillYears('trf-s-year', CUR.slice(0,4));
+  document.querySelectorAll('#transfers-main .trf-panel').forEach(function(p){ p.classList.toggle('trf-on', p.id === 'trf-p-' + TAB); });
+  if (TAB === 'month') renderMonth();
+  if (TAB === 'payday') renderPayday();
+  if (TAB === 'grid') trfRenderGrid();
+  if (TAB === 'recipients') trfRenderRecipients();
+  if (TAB === 'summary') trfRenderSummary();
+  if (TAB === 'data') renderData();
+  headerContext(CUR.slice(0,4), CUR.slice(5,7));
+};
+
+// ===================== MODE INTEGRATION (only active when ngt_enabled = '1') =====================
+// Double-tap circle: inner ring items while in Transfers
+window.trfRadialItems = function() {
+  return [
+    {icon:'\uD83D\uDCC5', label:'Month',   fn:'trfSwitch("month")',      color:'#3d5a73'},
+    {icon:'\uD83D\uDCB0', label:'Payday',  fn:'trfSwitch("payday")',     color:'#4a7c59'},
+    {icon:'\uD83D\uDCCA', label:'Grid',    fn:'trfSwitch("grid")',       color:'#8b5e3c'},
+    {icon:'\uD83D\uDC65', label:'People',  fn:'trfSwitch("recipients")', color:'#6b3d8c'},
+    {icon:'\uD83D\uDCC8', label:'Summary', fn:'trfSwitch("summary")',    color:'#2e7d8a'},
+    {icon:'\u2699\uFE0F', label:'Data', fn:'trfSwitch("data")',    color:'#5a6b3d'}
+  ];
+};
+window.trfNextMode = function() {
+  var m = (typeof _appMode !== 'undefined') ? _appMode : 'expenses';
+  if (m === 'expenses') return 'income';
+  if (m === 'income') return trfOn() ? 'transfers' : 'expenses';
+  return 'expenses';
+};
+function showTransfers() {
+  var hide = function(id){ var x = el(id); if (x) x.style.display = 'none'; };
+  hide('main-nav'); hide('income-nav'); hide('income-main');
+  document.querySelectorAll('main > .panel').forEach(function(p){ p.style.display = 'none'; });
+  var tm = el('transfers-main'); if (tm) tm.style.display = 'block';
+  if (typeof syncBurgerMode === 'function') syncBurgerMode('transfers');
+  var ml = el('hdr-mode-label');
+  if (ml) { ml.innerHTML = '&#128228; TRANSFERS'; ml.style.background = 'rgba(41,128,185,0.2)'; ml.style.color = '#8ec5f0'; }
+  if (typeof adjustMainPadding === 'function') adjustMainPadding();
+  trfRenderAll();
+}
+function injectBurger() {
+  if (el('burger-trf-items')) return;
+  var inc = el('burger-inc-items'); if (!inc) return;
+  var box = document.createElement('div');
+  box.id = 'burger-trf-items'; box.style.display = 'none';
+  box.innerHTML = TABS.map(function(t){ return '<button class="bmenu-item' + (t[0] === TAB ? ' active' : '') + '" data-trf="' + t[0] + '" onclick="trfSwitch(\'' + t[0] + '\')"><span>' + t[1] + '</span> ' + t[2] + '</button>'; }).join('');
+  inc.parentNode.insertBefore(box, inc.nextSibling);
+}
+function fixSwitchBtn() {
+  var b = el('mode-switch-btn'); if (b) b.setAttribute('onclick', 'selectMode(trfNextMode())');
+  if (_appMode === 'transfers') { var ml = el('hdr-mode-label'); if (ml) { ml.innerHTML = '&#128228; TRANSFERS'; ml.style.background = 'rgba(41,128,185,0.2)'; ml.style.color = '#8ec5f0'; } }
+}
+
+function install() {
+  if (window._trfInstalled) return;
+  window._trfInstalled = true;
+  if (!trfOn()) {
+    // Switch is off: if a previous session left the app in 'transfers', fall back to expenses.
+    if (typeof _appMode !== 'undefined' && _appMode === 'transfers' && typeof selectMode === 'function') selectMode('expenses');
+    return;
+  }
+  injectBurger();
+
+  var oApply = window.applyMode;
+  window.applyMode = function() {
+    var tm = el('transfers-main');
+    if (_appMode === 'transfers') return showTransfers();
+    if (tm) tm.style.display = 'none';
+    return oApply.apply(this, arguments);
+  };
+  var oBurger = window.syncBurgerMode;
+  window.syncBurgerMode = function(mode) {
+    var r = oBurger.apply(this, arguments);
+    var bt = el('burger-trf-items'); if (bt) bt.style.display = mode === 'transfers' ? 'block' : 'none';
+    return r;
+  };
+  var oPrompt = window.showModeSwitchPrompt;
+  window.showModeSwitchPrompt = function() { if (typeof selectMode === 'function') selectMode(trfNextMode()); };
+  var oUser = window.updateUserDisplay;
+  if (oUser) window.updateUserDisplay = function() { var r = oUser.apply(this, arguments); fixSwitchBtn(); return r; };
+  var oInc = window.updateIncomeHeaderContext;
+  if (oInc) window.updateIncomeHeaderContext = function(y, m) { if (_appMode === 'transfers') return headerContext(el('hdr-filter-year') && el('hdr-filter-year').value, el('hdr-filter-month') && el('hdr-filter-month').value); return oInc.apply(this, arguments); };
+  var oLookup = window.openDateLookup;
+  if (oLookup) window.openDateLookup = function() { if (_appMode === 'transfers') return trfOpenCal(); return oLookup.apply(this, arguments); };
+  var oRefresh = window.appRefresh;
+  if (oRefresh) window.appRefresh = function() {
+    if (_appMode !== 'transfers') return oRefresh.apply(this, arguments);
+    S = load(); trfRenderAll(); say('Refreshed');
+  };
+
+  fixSwitchBtn();
+  // T = jump to Transfers (same rules as E and I)
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 't' && e.key !== 'T') return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var a = document.activeElement, tag = a && a.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (a && a.isContentEditable)) return;
+    var blockers = ['help-overlay','date-lookup-overlay','onboard-overlay','pin-overlay'];
+    if (blockers.some(function(id){ var o = document.getElementById(id); return o && getComputedStyle(o).display !== 'none'; })) return;
+    e.preventDefault();
+    if (_appMode !== 'transfers') selectMode('transfers');
+  });
+  // Tab / Shift+Tab = cycle Transfers tabs (not while typing or with a window open)
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Tab' || _appMode !== 'transfers') return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var a = document.activeElement, tag = a && a.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (a && a.isContentEditable)) return;
+    var mo = el('trf-modal'), co = el('trf-cal-overlay');
+    if ((mo && mo.classList.contains('show')) || (co && co.style.display === 'flex')) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    var i = -1; for (var k = 0; k < TABS.length; k++) if (TABS[k][0] === TAB) i = k;
+    if (i < 0) i = 0;
+    trfSwitch(TABS[(i + (e.shiftKey ? TABS.length - 1 : 1)) % TABS.length][0]);
+  }, true);
+  // Ctrl+1..6 = Transfers tabs (only in Transfers; Expenses/Income keep their own)
+  document.addEventListener('keydown', function(e){
+    if (_appMode !== 'transfers') return;
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+    var n = parseInt(e.key, 10);
+    if (!(n >= 1 && n <= 6)) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    trfSwitch(TABS[n - 1][0]);
+  }, true);
+  if (typeof _appMode !== 'undefined' && _appMode === 'transfers') applyMode();
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(install, 0); });
+else setTimeout(install, 0);
+})();
+</script>
+<!-- ===================== END TRANSFERS MODULE ===================== -->
+
 </main>
 
 <!-- Floating scroll buttons -->
@@ -10187,7 +11055,7 @@ function openRadialMenu(x, y) {
   var outerG = document.getElementById('radial-outer-g');
   if(!menu) return;
   var isIncome = _appMode === 'income';
-  var innerItems = isIncome ? [
+  var innerItems = (_appMode === "transfers" && window.trfRadialItems) ? window.trfRadialItems() : isIncome ? [
     {icon:'📥',label:'Import',fn:'switchIncomeTab("inc-import",null)',color:'#3d5a73'},
     {icon:'🏷️',label:'Cat',fn:'switchIncomeTab("inc-categorize",null)',color:'#4a7c59'},
     {icon:'📅',label:'Monthly',fn:'switchIncomeTab("inc-monthly",null)',color:'#8b5e3c'},
