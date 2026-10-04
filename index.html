@@ -1874,6 +1874,16 @@ input[type="password"]::-ms-clear { display:none !important; }
 .cb-del-btn   { background:#c0392b;color:#fff; }
 .cb-sel-btn   { background:#2980b9;color:#fff; }
 .cb-action-btn:active { opacity:.8; }
+/* Button "press" effect for all action buttons inside the modules (Expenses, Income, Transfers) */
+main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-nav button):not([style*="background:none"]):not([style*="background: none"]):not([style*="background:transparent"]) {
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.25) !important;
+  transition: transform .08s, box-shadow .08s;
+}
+main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-nav button):not([style*="background:none"]):not([style*="background: none"]):not([style*="background:transparent"]):active {
+  transform: translate(2px,2px);
+  box-shadow: 0 0 0 rgba(0,0,0,0.25) !important;
+}
+.cb-action-btn { font-family:'DM Mono',monospace !important; font-size:0.72rem !important; font-weight:700 !important; letter-spacing:1px !important; text-transform:uppercase; border-radius:3px !important; border:none !important; }
 </style>
 </head>
 <body>
@@ -4108,6 +4118,32 @@ window.trfRadialItems = function() {
     {icon:'\u2699\uFE0F', label:'Data', fn:'trfSwitch("data")',    color:'#5a6b3d'}
   ];
 };
+// Circle "Switch": small chooser showing the modules you're not in
+window.trfModeChooser = function() {
+  if (typeof closeRadialMenu === 'function') closeRadialMenu();
+  var cur = _appMode, on = trfOn();
+  var all = [['expenses','\uD83D\uDCB8','EXPENSES','rgba(200,150,46,0.9)','#1a1410'],
+             ['income','\uD83D\uDCB0','INCOME','rgba(74,124,89,0.9)','#fff'],
+             ['transfers','\uD83D\uDCE4','TRANSFERS','rgba(41,128,185,0.9)','#fff']];
+  var opts = all.filter(function(m){ return m[0] !== cur && (m[0] !== 'transfers' || on); });
+  if (opts.length === 1) { selectMode(opts[0][0]); return; }
+  var p = el('trf-mode-pop');
+  if (!p) {
+    p = document.createElement('div'); p.id = 'trf-mode-pop';
+    p.style.cssText = 'position:fixed;inset:0;z-index:99996;background:rgba(26,20,16,0.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+    p.addEventListener('click', function(e){ if (e.target === p) p.remove(); });
+    document.body.appendChild(p);
+  }
+  p.innerHTML = '<div style="background:var(--ink);border:1.5px solid var(--gold);border-radius:8px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">' +
+    '<div style="font-family:DM Mono,monospace;font-size:0.58rem;letter-spacing:2px;color:rgba(255,255,255,0.5);margin-bottom:7px;text-align:center;">SWITCH TO</div>' +
+    opts.map(function(m, i){
+      return '<button onclick="var x=document.getElementById(\'trf-mode-pop\');if(x)x.remove();selectMode(\'' + m[0] + '\')" style="display:block;min-width:130px;margin-bottom:' + (i === opts.length - 1 ? 0 : 6) + 'px;padding:7px 12px;border:none;border-radius:5px;background:' + m[3] + ';color:' + m[4] + ';font-family:DM Mono,monospace;font-size:0.7rem;font-weight:700;letter-spacing:1px;cursor:pointer;">' + m[1] + ' ' + m[2] + '</button>';
+    }).join('') + '</div>';
+};
+document.addEventListener('keydown', function(e){
+  var x = el('trf-mode-pop');
+  if (e.key === 'Escape' && x) { e.preventDefault(); e.stopImmediatePropagation(); x.remove(); }
+}, true);
 window.trfNextMode = function() {
   var m = (typeof _appMode !== 'undefined') ? _appMode : 'expenses';
   if (m === 'expenses') return 'income';
@@ -11189,7 +11225,7 @@ function openRadialMenu(x, y) {
     {icon:'⚙️',label:'Manage',fn:'switchTab("manage",null)',color:'#5a6b3d'}
   ];
   var outerItems = [
-    {icon:'🔁',label:'Switch',fn:'selectMode(_appMode==="income"?"expenses":"income")',color:'#c8962e'},
+    {icon:'🔁',label:'Switch',fn:'trfModeChooser()',color:'#c8962e'},
     {icon:'📅',label:'Calendar',fn:'openDateLookup()',color:'#3d6b8a'},
     {icon:'❓',label:'Help',fn:'openHelp()',color:'#6b3d8c'},
     {icon:'📖',label:'Guide',fn:'startOnboarding(_appMode,true,true)',color:'#4a7c59'},
@@ -21697,9 +21733,6 @@ syncInit();
     <button onclick="closeEmailVerifyOverlay()" style="width:100%;padding:8px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#3a3020;cursor:pointer;">Cancel</button>
   </div>
 </div>
-
-
-l>
 
 
 <!-- ═══ USER MANUAL OVERLAY ═══ -->
