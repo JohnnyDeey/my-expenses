@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.10.1')) {
+          if (!key.startsWith('mel-v2.10.2')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -3361,6 +3361,29 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
   .trf-mlist .it .a{font-family:'DM Mono',monospace;float:right;font-weight:500;}
   .trf-mlist .it .n{color:var(--muted);font-size:0.72rem;margin-top:3px;white-space:pre-wrap;}
   .trf-hint{font-size:0.75rem;color:var(--muted);line-height:1.5;}
+  .trf-dhead{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--ink);border-radius:6px;padding:12px 14px;margin-bottom:12px;}
+  .trf-dhead .t{font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;color:#9e8e7e;}
+  .trf-dhead .v{font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--gold2);margin-top:3px;}
+  .trf-dyears{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 12px;}
+  .trf-dyears span{font-family:'DM Mono',monospace;font-size:0.7rem;background:white;border:1px solid var(--border);border-radius:12px;padding:3px 10px;color:var(--ink);}
+  .trf-dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  @media(max-width:900px){ .trf-dgrid{grid-template-columns:1fr;} }
+  .trf-dcard{background:white;border:1px solid var(--border);border-radius:6px;padding:12px;box-shadow:2px 2px 0 rgba(0,0,0,0.06);display:flex;flex-direction:column;gap:8px;}
+  .trf-dcard .h{display:flex;gap:10px;align-items:flex-start;}
+  .trf-dcard .ic{width:34px;height:34px;border-radius:50%;background:var(--paper2);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+  .trf-dcard b{display:block;font-size:0.88rem;color:var(--ink);}
+  .trf-dcard small{display:block;font-size:0.72rem;color:var(--muted);line-height:1.4;margin-top:2px;}
+  .trf-filebtn{display:inline-block;align-self:flex-start;padding:7px 12px;}
+  /* Check-for-update button (all modules): dark + gold, never white */
+  .mel-upd-btn{background:var(--ink);color:var(--gold2);border:1.5px solid var(--gold);border-radius:3px;padding:4px 10px;margin:6px 0 0;font-family:'DM Mono',monospace;font-size:0.66rem;font-weight:700;letter-spacing:1px;cursor:pointer;}
+  .mel-upd-btn:disabled{opacity:0.6;cursor:wait;}
+  .mel-upd-out{font-family:'DM Mono',monospace;font-size:0.66rem;margin-top:6px;color:#9e8e7e;}
+  .mel-upd-new{color:#8dd4a8;}
+  .trf-dcard .mel-upd-out{flex-basis:100%;color:var(--muted);}
+  .trf-dcard .mel-upd-new{color:var(--sage);}
+  .mel-upd-go{background:var(--gold);color:var(--ink);border:none;border-radius:3px;padding:3px 9px;margin-left:4px;font-family:'DM Mono',monospace;font-size:0.64rem;font-weight:700;cursor:pointer;}
+  .trf-dsel{font-size:0.8rem;padding:6px 8px;border:1.5px solid var(--border);border-radius:3px;background:white;}
+  .trf-dta{width:100%;box-sizing:border-box;font-family:inherit;font-size:0.82rem;padding:7px 9px;border:1.5px solid var(--border);border-radius:3px;resize:vertical;}
   /* Burger menu: only as wide as its longest item (all modes) */
   #burger-sidebar{width:auto!important;min-width:170px;max-width:80vw;}
   #burger-sidebar .bmenu-item{padding-right:28px;white-space:nowrap;}
@@ -3421,6 +3444,13 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
   <div class="section-title">Year Grid</div>
   <div class="trf-tools">
     <select id="trf-g-year" onchange="trfRenderGrid()"></select>
+    <select id="trf-g-month" onchange="trfRenderGrid()" title="Show only people with money in this month">
+      <option value="-1">All months</option>
+      <option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option>
+      <option value="3">Apr</option><option value="4">May</option><option value="5">Jun</option>
+      <option value="6">Jul</option><option value="7">Aug</option><option value="8">Sep</option>
+      <option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
+    </select>
     <input type="text" id="trf-g-search" placeholder="Search recipient…" oninput="trfRenderGrid()">
     <select id="trf-g-sort" onchange="trfRenderGrid()">
       <option value="order">Original order</option>
@@ -3458,29 +3488,34 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
 <!-- DATA -->
 <div class="trf-panel" id="trf-p-data">
   <div class="section-title">Transfers Data</div>
-  <div class="card">
-    <div class="trf-grp" style="margin-top:0;">Import prepared file (.json)</div>
-    <p class="trf-hint">Replaces everything currently in this module.</p>
-    <input type="file" accept=".json,application/json" onchange="trfImportJSON(this)">
+  <div class="trf-dhead">
+    <div><div class="t">Cloud sync</div><div class="v" id="trf-d-sync">&#9729; …</div></div>
+    <div style="text-align:right;"><div class="t">Version</div><div class="v" id="trf-d-version">–</div>
+</div>
   </div>
-  <div class="card">
-    <div class="trf-grp" style="margin-top:0;">Paste from Excel / Google Sheets</div>
-    <p class="trf-hint">Rows: Names, Account No, Bank, January … December. Each non-empty month becomes one Sent transfer. Adds to existing data.</p>
-    <div class="trf-tools"><select id="trf-d-year"></select></div>
-    <textarea id="trf-d-paste" rows="6" style="width:100%;font-family:inherit;font-size:0.85rem;padding:7px 9px;border:1.5px solid var(--border);border-radius:3px;" placeholder="Paste rows here…"></textarea>
-    <div style="margin-top:6px;"><button class="trf-b gold" style="padding:7px 12px;" onclick="trfImportPaste()">Import pasted rows</button></div>
-  </div>
-  <div class="card">
-    <div class="trf-grp" style="margin-top:0;">Backup</div>
-    <p class="trf-hint" id="trf-d-stats"></p>
-    <div class="trf-tools">
-      <button class="trf-b ink" style="padding:7px 12px;" onclick="trfExportJSON()">&#11015; Export backup</button>
-      <button class="trf-b rust" style="padding:7px 12px;" onclick="trfClearAll()">Clear all data</button>
+  <div class="trf-kpis" id="trf-d-stats"></div>
+  <div class="trf-dyears" id="trf-d-years"></div>
+  <div class="trf-dgrid">
+    <div class="trf-dcard">
+      <div class="h"><span class="ic">&#128229;</span><div><b>Import backup file</b><small>Loads a .json backup. Replaces everything in this module.</small></div></div>
+      <label class="trf-b gold trf-filebtn">Choose file…<input type="file" accept=".json,application/json" onchange="trfImportJSON(this)" style="display:none;"></label>
     </div>
-    <p class="trf-hint" id="trf-d-sync"></p>
+    <div class="trf-dcard">
+      <div class="h"><span class="ic">&#128203;</span><div><b>Paste from Excel / Sheets</b><small>Rows: Names, Account No, Bank, Jan … Dec. Each filled month becomes a Sent transfer.</small></div></div>
+      <div style="display:flex;gap:6px;margin-bottom:6px;"><select id="trf-d-year" class="trf-dsel"></select></div>
+      <textarea id="trf-d-paste" rows="4" class="trf-dta" placeholder="Paste rows here…"></textarea>
+      <button class="trf-b gold" style="margin-top:6px;padding:7px 12px;" onclick="trfImportPaste()">Import pasted rows</button>
+    </div>
+    <div class="trf-dcard">
+      <div class="h"><span class="ic">&#128190;</span><div><b>Backup &amp; reset</b><small>Download everything as a file, or clear this module.</small></div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="trf-b ink" style="padding:7px 12px;" onclick="trfExportJSON()">&#11015; Export backup</button>
+        <button class="trf-b rust" style="padding:7px 12px;" onclick="trfClearAll()">Clear all data</button>
+        <button class="trf-b gold" style="padding:7px 12px;" onclick="melCheckUpdate(this)">&#8635; Check for update</button>
+      </div>
+    </div>
   </div>
 </div>
-
 <datalist id="trf-dl-names"></datalist>
 <datalist id="trf-dl-banks">
   <option value="ACC">Access</option><option value="FBN">First Bank</option><option value="FCM">FCMB</option>
@@ -3782,6 +3817,7 @@ function fillYears(id, want) {
 window.trfRenderGrid = function() {
   var y = el('trf-g-year').value, q = el('trf-g-search').value.trim().toLowerCase();
   var hide0 = el('trf-g-hide0').checked, incP = el('trf-g-plan').checked, sort = el('trf-g-sort').value;
+  var mf = el('trf-g-month') ? +el('trf-g-month').value : -1;
   var Z = function(){ return [0,0,0,0,0,0,0,0,0,0,0,0]; };
   var cells = {}, plan = {};
   S.transfers.forEach(function(t){ if (t.month.slice(0,4) !== y) return; var b = t.status === 'planned' ? plan : cells; (b[t.rid] = b[t.rid] || Z())[+t.month.slice(5,7)-1] += +t.amount; });
@@ -3791,13 +3827,14 @@ window.trfRenderGrid = function() {
     return { r: r, c: c, p: p, tot: tot };
   }).filter(function(x){
     if (q && (x.r.name + ' ' + x.r.bank + ' ' + x.r.account).toLowerCase().indexOf(q) === -1) return false;
+    if (mf >= 0 && !(x.c[mf] || (incP && x.p[mf]))) return false;   // month filter: hide empty rows for that month
     var any = x.c.some(Boolean) || (incP && x.p.some(Boolean));
     return !((hide0 || x.r.archived) && !any);
   });
   if (sort === 'name') rows.sort(function(a,b){ return a.r.name.localeCompare(b.r.name); });
   else if (sort === 'total') rows.sort(function(a,b){ return b.tot - a.tot; });
   var col = Z(), grand = 0;
-  var h = '<thead><tr><th>NAME</th>' + MON.map(function(m){ return '<th>' + m.toUpperCase() + '</th>'; }).join('') + '<th>TOTAL</th></tr></thead><tbody>';
+  var h = '<thead><tr><th>NAME</th>' + MON.map(function(m, i){ return '<th' + (i === mf ? ' style="background:var(--gold);color:var(--ink);"' : '') + '>' + m.toUpperCase() + '</th>'; }).join('') + '<th>TOTAL</th></tr></thead><tbody>';
   rows.forEach(function(x){
     h += '<tr><td title="' + esc(x.r.name) + '">' + esc(x.r.name) + '</td>';
     for (var i = 0; i < 12; i++) {
@@ -3808,7 +3845,8 @@ window.trfRenderGrid = function() {
     h += '<td class="tot">' + fmtNo(x.tot) + '</td></tr>';
   });
   h += '</tbody><tfoot><tr><td>TOTAL &#8358;</td>' + col.map(function(v){ return '<td>' + (v ? fmtNo(v) : '') + '</td>'; }).join('') + '<td>' + fmtNo(grand) + '</td></tr></tfoot>';
-  el('trf-grid').innerHTML = rows.length ? h : '<tbody><tr><td class="trf-empty" style="position:static;">No transfers for ' + y + '.</td></tr></tbody>';
+  el('trf-grid').innerHTML = rows.length ? h : '<tbody><tr><td class="trf-empty" style="position:static;">No transfers for ' + (mf >= 0 ? MON[mf] + ' ' : '') + y + '.</td></tr></tbody>';
+  if (mf >= 0) { var th = el('trf-grid').querySelectorAll('thead th')[mf + 1], wr = el('trf-grid').parentElement; if (th && wr) wr.scrollLeft = Math.max(0, th.offsetLeft - 140); }
 };
 window.trfCell = function(rid, m) {
   var r = rec(rid), list = S.transfers.filter(function(t){ return t.rid === rid && t.month === m; });
@@ -3998,7 +4036,17 @@ function renderData() {
   for (var y = cy + 1; y >= cy - 6; y--) ys.push(y);
   dy.innerHTML = ys.map(function(y){ return '<option>' + y + '</option>'; }).join(''); dy.value = keep;
   var by = {}; S.transfers.forEach(function(t){ var y = t.month.slice(0,4); by[y] = by[y] || [0,0]; by[y][0]++; if (t.status !== 'planned') by[y][1] += +t.amount; });
-  trfSyncLine(); el('trf-d-stats').innerHTML = S.recipients.length + ' recipients · ' + S.transfers.length + ' transfers<br>' + Object.keys(by).sort().map(function(y){ return y + ': ' + by[y][0] + ' transfers, ' + fmt(by[y][1]) + ' sent'; }).join('<br>');
+  trfSyncLine();
+  var vEl = el('trf-d-version'); if (vEl) vEl.textContent = 'v' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : '?');
+  var allSent = sum(S.transfers.filter(function(t){ return t.status !== 'planned'; }));
+  el('trf-d-stats').innerHTML =
+    '<div class="trf-kpi"><div class="l">Recipients</div><div class="v">' + S.recipients.length + '</div></div>' +
+    '<div class="trf-kpi"><div class="l">Transfers</div><div class="v">' + S.transfers.length + '</div></div>' +
+    '<div class="trf-kpi"><div class="l">Years tracked</div><div class="v">' + Object.keys(by).length + '</div></div>' +
+    '<div class="trf-kpi rem"><div class="l">Total sent</div><div class="v">' + fmt(allSent) + '</div></div>';
+  var yEl = el('trf-d-years');
+  if (yEl) yEl.innerHTML = Object.keys(by).sort().reverse().map(function(y){ return '<span><b>' + y + '</b> · ' + by[y][0] + ' transfers · ' + fmt(by[y][1]) + '</span>'; }).join('');
+  if (false) el('trf-d-stats').innerHTML = S.recipients.length + ' recipients · ' + S.transfers.length + ' transfers<br>' + Object.keys(by).sort().map(function(y){ return y + ': ' + by[y][0] + ' transfers, ' + fmt(by[y][1]) + ' sent'; }).join('<br>');
 }
 window.trfImportJSON = function(input) {
   var f = input.files && input.files[0]; if (!f) return;
@@ -4150,6 +4198,30 @@ window.trfRenderAll = function() {
   headerContext(CUR.slice(0,4), CUR.slice(5,7));
 };
 
+// ===================== YEAR GRID: drag with the mouse (middle-wheel press or left button) =====================
+(function(){
+  var g = el('trf-grid'), w = g && g.parentElement;
+  if (!w || w._trfDrag) return;
+  w._trfDrag = true;
+  w.style.cursor = 'grab';
+  var down = false, moved = false, sx = 0, sl = 0;
+  w.addEventListener('mousedown', function(e){
+    if (e.button !== 0 && e.button !== 1) return;   // 0 = left, 1 = wheel
+    down = true; moved = false; sx = e.clientX; sl = w.scrollLeft;
+    w.style.cursor = 'grabbing';
+    e.preventDefault();                              // stops Windows auto-scroll and text selection
+  });
+  window.addEventListener('mousemove', function(e){
+    if (!down) return;
+    var dx = e.clientX - sx;
+    if (Math.abs(dx) > 4) moved = true;
+    w.scrollLeft = sl - dx;
+  });
+  window.addEventListener('mouseup', function(){ if (!down) return; down = false; w.style.cursor = 'grab'; });
+  w.addEventListener('click', function(e){ if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+  w.addEventListener('auxclick', function(e){ if (e.button === 1) e.preventDefault(); });
+})();
+
 // ===================== MODE INTEGRATION (only active when ngt_enabled = '1') =====================
 // Double-tap circle: inner ring items while in Transfers
 window.trfRadialItems = function() {
@@ -4162,6 +4234,92 @@ window.trfRadialItems = function() {
     {icon:'\u2699\uFE0F', label:'Data', fn:'trfSwitch("data")',    color:'#5a6b3d'}
   ];
 };
+// ===================== CHECK FOR UPDATE (all modules) =====================
+// App (Capacitor) → latest GitHub release · Vercel → live page · Live Server → local copy
+(function(){
+  function vnum(v){ var p = String(v || '').replace(/^v/i, '').split('.'); return (+p[0]||0)*1e6 + (+p[1]||0)*1e3 + (+p[2]||0); }
+  function setOut(btn, html){
+    var o = btn.nextElementSibling;
+    if (!o || !o.classList.contains('mel-upd-out')) { o = document.createElement('div'); o.className = 'mel-upd-out'; btn.parentNode.insertBefore(o, btn.nextSibling); }
+    o.innerHTML = html;
+  }
+  var GO = 'class="mel-upd-go"';
+  window.melCheckUpdate = function(btn){
+    var cur = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '0';
+    var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+    var isLocal = !isApp && /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+    btn.disabled = true; var lbl = btn.innerHTML; btn.innerHTML = '&#8635; Checking…';
+    var done = function(){ btn.disabled = false; btn.innerHTML = lbl; };
+    if (isLocal) { done(); setOut(btn, '&#128187; Local test copy (v' + cur + ') · always current'); return; }
+    if (isApp) {
+      fetch('https://api.github.com/repos/JohnnyDeey/my-expenses/releases/latest', { cache: 'no-store' })
+        .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function(rel){
+          done();
+          var best = rel.tag_name || '', url = rel.html_url;
+          (rel.assets || []).forEach(function(a){
+            var m = /v?(\d+\.\d+\.\d+)\.apk$/i.exec(a.name || '');
+            if (m && vnum(m[1]) >= vnum(best)) { best = m[1]; url = a.browser_download_url; }
+          });
+          if (vnum(best) > vnum(cur)) setOut(btn, '<b class="mel-upd-new">v' + String(best).replace(/^v/i,'') + ' available</b> <button ' + GO + ' onclick="window.open(\'' + url + '\',\'_blank\')">&#11015; Download</button>');
+          else setOut(btn, '&#10003; Up to date (v' + cur + ')');
+        })
+        .catch(function(){ done(); setOut(btn, 'Couldn\'t check. Are you offline?'); });
+      return;
+    }
+    fetch('/?_v=' + Date.now(), { cache: 'no-store' })
+      .then(function(r){ return r.text(); })
+      .then(function(html){
+        done();
+        var m = html.match(/var APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+        var rem = m ? m[1] : null;
+        if (rem && vnum(rem) > vnum(cur)) setOut(btn, '<b class="mel-upd-new">v' + rem + ' available</b> <button ' + GO + ' onclick="if(typeof _applyUpdate===\'function\')_applyUpdate();else location.reload();">Update now</button>');
+        else setOut(btn, '&#10003; Up to date (v' + cur + ')');
+      })
+      .catch(function(){ done(); setOut(btn, 'Couldn\'t check. Are you offline?'); });
+  };
+  // Add the button under "Version …" in Expenses and Income Manage
+  function addButtons(){
+    document.querySelectorAll('#app-version-display').forEach(function(v){
+      if (v.nextElementSibling && v.nextElementSibling.classList.contains('mel-upd-btn')) return;
+      var b = document.createElement('button');
+      b.className = 'mel-upd-btn';
+      b.innerHTML = '&#8635; Check for update';
+      b.onclick = function(){ melCheckUpdate(b); };
+      v.parentNode.insertBefore(b, v.nextSibling);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addButtons); else addButtons();
+})();
+
+// ===================== LOCK SCREEN: no fingerprint pop-up after logout / auto-lock =====================
+(function(){
+  function hook() {
+    var oLock = window.lockApp;
+    if (typeof oLock === 'function' && !oLock._hold) {
+      window.lockApp = function(){ sessionStorage.setItem('bio_hold', '1'); return oLock.apply(this, arguments); };
+      window.lockApp._hold = true;
+    }
+    var oRes = window._resumeSession;
+    if (typeof oRes === 'function' && !oRes._hold) {
+      window._resumeSession = function(){ sessionStorage.removeItem('bio_hold'); return oRes.apply(this, arguments); };
+      window._resumeSession._hold = true;
+    }
+    var oPad = window.showPinPadStep;
+    if (typeof oPad === 'function' && !oPad._hold) {
+      window.showPinPadStep = function(){
+        var r = oPad.apply(this, arguments);
+        // On the lock screen, offer fingerprint as a button (tap to use) instead of a pop-up
+        var fb = document.getElementById('fp-login-btn');
+        if (fb && localStorage.getItem('fp_enabled') === '1') fb.style.display = 'block';
+        return r;
+      };
+      window.showPinPadStep._hold = true;
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook();
+})();
+
 // Circle "Switch": small chooser showing the modules you're not in
 window.trfModeChooser = function() {
   if (typeof closeRadialMenu === 'function') closeRadialMenu();
@@ -16958,7 +17116,7 @@ function showPinScreen() {
   // Auto-trigger biometric — only if enabled, not manual logout, and not already triggered
   if (localStorage.getItem(FP_KEY) === '1' && 
       window.Capacitor && window.Capacitor.isNativePlatform() && 
-      sessionStorage.getItem('manual_logout') !== '1' &&
+      sessionStorage.getItem('manual_logout') !== '1' && sessionStorage.getItem('bio_hold') !== '1' &&
       !window._bioTriggered) {
     window._bioTriggered = true;
     setTimeout(function() { 
@@ -17432,7 +17590,7 @@ function showLoginStep() {
   // Show FP button and auto-trigger if enabled
   var fpBtn = document.getElementById('fp-login-btn');
   if(fpBtn) fpBtn.style.display = 'block';
-  if(localStorage.getItem('fp_enabled')==='1'){
+  if(localStorage.getItem('fp_enabled')==='1' && sessionStorage.getItem('bio_hold') !== '1' && !window._bioTriggered){
     // Show blur overlay while authenticating
     var _bioOverlay = document.getElementById('_bio_overlay');
     if(!_bioOverlay){
@@ -18412,6 +18570,7 @@ function logOut() {
   var dotsEl = document.getElementById('fv-pin-dots');
   if (dotsEl) dotsEl.innerHTML = '<span id="fv-pin-hint" style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#6b5e50;letter-spacing:1px;">&#128273; Tap here then type your PIN</span>';
   sessionStorage.setItem('manual_logout', '1'); // Flag to skip biometric auto-trigger
+  sessionStorage.setItem('bio_hold', '1');      // stays until signed back in
   showPinScreen();
   // Hide all steps including dynamically created Google flow steps
   ['pin-step-register','pin-step-code','pin-step-full-verify','pin-step-google-setup','pin-step-google-profile','pin-step-google-username'].forEach(function(id){
@@ -18618,7 +18777,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.10.1';
+var APP_VERSION = '2.10.2';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -21907,6 +22066,36 @@ syncInit();
     <button onclick="_crCancel()" style="width:100%;padding:7px;background:none;border:none;font-family:'DM Mono',monospace;font-size:0.63rem;color:#3a3020;cursor:pointer;margin-top:8px;">✕ Cancel import</button>
   </div>
 </div>
-
+<script>
+// Biometric: no auto prompt after logout or auto-lock; offer a tap button instead
+(function(){
+  function hook(){
+    if (typeof window.lockApp === 'function' && !window.lockApp._bh){
+      var oLock = window.lockApp;
+      window.lockApp = function(){ sessionStorage.setItem('bio_hold','1'); return oLock.apply(this, arguments); };
+      window.lockApp._bh = 1;
+    }
+    if (typeof window._resumeSession === 'function' && !window._resumeSession._bh){
+      var oRes = window._resumeSession;
+      window._resumeSession = function(){ sessionStorage.removeItem('bio_hold'); window._bioTriggered = false; return oRes.apply(this, arguments); };
+      window._resumeSession._bh = 1;
+    }
+    if (typeof window.showPinPadStep === 'function' && !window.showPinPadStep._bh){
+      var oPad = window.showPinPadStep;
+      window.showPinPadStep = function(){
+        var r = oPad.apply(this, arguments);
+        var b = document.getElementById('fp-login-btn');
+        if (b && localStorage.getItem('fp_enabled') === '1') b.style.display = '';
+        return r;
+      };
+      window.showPinPadStep._bh = 1;
+    }
+  }
+  window._bioHook = hook;
+  hook();
+  var n = 0, t = setInterval(function(){ hook(); if (++n > 40) clearInterval(t); }, 500);
+  window.addEventListener('load', hook);
+})();
+</script>
 </body>
 </html>
