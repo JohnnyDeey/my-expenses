@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.10.2')) {
+          if (!key.startsWith('mel-v2.10.3')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -631,7 +631,7 @@ function editDateLookupCat(pill, itemId, type) {
     var newCat = sel.value;
     if (newCat === '__new__') {
       var typed = prompt('Enter new category name:');
-      if (!typed || !typed.trim()) { sel.replaceWith(pill); return; }
+      if (!typed || !typed.trim()) { sel.parentNode&&sel.parentNode&&sel.parentNode&&sel.replaceWith(pill); return; }
       newCat = typed.trim();
       if (type === 'income') saveIncomeCustomCat(newCat); else saveCustomCategory(newCat);
     }
@@ -650,10 +650,10 @@ function editDateLookupCat(pill, itemId, type) {
     pill.style.color = catColor;
     pill.style.background = catColor+'18';
     pill.style.borderColor = catColor+'30';
-    sel.replaceWith(pill);
+    sel.parentNode&&sel.parentNode&&sel.parentNode&&sel.replaceWith(pill);
     showToast('Category updated to "'+newCat+'"');
   });
-  sel.addEventListener('blur', function(){ sel.replaceWith(pill); });
+  sel.addEventListener('blur', function(){ sel.parentNode&&sel.parentNode&&sel.parentNode&&sel.replaceWith(pill); });
   pill.replaceWith(sel); sel.focus();
 }
 
@@ -6649,7 +6649,15 @@ function applyCatFilter() {
     var filtered = data.filter(function(i){ return i.date.substring(0,4) === yearSel; });
     if (monthSel !== 'all') filtered = filtered.filter(function(i){ return i.date.substring(5,7) === monthSel; });
     if (currSel !== 'all') filtered = filtered.filter(function(i){ return i.currency === currSel; });
-    catEditItems = filtered.map(function(i){ return Object.assign({},i); });
+    var _keep = {};
+    if (catViewMode !== 'pending' && catEditItems.length) {
+      var _saved = {};
+      data.forEach(function(i){ _saved[String(i.id)] = i.category; });
+      catEditItems.forEach(function(i){ var k = String(i.id); if (_saved[k] !== undefined && _saved[k] !== i.category) _keep[k] = i.category; });
+    }
+    catEditItems = filtered.map(function(i){ var o = Object.assign({},i), k = String(i.id); if (_keep[k] !== undefined) o.category = _keep[k]; return o; });
+    var _kept = Object.keys(_keep).length;
+    if (_kept) console.log('Categorize: kept ' + _kept + ' unsaved category change(s)');
     catViewMode = yearSel + (monthSel !== 'all' ? '-' + monthSel : '') + (currSel !== 'all' ? '-' + currSel : '');
     document.getElementById('btn-save-pending').textContent = 'Update';
   }
@@ -6890,7 +6898,7 @@ function renderCategorizeTable() {
     var wrap = document.createElement('div');
     wrap.className = 'cat-wrapper'; wrap.id = 'wrap-'+idx; wrap.style.cssText = 'width:100%;';
     var inp = document.createElement('input');
-    inp.type = 'text'; inp.className = 'cat-input'; inp.id = 'catinput-'+idx;
+    inp.type = 'text'; inp.className = 'cat-input'; inp.id = 'catinput-'+idx; inp._item = item;
     inp.value = item.category; inp.setAttribute('autocomplete','off'); inp.setAttribute('placeholder','Category...');
     inp.addEventListener('focus', function(){ inp.select(); openCatDropdown(idx); });
     inp.addEventListener('input', function(){ filterCatDropdown(idx); });
@@ -6990,7 +6998,9 @@ function filterCatDropdown(idx) {
 function selectCat(idx, cat, isNew) {
   if (!cat.trim()) return;
   var items = (catViewMode==='pending') ? pendingItems : catEditItems;
-  if (items[idx]) items[idx].category = cat.trim();
+  var _ci = document.getElementById('catinput-'+idx);
+  var _it = (_ci && _ci._item) || items[idx];
+  if (_it) _it.category = cat.trim();
   var inp = document.getElementById('catinput-'+idx);
   var drop = document.getElementById('catdrop-'+idx);
   if (inp) inp.value = cat.trim();
@@ -9085,7 +9095,9 @@ function _getCatCheckedItemObjects() {
   var result = [];
   document.querySelectorAll('#categorize-tbody .cat-row-cb:checked').forEach(function(cb) {
     var idx = parseInt(cb.getAttribute('data-idx'));
-    if (filtered[idx]) result.push(filtered[idx]);
+    var _rowInp = cb.closest('tr') && cb.closest('tr').querySelector('.cat-input');
+    if (_rowInp && _rowInp._item) result.push(_rowInp._item);
+    else if (filtered[idx]) result.push(filtered[idx]);
   });
   return result;
 }
@@ -9162,7 +9174,8 @@ function _getIncCatCheckedItemObjects() {
   var result = [];
   document.querySelectorAll('#inc-categorize-tbody .cat-row-cb:checked').forEach(function(cb) {
     var idx = parseInt(cb.getAttribute('data-idx'));
-    if (filtered[idx]) result.push(filtered[idx]);
+    if (cb._item) result.push(cb._item);
+    else if (filtered[idx]) result.push(filtered[idx]);
   });
   return result;
 }
@@ -10197,7 +10210,7 @@ function renderLedger(){
         var nc=sel.value;
         if(nc==='__new__'){
           var typed=prompt('Enter new category name:');
-          if(!typed||!typed.trim()){sel.replaceWith(pill);return;}
+          if(!typed||!typed.trim()){sel.parentNode&&sel.parentNode&&sel.parentNode&&sel.replaceWith(pill);return;}
           nc=typed.trim(); saveCustomCategory(nc);
         }
         var d2=loadData();
@@ -10205,9 +10218,9 @@ function renderLedger(){
         saveData(d2); item.category=nc;
         var nc2=getCatColor(nc,0);
         pill.textContent=nc; pill.style.color=nc2; pill.style.background=nc2+'15'; pill.style.borderColor=nc2+'30';
-        sel.replaceWith(pill); showToast('Updated to "'+nc+'"');
+        sel.parentNode&&sel.parentNode&&sel.parentNode&&sel.replaceWith(pill); showToast('Updated to "'+nc+'"');
       });
-      sel.addEventListener('blur', function(){ sel.replaceWith(pill); });
+      sel.addEventListener('blur', function(){ sel.parentNode&&sel.parentNode&&sel.parentNode&&sel.replaceWith(pill); });
       pill.replaceWith(sel); sel.focus();
     });
     catTd.appendChild(pill);
@@ -13318,7 +13331,8 @@ function syncIncomeToFirebase() {
   var batch = _db.batch();
   var localMonths = Object.keys(byMonth);
   localMonths.forEach(function(ym) {
-    batch.set(userCol('income_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
+    var _o = _incGetSig();
+    if (!_o || _o[ym] !== _melHash(_melCanon(byMonth[ym]))) batch.set(userCol('income_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
   });
   var knownMonths = window._knownIncomeMonths || [];
   knownMonths.forEach(function(ym) {
@@ -13327,6 +13341,8 @@ function syncIncomeToFirebase() {
   window._knownIncomeMonths = localMonths;
   batch.commit()
     .then(function(){
+      var _ns = {}; Object.keys(byMonth).forEach(function(m){ _ns[m] = _melHash(_melCanon(byMonth[m])); }); _incSetSig(_ns);
+      console.log('Income sync push done');
       // Keep lock for 6 seconds after confirmed write
       setTimeout(function(){ window._incDeletePending = false; }, 15000);
     })
@@ -14215,6 +14231,7 @@ function applyIncomeCatFilter() {
   if (yearVal === 'pending') {
     incCatViewMode = 'pending';
     incCatEditItems = incPendingItems;
+    document.getElementById('inc-btn-save-pending').textContent = 'Save to ledger';
     if (monthSel) monthSel.style.display = 'none';
   } else {
     if (monthSel) monthSel.style.display = 'inline-block';
@@ -14222,9 +14239,15 @@ function applyIncomeCatFilter() {
     var data = loadIncomeData().filter(function(i){ return i.date.substring(0,4)===yearVal; });
     if (monthVal !== 'all') data = data.filter(function(i){ return i.date.substring(5,7)===monthVal; });
     if (incCurrSel !== 'all') data = data.filter(function(i){ return i.currency === incCurrSel; });
-    incCatEditItems = data.map(function(i){ return Object.assign({},i); });
+    var _keep = {};
+    if (incCatViewMode !== 'pending' && incCatEditItems.length) {
+      var _saved = {};
+      data.forEach(function(i){ _saved[String(i.id)] = i.category; });
+      incCatEditItems.forEach(function(i){ var k = String(i.id); if (_saved[k] !== undefined && _saved[k] !== i.category) _keep[k] = i.category; });
+    }
+    incCatEditItems = data.map(function(i){ var o = Object.assign({},i), k = String(i.id); if (_keep[k] !== undefined) o.category = _keep[k]; return o; });
     incCatViewMode = yearVal + (monthVal !== 'all' ? '-' + monthVal : '') + (incCurrSel !== 'all' ? '-' + incCurrSel : '');
-    document.getElementById('inc-btn-save-pending').textContent = 'Save to ledger';
+    document.getElementById('inc-btn-save-pending').textContent = 'Update';
   }
   renderIncomeCatTable();
 }
@@ -14316,7 +14339,7 @@ function renderIncomeCatTable() {
           renderIncomeCatTable();
         } else { sel.value = item.category; }
       } else {
-        saveManualCat(item.desc, sel.value, true);
+        // learning happens on Update / Save to ledger
         item.category = sel.value;
       }
     });
@@ -14328,7 +14351,7 @@ function renderIncomeCatTable() {
     incCbTd.className = 'cat-cb-td';
     var incCb = document.createElement('input');
     incCb.type = 'checkbox'; incCb.className = 'cat-row-cb';
-    incCb.setAttribute('data-idx', idx);
+    incCb.setAttribute('data-idx', idx); incCb._item = item;
     incCb.addEventListener('change', function() {
       if (incCb.checked) tr.classList.add('cat-row-selected');
       else tr.classList.remove('cat-row-selected');
@@ -14441,6 +14464,7 @@ function saveAllPendingIncome() {
         incPopulateFilters();
         return;
       }
+      finalItems.forEach(function(i){ if (i.category !== autoCategoryIncome(i.desc)) saveManualCat(i.desc, i.category, true); });
       saveIncomeData(base.concat(finalItems));
       var msg = 'Saved ' + finalItems.length + ' income entries';
       if (exactSkipped) msg += ' · ' + exactSkipped + ' unchanged skipped';
@@ -14463,7 +14487,7 @@ function saveAllPendingIncome() {
     var updMap = {};
     incCatEditItems.forEach(function(i){ updMap[String(i.id)] = i.category; });
     var changed = 0;
-    data.forEach(function(i){ if(updMap[String(i.id)] && updMap[String(i.id)]!==i.category){ i.category=updMap[String(i.id)]; changed++; } });
+    data.forEach(function(i){ if(updMap[String(i.id)] && updMap[String(i.id)]!==i.category){ saveManualCat(i.desc, updMap[String(i.id)], true); i.category=updMap[String(i.id)]; changed++; } });
     saveIncomeData(data);
     showToast('Updated ' + changed + ' categories');
   }
@@ -15222,16 +15246,16 @@ function renderIncomeLedger() {
         var nc=sel.value;
         if(nc==='__new__'){
           var typed=prompt('Enter new category name:');
-          if(!typed||!typed.trim()){sel.replaceWith(pill);return;}
+          if(!typed||!typed.trim()){sel.parentNode&&sel.parentNode&&sel.parentNode&&sel.replaceWith(pill);return;}
           nc=typed.trim(); saveIncomeCustomCat(nc);
         }
         var d2=loadIncomeData();
         d2.forEach(function(d){ if(String(d.id)===String(item.id)) d.category=nc; });
         saveIncomeData(d2); item.category=nc;
-        pill.textContent=nc; pill.style.color=getIncCatColor(nc); sel.replaceWith(pill);
+        pill.textContent=nc; pill.style.color=getIncCatColor(nc); sel.parentNode&&sel.parentNode&&sel.parentNode&&sel.replaceWith(pill);
         showToast('Updated to "'+nc+'"');
       });
-      sel.addEventListener('blur', function(){ sel.replaceWith(pill); });
+      sel.addEventListener('blur', function(){ sel.parentNode&&sel.parentNode&&sel.replaceWith(pill); });
       pill.replaceWith(sel); sel.focus();
     });
     catTd.appendChild(pill);
@@ -16980,10 +17004,20 @@ function syncPushNow() {
     });
 }
 
+function _melHash(s){ var h = 5381, i = s.length; while (i) h = (h * 33) ^ s.charCodeAt(--i); return (h >>> 0).toString(36) + '.' + s.length; }
+function _melCanon(arr){ return arr.map(function(e){ return JSON.stringify(e, Object.keys(e).sort()); }).sort().join('\n'); }
+function _incGetSig(){ try { return JSON.parse(localStorage.getItem('inc_month_sig_' + (_userId || ''))); } catch(e){ return null; } }
+function _incSetSig(s){ try { localStorage.setItem('inc_month_sig_' + (_userId || ''), JSON.stringify(s)); } catch(e){} }
+function _melSigKey(){ return 'exp_month_sig_' + (_userId || ''); }
+function _melGetSig(){ try { return JSON.parse(localStorage.getItem(_melSigKey())); } catch(e){ return null; } }
+function _melSetSig(s){ try { localStorage.setItem(_melSigKey(), JSON.stringify(s)); } catch(e){} }
+
 function syncPush() {
-  if (!_db || !_userId || _isMerging) { syncSetStatus('live'); return; }
+  if (!_db || !_userId) { syncSetStatus('live'); return; }
+  if (_isMerging) { clearTimeout(_syncPushTimer); _syncPushTimer = setTimeout(syncPush, 1000); return; }
   clearTimeout(_syncPushTimer);
   _syncPushTimer = setTimeout(function() {
+    if (_isMerging) { _syncPushTimer = setTimeout(syncPush, 1000); return; }
     syncSetStatus('syncing');
     var data  = localStorage.getItem('expense_ledger')    || '[]';
     var cats  = localStorage.getItem('custom_categories') || '[]';
@@ -16996,15 +17030,22 @@ function syncPush() {
       byMonth[k].push(e);
     });
     var localMonths2 = Object.keys(byMonth);
+    var oldSig = _melGetSig(), newSig = {}, written = [];
     var batch = _db.batch();
     localMonths2.forEach(function(ym) {
-      batch.set(userCol('expense_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
+      var s = _melHash(_melCanon(byMonth[ym]));
+      newSig[ym] = s;
+      if (!oldSig || oldSig[ym] !== s) {
+        batch.set(userCol('expense_months').doc(ym), { entries: byMonth[ym], updated: Date.now() });
+        written.push(ym);
+      }
     });
     // Delete Firebase docs for months removed from local
     var knownM = window._knownFirebaseMonths || [];
     knownM.forEach(function(ym) {
       if (localMonths2.indexOf(ym) === -1) {
         batch.delete(userCol('expense_months').doc(ym));
+        written.push('-' + ym);
       }
     });
     window._knownFirebaseMonths = localMonths2;
@@ -17013,7 +17054,7 @@ function syncPush() {
       display_name: _userName, updated: Date.now()
     });
     batch.commit()
-      .then(function(){ syncSetStatus('live'); })
+      .then(function(){ _melSetSig(newSig); console.log('Sync push:', written.length ? written.join(', ') : 'no month changes'); syncSetStatus('live'); })
       .catch(function(e){ console.error('Push error:', e); syncSetStatus('error'); });
   }, 1500);
 }
@@ -17029,7 +17070,7 @@ function syncStartListener() {
   if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
   _syncUnsubscribe = userCol('expense_months').onSnapshot(function(snapshot) {
     // Block if we just wrote locally (avoids race condition restoring deleted data)
-    if (window._deletePending || window._isMerging || (window._lastDeleteTime && (Date.now() - window._lastDeleteTime) < 15000)) return;
+    if (window._deletePending || window._isMerging || (window._lastDeleteTime && (Date.now() - window._lastDeleteTime) < 15000)) { clearTimeout(window._lateSnapT); window._lateSnapT = setTimeout(syncStartListener, 16000); return; }
     var allEntries = [];
     var fbMonths = [];
     snapshot.forEach(function(doc) {
@@ -17067,7 +17108,7 @@ function syncStartListener() {
   if (_incomeUnsubscribe) { _incomeUnsubscribe(); _incomeUnsubscribe = null; }
   _incomeUnsubscribe = userCol('income_months').onSnapshot(function(snapshot) {
     // Block if we just pushed income data (avoids restoring our own deletions)
-    if (window._incDeletePending || (window._incLastDeleteTime && (Date.now() - window._incLastDeleteTime) < 15000)) return;
+    if (window._incDeletePending || (window._incLastDeleteTime && (Date.now() - window._incLastDeleteTime) < 15000)) { clearTimeout(window._lateSnapT); window._lateSnapT = setTimeout(syncStartListener, 16000); return; }
     var allEntries = [];
     snapshot.forEach(function(doc) {
       var d = doc.data();
@@ -18777,7 +18818,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.10.2';
+var APP_VERSION = '2.10.3';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -22095,6 +22136,115 @@ syncInit();
   hook();
   var n = 0, t = setInterval(function(){ hook(); if (++n > 40) clearInterval(t); }, 500);
   window.addEventListener('load', hook);
+})();
+</script>
+<script>
+// Full cell text: hover on desktop, long press on mobile (Ledger + Categorize, both modules)
+(function(){
+  var PANELS = '#panel-ledger,#panel-categorize,#panel-inc-ledger,#panel-inc-categorize';
+  var tip = document.createElement('div');
+  tip.style.cssText = 'position:fixed;z-index:99999;max-width:min(320px,90vw);padding:6px 10px;border-radius:6px;background:#1f2a24;color:#fff;font:500 0.8rem/1.35 "DM Sans",sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none;white-space:pre-line;word-break:break-word;display:none;';
+  document.body.appendChild(tip);
+
+  function cellText(td){
+    var f = td.querySelector('input:not([type=checkbox]),select,textarea');
+    if (f) return f.tagName === 'SELECT' ? ((f.options[f.selectedIndex] || {}).text || '') : f.value;
+    return (td.innerText || '').trim();
+  }
+  function isCut(td){
+    return [td].concat([].slice.call(td.querySelectorAll('*'))).some(function(e){ return e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 1; });
+  }
+  function target(e){ var td = e.target && e.target.closest && e.target.closest('td'); return td && td.closest(PANELS) ? td : null; }
+  function show(td, x, y){
+    var t = cellText(td); if (!t) return false;
+    tip.textContent = t; tip.style.display = 'block';
+    var r = tip.getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight;
+    var left = Math.min(Math.max(8, x - r.width / 2), W - r.width - 8);
+    var top = y - r.height - 14; if (top < 8) top = y + 20;
+    tip.style.left = left + 'px'; tip.style.top = Math.min(top, H - r.height - 8) + 'px';
+    return true;
+  }
+  function hide(){ tip.style.display = 'none'; }
+
+  // Desktop: hover
+  var hoverT = null, cur = null;
+  document.addEventListener('mouseover', function(e){
+    if (!window.matchMedia('(hover: hover)').matches) return;
+    var td = target(e);
+    if (td === cur) return;
+    cur = td; clearTimeout(hoverT); hide();
+    if (!td || !isCut(td)) return;
+    var x = e.clientX, y = e.clientY;
+    hoverT = setTimeout(function(){ show(td, x, y); }, 350);
+  });
+  document.addEventListener('scroll', hide, true);
+
+  // Mobile: long press
+  var pressT = null, sx = 0, sy = 0, shownAt = 0, hideT = null;
+  document.addEventListener('touchstart', function(e){
+    var td = target(e); if (!td || e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    clearTimeout(pressT);
+    pressT = setTimeout(function(){
+      if (isCut(td) && show(td, sx, sy)) {
+        shownAt = Date.now();
+        if (navigator.vibrate) navigator.vibrate(10);
+        clearTimeout(hideT); hideT = setTimeout(hide, 2500);
+      }
+    }, 450);
+  }, {passive: true});
+  document.addEventListener('touchmove', function(e){
+    var p = e.touches[0];
+    if (Math.abs(p.clientX - sx) > 10 || Math.abs(p.clientY - sy) > 10) clearTimeout(pressT);
+  }, {passive: true});
+  document.addEventListener('touchend', function(){ clearTimeout(pressT); }, {passive: true});
+  document.addEventListener('contextmenu', function(e){ if (Date.now() - shownAt < 800 && target(e)) e.preventDefault(); });
+})();
+</script>
+<script>
+// Centre refresh button inside the radial circle (all modules)
+(function(){
+  var NS = 'http://www.w3.org/2000/svg';
+  function addCentre(){
+    var svg = document.getElementById('radial-svg');
+    if (!svg || document.getElementById('radial-centre-btn')) return;
+    var vb = svg.viewBox && svg.viewBox.baseVal, hasVB = vb && vb.width;
+    var w = hasVB ? vb.width : svg.clientWidth, h = hasVB ? vb.height : svg.clientHeight;
+    var cx = (hasVB ? vb.x : 0) + w / 2, cy = (hasVB ? vb.y : 0) + h / 2;
+    var r = Math.min(w, h) * 0.045;
+    var g = document.createElementNS(NS, 'g');
+    g.id = 'radial-centre-btn'; g.style.cursor = 'pointer';
+    var c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+    var _seg = svg.querySelector('#radial-inner-g path, #radial-inner-g circle'), _ico = svg.querySelector('#radial-inner-g text');
+    var _cs = _seg ? getComputedStyle(_seg) : null;
+    c.style.fill = _cs ? _cs.fill : 'rgba(255,255,255,0.15)';
+    c.style.fillOpacity = _cs ? _cs.fillOpacity : '1';
+    c.style.stroke = _cs && _cs.stroke !== 'none' ? _cs.stroke : 'rgba(255,255,255,0.4)';
+    c.setAttribute('stroke-width', r * 0.08);
+    var t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', cx); t.setAttribute('y', cy);
+    t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'central');
+    t.setAttribute('font-size', r * 1.2); t.setAttribute('font-weight', '700'); t.setAttribute('fill', _ico ? getComputedStyle(_ico).fill : '#fff');
+    t.style.pointerEvents = 'none';
+    t.textContent = '\u21BB';
+    g.appendChild(c); g.appendChild(t);
+    g.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      if (typeof closeRadialMenu === 'function') closeRadialMenu();
+      if (typeof appRefresh === 'function') appRefresh();
+    });
+    svg.appendChild(g);
+  }
+  function hook(){
+    if (typeof window.openRadialMenu === 'function' && !window.openRadialMenu._cr){
+      var o = window.openRadialMenu;
+      window.openRadialMenu = function(){ var res = o.apply(this, arguments); try { addCentre(); } catch(e){ console.warn('centre btn', e); } return res; };
+      window.openRadialMenu._cr = 1;
+    }
+  }
+  hook();
+  var n = 0, timer = setInterval(function(){ hook(); if (++n > 40) clearInterval(timer); }, 500);
 })();
 </script>
 </body>
