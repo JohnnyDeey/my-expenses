@@ -3444,7 +3444,7 @@ input[type="password"]::-ms-clear { display:none !important; }
       <button class="trf-b ink" style="padding:7px 12px;" onclick="trfExportJSON()">&#11015; Export backup</button>
       <button class="trf-b rust" style="padding:7px 12px;" onclick="trfClearAll()">Clear all data</button>
     </div>
-    <p class="trf-hint">Stored on this device only for now. Cloud sync comes in a later step.</p>
+    <p class="trf-hint" id="trf-d-sync"></p>
   </div>
 </div>
 
@@ -3465,14 +3465,123 @@ input[type="password"]::-ms-clear { display:none !important; }
 function trfOn() { try { return localStorage.getItem('ngt_enabled') === '1'; } catch(e) { return false; } }
 window.trfOn = trfOn;
 
-// ===================== STORE =====================
-var KEY = 'ngt_data_v1';
-var S = load();
-function load() {
-  try { var d = JSON.parse(localStorage.getItem(KEY)); if (d && d.recipients && d.transfers) return d; } catch(e) {}
-  return { version: 1, recipients: [], transfers: [] };
+// ===================== STORE + CLOUD SYNC =====================
+// Local copy per user; every recipient/transfer is its own Firestore doc with a 'u' (last-changed) stamp.
+// Newer stamp wins per record. Deletions leave a tombstone {deleted:true,u}. Offline edits queue in META.dirty.
+var BASE = 'ngt_data_v1';
+var META = { dead: {}, dirty: {} };
+var PREV = {};
+function key() { return (typeof _userId !== 'undefined' && _userId && _userId !== 'guest_local') ? BASE + '_' + _userId : BASE; }
+function readJSON(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v || d; } catch(e) { return d; } }
+function sig(o) { return JSON.stringify(o, function(k, v){ return k === 'u' ? undefined : v; }); }
+function snapPrev(d) {
+  PREV = {};
+  d.recipients.forEach(function(r){ PREV['r:' + r.id] = sig(r); });
+  d.transfers.forEach(function(t){ PREV['t:' + t.id] = sig(t); });
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { say('Could not save on this device'); } trfRenderAll(); }
+function load() {
+  var k = key();
+  if (k !== BASE && !localStorage.getItem(k) && localStorage.getItem(BASE)) {
+    // adopt data imported before sync existed
+    localStorage.setItem(k, localStorage.getItem(BASE));
+    if (localStorage.getItem(BASE + '_meta')) localStorage.setItem(k + '_meta', localStorage.getItem(BASE + '_meta'));
+    localStorage.removeItem(BASE); localStorage.removeItem(BASE + '_meta');
+  }
+  var d = readJSON(k, null);
+  if (!d || !d.recipients || !d.transfers) d = { version: 1, recipients: [], transfers: [] };
+  META = readJSON(k + '_meta', { dead: {}, dirty: {} });
+  META.dead = META.dead || {}; META.dirty = META.dirty || {};
+  snapPrev(d);
+  return d;
+}
+var S = load();
+function persist() {
+  try { localStorage.setItem(key(), JSON.stringify(S)); localStorage.setItem(key() + '_meta', JSON.stringify(META)); }
+  catch(e) { say('Could not save on this device'); }
+}
+function save() {
+  var now = Date.now(), cur = {};
+  S.recipients.forEach(function(r){ cur['r:' + r.id] = r; });
+  S.transfers.forEach(function(t){ cur['t:' + t.id] = t; });
+  Object.keys(cur).forEach(function(k){
+    if (PREV[k] !== sig(cur[k])) { cur[k].u = now; META.dirty[k] = 1; delete META.dead[k]; }
+  });
+  Object.keys(PREV).forEach(function(k){ if (!cur[k]) { META.dead[k] = now; META.dirty[k] = 1; } });
+  persist(); snapPrev(S); schedulePush();
+  if (typeof trfRenderAll === 'function') trfRenderAll();
+}
+
+// ----- Cloud -----
+var pushT = null, pushing = false, unsubs = [], syncUid = null, ready = 0;
+function online() {
+  return typeof _db !== 'undefined' && _db && typeof _userId !== 'undefined' && _userId && _userId !== 'guest_local' && typeof userCol === 'function';
+}
+function col(kind) { return userCol(kind === 'r' ? 'ngt_recipients' : 'ngt_transfers'); }
+function schedulePush() { clearTimeout(pushT); pushT = setTimeout(push, 800); }
+function push() {
+  if (!online() || syncUid !== _userId || ready < 2) return;
+  var keys = Object.keys(META.dirty); if (!keys.length) return;
+  if (pushing) { schedulePush(); return; }
+  pushing = true;
+  var idx = {};
+  S.recipients.forEach(function(r){ idx['r:' + r.id] = r; });
+  S.transfers.forEach(function(t){ idx['t:' + t.id] = t; });
+  var chunk = keys.slice(0, 400), batch = _db.batch();
+  chunk.forEach(function(k){
+    var ref = col(k.charAt(0)).doc(k.slice(2));
+    if (META.dead[k]) batch.set(ref, { deleted: true, u: META.dead[k] });
+    else if (idx[k]) batch.set(ref, JSON.parse(JSON.stringify(idx[k])));
+  });
+  batch.commit().then(function(){
+    chunk.forEach(function(k){ delete META.dirty[k]; });
+    META.synced = true; META.last = Date.now();
+    persist(); pushing = false;
+    if (Object.keys(META.dirty).length) schedulePush();
+    if (typeof trfSyncLine === 'function') trfSyncLine();
+  }).catch(function(e){ pushing = false; console.warn('Transfers sync push failed:', e); setTimeout(schedulePush, 15000); });
+}
+function applyRemote(kind, id, d) {
+  var k = kind + ':' + id, arr = kind === 'r' ? S.recipients : S.transfers, i = -1;
+  for (var j = 0; j < arr.length; j++) if (arr[j].id === id) { i = j; break; }
+  var localU = i >= 0 ? (arr[i].u || 0) : (META.dead[k] || 0);
+  var ru = d.u || 0;
+  if (ru <= localU) return false;
+  if (d.deleted) { if (i >= 0) arr.splice(i, 1); META.dead[k] = ru; delete META.dirty[k]; return true; }
+  var o = JSON.parse(JSON.stringify(d)); o.id = id;
+  if (i >= 0) arr[i] = o; else arr.push(o);
+  delete META.dead[k]; delete META.dirty[k];
+  return true;
+}
+function stopSync() { unsubs.forEach(function(f){ try { f(); } catch(e) {} }); unsubs = []; syncUid = null; ready = 0; }
+window.trfStartSync = function() {
+  if (!online() || syncUid === _userId) return;
+  stopSync();
+  syncUid = _userId;
+  S = load();
+  if (!META.synced) {
+    // first sync for this user on this device: offer local records with an old stamp so newer cloud data wins
+    S.recipients.forEach(function(r){ if (!r.u) r.u = 1; META.dirty['r:' + r.id] = 1; });
+    S.transfers.forEach(function(t){ if (!t.u) t.u = 1; META.dirty['t:' + t.id] = 1; });
+    persist(); snapPrev(S);
+  }
+  ['r', 't'].forEach(function(kind){
+    var first = true;
+    unsubs.push(col(kind).onSnapshot(function(snap){
+      var changed = false;
+      snap.docChanges().forEach(function(ch){ if (ch.type !== 'removed' && applyRemote(kind, ch.doc.id, ch.doc.data())) changed = true; });
+      if (first) { first = false; ready++; }
+      if (changed) { persist(); snapPrev(S); if (typeof trfRenderAll === 'function') trfRenderAll(); }
+      schedulePush();
+    }, function(err){ console.warn('Transfers listener error:', err); }));
+  });
+};
+window.trfSyncLine = function() {
+  var x = document.getElementById('trf-d-sync'); if (!x) return;
+  var n = Object.keys(META.dirty).length;
+  if (!online()) { x.innerHTML = '&#9729; Offline &middot; ' + n + ' change' + (n === 1 ? '' : 's') + ' waiting'; return; }
+  x.innerHTML = '&#9729; Cloud sync on' + (META.last ? ' &middot; last synced ' + new Date(META.last).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '') + (n ? ' &middot; ' + n + ' waiting' : ' &middot; all saved');
+};
+window.trfSyncInfo = function(){ return { synced: !!META.synced, waiting: Object.keys(META.dirty).length, deleted: Object.keys(META.dead).length, key: key(), uid: syncUid }; };
 function uid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function say(m) { if (typeof showToast === 'function') showToast(m); }
 
@@ -3832,7 +3941,7 @@ function renderData() {
   for (var y = cy + 1; y >= cy - 6; y--) ys.push(y);
   dy.innerHTML = ys.map(function(y){ return '<option>' + y + '</option>'; }).join(''); dy.value = keep;
   var by = {}; S.transfers.forEach(function(t){ var y = t.month.slice(0,4); by[y] = by[y] || [0,0]; by[y][0]++; if (t.status !== 'planned') by[y][1] += +t.amount; });
-  el('trf-d-stats').innerHTML = S.recipients.length + ' recipients · ' + S.transfers.length + ' transfers<br>' + Object.keys(by).sort().map(function(y){ return y + ': ' + by[y][0] + ' transfers, ' + fmt(by[y][1]) + ' sent'; }).join('<br>');
+  trfSyncLine(); el('trf-d-stats').innerHTML = S.recipients.length + ' recipients · ' + S.transfers.length + ' transfers<br>' + Object.keys(by).sort().map(function(y){ return y + ': ' + by[y][0] + ' transfers, ' + fmt(by[y][1]) + ' sent'; }).join('<br>');
 }
 window.trfImportJSON = function(input) {
   var f = input.files && input.files[0]; if (!f) return;
@@ -4034,6 +4143,9 @@ function install() {
     return;
   }
   injectBurger();
+  // Cloud sync: starts once signed in; restarts if the account changes
+  trfStartSync();
+  setInterval(function(){ trfStartSync(); }, 3000);
 
   var oApply = window.applyMode;
   window.applyMode = function() {
