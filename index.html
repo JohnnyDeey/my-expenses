@@ -100,7 +100,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.9.17')) {
+          if (!key.startsWith('mel-v2.10.0')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18528,7 +18528,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.9.17';
+var APP_VERSION = '2.10.0';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
