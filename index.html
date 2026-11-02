@@ -22482,5 +22482,353 @@ syncInit();
   var n = 0, t = setInterval(function(){ hook(); if (++n > 40) clearInterval(t); }, 500);
 })();
 </script>
+<script>
+// Loans tab inside Budget Targets (reads expenses, never changes them)
+(function(){
+  var SEED = [{ id: 'l1', name: 'Préstamo consumo', received: 5000, fee: 168.37, capital: 5168.37, rate: 9, payment: 83.15, first: '2025-09-30', cat: 'Loan repayment', extras: [{ date: '2026-10-31', amount: 3450 }] }];
+  var LOANS = null, LOANS_KEY = '', SEL = 0, EDIT = false, pulled = false;
+
+  function pad2(n){ return String(n).padStart(2, '0'); }
+  function iso(d){ return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function eom(d){ return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
+  function r2(x){ return Math.round(x * 100) / 100; }
+  function money(x){ return '\u20AC' + (x || 0).toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function fdate(s){ return new Date(s + 'T00:00:00').toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}); }
+  function fmon(s){ return new Date(s + 'T00:00:00').toLocaleDateString('en-GB', {month:'short', year:'numeric'}); }
+  function days(a, b){ return (new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 86400000; }
+  function sum(a, k){ return r2(a.reduce(function(s, x){ return s + (x[k] || 0); }, 0)); }
+  function KEY(){ return 'mel_loans_' + (window._userId || ''); }
+
+  // ---------- storage ----------
+  function load(){
+    if (LOANS && LOANS_KEY === KEY()) return LOANS;
+    LOANS = null; LOANS_KEY = KEY(); pulled = false;
+    try { LOANS = JSON.parse(localStorage.getItem(KEY())); } catch(e) {}
+    if (!LOANS || !LOANS.length) LOANS = JSON.parse(JSON.stringify(SEED));
+    return LOANS;
+  }
+  function saved(){ try { return !!localStorage.getItem(KEY()); } catch(e){ return false; } }
+  function save(){
+    if (!window._userId) return;
+    var u = Date.now();
+    try { localStorage.setItem(KEY(), JSON.stringify(LOANS)); localStorage.setItem(KEY() + '_u', u); } catch(e) {}
+    try { if (window._db && typeof userCol === 'function') userCol('loans').doc('all').set({ list: LOANS, u: u }).catch(function(e){ console.warn('Loans save:', e); }); } catch(e) {}
+  }
+  function pull(){
+    if (pulled || !window._db || !window._userId || typeof userCol !== 'function') return;
+    pulled = true;
+    userCol('loans').doc('all').get().then(function(s){
+      if (!s.exists || !s.data().list) return;
+      var cu = s.data().u || 0, lu = +(localStorage.getItem(KEY() + '_u') || 0);
+      if (cu > lu) { LOANS = s.data().list; try { localStorage.setItem(KEY(), JSON.stringify(LOANS)); localStorage.setItem(KEY() + '_u', cu); } catch(e) {} render(); }
+    }).catch(function(e){ console.warn('Loans load:', e); });
+  }
+
+  // ---------- schedule (same method as the bank: monthly rate on balance, fixed payment) ----------
+  function schedule(L){
+    var r = (+L.rate || 0) / 100 / 12, bal = +L.capital || 0, rows = [], n = 0;
+    var d = new Date((L.first || iso(new Date())) + 'T00:00:00'); d = new Date(d.getFullYear(), d.getMonth(), 1);
+    var ex = (L.extras || []).slice().sort(function(a, b){ return a.date.localeCompare(b.date); }), ei = 0;
+    while (bal > 0.004 && n < 600) {
+      var ym = d.getFullYear() + '-' + pad2(d.getMonth() + 1);
+      while (ei < ex.length && ex[ei].date.slice(0, 7) <= ym) {
+        var a = r2(Math.min(+ex[ei].amount || 0, bal)); bal = r2(bal - a);
+        rows.push({ type: 'extra', date: ex[ei].date, pay: a, int: 0, prin: a, bal: bal, ei: (L.extras || []).indexOf(ex[ei]) });
+        ei++;
+      }
+      if (bal <= 0.004) break;
+      var it = r2(bal * r), pay = +L.payment || 0, pr = r2(pay - it);
+      if (pr <= 0) break;
+      if (pr >= bal) { pr = bal; pay = r2(bal + it); }
+      bal = r2(bal - pr); n++;
+      rows.push({ type: 'cuota', n: n, date: iso(eom(d)), pay: pay, int: it, prin: pr, bal: bal });
+      d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    }
+    return rows;
+  }
+  function recorded(L){
+    function norm(s){ return String(s || '').replace(/&amp;/g, '&').toLowerCase().replace(/\s+/g, ' ').trim().replace(/s\b/g, ''); }
+    var c = norm(L.cat);
+    if (!c || typeof loadData !== 'function') return [];
+    return (window.__realLoadData || loadData)().filter(function(e){ return norm(e.category) === c; });
+  }
+  function match(rw, rec, used){
+    for (var i = 0; i < rec.length; i++) {
+      if (used[i]) continue;
+      if (Math.abs(Math.abs(+rec[i].amount) - rw.pay) < 0.02 && Math.abs(days(rec[i].date, rw.date)) <= 20) { used[i] = 1; return rec[i].date; }
+    }
+    return null;
+  }
+
+  // ---------- view ----------
+  var css = '<style>' +
+    '#loans-view{font-family:"DM Sans",sans-serif;}' +
+    '.ln-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;}' +
+    '.ln-title{font-family:"Playfair Display",serif;font-size:1.15rem;font-weight:700;color:var(--ink);margin-right:auto;}' +
+    '.ln-btn{background:none;border:1.5px solid var(--gold);border-radius:14px;color:var(--ink);font-family:"DM Mono",monospace;font-size:0.72rem;font-weight:700;padding:5px 12px;cursor:pointer;}' +
+    '.ln-btn.solid{background:var(--gold);}' +
+    '.ln-btn.del{border-color:#c0392b;color:#c0392b;}' +
+    '.ln-sel{font-family:"DM Mono",monospace;font-size:0.78rem;padding:5px 8px;border:1.5px solid var(--border);border-radius:4px;background:white;}' +
+    '.ln-note{background:#fff8e1;border:1px solid var(--gold);border-radius:6px;padding:8px 12px;font-size:0.8rem;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}' +
+    '.ln-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px;}' +
+    '.ln-kpi{background:white;border:1px solid var(--border);border-radius:6px;padding:8px 10px;}' +
+    '.ln-kpi span{display:block;font-family:"DM Mono",monospace;font-size:0.6rem;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}' +
+    '.ln-kpi b{font-family:"DM Mono",monospace;font-size:0.98rem;color:var(--ink);}' +
+    '.ln-kpi.hi{border:1.5px solid var(--gold);background:#fffaf0;}' +
+    '.ln-kpi.hi b{font-size:1.1rem;}' +
+    '.ln-bar{height:10px;background:var(--border);border-radius:6px;overflow:hidden;margin:4px 0 4px;}' +
+    '.ln-bar i{display:block;height:100%;background:var(--gold);}' +
+    '.ln-barlbl{font-family:"DM Mono",monospace;font-size:0.68rem;color:var(--muted);text-align:right;margin-bottom:12px;}' +
+    '.ln-card{background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:10px;}' +
+    '.ln-card h4{margin:0 0 8px;font-family:"DM Mono",monospace;font-size:0.7rem;letter-spacing:1px;color:var(--muted);}' +
+    '.ln-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}' +
+    '.ln-form label{font-family:"DM Mono",monospace;font-size:0.62rem;color:var(--muted);display:flex;flex-direction:column;gap:3px;}' +
+    '.ln-form input{font-family:"DM Mono",monospace;font-size:0.82rem;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;}' +
+    '.ln-ex{display:flex;align-items:center;gap:8px;font-family:"DM Mono",monospace;font-size:0.78rem;padding:4px 0;border-bottom:1px dashed var(--border);}' +
+    '.ln-ex button{margin-left:auto;background:none;border:none;color:#c0392b;cursor:pointer;font-size:0.9rem;}' +
+    '.ln-addex{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}' +
+    '.ln-addex input{font-family:"DM Mono",monospace;font-size:0.8rem;padding:5px 8px;border:1.5px solid var(--border);border-radius:4px;}' +
+    '.ln-tbl{width:100%;min-width:540px;border-collapse:collapse;font-size:0.8rem;}' +
+    '.ln-tbl th{background:var(--ink);color:var(--paper);font-family:"DM Mono",monospace;font-size:0.62rem;letter-spacing:1px;padding:7px 8px;text-align:right;}' +
+    '.ln-tbl th:nth-child(-n+2){text-align:left;}' +
+    '.ln-tbl td{padding:6px 8px;border-bottom:1px solid var(--border);font-family:"DM Mono",monospace;text-align:right;white-space:nowrap;}' +
+    '.ln-tbl td:nth-child(-n+2){text-align:left;}' +
+    '.ln-tbl tr.fut td{color:var(--muted);}' +
+    '.ln-tbl tr.next td{background:#fffaf0;font-weight:700;}' +
+    '.ln-tbl tr.extra td{background:#eef6ee;}' +
+    '.ln-ok{color:var(--sage,#4a7);font-weight:700;}' +
+    '.ln-no{color:#c0392b;font-weight:700;}' +
+    '</style>';
+
+  function kpi(lbl, val, hi){ return '<div class="ln-kpi' + (hi ? ' hi' : '') + '"><span>' + lbl + '</span><b>' + val + '</b></div>'; }
+
+  function render(){
+    var v = document.getElementById('loans-view'); if (!v) return;
+    load(); pull();
+    if (SEL >= LOANS.length) SEL = 0;
+    var L = LOANS[SEL];
+    if (!L) { v.innerHTML = css + '<div class="ln-head"><span class="ln-title">&#127974; Loans</span><button class="ln-btn solid" onclick="lnNew()">+ Loan</button></div><div class="ln-card">No loans yet.</div>'; return; }
+
+    var rows = schedule(L), today = iso(new Date()), rec = recorded(L), used = {};
+    rows.forEach(function(rw){ rw.past = rw.date <= today; rw.match = match(rw, rec, used); });
+    var past = rows.filter(function(r){ return r.past; }), fut = rows.filter(function(r){ return !r.past; });
+    var out = past.length ? past[past.length - 1].bal : (+L.capital || 0);
+    var cu = rows.filter(function(r){ return r.type === 'cuota'; });
+    var cuPast = cu.filter(function(r){ return r.past; }).length;
+    var pct = L.capital ? Math.max(0, Math.min(100, (L.capital - out) / L.capital * 100)) : 0;
+    var missing = past.filter(function(r){ return !r.match; }).length;
+    var extraRec = rec.filter(function(e, i){ return !used[i]; });
+    var nextRow = fut[0];
+
+    var h = css;
+    h += '<div class="ln-head"><span class="ln-title">&#127974; ' + esc(L.name) + '</span>';
+    if (LOANS.length > 1) h += '<select class="ln-sel" onchange="lnSel(this.value)">' + LOANS.map(function(x, i){ return '<option value="' + i + '"' + (i === SEL ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</select>';
+    h += '<button class="ln-btn" onclick="lnEdit()">' + (EDIT ? 'Close' : '&#9998; Edit') + '</button><button class="ln-btn" onclick="lnNew()">+ Loan</button></div>';
+
+    if (!saved()) h += '<div class="ln-note">Filled in from your bank details. Check the figures, then press <button class="ln-btn solid" onclick="lnSaveSeed()">Save</button> to keep them.</div>';
+
+    if (EDIT) {
+      h += '<div class="ln-card"><h4>LOAN DETAILS</h4><div class="ln-form">' +
+        '<label>Name<input id="ln-f-name" value="' + esc(L.name) + '"></label>' +
+        '<label>Received (\u20AC)<input id="ln-f-received" type="number" step="0.01" value="' + (L.received || '') + '"></label>' +
+        '<label>Fee financed (\u20AC)<input id="ln-f-fee" type="number" step="0.01" value="' + (L.fee || 0) + '"></label>' +
+        '<label>Initial capital (\u20AC)<input id="ln-f-capital" type="number" step="0.01" value="' + (L.capital || '') + '"></label>' +
+        '<label>Interest TIN (%)<input id="ln-f-rate" type="number" step="0.01" value="' + (L.rate || '') + '"></label>' +
+        '<label>Monthly payment (\u20AC)<input id="ln-f-payment" type="number" step="0.01" value="' + (L.payment || '') + '"></label>' +
+        '<label>First payment date<input id="ln-f-first" type="date" value="' + (L.first || '') + '"></label>' +
+        '<label>Expense category<input id="ln-f-cat" value="' + esc(L.cat || 'Loan repayment') + '"></label>' +
+        '</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;"><button class="ln-btn solid" onclick="lnSave()">Save</button>' +
+        (LOANS.length > 1 ? '<button class="ln-btn del" onclick="lnDelLoan()">Delete loan</button>' : '') + '</div></div>';
+    }
+
+    h += '<div class="ln-kpis">' +
+      kpi('Received', money(L.received)) +
+      kpi('Fee financed', money(L.fee)) +
+      kpi('Owed at start', money(L.capital)) +
+      kpi('Paid so far', money(sum(past, 'pay'))) +
+      kpi('Interest paid', money(sum(past, 'int'))) +
+      kpi('Principal repaid', money(sum(past, 'prin'))) +
+      kpi('Still owed', money(out), true) +
+      kpi('Payments', cuPast + ' / ' + cu.length) +
+      kpi('Paid off', rows.length ? fmon(rows[rows.length - 1].date) : '-') +
+      kpi('Interest to come', money(sum(fut, 'int'))) +
+      kpi('Other charges', money(extraRec.reduce(function(s, e){ return s + Math.abs(+e.amount); }, 0))) +
+      '</div>';
+    h += '<div class="ln-bar"><i style="width:' + pct.toFixed(1) + '%"></i></div><div class="ln-barlbl">' + pct.toFixed(1) + '% repaid' + (nextRow ? ' &middot; next: ' + money(nextRow.pay) + ' on ' + fdate(nextRow.date) : '') + '</div>';
+
+    if (missing) {
+      h += '<div class="ln-note">';
+      if (missing) h += '&#10007; ' + missing + ' past payment' + (missing === 1 ? ' is' : 's are') + ' not found in Expenses under "' + esc(L.cat) + '". ';
+      if (extraRec.length) h += '&#9888; ' + extraRec.length + ' "' + esc(L.cat) + '" expense' + (extraRec.length === 1 ? '' : 's') + ' did not match any payment: ' + extraRec.slice(0, 4).map(function(e){ return fdate(e.date) + ' ' + money(Math.abs(e.amount)); }).join(', ') + (extraRec.length > 4 ? ' &hellip;' : '');
+      h += '</div>';
+    }
+
+    h += '<div class="ln-card"><h4>EXTRA PAYMENTS</h4>';
+    (L.extras || []).forEach(function(x, i){ h += '<div class="ln-ex"><span>' + fdate(x.date) + '</span><b>' + money(+x.amount) + '</b><button title="Remove" onclick="lnDelExtra(' + i + ')">&#10005;</button></div>'; });
+    if (!(L.extras || []).length) h += '<div style="font-size:0.78rem;color:var(--muted);">None yet.</div>';
+    h += '<div class="ln-addex"><input type="date" id="ln-x-date" value="' + today + '"><input type="number" step="0.01" id="ln-x-amt" placeholder="Amount \u20AC"><button class="ln-btn solid" onclick="lnAddExtra()">+ Add</button></div></div>';
+
+    h += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="ln-tbl"><thead><tr><th>#</th><th>DATE</th><th>PAYMENT</th><th>INTEREST</th><th>PRINCIPAL</th><th>BALANCE</th><th>LEDGER</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var cls = r.type === 'extra' ? 'extra' : (r === nextRow ? 'next' : (r.past ? '' : 'fut'));
+      var led = r.past ? (r.match ? '<span class="ln-ok">&#10003;</span>' : '<span class="ln-no">&#10007;</span>') : '';
+      h += '<tr class="' + cls + '"><td>' + (r.type === 'extra' ? 'Extra' : r.n) + '</td><td>' + fdate(r.date) + '</td><td>' + money(r.pay) + '</td><td>' + money(r.int) + '</td><td>' + money(r.prin) + '</td><td>' + money(r.bal) + '</td><td style="text-align:center;">' + led + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+    v.innerHTML = h;
+  }
+
+  // ---------- actions ----------
+  function num(id){ var e = document.getElementById(id); return e ? parseFloat(e.value) : NaN; }
+  function val(id){ var e = document.getElementById(id); return e ? e.value.trim() : ''; }
+  window.lnEdit = function(){ EDIT = !EDIT; render(); };
+  window.lnSel = function(i){ SEL = +i; EDIT = false; render(); };
+  window.lnSaveSeed = function(){ save(); if (typeof showToast === 'function') showToast('Loan saved'); render(); };
+  window.lnSave = function(){
+    var L = LOANS[SEL];
+    L.name = val('ln-f-name') || 'Loan';
+    L.received = num('ln-f-received') || 0;
+    L.fee = num('ln-f-fee') || 0;
+    L.capital = num('ln-f-capital') || r2(L.received + L.fee);
+    L.rate = num('ln-f-rate') || 0;
+    L.payment = num('ln-f-payment') || 0;
+    L.first = val('ln-f-first') || L.first;
+    L.cat = val('ln-f-cat') || 'Loan repayment';
+    EDIT = false; save(); if (typeof showToast === 'function') showToast('Loan saved'); render();
+  };
+  window.lnNew = function(){
+    load();
+    LOANS.push({ id: 'l' + Date.now(), name: 'New loan', received: 0, fee: 0, capital: 0, rate: 0, payment: 0, first: iso(eom(new Date())), cat: 'Loan repayment', extras: [] });
+    SEL = LOANS.length - 1; EDIT = true; render();
+  };
+  window.lnDelLoan = function(){
+    if (!confirm('Delete "' + LOANS[SEL].name + '"? Your expenses are not affected.')) return;
+    LOANS.splice(SEL, 1); SEL = 0; EDIT = false; save(); render();
+  };
+  window.lnAddExtra = function(){
+    var d = val('ln-x-date'), a = num('ln-x-amt');
+    if (!d || !(a > 0)) { if (typeof showToast === 'function') showToast('Enter a date and amount'); return; }
+    var L = LOANS[SEL]; (L.extras = L.extras || []).push({ date: d, amount: r2(a) });
+    save(); render();
+  };
+  window.lnDelExtra = function(i){ var L = LOANS[SEL]; L.extras.splice(i, 1); save(); render(); };
+
+  // ---------- adjusted data for totals (repayments -> interest, loan income removed) ----------
+  function nrm(s){ return String(s || '').replace(/&amp;/g, '&').toLowerCase().replace(/\s+/g, ' ').trim().replace(/s\b/g, ''); }
+  window.melLoanAdjustExp = function(data){
+    load(); if (!LOANS || !saved() || !Array.isArray(data)) return data;
+    var drop = {}, repl = {}, add = [];
+    LOANS.forEach(function(L){
+      var c = nrm(L.cat); if (!c) return;
+      var rec = [], idx = [];
+      data.forEach(function(e, i){ if (nrm(e.category) === c) { rec.push(e); idx.push(i); } });
+      var used = {};
+      schedule(L).forEach(function(rw){
+        for (var j = 0; j < rec.length; j++) {
+          if (used[j]) continue;
+          if (Math.abs(Math.abs(+rec[j].amount) - rw.pay) < 0.02 && Math.abs(days(rec[j].date, rw.date)) <= 20) {
+            used[j] = 1;
+            if (rw.type === 'extra' || !(rw.int > 0)) drop[idx[j]] = 1; else repl[idx[j]] = rw.int;
+            break;
+          }
+        }
+      });
+      if (+L.fee > 0) add.push({ id: 'loanfee-' + L.id, date: (L.first || '').slice(0, 8) + '01', desc: (L.name || 'Loan') + ' fee', amount: +L.fee, category: 'Loan interest & fees', currency: L.currency || 'EUR' });
+    });
+    var out = [];
+    data.forEach(function(e, i){
+      if (drop[i]) return;
+      if (repl[i] !== undefined) out.push(Object.assign({}, e, { amount: repl[i], category: 'Loan interest & fees', desc: (e.desc || '') + ' (interest)' }));
+      else out.push(e);
+    });
+    return out.concat(add);
+  };
+  window.melLoanAdjustInc = function(data){
+    load(); if (!LOANS || !saved() || !Array.isArray(data)) return data;
+    var drop = {};
+    LOANS.forEach(function(L){
+      data.forEach(function(e, i){
+        if (drop[i] || (e.currency || 'EUR') !== (L.currency || 'EUR')) return;
+        var d = days(e.date, L.first);
+        if (d < -45 || d > 0) return;
+        var a = +e.amount;
+        if (Math.abs(a - L.capital) < 0.02 || Math.abs(a - L.received) < 0.02) drop[i] = 1;
+      });
+    });
+    return data.filter(function(e, i){ return !drop[i]; });
+  };
+
+  // ---------- Budget | Loans switch ----------
+  function modeLoans(){ try { return localStorage.getItem('bl_mode') === 'loans'; } catch(e){ return false; } }
+  window.blMode = function(m){ try { localStorage.setItem('bl_mode', m); } catch(e) {} apply(); };
+  function apply(){
+    var p = document.getElementById('panel-budget'); if (!p) return;
+    var on = modeLoans();
+    [].forEach.call(p.children, function(c){
+      if (c.id === 'bl-switch') return;
+      if (c.id === 'loans-view') { c.style.display = on ? '' : 'none'; return; }
+      if (on) { if (c.dataset.blHid === undefined) c.dataset.blHid = c.style.display; c.style.display = 'none'; }
+      else if (c.dataset.blHid !== undefined) { c.style.display = c.dataset.blHid; delete c.dataset.blHid; }
+    });
+    var s = document.getElementById('bl-switch');
+    if (s) [].forEach.call(s.children, function(b){ var act = (b.getAttribute('data-m') === 'loans') === on; b.style.background = act ? 'var(--gold)' : 'transparent'; b.style.opacity = act ? '1' : '.65'; });
+    if (on) render();
+  }
+  function ensure(){
+    var p = document.getElementById('panel-budget'); if (!p) return;
+    if (!document.getElementById('bl-switch')) {
+      var s = document.createElement('div'); s.id = 'bl-switch';
+      s.style.cssText = 'display:inline-flex;gap:2px;padding:2px;border:1.5px solid var(--gold);border-radius:16px;margin:0 0 12px;';
+      var bs = 'border:none;border-radius:14px;padding:5px 14px;font-family:"DM Mono",monospace;font-size:0.75rem;font-weight:700;color:var(--ink);cursor:pointer;';
+      s.innerHTML = '<button data-m="budget" onclick="blMode(\'budget\')" style=\'' + bs + '\'>&#127919; Budget</button><button data-m="loans" onclick="blMode(\'loans\')" style=\'' + bs + '\'>&#127974; Loans</button>';
+      p.insertBefore(s, p.firstChild);
+      var v = document.createElement('div'); v.id = 'loans-view'; p.appendChild(v);
+    }
+    apply();
+  }
+  function hook(){
+    if (typeof window.renderBudget === 'function' && !window.renderBudget._ln) {
+      var o = window.renderBudget;
+      window.renderBudget = function(){ var r = o.apply(this, arguments); try { ensure(); } catch(e){ console.warn('loans', e); } return r; };
+      window.renderBudget._ln = 1;
+    }
+    if (document.getElementById('panel-budget') && !document.getElementById('bl-switch')) ensure();
+  }
+  hook();
+  var n = 0, t = setInterval(function(){ hook(); if (++n > 40) clearInterval(t); }, 500);
+})();
+</script>
+<script>
+// Totals see loan-adjusted data; listing screens keep the real data. Saving is blocked while adjusted.
+(function(){
+  var EXP = ['renderMonthPicker','updateHeaderContext','updateMonthFilterPill','renderDashboard','buildDashCurStrip','updateHeader','renderBudget','printDashboard','generatePDFReport'];
+  var INC = ['updateIncomeHeaderContext','renderIncomeMonthPicker','renderIncomeMonthly','renderIncomeDashboard','buildIncDashCurStrip','generateIncomePDFReport'];
+  var depth = 0, oLD, oLID, oSD, oSID;
+  function enter(){
+    if (depth++ > 0) return;
+    oLD = window.loadData; oLID = window.loadIncomeData; oSD = window.saveData; oSID = window.saveIncomeData;
+    window.__realLoadData = oLD;
+    if (oLD && window.melLoanAdjustExp) window.loadData = function(){ return melLoanAdjustExp(oLD.apply(this, arguments)); };
+    if (oLID && window.melLoanAdjustInc) window.loadIncomeData = function(){ return melLoanAdjustInc(oLID.apply(this, arguments)); };
+    window.saveData = function(){ console.warn('saveData blocked inside a totals view'); };
+    window.saveIncomeData = function(){ console.warn('saveIncomeData blocked inside a totals view'); };
+  }
+  function leave(){
+    if (--depth > 0) return;
+    window.loadData = oLD; window.loadIncomeData = oLID; window.saveData = oSD; window.saveIncomeData = oSID;
+    delete window.__realLoadData;
+  }
+  function wrap(name){
+    var f = window[name];
+    if (typeof f !== 'function' || f._lt) return;
+    var w = function(){ enter(); try { return f.apply(this, arguments); } finally { leave(); } };
+    w._lt = 1; window[name] = w;
+  }
+  function hook(){ EXP.concat(INC).forEach(wrap); }
+  hook();
+  var n = 0, t = setInterval(function(){ hook(); if (++n > 40) clearInterval(t); }, 500);
+})();
+</script>
 </body>
 </html>
