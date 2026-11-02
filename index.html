@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.11.0')) {
+          if (!key.startsWith('mel-v2.11.1')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -4246,7 +4246,7 @@ window.trfRadialItems = function() {
   var GO = 'class="mel-upd-go"';
   window.melCheckUpdate = function(btn){
     var cur = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '0';
-    var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+    var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
     var isLocal = !isApp && /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
     btn.disabled = true; var lbl = btn.innerHTML; btn.innerHTML = '&#8635; Checking…';
     var done = function(){ btn.disabled = false; btn.innerHTML = lbl; };
@@ -4273,7 +4273,7 @@ window.trfRadialItems = function() {
         done();
         var m = html.match(/var APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
         var rem = m ? m[1] : null;
-        if (rem && vnum(rem) > vnum(cur)) setOut(btn, '<b class="mel-upd-new">v' + rem + ' available</b> <button ' + GO + ' onclick="if(typeof _applyUpdate===\'function\')_applyUpdate();else location.reload();">Update now</button>');
+        if (rem && vnum(rem) > vnum(cur)) setOut(btn, '<b class="mel-upd-new">v' + rem + ' available</b> <button ' + GO + ' onclick="if(window.melReloadFresh)melReloadFresh();else location.reload();">Update now</button>');
         else setOut(btn, '&#10003; Up to date (v' + cur + ')');
       })
       .catch(function(){ done(); setOut(btn, 'Couldn\'t check. Are you offline?'); });
@@ -18819,7 +18819,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.11.0';
+var APP_VERSION = '2.11.1';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -22828,6 +22828,49 @@ syncInit();
   function hook(){ EXP.concat(INC).forEach(wrap); }
   hook();
   var n = 0, t = setInterval(function(){ hook(); if (++n > 40) clearInterval(t); }, 500);
+})();
+</script>
+<script>
+// Update-ready banner: compares the running APP_VERSION with the live one, offers one-tap reload
+(function(){
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) || location.protocol === 'file:') return;
+  var last = 0, shown = false;
+  function cmp(a, b){
+    var x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+    for (var i = 0; i < Math.max(x.length, y.length); i++) { var d = (x[i] || 0) - (y[i] || 0); if (d) return d; }
+    return 0;
+  }
+  function reloadFresh(){
+    var p = [];
+    if ('caches' in window) p.push(caches.keys().then(function(ks){ return Promise.all(ks.filter(function(k){ return /^mel-v/.test(k); }).map(function(k){ return caches.delete(k); })); }));
+    if (navigator.serviceWorker) p.push(navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(r){ return r.update().catch(function(){}); })); }));
+    Promise.all(p).catch(function(){}).then(function(){ location.reload(); });
+  }
+  window.melReloadFresh = reloadFresh;
+  function banner(v){
+    if (shown) return; shown = true;
+    var b = document.createElement('div');
+    b.id = 'mel-upd-banner';
+    b.style.cssText = 'position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:999999;display:flex;align-items:center;gap:10px;background:var(--ink,#1a1410);color:var(--paper,#fff);border:1.5px solid var(--gold,#c9a227);border-radius:24px;padding:8px 8px 8px 16px;box-shadow:0 6px 20px rgba(0,0,0,.35);font-family:"DM Mono",monospace;font-size:0.78rem;max-width:calc(100vw - 32px);';
+    b.innerHTML = '<span>&#10024; Update ready &middot; v' + v + '</span>' +
+      '<button id="mel-upd-go" style="background:var(--gold,#c9a227);color:var(--ink,#1a1410);border:none;border-radius:16px;padding:6px 14px;font-family:inherit;font-weight:700;font-size:0.76rem;cursor:pointer;">Reload</button>' +
+      '<button id="mel-upd-x" title="Later" style="background:none;border:none;color:inherit;opacity:.6;font-size:1rem;cursor:pointer;padding:0 6px;">&#10005;</button>';
+    document.body.appendChild(b);
+    document.getElementById('mel-upd-go').onclick = function(){ this.textContent = '…'; reloadFresh(); };
+    document.getElementById('mel-upd-x').onclick = function(){ b.remove(); };
+  }
+  function check(){
+    if (shown || typeof APP_VERSION === 'undefined') return;
+    if (Date.now() - last < 60000) return; last = Date.now();
+    fetch('/index.html?v=' + Date.now(), { cache: 'no-store' })
+      .then(function(r){ return r.ok ? r.text() : ''; })
+      .then(function(t){
+        var m = /APP_VERSION\s*=\s*['"]([\d.]+)['"]/.exec(t || '');
+        if (m && cmp(m[1], APP_VERSION) > 0) banner(m[1]);
+      }).catch(function(){});
+  }
+  setTimeout(check, 3000);
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') check(); });
 })();
 </script>
 </body>
