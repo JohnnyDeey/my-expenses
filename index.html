@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.11.1')) {
+          if (!key.startsWith('mel-v2.11.2')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18819,7 +18819,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.11.1';
+var APP_VERSION = '2.11.2';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -22403,7 +22403,7 @@ syncInit();
       b.style.padding = '2px'; b.style.display = 'inline-flex'; b.style.gap = '2px';
       function seg(icon, on){ return '<span style="display:inline-flex;padding:3px 6px;border-radius:9px;' + (on ? 'background:var(--gold);color:var(--ink);' : 'color:var(--gold2);opacity:.6;') + '">' + icon + '</span>'; }
       b.innerHTML = seg(ICON_DAY, !window._dlWeek) + seg(ICON_WEEK, window._dlWeek);
-      b.title = window._dlWeek ? 'Switch to Day' : 'Switch to Week';
+      b.title = window._dlWeek ? 'Switch to Day (D)' : 'Switch to Week (W)';
     }
     if (inp && w) {
       inp.style.display = window._dlWeek ? 'none' : '';
@@ -22412,6 +22412,35 @@ syncInit();
     }
   }
   window.dlToggleWeek = function(){ window._dlWeek = !window._dlWeek; setHead(); runDateLookup(); };
+  window.addEventListener('keydown', function(e){
+    var ov = document.getElementById('date-lookup-overlay');
+    var tc = document.getElementById('trf-cal-overlay');
+    if (tc && getComputedStyle(tc).display !== 'none' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var t0 = e.target && e.target.tagName;
+      if (t0 !== 'INPUT' && t0 !== 'TEXTAREA' && t0 !== 'SELECT' && typeof trfCalShift === 'function') {
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        trfCalShift(e.key === 'ArrowLeft' ? -1 : 1);
+      }
+      return;
+    }
+    if (!ov || getComputedStyle(ov).display === 'none') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.getElementById('dl-wk-pop')) return;
+    var tg = e.target, tag = tg && tg.tagName, k = e.key || '';
+    var typing = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (tg && tg.isContentEditable));
+    if (k === 'ArrowLeft' || k === 'ArrowRight') {
+      if (typing && tg.id !== 'date-lookup-input') return;
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      shiftLookupDate(k === 'ArrowLeft' ? -1 : 1);
+      return;
+    }
+    if (typing) return;
+    var l = k.toLowerCase();
+    if (l !== 'd' && l !== 'w') return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    if (l === 'w' && !window._dlWeek) dlToggleWeek();
+    if (l === 'd' && window._dlWeek) dlToggleWeek();
+  }, true);
 
   // ---------- week results ----------
   var css = '<style>' +
@@ -22599,6 +22628,21 @@ syncInit();
     '.ln-tbl tr.extra td{background:#eef6ee;}' +
     '.ln-ok{color:var(--sage,#4a7);font-weight:700;}' +
     '.ln-no{color:#c0392b;font-weight:700;}' +
+    '.ln-title{font-size:0.95rem!important;}' +
+    '.ln-kpis{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))!important;gap:6px!important;}' +
+    '.ln-kpi{padding:6px 8px!important;}' +
+    '.ln-kpi span{font-size:0.54rem!important;}' +
+    '.ln-kpi b{font-size:0.8rem!important;}' +
+    '.ln-kpi.hi b{font-size:0.9rem!important;}' +
+    '.ln-kpi small{font-size:0.6rem!important;}' +
+    '.ln-btn{font-size:0.64rem!important;padding:4px 10px!important;}' +
+    '.ln-note,.ln-barlbl,.ln-ex{font-size:0.7rem!important;}' +
+    '.ln-card h4{font-size:0.62rem!important;}' +
+    '.ln-form label{font-size:0.56rem!important;}' +
+    '.ln-form input,.ln-addex input,.ln-sel{font-size:0.74rem!important;padding:5px 7px!important;}' +
+    '.ln-tbl{font-size:0.7rem!important;min-width:480px!important;}' +
+    '.ln-tbl th{font-size:0.54rem!important;padding:6px 6px!important;}' +
+    '.ln-tbl td{padding:4px 6px!important;}' +
     '</style>';
 
   function kpi(lbl, val, hi){ return '<div class="ln-kpi' + (hi ? ' hi' : '') + '"><span>' + lbl + '</span><b>' + val + '</b></div>'; }
@@ -22632,19 +22676,20 @@ syncInit();
       h += '<div class="ln-card"><h4>LOAN DETAILS</h4><div class="ln-form">' +
         '<label>Name<input id="ln-f-name" value="' + esc(L.name) + '"></label>' +
         '<label>Received (\u20AC)<input id="ln-f-received" type="number" step="0.01" value="' + (L.received || '') + '"></label>' +
-        '<label>Fee financed (\u20AC)<input id="ln-f-fee" type="number" step="0.01" value="' + (L.fee || 0) + '"></label>' +
+        '<label>Insurance financed (\u20AC)<input id="ln-f-fee" type="number" step="0.01" value="' + (L.fee || 0) + '"></label>' +
         '<label>Initial capital (\u20AC)<input id="ln-f-capital" type="number" step="0.01" value="' + (L.capital || '') + '"></label>' +
         '<label>Interest TIN (%)<input id="ln-f-rate" type="number" step="0.01" value="' + (L.rate || '') + '"></label>' +
         '<label>Monthly payment (\u20AC)<input id="ln-f-payment" type="number" step="0.01" value="' + (L.payment || '') + '"></label>' +
         '<label>First payment date<input id="ln-f-first" type="date" value="' + (L.first || '') + '"></label>' +
         '<label>Expense category<input id="ln-f-cat" value="' + esc(L.cat || 'Loan repayment') + '"></label>' +
+        '<label>Insurance / fee refunded (\u20AC)<input id="ln-f-refund" type="number" step="0.01" value="' + (L.refund || 0) + '"></label>' +
         '</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;"><button class="ln-btn solid" onclick="lnSave()">Save</button>' +
         (LOANS.length > 1 ? '<button class="ln-btn del" onclick="lnDelLoan()">Delete loan</button>' : '') + '</div></div>';
     }
 
     h += '<div class="ln-kpis">' +
       kpi('Received', money(L.received)) +
-      kpi('Fee financed', money(L.fee)) +
+      kpi('insurance financed ', money(L.fee) + (L.refund ? ' <small style="font-size:.7rem;color:var(--sage,#4a7);">&minus;' + money(L.refund) + ' refunded</small>' : '')) +
       kpi('Owed at start', money(L.capital)) +
       kpi('Paid so far', money(sum(past, 'pay'))) +
       kpi('Interest paid', money(sum(past, 'int'))) +
@@ -22653,7 +22698,8 @@ syncInit();
       kpi('Payments', cuPast + ' / ' + cu.length) +
       kpi('Paid off', rows.length ? fmon(rows[rows.length - 1].date) : '-') +
       kpi('Interest to come', money(sum(fut, 'int'))) +
-      kpi('Other charges', money(extraRec.reduce(function(s, e){ return s + Math.abs(+e.amount); }, 0))) +
+      kpi('Other charges', money(extraRec.reduce(function(s, e){ return s + (+e.amount || 0); }, 0))) +
+            kpi('Total cost of loan', money(r2(sum(past, 'int') + (+L.fee || 0) - (+L.refund || 0) + extraRec.reduce(function(s, e){ return s + (+e.amount || 0); }, 0))), true) +
       '</div>';
     h += '<div class="ln-bar"><i style="width:' + pct.toFixed(1) + '%"></i></div><div class="ln-barlbl">' + pct.toFixed(1) + '% repaid' + (nextRow ? ' &middot; next: ' + money(nextRow.pay) + ' on ' + fdate(nextRow.date) : '') + '</div>';
 
@@ -22695,6 +22741,7 @@ syncInit();
     L.payment = num('ln-f-payment') || 0;
     L.first = val('ln-f-first') || L.first;
     L.cat = val('ln-f-cat') || 'Loan repayment';
+    L.refund = num('ln-f-refund') || 0;
     EDIT = false; save(); if (typeof showToast === 'function') showToast('Loan saved'); render();
   };
   window.lnNew = function(){
@@ -22734,7 +22781,8 @@ syncInit();
           }
         }
       });
-      if (+L.fee > 0) add.push({ id: 'loanfee-' + L.id, date: (L.first || '').slice(0, 8) + '01', desc: (L.name || 'Loan') + ' fee', amount: +L.fee, category: 'Loan interest & fees', currency: L.currency || 'EUR' });
+      var netFee = r2((+L.fee || 0) - (+L.refund || 0));
+      if (netFee > 0) add.push({ id: 'loanfee-' + L.id, date: (L.first || '').slice(0, 8) + '01', desc: (L.name || 'Loan') + ' insurance / fee (net)', amount: netFee, category: 'Loan interest & fees', currency: L.currency || 'EUR' });
     });
     var out = [];
     data.forEach(function(e, i){
