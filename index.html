@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.12.0')) {
+          if (!key.startsWith('mel-v2.12.1')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18819,7 +18819,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.12.0';
+var APP_VERSION = '2.12.1';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -23455,6 +23455,18 @@ syncInit();
 // Personal loans, auto-detected: kept out of income & expense totals; listed in Budget -> Personal. Never edits entries.
 (function(){
   var OFF = null, OK = '', pulled = false, CUR = null;
+  function MODE(){ try { return localStorage.getItem('pl_mode') || 'review'; } catch(e){ return 'review'; } }
+  window.plMode = function(m){ try { localStorage.setItem('pl_mode', m); } catch(e) {} plRender(); };
+  function PF(){ try { return JSON.parse(localStorage.getItem('pl_filter')) || { sort: 'asc', y: 'all', m: 'all' }; } catch(e){ return { sort: 'asc', y: 'all', m: 'all' }; } }
+  window.plF = function(k, v){ var f = PF(); f[k] = v; try { localStorage.setItem('pl_filter', JSON.stringify(f)); } catch(e) {} plRender(); };
+  function fshort(s){ return s ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(2, 4) : ''; }
+  function barCtl(list){
+    var f = PF(), ys = {}; list.forEach(function(e){ if (e.date) ys[e.date.slice(0, 4)] = 1; });
+    var M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '<button class="pd-ico" title="' + (f.sort === 'asc' ? 'Oldest first (tap for latest first)' : 'Latest first (tap for oldest first)') + '" onclick="plF(\'sort\',\'' + (f.sort === 'asc' ? 'desc' : 'asc') + '\')">' + (f.sort === 'asc' ? '&#8593;' : '&#8595;') + '</button>' +
+      '<select onchange="plF(\'y\', this.value)"><option value="all">All years</option>' + Object.keys(ys).sort().reverse().map(function(y){ return '<option' + (y === f.y ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select>' +
+      '<select onchange="plF(\'m\', this.value)"><option value="all">All months</option>' + M.map(function(m, i){ var v = String(i + 1).padStart(2, '0'); return '<option value="' + v + '"' + (v === f.m ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select>';
+  }
   var RX = /\bloans?\b|\blent\b|\blend(ing)?\b|\bborrow(ed|ing)?\b/i;
 
   function KEY(){ return 'mel_loandetect_' + (window._userId || ''); }
@@ -23536,6 +23548,15 @@ syncInit();
     '.pd-title{font-family:"Playfair Display",serif;font-size:0.95rem;font-weight:700;color:var(--ink);margin-bottom:4px;}' +
     '.pd-note{font-size:0.7rem;color:var(--muted);margin-bottom:10px;line-height:1.4;}' +
     '.pd-bar{display:flex;gap:6px;align-items:center;margin-bottom:10px;}' +
+    '.pd-bar:empty{display:none;}' +
+    '.pd-info{margin-bottom:10px;}' +
+    '.pd-info>summary{list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer;}' +
+    '.pd-info>summary::-webkit-details-marker{display:none;}' +
+    '.pd-info .pd-title{margin:0;}' +
+    '.pd-i{margin-left:auto;font-family:"DM Mono",monospace;font-size:0.6rem;font-weight:700;color:var(--ink);border:1.5px solid var(--gold);border-radius:12px;padding:3px 9px;white-space:nowrap;}' +
+    '.pd-info[open] .pd-i{background:var(--gold);}' +
+    '.pd-info .pd-note{margin:8px 0 0;}' +
+    '.pd-bar .pd-back{margin:0;}' +
     '.pd-bar select{font-family:"DM Mono",monospace;font-size:0.74rem;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;background:white;}' +
     '.pd-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;}' +
     '.pd-kpi{background:white;border:1px solid var(--border);border-top:3px solid var(--gold);border-radius:8px;padding:8px 10px;font-family:"DM Mono",monospace;min-width:0;}' +
@@ -23565,6 +23586,53 @@ syncInit();
         '<span class="a">' + money(+e.amount || 0, e.currency || 'EUR') + '</span></label>';
     }).join('') || '<div class="pd-row"><span class="t" style="color:var(--muted);">None found.</span></div>';
   }
+  function finalTable(incC, expC, off){
+    var css2 = '<style>' +
+      '.pd-tw{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;border:1px solid var(--border);margin-bottom:10px;}' +
+      '.pd-t{width:100%;border-collapse:collapse;font-family:"DM Mono",monospace;font-size:0.72rem;}' +
+      '.pd-t th{background:var(--ink);color:var(--paper);font-size:0.58rem;letter-spacing:1px;padding:8px 8px;text-align:right;white-space:nowrap;position:sticky;top:0;}' +
+      '.pd-t th:nth-child(-n+2),.pd-t td:nth-child(-n+2){text-align:left;}' +
+      '.pd-t th:first-child,.pd-t td:first-child{position:sticky;left:0;z-index:2;box-shadow:2px 0 4px rgba(0,0,0,.06);}' +
+      '.pd-t th:first-child{z-index:3;}' +
+      '.pd-t td:first-child{font-size:0.64rem;padding-right:6px;}' +
+      '.pd-ico{border:1.5px solid var(--gold);background:white;border-radius:12px;padding:3px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;color:var(--ink);flex-shrink:0;}' +
+      '.pd-bar{flex-wrap:nowrap;overflow-x:auto;}' +
+      '.pd-bar select{min-width:0;font-size:0.7rem!important;padding:5px 6px!important;}' +
+      '.pd-t td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;color:var(--ink);}' +
+      '.pd-t td:nth-child(2){max-width:150px;overflow:hidden;text-overflow:ellipsis;font-family:"DM Sans",sans-serif;cursor:pointer;}' +
+      '.pd-t td.full{white-space:normal;max-width:220px;word-break:break-word;}' +
+      '.pd-t td small{display:block;font-family:"DM Mono",monospace;font-size:0.56rem;color:var(--muted);}' +
+      '.pd-t tbody tr:nth-child(odd) td{background:#ffffff;}' +
+      '.pd-t tbody tr:nth-child(even) td{background:#f6efe1;}' +
+      '.pd-t .in{color:var(--sage,#4a7);font-weight:700;}' +
+      '.pd-t .out{color:#c0392b;font-weight:700;}' +
+      '.pd-t .net{color:var(--muted);}' +
+      '.pd-t tfoot td{font-weight:700;background:#efe3c8;border-top:2px solid var(--ink);border-bottom:none;}' +
+      '.pd-go{display:block;width:100%;margin:4px 0 12px;border:none;background:var(--gold);color:var(--ink);border-radius:18px;padding:9px;font-family:"DM Mono",monospace;font-size:0.72rem;font-weight:700;cursor:pointer;}' +
+      '.pd-back{background:none;border:1.5px solid var(--gold);border-radius:14px;padding:4px 11px;font-family:"DM Mono",monospace;font-size:0.64rem;font-weight:700;color:var(--ink);cursor:pointer;margin-bottom:8px;}' +
+      '</style>';
+    var rows = incC.filter(function(e){ return !off[keyOf('inc', e)]; }).map(function(e){ return { e: e, s: 'in' }; })
+      .concat(expC.filter(function(e){ return !off[keyOf('exp', e)]; }).map(function(e){ return { e: e, s: 'out' }; }))
+      .sort(function(a, b){ return (a.e.date || '').localeCompare(b.e.date || ''); });
+    var f = PF();
+    rows = rows.filter(function(r){ var d = r.e.date || ''; return (f.y === 'all' || d.slice(0, 4) === f.y) && (f.m === 'all' || d.slice(5, 7) === f.m); });
+    var run = 0, tin = 0, tout = 0;
+    rows.forEach(function(r){ var a = +r.e.amount || 0; if (r.s === 'in') { run += a; tin += a; } else { run -= a; tout += a; } r.net = run; });
+    if (f.sort === 'desc') rows.reverse();
+    var body = rows.map(function(r){
+      var a = +r.e.amount || 0, c = r.e.currency || 'EUR';
+
+      return '<tr><td>' + fshort(r.e.date) + '</td>' +
+        '<td onclick="this.classList.toggle(\'full\')" title="' + esc(r.e.desc) + '">' + esc(r.e.desc) + '<small>' + esc(r.e.category) + '</small></td>' +
+        '<td class="in">' + (r.s === 'in' ? money(a, c) : '') + '</td>' +
+        '<td class="out">' + (r.s === 'out' ? money(a, c) : '') + '</td>' +
+        '<td class="net">' + (r.net < 0 ? '&minus;' : '') + money(Math.abs(r.net), c) + '</td></tr>';
+    }).join('');
+    return css2 +
+      '<div class="pd-tw"><table class="pd-t"><thead><tr><th>DATE</th><th>DESCRIPTION</th><th>IN</th><th>OUT</th><th>NET</th></tr></thead><tbody>' +
+      (body || '<tr><td colspan="5" style="text-align:center;color:var(--muted);">No entries.</td></tr>') +
+      '</tbody><tfoot><tr><td colspan="2">Total &middot; ' + rows.length + ' entries</td><td class="in">' + money(tin, CUR) + '</td><td class="out">' + money(tout, CUR) + '</td><td>' + (tin - tout < 0 ? '&minus;' : '') + money(Math.abs(tin - tout), CUR) + '</td></tr></tfoot></table></div>';
+  }
   window.plRender = function(){
     var p = document.getElementById('panel-budget'); if (!p) return;
     var v = document.getElementById('pl-view');
@@ -23581,16 +23649,18 @@ syncInit();
     var expC = exp.filter(function(e){ return (e.currency || 'EUR') === CUR; }).sort(function(a, b){ return (b.date || '').localeCompare(a.date || ''); });
     function tot(list, side){ return list.reduce(function(s, e){ return s + (off[keyOf(side, e)] ? 0 : (+e.amount || 0)); }, 0); }
     var tin = tot(incC, 'inc'), tout = tot(expC, 'exp'), net = tin - tout;
-    var h = css + '<div class="pd-title">&#129309; Personal loans</div>' +
-      '<div class="pd-note">Found automatically: income in a "loan" category, and any entry whose description mentions <i>loan, lent, lend</i> or <i>borrow</i>. Ticked entries are <b>left out of your income and expense totals</b>. Untick any that is not really a loan. Your entries are never changed. The Santander loan is handled in the Loans tab.</div>' +
-      (cl.length > 1 ? '<div class="pd-bar"><select onchange="plCur(this.value)">' + cl.map(function(c){ return '<option' + (c === CUR ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></div>' : '') +
+    var h = css + '<details class="pd-info"><summary><span class="pd-title">&#129309; Personal loans</span><span class="pd-i">&#9432; How it works</span></summary>' +
+      '<div class="pd-note">Found automatically: income in a "loan" category, and any entry whose description mentions <i>loan, lent, lend</i> or <i>borrow</i>. Ticked entries are <b>left out of your income and expense totals</b>. Untick any that is not really a loan. Your entries are never changed. The Santander loan is handled in the Loans tab.</div></details>' +
+      '<div class="pd-bar">' + (cl.length > 1 ? '<select onchange="plCur(this.value)">' + cl.map(function(c){ return '<option' + (c === CUR ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select>' : '') + (MODE() === 'final' ? barCtl(incC.concat(expC)) + '<button class="pd-back" onclick="plMode(\'review\')">&#9998; Edit</button>' : '') + '</div>' +
       '<div class="pd-kpis">' +
         '<div class="pd-kpi"><span>Money in</span><b>' + money(tin, CUR) + '</b><small>borrowed / refunded to me</small></div>' +
         '<div class="pd-kpi" style="border-top-color:#3b7dd8"><span>Money out</span><b>' + money(tout, CUR) + '</b><small>lent / repaid by me</small></div>' +
         '<div class="pd-kpi" style="border-top-color:' + (net >= 0 ? '#c0392b' : 'var(--sage,#5a9e6f)') + '"><span>Difference</span><b>' + money(Math.abs(net), CUR) + '</b><small>' + (Math.abs(net) < 0.005 ? 'in = out' : (net > 0 ? 'more came in than went out' : 'more went out than came in')) + '</small></div>' +
       '</div>' +
-      '<div class="pd-sec"><h4><span>&#8595; MONEY IN &middot; INCOME</span><span>' + incC.length + '</span></h4>' + rowsFor(incC, 'inc') + '</div>' +
-      '<div class="pd-sec"><h4><span>&#8593; MONEY OUT &middot; EXPENSES</span><span>' + expC.length + '</span></h4>' + rowsFor(expC, 'exp') + '</div>';
+      (MODE() === 'final' ? finalTable(incC, expC, off) :
+        '<div class="pd-sec"><h4><span>&#8595; MONEY IN &middot; INCOME</span><span>' + incC.length + '</span></h4>' + rowsFor(incC, 'inc') + '</div>' +
+        '<div class="pd-sec"><h4><span>&#8593; MONEY OUT &middot; EXPENSES</span><span>' + expC.length + '</span></h4>' + rowsFor(expC, 'exp') + '</div>' +
+        '<button class="pd-go" onclick="plMode(\'final\')">&#10003; Data confirmed: show table</button>');
     v.innerHTML = h;
   };
   window.plCur = function(c){ CUR = c; plRender(); };
