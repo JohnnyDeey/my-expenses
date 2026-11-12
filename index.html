@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.12.1')) {
+          if (!key.startsWith('mel-v2.11.6')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18819,7 +18819,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.12.1';
+var APP_VERSION = '2.11.6';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -22860,8 +22860,9 @@ syncInit();
     oLD = window.loadData; oLID = window.loadIncomeData; oSD = window.saveData; oSID = window.saveIncomeData;
     window.__realLoadData = oLD;
     window.__realLoadIncomeData = oLID;
-    if (oLD && window.melLoanAdjustExp) window.loadData = function(){ return melLoanAdjustExp(oLD.apply(this, arguments)); };
-    if (oLID && window.melLoanAdjustInc) window.loadIncomeData = function(){ return melLoanAdjustInc(oLID.apply(this, arguments)); };
+    var cE = null, cI = null;
+    if (oLD && window.melLoanAdjustExp) window.loadData = function(){ if (!cE) cE = melLoanAdjustExp(oLD.apply(this, arguments)); return cE.slice(); };
+    if (oLID && window.melLoanAdjustInc) window.loadIncomeData = function(){ if (!cI) cI = melLoanAdjustInc(oLID.apply(this, arguments)); return cI.slice(); };
     window.saveData = function(){ console.warn('saveData blocked inside a totals view'); };
     window.saveIncomeData = function(){ console.warn('saveIncomeData blocked inside a totals view'); };
   }
@@ -23509,7 +23510,13 @@ syncInit();
     out[nrm('Loan interest & fees')] = 1;
     return out;
   }
-  function bankLoans(){ try { return JSON.parse(localStorage.getItem('mel_loans_' + (window._userId || ''))) || []; } catch(e){ return []; } }
+  var _blC = null, _blT = 0;
+  function bankLoans(){
+    var now = Date.now();
+    if (_blC && now - _blT < 3000) return _blC;
+    try { _blC = JSON.parse(localStorage.getItem('mel_loans_' + (window._userId || ''))) || []; } catch(e){ _blC = []; }
+    _blT = now; return _blC;
+  }
   function bankEntry(e, side){
     var a = +e.amount || 0;
     return bankLoans().some(function(L){
@@ -23651,7 +23658,7 @@ syncInit();
     var tin = tot(incC, 'inc'), tout = tot(expC, 'exp'), net = tin - tout;
     var h = css + '<details class="pd-info"><summary><span class="pd-title">&#129309; Personal loans</span><span class="pd-i">&#9432; How it works</span></summary>' +
       '<div class="pd-note">Found automatically: income in a "loan" category, and any entry whose description mentions <i>loan, lent, lend</i> or <i>borrow</i>. Ticked entries are <b>left out of your income and expense totals</b>. Untick any that is not really a loan. Your entries are never changed. The Santander loan is handled in the Loans tab.</div></details>' +
-      '<div class="pd-bar">' + (cl.length > 1 ? '<select onchange="plCur(this.value)">' + cl.map(function(c){ return '<option' + (c === CUR ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select>' : '') + (MODE() === 'final' ? barCtl(incC.concat(expC)) + '<button class="pd-back" onclick="plMode(\'review\')">&#9998; Edit</button>' : '') + '</div>' +
+      '<div class="pd-bar">' + (cl.length > 1 ? '<select onchange="plCur(this.value)">' + cl.map(function(c){ return '<option' + (c === CUR ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select>' : '') + (MODE() === 'final' ? barCtl(incC.concat(expC)) + '<button class="pd-back" onclick="plMode(\'review\')">&#9998</button>' : '') + '</div>' +
       '<div class="pd-kpis">' +
         '<div class="pd-kpi"><span>Money in</span><b>' + money(tin, CUR) + '</b><small>borrowed / refunded to me</small></div>' +
         '<div class="pd-kpi" style="border-top-color:#3b7dd8"><span>Money out</span><b>' + money(tout, CUR) + '</b><small>lent / repaid by me</small></div>' +
