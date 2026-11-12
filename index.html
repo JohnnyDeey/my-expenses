@@ -23658,7 +23658,7 @@ syncInit();
     var tin = tot(incC, 'inc'), tout = tot(expC, 'exp'), net = tin - tout;
     var h = css + '<details class="pd-info"><summary><span class="pd-title">&#129309; Personal loans</span><span class="pd-i">&#9432; How it works</span></summary>' +
       '<div class="pd-note">Found automatically: income in a "loan" category, and any entry whose description mentions <i>loan, lent, lend</i> or <i>borrow</i>. Ticked entries are <b>left out of your income and expense totals</b>. Untick any that is not really a loan. Your entries are never changed. The Santander loan is handled in the Loans tab.</div></details>' +
-      '<div class="pd-bar">' + (cl.length > 1 ? '<select onchange="plCur(this.value)">' + cl.map(function(c){ return '<option' + (c === CUR ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select>' : '') + (MODE() === 'final' ? barCtl(incC.concat(expC)) + '<button class="pd-back" onclick="plMode(\'review\')">&#9998</button>' : '') + '</div>' +
+      '<div class="pd-bar">' + (cl.length > 1 ? '<select onchange="plCur(this.value)">' + cl.map(function(c){ return '<option' + (c === CUR ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select>' : '') + (MODE() === 'final' ? barCtl(incC.concat(expC)) + '<button class="pd-back" onclick="plMode(\'review\')">&#9998;</button>' : '') + '</div>' +
       '<div class="pd-kpis">' +
         '<div class="pd-kpi"><span>Money in</span><b>' + money(tin, CUR) + '</b><small>borrowed / refunded to me</small></div>' +
         '<div class="pd-kpi" style="border-top-color:#3b7dd8"><span>Money out</span><b>' + money(tout, CUR) + '</b><small>lent / repaid by me</small></div>' +
