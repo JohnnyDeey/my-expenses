@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.11.3')) {
+          if (!key.startsWith('mel-v2.11.4')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18819,7 +18819,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.11.3';
+var APP_VERSION = '2.11.4';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -22987,6 +22987,17 @@ syncInit();
     '.cmp-t tbody tr:nth-child(odd) td{background:#ffffff;}' +
     '.cmp-t tbody tr:nth-child(even) td{background:#f6efe1;}' +
     '.cmp-t tfoot td{font-weight:700;background:#efe3c8;border-top:2px solid var(--ink);border-bottom:none;}' +
+    '@media(min-width:900px){' +
+      '.cmp-root{max-width:1180px;}' +
+      '.cmp-top{max-width:560px;}' +
+      '.cmp-chips{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}' +
+      '.cmp-kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}' +
+      '.cmp-adds{display:inline-grid;grid-template-columns:repeat(4,auto);width:auto;}' +
+      '.cmp-adds button{padding:6px 16px;}' +
+      '.cmp-canvas{height:300px;}' +
+      '.cmp-t td:first-child,.cmp-t th:first-child{max-width:none;}' +
+      '.cmp-t{font-size:0.78rem;}' +
+    '}' +
     '</style>';
 
   function makeCompare(cfg){
