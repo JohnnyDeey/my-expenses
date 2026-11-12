@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.11.6')) {
+          if (!key.startsWith('mel-v2.12.2')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -1907,6 +1907,32 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
       setTimeout(function(){ h.classList.remove('trf-boot'); }, 8000);
     }
     if (css) { var s = document.createElement('style'); s.id = 'boot-css'; s.textContent = css; document.head.appendChild(s); }
+  } catch(e) {}
+})();
+</script>
+<script>
+// Boot: on reload while signed in, hide the default (Import) tab until the remembered tab is active
+(function(){
+  try {
+    if (sessionStorage.getItem('screen_state') !== 'app') return;
+    var mode = localStorage.getItem('expense_app_mode') || 'expenses';
+    if (mode === 'transfers') return;
+    var tab = mode === 'income' ? localStorage.getItem('expense_active_inc_tab') : localStorage.getItem('expense_active_tab');
+    if (!tab || (mode === 'expenses' && tab === 'import')) return;
+    var want = 'panel-' + tab;
+    var st = document.createElement('style');
+    st.id = 'tab-boot-css';
+    st.textContent = 'html.tab-boot .panel:not(#' + want + '){visibility:hidden!important;}';
+    document.head.appendChild(st);
+    document.documentElement.classList.add('tab-boot');
+    function release(){ document.documentElement.classList.remove('tab-boot'); var s = document.getElementById('tab-boot-css'); if (s) s.remove(); }
+    var t0 = Date.now();
+    (function wait(){
+      var a = document.getElementById(want);
+      if (a && a.classList.contains('active')) return release();
+      if (Date.now() - t0 > 3000) return release();
+      setTimeout(wait, 50);
+    })();
   } catch(e) {}
 })();
 </script>
@@ -18819,7 +18845,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.11.6';
+var APP_VERSION = '2.12.2';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
