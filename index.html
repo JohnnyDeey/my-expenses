@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.12.5')) {
+          if (!key.startsWith('mel-v2.12.7')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -2811,7 +2811,6 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
 
   <!-- Month selector -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
-    <span class="filter-label">View month:</span>
     <select id="budget-year" onchange="budgetYearChanged()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;"></select>
     <select id="budget-month" onchange="renderBudget()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;"></select>
     <select id="budget-currency" onchange="renderBudget()" style="font-family:'DM Mono',monospace;font-size:0.78rem;padding:7px 12px;border:1.5px solid var(--border);border-radius:3px;background:white;outline:none;">
@@ -2820,7 +2819,10 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
       <option value="USD">USD $</option>
       <option value="GBP">GBP £</option>
     </select>
-    <button class="btn btn-primary" style="padding:8px 16px;font-size:0.75rem;" onclick="generatePDFReport()">&#128196; PDF Report</button>
+    <button class="btn btn-primary" style="padding:8px 12px;font-size:0.75rem;display:inline-flex;align-items:center;gap:6px;" onclick="generatePDFReport()" title="Print report">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7" rx="1"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg>
+  Report
+</button>
   </div>
 
   <!-- Add custom category for budget -->
@@ -3012,7 +3014,9 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
       <button onclick="scrollIncDashCur(-1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">&#9664;</button>
       <div id="inc-dash-cur-strip-wrap" style="flex:1;overflow:hidden;min-width:0;"><div id="inc-dash-cur-strip" style="display:flex;gap:6px;transition:transform 0.25s ease;"></div></div>
       <button onclick="scrollIncDashCur(1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">&#9654;</button>
-      <button onclick="openPrintPicker('income')" style="padding:6px 14px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--sage);cursor:pointer;white-space:nowrap;letter-spacing:1px;flex-shrink:0;">&#128438;</button>
+      <button onclick="openPrintPicker('income')" title="Print report" style="padding:6px 10px;background:var(--ink);border:1.5px solid var(--sage);border-radius:4px;color:var(--sage);cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;line-height:1;">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7" rx="1"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg>
+</button>
     </div>
     <!-- Hidden selectors for JS compatibility -->
     <select id="inc-dash-year"         style="display:none;"></select>
@@ -3199,8 +3203,7 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
         <div class="btn btn-ghost" style="width:100%;padding:12px;justify-content:center;cursor:pointer;text-align:center;font-family:'DM Mono',monospace;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;">&#8593; Import Income CSV</div>
         <input type="file" accept=".csv" onchange="importIncomeCSV(event)" style="display:none;">
       </label>
-      <button class="btn btn-primary" style="width:100%;padding:12px;justify-content:center;margin-top:8px;" onclick="generateIncomePDFReport()">&#128196; PDF Report</button>
-    </div>
+          </div>
     <div class="card">
       <label>&#128465; Delete Data</label>
       <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.7;">Filter by year, month, or day. Deleted entries go to the Recycle Bin.</p>
@@ -18845,7 +18848,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.12.5';
+var APP_VERSION = '2.12.7';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -23340,186 +23343,6 @@ syncInit();
 })();
 </script>
 <script>
-// Personal loans (borrowed from / lent to people): balances in the Loans tab, excluded from income & expense totals. Never edits entries.
-(function(){
-  var PL = null, LK = '', pulled = false, EDIT = null;
-  function KEY(){ return 'mel_ploans_' + (window._userId || ''); }
-  function load(){
-    if (PL && LK === KEY()) return PL;
-    LK = KEY(); pulled = false;
-    try { PL = JSON.parse(localStorage.getItem(KEY())); } catch(e) {}
-    if (!Array.isArray(PL)) PL = [];
-    return PL;
-  }
-  function save(){
-    if (!window._userId) return;
-    var u = Date.now();
-    try { localStorage.setItem(KEY(), JSON.stringify(PL)); localStorage.setItem(KEY() + '_u', u); } catch(e) {}
-    try { if (window._db && typeof userCol === 'function') userCol('loans').doc('personal').set({ list: PL, u: u }).catch(function(e){ console.warn('Personal loans save:', e); }); } catch(e) {}
-  }
-  function pull(){
-    if (pulled || !window._db || !window._userId || typeof userCol !== 'function') return;
-    pulled = true;
-    userCol('loans').doc('personal').get().then(function(s){
-      if (!s.exists) return;
-      var d = s.data(), lu = +(localStorage.getItem(KEY() + '_u') || 0);
-      if (d && Array.isArray(d.list) && (d.u || 0) > lu) {
-        PL = d.list;
-        try { localStorage.setItem(KEY(), JSON.stringify(PL)); localStorage.setItem(KEY() + '_u', d.u); } catch(e) {}
-        paint();
-      }
-    }).catch(function(e){ console.warn('Personal loans load:', e); });
-  }
-
-  function nrm(s){ return String(s || '').replace(/&amp;/g, '&').toLowerCase().replace(/\s+/g, ' ').trim().replace(/s\b/g, ''); }
-  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-  function money(x, c){ var s = (window.SYMS && SYMS[c]) || ''; return s + (typeof fmtNum === 'function' ? fmtNum(Math.round(x * 100) / 100) : (+x).toFixed(2)); }
-  function fdate(s){ return s ? new Date(s + 'T00:00:00').toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) : ''; }
-  function kws(L){ return String(L.kw || '').split(',').map(function(s){ return s.trim().toLowerCase(); }).filter(Boolean); }
-  function hit(e, L, cat){
-    if ((e.currency || 'EUR') !== (L.cur || 'EUR')) return false;
-    if (cat && nrm(e.category) !== nrm(cat)) return false;
-    var d = String(e.desc || '').toLowerCase(), k = kws(L);
-    return k.length > 0 && k.some(function(w){ return d.indexOf(w) > -1; });
-  }
-  function realExp(){ var f = window.__realLoadData || window.loadData; return typeof f === 'function' ? f() : []; }
-  function realInc(){ var f = window.__realLoadIncomeData || window.loadIncomeData; return typeof f === 'function' ? f() : []; }
-  function figures(L){
-    var out = realExp().filter(function(e){ return hit(e, L, L.outCat); });
-    var inn = realInc().filter(function(e){ return hit(e, L, L.inCat); });
-    var so = out.reduce(function(s, e){ return s + (+e.amount || 0); }, 0);
-    var si = inn.reduce(function(s, e){ return s + (+e.amount || 0); }, 0);
-    var bal = L.dir === 'lent' ? so - si : si - so;
-    return { out: out, inn: inn, so: so, si: si, bal: Math.round(bal * 100) / 100 };
-  }
-
-  // ---------- keep these entries out of totals ----------
-  function adjExp(d){ load(); if (!PL.length || !Array.isArray(d)) return d; return d.filter(function(e){ return !PL.some(function(L){ return hit(e, L, L.outCat); }); }); }
-  function adjInc(d){ load(); if (!PL.length || !Array.isArray(d)) return d; return d.filter(function(e){ return !PL.some(function(L){ return hit(e, L, L.inCat); }); }); }
-  window.melPersonalOnlyExp = adjExp; window.melPersonalOnlyInc = adjInc;
-  function wrapAdj(){
-    [['melLoanAdjustExp', adjExp], ['melLoanAdjustInc', adjInc]].forEach(function(p){
-      var f = window[p[0]];
-      if (typeof f === 'function' && !f._pl) { var w = function(d){ return p[1](f(d)); }; w._pl = 1; window[p[0]] = w; }
-      else if (typeof f !== 'function') { var g = function(d){ return p[1](d); }; g._pl = 1; window[p[0]] = g; }
-    });
-  }
-
-  // ---------- view inside the Loans tab ----------
-  var css = '<style>' +
-    '#ploans{margin-top:16px;font-family:"DM Sans",sans-serif;}' +
-    '.pl-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;}' +
-    '.pl-head span{font-family:"Playfair Display",serif;font-size:0.95rem;font-weight:700;color:var(--ink);margin-right:auto;}' +
-    '.pl-btn{background:none;border:1.5px solid var(--gold);border-radius:14px;color:var(--ink);font-family:"DM Mono",monospace;font-size:0.64rem;font-weight:700;padding:4px 10px;cursor:pointer;}' +
-    '.pl-btn.solid{background:var(--gold);}' +
-    '.pl-btn.del{border-color:#c0392b;color:#c0392b;}' +
-    '.pl-card{background:white;border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:8px;padding:9px 11px;margin-bottom:8px;}' +
-    '.pl-card.lent{border-left-color:#3b7dd8;}' +
-    '.pl-card.done{opacity:.75;}' +
-    '.pl-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}' +
-    '.pl-top b{font-size:0.85rem;color:var(--ink);}' +
-    '.pl-tag{font-family:"DM Mono",monospace;font-size:0.56rem;font-weight:700;padding:2px 7px;border-radius:10px;background:#c9a22722;color:var(--ink);}' +
-    '.pl-card.lent .pl-tag{background:#3b7dd822;}' +
-    '.pl-top .pl-acts{margin-left:auto;display:flex;gap:4px;}' +
-    '.pl-nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px;}' +
-    '.pl-nums div{font-family:"DM Mono",monospace;}' +
-    '.pl-nums span{display:block;font-size:0.54rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}' +
-    '.pl-nums b{font-size:0.8rem;color:var(--ink);}' +
-    '.pl-nums .hi b{color:#c0392b;}' +
-    '.pl-nums .ok b{color:var(--sage,#4a7);}' +
-    '.pl-card details{margin-top:6px;}' +
-    '.pl-card summary{cursor:pointer;font-family:"DM Mono",monospace;font-size:0.62rem;color:var(--muted);}' +
-    '.pl-row{display:flex;gap:6px;font-family:"DM Mono",monospace;font-size:0.64rem;padding:3px 0;border-bottom:1px dashed var(--border);}' +
-    '.pl-row .d{color:var(--muted);white-space:nowrap;}' +
-    '.pl-row .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
-    '.pl-row .a{font-weight:700;white-space:nowrap;}' +
-    '.pl-form{background:#fffaf0;border:1px solid var(--gold);border-radius:8px;padding:10px;margin-bottom:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}' +
-    '.pl-form label{font-family:"DM Mono",monospace;font-size:0.56rem;color:var(--muted);display:flex;flex-direction:column;gap:3px;}' +
-    '.pl-form input,.pl-form select{font-family:"DM Mono",monospace;font-size:0.74rem;padding:5px 7px;border:1.5px solid var(--border);border-radius:4px;background:white;}' +
-    '.pl-form .acts{grid-column:1/-1;display:flex;gap:6px;}' +
-    '.pl-empty{font-size:0.74rem;color:var(--muted);background:white;border:1px dashed var(--border);border-radius:8px;padding:10px;}' +
-    '</style>';
-
-  function opts(list, sel, anyLbl){
-    return '<option value="">' + anyLbl + '</option>' + list.map(function(c){ return '<option value="' + esc(c) + '"' + (nrm(c) === nrm(sel) && sel ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('');
-  }
-  function form(L){
-    var expC = typeof getAllCategories === 'function' ? getAllCategories() : [];
-    var incC = typeof getAllIncomeCats === 'function' ? getAllIncomeCats() : [];
-    var curs = {}; realExp().concat(realInc()).forEach(function(e){ curs[e.currency || 'EUR'] = 1; });
-    return '<div class="pl-form">' +
-      '<label>Name<input id="pl-f-name" value="' + esc(L.name) + '" placeholder="e.g. Tunde"></label>' +
-      '<label>Direction<select id="pl-f-dir"><option value="borrowed"' + (L.dir !== 'lent' ? ' selected' : '') + '>I borrowed</option><option value="lent"' + (L.dir === 'lent' ? ' selected' : '') + '>I lent</option></select></label>' +
-      '<label>Keywords in description (comma-separated)<input id="pl-f-kw" value="' + esc(L.kw) + '" placeholder="e.g. Ousama, Oussama"></label>' +
-      '<label>Currency<select id="pl-f-cur">' + Object.keys(curs).sort().map(function(c){ return '<option' + (c === (L.cur || 'EUR') ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></label>' +
-      '<label>Expense category (money out)<select id="pl-f-out">' + opts(expC, L.outCat, '(any category)') + '</select></label>' +
-      '<label>Income category (money in)<select id="pl-f-in">' + opts(incC, L.inCat, '(any category)') + '</select></label>' +
-      '<div class="acts"><button class="pl-btn solid" onclick="plSave()">Save</button><button class="pl-btn" onclick="plCancel()">Cancel</button></div>' +
-      '</div>';
-  }
-  function card(L, i){
-    var f = figures(L), lent = L.dir === 'lent', c = L.cur || 'EUR';
-    var lbl = lent ? ['Lent', 'Refunded', 'Owed to me'] : ['Received', 'Repaid', 'I still owe'];
-    var a = lent ? f.so : f.si, b = lent ? f.si : f.so;
-    var done = Math.abs(f.bal) < 0.005, over = f.bal < -0.004;
-    var balTxt = done ? 'Settled &#10003;' : (over ? (lent ? 'Over-refunded ' : 'Over-repaid ') + money(-f.bal, c) : money(f.bal, c));
-    var rowsH = f.out.concat([]).map(function(e){ return { e: e, s: 'out' }; }).concat(f.inn.map(function(e){ return { e: e, s: 'in' }; }))
-      .sort(function(x, y){ return (x.e.date || '').localeCompare(y.e.date || ''); })
-      .map(function(r){ return '<div class="pl-row"><span class="d">' + fdate(r.e.date) + '</span><span class="t">' + (r.s === 'out' ? '&#8593; ' : '&#8595; ') + esc(r.e.desc) + '</span><span class="a">' + money(+r.e.amount || 0, c) + '</span></div>'; }).join('');
-    return '<div class="pl-card' + (lent ? ' lent' : '') + (done ? ' done' : '') + '">' +
-      '<div class="pl-top"><b>' + esc(L.name) + '</b><span class="pl-tag">' + (lent ? 'I lent' : 'I borrowed') + ' &middot; ' + esc(c) + '</span>' +
-      '<span class="pl-acts"><button class="pl-btn" onclick="plEdit(' + i + ')">&#9998;</button><button class="pl-btn del" onclick="plDel(' + i + ')">&#10005;</button></span></div>' +
-      '<div class="pl-nums"><div><span>' + lbl[0] + '</span><b>' + money(a, c) + '</b></div><div><span>' + lbl[1] + '</span><b>' + money(b, c) + '</b></div>' +
-      '<div class="' + (done ? 'ok' : 'hi') + '"><span>' + lbl[2] + '</span><b>' + balTxt + '</b></div></div>' +
-      '<details><summary>' + (f.out.length + f.inn.length) + ' matching entries (&#8593; out of my pocket &middot; &#8595; into my pocket)</summary>' + (rowsH || '<div class="pl-row"><span class="t">None found. Check the keywords, categories and currency.</span></div>') + '</details>' +
-      '</div>';
-  }
-  function html(){
-    load(); pull();
-    var h = css + '<div class="pl-head"><span>&#128101; Personal loans</span><button class="pl-btn solid" onclick="plEdit(\'new\')">+ Add</button></div>';
-    if (EDIT === 'new') h += form({ dir: 'borrowed', cur: 'EUR', inCat: 'Loan Received' });
-    else if (EDIT !== null && PL[EDIT]) h += form(PL[EDIT]);
-    if (!PL.length && EDIT === null) h += '<div class="pl-empty">Add money you borrowed from or lent to someone. Matching entries are found in your ledgers by name and category, and left out of your income and expense totals. Your entries are never changed.</div>';
-    h += PL.map(card).join('');
-    return h;
-  }
-  function paint(){
-    var lv = document.getElementById('loans-view');
-    if (!lv) return;
-    var c = document.getElementById('ploans');
-    if (!c) { c = document.createElement('div'); c.id = 'ploans'; lv.appendChild(c); }
-    c.innerHTML = html();
-  }
-  function val(id){ var e = document.getElementById(id); return e ? e.value.trim() : ''; }
-  window.plEdit = function(i){ EDIT = i; paint(); };
-  window.plCancel = function(){ EDIT = null; paint(); };
-  window.plSave = function(){
-    var L = { id: 'p' + Date.now(), name: val('pl-f-name'), dir: val('pl-f-dir') || 'borrowed', kw: val('pl-f-kw'), cur: val('pl-f-cur') || 'EUR', outCat: val('pl-f-out'), inCat: val('pl-f-in') };
-    if (!L.name) { if (typeof showToast === 'function') showToast('Enter a name'); return; }
-    if (!L.kw) L.kw = L.name;
-    load();
-    if (EDIT === 'new') PL.push(L); else { L.id = PL[EDIT].id; PL[EDIT] = L; }
-    EDIT = null; save(); paint();
-  };
-  window.plDel = function(i){
-    if (!confirm('Remove "' + PL[i].name + '" from personal loans? Your ledger entries are not affected; they will simply count in your totals again.')) return;
-    PL.splice(i, 1); save(); paint();
-  };
-
-  function hook(){
-    wrapAdj();
-    var lv = document.getElementById('loans-view');
-    if (lv && !lv._plObs) {
-      lv._plObs = new MutationObserver(function(){ if (!document.getElementById('ploans')) paint(); });
-      lv._plObs.observe(lv, { childList: true });
-      paint();
-    }
-  }
-  hook();
-  var n = 0, t = setInterval(function(){ hook(); if (++n > 60) clearInterval(t); }, 500);
-})();
-</script>
-<script>
 // Personal loans, auto-detected: kept out of income & expense totals; listed in Budget -> Personal. Never edits entries.
 (function(){
   var OFF = null, OK = '', pulled = false, CUR = null;
@@ -23608,6 +23431,7 @@ syncInit();
   // ---------- keep detected loans out of totals ----------
   function adjExp(d){ if (!Array.isArray(d) || !window._userId) return d; var bc = bankCats(); return d.filter(function(e){ return !counted(e, 'exp', bc) && !bankEntry(e, 'exp'); }); }
   function adjInc(d){ if (!Array.isArray(d) || !window._userId) return d; var bc = bankCats(); return d.filter(function(e){ return !counted(e, 'inc', bc); }); }
+  window.melPersonalOnlyExp = adjExp; window.melPersonalOnlyInc = adjInc;
   function wrapAdj(){
     [['melLoanAdjustExp', adjExp], ['melLoanAdjustInc', adjInc]].forEach(function(p){
       var f = window[p[0]];
@@ -23829,6 +23653,116 @@ syncInit();
   }
   hook();
   var n = 0, iv = setInterval(function(){ hook(); if (++n > 40) clearInterval(iv); }, 500);
+})();
+</script>
+<script>
+// Shortcuts: Dashboard D/C/P, Budget B/L/P  +  Import auto-selects the highlighted month
+(function(){
+  function vis(id){ var p = document.getElementById(id); return p && p.classList.contains('active') && p.offsetParent !== null; }
+  function overlayOpen(){
+    return [].some.call(document.querySelectorAll('#date-lookup-overlay, #trf-cal-overlay, #pin-overlay, #help-overlay'), function(o){
+      var cs = getComputedStyle(o);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return false;
+      var r = o.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+  }
+  window.addEventListener('keydown', function(e){
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var tg = e.target, tag = tg && tg.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (tg && tg.isContentEditable)) return;
+    if (overlayOpen()) return;
+    var k = (e.key || '').toLowerCase(), act = null;
+    if (vis('panel-dashboard')) {
+      if (k === 'd' && window.CMPX) act = function(){ CMPX.mode('dash'); };
+      if (k === 'c' && window.CMPX) act = function(){ CMPX.mode('cmp'); };
+      if (k === 'p' && typeof openPrintPicker === 'function') act = function(){ openPrintPicker('expenses'); };
+    } else if (vis('panel-inc-dashboard')) {
+      if (k === 'd' && window.CMPI) act = function(){ CMPI.mode('dash'); };
+      if (k === 'c' && window.CMPI) act = function(){ CMPI.mode('cmp'); };
+      if (k === 'p' && typeof openPrintPicker === 'function') act = function(){ openPrintPicker('income'); };
+    } else if (vis('panel-budget') && typeof blMode === 'function') {
+      if (k === 'b') act = function(){ blMode('budget'); };
+      if (k === 'l') act = function(){ blMode('loans'); };
+      if (k === 'p') act = function(){ blMode('personal'); };
+    }
+    if (!act) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    act();
+  }, true);
+
+    // ---------- Import: make sure the selected month's text is shown ----------
+  var MON = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)$/i;
+  function fill(p, fn){
+    if (!p || !p.classList.contains('active') || p._filling) return;
+    var ta = p.querySelector('textarea'); if (!ta || ta.value.trim()) return;
+    p._filling = 1; setTimeout(function(){ p._filling = 0; }, 800);
+    var sel = p.querySelector('.month-btn.selected');
+    if (sel) { if (typeof window[fn] === 'function') { try { window[fn](); } catch(e) { console.warn('import fill', e); } } return; }
+    var nowM = new Date().toLocaleDateString('en-GB', { month: 'short' }).slice(0, 3).toLowerCase();
+    var btn = [].find.call(p.querySelectorAll('.month-btn'), function(b){ return MON.test((b.textContent || '').trim()) && (b.textContent || '').trim().toLowerCase() === nowM; });
+    if (btn) btn.click();
+  }
+  var MAP = { 'panel-import': 'loadMonthIntoTextarea', 'panel-inc-import': 'loadIncomeMonthIntoTextarea' };
+  function watch(id){
+    var p = document.getElementById(id);
+    if (!p || p._apObs) return;
+    p._apObs = new MutationObserver(function(){ setTimeout(function(){ fill(p, MAP[id]); }, 60); });
+    p._apObs.observe(p, { attributes: true, attributeFilter: ['class'] });
+    setTimeout(function(){ fill(p, MAP[id]); }, 60);
+  }
+  function hook(){ Object.keys(MAP).forEach(watch); }
+  hook();
+  var n = 0, t = setInterval(function(){ hook(); Object.keys(MAP).forEach(function(id){ fill(document.getElementById(id), MAP[id]); }); if (++n > 20) clearInterval(t); }, 500);
+})();
+</script>
+<script>
+// Tab / Shift+Tab: move through tabs in the same order as the burger menu (Expenses and Income); land on each tab's main view
+(function(){
+  function mode(){ try { return localStorage.getItem('expense_app_mode') || 'expenses'; } catch(e){ return 'expenses'; } }
+  function menuOrder(m){
+    var box = document.getElementById(m === 'income' ? 'burger-inc-items' : 'burger-exp-items'), list = [];
+    if (box) [].forEach.call(box.querySelectorAll('[onclick]'), function(b){
+      var r = /switch(?:Income)?Tab\(\s*'([^']+)'/.exec(b.getAttribute('onclick') || '');
+      if (r && list.indexOf(r[1]) === -1) list.push(r[1]);
+    });
+    return list;
+  }
+  function shown(id){
+    var o = document.getElementById(id); if (!o) return false;
+    var cs = getComputedStyle(o);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return false;
+    var r = o.getBoundingClientRect(); return r.width > 0 && r.height > 0;
+  }
+  function mainView(tab){
+    try {
+      if (tab === 'budget') { localStorage.setItem('bl_mode', 'budget'); }
+      if (tab === 'dashboard') { localStorage.setItem('dash_mode', 'dash'); }
+      if (tab === 'inc-dashboard') { localStorage.setItem('inc_dash_mode', 'dash'); }
+    } catch(e) {}
+  }
+  window.addEventListener('keydown', function(e){
+    if (e.key !== 'Tab' || e.ctrlKey || e.altKey || e.metaKey) return;
+    var m = mode(); if (m === 'transfers') return;
+    var tg = e.target, tag = tg && tg.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (tg && tg.isContentEditable)) return;
+    if (shown('date-lookup-overlay') || shown('trf-cal-overlay')) return;
+    var list = menuOrder(m); if (list.length < 2) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    if (e.repeat) return;
+    var act = document.querySelector(m === 'income' ? '#income-main .panel.active' : 'main > .panel.active');
+    var cur = act ? act.id.replace(/^panel-/, '') : list[0];
+    var i = list.indexOf(cur);
+    var next = list[((i < 0 ? 0 : i) + (e.shiftKey ? -1 : 1) + list.length) % list.length];
+    mainView(next);
+    if (m === 'income') { if (typeof switchIncomeTab === 'function') switchIncomeTab(next, null); }
+    else { if (typeof switchTab === 'function') switchTab(next, null); }
+    setTimeout(function(){
+      if (next === 'budget' && typeof blMode === 'function') blMode('budget');
+      if (next === 'dashboard' && window.CMPX) CMPX.mode('dash');
+      if (next === 'inc-dashboard' && window.CMPI) CMPI.mode('dash');
+    }, 0);
+  }, true);
 })();
 </script>
 </body>
