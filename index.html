@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.12.4')) {
+          if (!key.startsWith('mel-v2.12.5')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18845,7 +18845,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.12.4';
+var APP_VERSION = '2.12.5';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -22878,7 +22878,7 @@ syncInit();
 <script>
 // Totals see loan-adjusted data; listing screens keep the real data. Saving is blocked while adjusted.
 (function(){
-  var EXP = ['renderMonthPicker','updateHeaderContext','updateMonthFilterPill','renderDashboard','buildDashCurStrip','updateHeader','renderBudget','printDashboard','generatePDFReport'];
+  var EXP = ['renderDailyView','renderMonthPicker','updateHeaderContext','updateMonthFilterPill','renderDashboard','buildDashCurStrip','updateHeader','renderBudget','printDashboard','generatePDFReport'];
   var INC = ['updateIncomeHeaderContext','renderIncomeMonthPicker','renderIncomeMonthly','renderIncomeDashboard','buildIncDashCurStrip','generateIncomePDFReport'];
   var depth = 0, oLD, oLID, oSD, oSID;
   var VER = 0, MEMO = { e: null, ek: '', i: null, ik: '' };
@@ -22915,7 +22915,28 @@ syncInit();
     var w = function(){ enter(); try { return f.apply(this, arguments); } finally { leave(); } };
     w._lt = 1; window[name] = w;
   }
-  function hook(){ EXP.concat(INC).forEach(wrap); }
+  var LIST = ['renderLedger','applyCatFilter','renderCategorizeTable','hdrSearchRun','runDateLookup','renderIncomeLedger','applyIncomeCatFilter','renderIncomeCatTable'];
+  var ldepth = 0, lLD, lLID;
+  function lenter(){
+    if (depth > 0 || ldepth++ > 0) return;
+    lLD = window.loadData; lLID = window.loadIncomeData;
+    window.__realLoadData = lLD; window.__realLoadIncomeData = lLID;
+    if (lLD && window.melPersonalOnlyExp) window.loadData = function(){ var k = VER + ':' + window._userId; if (MEMO.pk !== k || !MEMO.p) { MEMO.p = melPersonalOnlyExp(lLD.apply(this, arguments)); MEMO.pk = k; } return MEMO.p.slice(); };
+    if (lLID && window.melPersonalOnlyInc) window.loadIncomeData = function(){ var k = VER + ':' + window._userId; if (MEMO.pik !== k || !MEMO.pi) { MEMO.pi = melPersonalOnlyInc(lLID.apply(this, arguments)); MEMO.pik = k; } return MEMO.pi.slice(); };
+  }
+  function lleave(){
+    if (depth > 0) return;
+    if (--ldepth > 0) return;
+    window.loadData = lLD; window.loadIncomeData = lLID;
+    delete window.__realLoadData; delete window.__realLoadIncomeData;
+  }
+  function wrapList(name){
+    var f = window[name];
+    if (typeof f !== 'function' || f._lt2) return;
+    var w = function(){ lenter(); try { return f.apply(this, arguments); } finally { lleave(); } };
+    w._lt2 = 1; window[name] = w;
+  }
+  function hook(){ EXP.concat(INC).forEach(wrap); LIST.forEach(wrapList); }
   hook();
   var n = 0, t = setInterval(function(){ hook(); if (++n > 40) clearInterval(t); }, 500);
 })();
@@ -23375,6 +23396,7 @@ syncInit();
   // ---------- keep these entries out of totals ----------
   function adjExp(d){ load(); if (!PL.length || !Array.isArray(d)) return d; return d.filter(function(e){ return !PL.some(function(L){ return hit(e, L, L.outCat); }); }); }
   function adjInc(d){ load(); if (!PL.length || !Array.isArray(d)) return d; return d.filter(function(e){ return !PL.some(function(L){ return hit(e, L, L.inCat); }); }); }
+  window.melPersonalOnlyExp = adjExp; window.melPersonalOnlyInc = adjInc;
   function wrapAdj(){
     [['melLoanAdjustExp', adjExp], ['melLoanAdjustInc', adjInc]].forEach(function(p){
       var f = window[p[0]];
