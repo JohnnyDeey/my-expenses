@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.12.8')) {
+          if (!key.startsWith('mel-v2.12.9')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18848,7 +18848,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.12.8';
+var APP_VERSION = '2.12.9';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -24443,6 +24443,82 @@ syncInit();
     new MutationObserver(function(){ if (p.classList.contains('active')) later(); }).observe(p, { attributes: true, attributeFilter: ['class'] });
   });
   later();
+})();
+</script>
+<style>
+/* ===== 3D buttons: Expenses, Income and Transfers ===== */
+:root:not(#_a):not(#_b):not(#_c) :is(button,.btn):not(.mel-mysw button):not(.mg-ci):not([style*="background:none"]):not([style*="background: none"]):not([style*="transparent"]):not(:is(#burger-exp-items,#burger-inc-items,#burger-trf-items,.tabs) *):not(:disabled){
+  box-shadow:0 2px 0 rgba(60,45,20,.22),0 3px 6px rgba(60,45,20,.10),inset 0 1px 0 rgba(255,255,255,.55)!important;
+  transition:box-shadow .12s ease,translate .12s ease,filter .12s ease;
+}
+@media(hover:hover){
+  :root:not(#_a):not(#_b):not(#_c) :is(button,.btn):not(.mel-mysw button):not(.mg-ci):not([style*="background:none"]):not([style*="background: none"]):not([style*="transparent"]):not(:is(#burger-exp-items,#burger-inc-items,#burger-trf-items,.tabs) *):not(:disabled):hover{
+    translate:0 -1px;
+    box-shadow:0 3px 0 rgba(60,45,20,.22),0 6px 12px rgba(60,45,20,.12),inset 0 1px 0 rgba(255,255,255,.55)!important;
+  }
+}
+/* selected / on state looks pressed in */
+:root:not(#_a):not(#_b):not(#_c) :is(button,.btn):is(.on,.active,.selected):not(.mel-mysw button):not(.mg-ci):not([style*="background:none"]):not([style*="background: none"]):not([style*="transparent"]):not(:is(#burger-exp-items,#burger-inc-items,#burger-trf-items,.tabs) *){
+  translate:0 1px;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.18),0 1px 0 rgba(255,255,255,.4)!important;
+}
+/* pressing */
+:root:not(#_a):not(#_b):not(#_c) :is(button,.btn):not(.mel-mysw button):not(.mg-ci):not([style*="background:none"]):not([style*="background: none"]):not([style*="transparent"]):not(:is(#burger-exp-items,#burger-inc-items,#burger-trf-items,.tabs) *):not(:disabled):active{
+  translate:0 2px;
+  box-shadow:0 0 0 rgba(0,0,0,0),inset 0 2px 4px rgba(0,0,0,.2)!important;
+}
+
+/* ===== Income import: MONTH [year] YEAR on the year row ===== */
+#inc-mode-year-btn,#inc-mysw{display:none!important;}
+.year-nav button.mel-ym{width:auto!important;height:auto!important;min-width:0!important;border-radius:6px!important;padding:6px 12px!important;font-family:"DM Mono",monospace!important;font-size:0.66rem!important;font-weight:700!important;letter-spacing:1px!important;line-height:1.2!important;border:1.5px solid var(--border)!important;background:white!important;color:var(--muted)!important;cursor:pointer;flex-shrink:0;}
+.year-nav button.mel-ym.on{background:var(--gold)!important;border-color:var(--gold)!important;color:var(--ink)!important;}
+</style>
+<script>
+// Income import: MONTH button left of the year, YEAR button right of it; keys M = month, Y = year
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function isYear(){ try { return typeof _incomeImportMode !== 'undefined' && _incomeImportMode === 'year'; } catch(e) { return false; } }
+  function sync(){
+    var m = $('inc-ym-month'), y = $('inc-ym-year'); if (!m || !y) return;
+    var yr = isYear(); m.classList.toggle('on', !yr); y.classList.toggle('on', yr);
+  }
+  function set(mode){
+    if (typeof window.setIncomeImportMode === 'function' && (mode === 'year') !== isYear()) window.setIncomeImportMode(mode);
+    sync();
+  }
+  function mk(id, mode, label, key){
+    var b = document.createElement('button'); b.type = 'button'; b.id = id; b.className = 'mel-ym';
+    b.textContent = label; b.title = label.charAt(0) + label.slice(1).toLowerCase() + ' mode (' + key + ')';
+    b.onclick = function(e){ e.stopPropagation(); set(mode); };
+    return b;
+  }
+  function mount(){
+    if ($('inc-ym-month')) return true;
+    var yd = $('inc-picker-year-display'); if (!yd) return false;
+    var old = $('inc-mysw'); if (old) old.remove();
+    yd.parentNode.insertBefore(mk('inc-ym-month', 'month', 'MONTH', 'M'), yd);
+    yd.parentNode.insertBefore(mk('inc-ym-year', 'year', 'YEAR', 'Y'), yd.nextSibling);
+    sync(); return true;
+  }
+  function hook(){
+    if (typeof window.setIncomeImportMode === 'function' && !window.setIncomeImportMode._sw) {
+      var o = window.setIncomeImportMode;
+      window.setIncomeImportMode = function(){ var r = o.apply(this, arguments); sync(); return r; };
+      window.setIncomeImportMode._sw = 1;
+    }
+  }
+  // M = month mode, Y = year mode (Income import only, not while typing)
+  window.addEventListener('keydown', function(e){
+    if (e.ctrlKey || e.metaKey) return;
+    if (e.code !== 'KeyM' && e.code !== 'KeyY') return;
+    var p = $('panel-inc-import'); if (!p || !p.classList.contains('active')) return;
+    var t = e.target, tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    set(e.code === 'KeyY' ? 'year' : 'month');
+  }, true);
+  hook(); mount();
+  var n = 0, t = setInterval(function(){ hook(); mount(); if (++n > 40) clearInterval(t); }, 500);
 })();
 </script>
 </body>
