@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.15.3')) {
+          if (!key.startsWith('mel-v2.15.4')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18848,7 +18848,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.15.3';
+var APP_VERSION = '2.15.4';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -24579,7 +24579,7 @@ syncInit();
     txt.placeholder = 'Scan the receipt with your keyboard\'s "Scan text", then paste the text here.';
     txt.value = raw || '';
     note('');
-    buttons([['📋 Paste', pasteClip], ['⚙ Process', process, 'p'], ['Cancel', RC.close]]);
+    buttons([['📷 Photo', function(){ photo(true); }, 'p'], ['🖼 Image', function(){ photo(false); }], ['📋 Paste', pasteClip], ['⚙ Process', process], ['Cancel', RC.close]]);
   }
   function pasteClip(){
     if (navigator.clipboard && navigator.clipboard.readText) {
@@ -24594,6 +24594,81 @@ syncInit();
     txt.value = r.text;
     lastTitle = r.n + ' ITEM' + (r.n === 1 ? '' : 'S'); lastNote = r.msg;
     resultMode();
+  }
+
+    // ---------- photo -> Google ML Kit (in the app) -> rows rebuilt from where each piece of text sits ----------
+  function mlkit(){
+    var C = window.Capacitor;
+    if (!C || !C.isNativePlatform || !C.isNativePlatform()) return null;
+    if (C.Plugins && C.Plugins.CapacitorPluginMlKitTextRecognition) return C.Plugins.CapacitorPluginMlKitTextRecognition;
+    return C.registerPlugin ? C.registerPlugin('CapacitorPluginMlKitTextRecognition') : null;
+  }
+  function photo(useCam){
+    var ml = mlkit();
+    if (!ml) { note('Photo reading works in the installed app.'); return; }
+    var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+    if (useCam) inp.setAttribute('capture', 'environment');
+    inp.onchange = function(){
+      var f = inp.files && inp.files[0]; inp.value = ''; if (!f) return;
+      note('Reading the photo…');
+      createImageBitmap(f).then(function(b){
+        var s = Math.min(1, 2200 / Math.max(b.width, b.height)), c = document.createElement('canvas');
+        c.width = Math.round(b.width * s); c.height = Math.round(b.height * s);
+        c.getContext('2d').drawImage(b, 0, 0, c.width, c.height); if (b.close) b.close();
+        var data = c.toDataURL('image/jpeg', 0.92).split(',')[1]; c.width = c.height = 0;
+        return ml.detectText({ base64Image: data, rotation: 0 });
+      }).then(function(res){
+        var lines = rows(res);
+        if (!lines.length) { note('No text found. Try again with more light.'); return; }
+        raw = lines.join('\n'); txt.value = raw; rawNames = [];
+        lastTitle = lines.length + ' LINES'; lastNote = '✓ Read line by line. The photo is not kept.';
+        resultMode();
+      }).catch(function(e){ console.error('ML Kit:', e); note('Could not read the photo: ' + ((e && e.message) || e)); });
+    };
+    inp.click();
+  }
+  function rows(res){
+    var L = [];
+    (res.blocks || []).forEach(function(b){ (b.lines || []).forEach(function(l){ if (l.text && l.boundingBox) L.push(l); }); });
+    if (!L.length) return String(res.text || '').split('\n').filter(function(x){ return x.trim(); });
+    var angs = [];
+    L.forEach(function(l){
+      var c = l.cornerPoints;
+      if (c && c.topLeft && c.topRight) { var dx = c.topRight.x - c.topLeft.x, dy = c.topRight.y - c.topLeft.y; if (dx > 40) angs.push(Math.atan2(dy, dx)); }
+    });
+    angs.sort(function(a, b){ return a - b; });
+    var ang = angs.length ? angs[angs.length >> 1] : 0, cs = Math.cos(-ang), sn = Math.sin(-ang);
+    var items = L.map(function(l){
+      var bb = l.boundingBox, c = l.cornerPoints, cx = (bb.left + bb.right) / 2, cy = (bb.top + bb.bottom) / 2;
+      var w = c && c.topLeft && c.topRight ? Math.hypot(c.topRight.x - c.topLeft.x, c.topRight.y - c.topLeft.y) : bb.right - bb.left;
+      var h = c && c.topLeft && c.bottomLeft ? Math.hypot(c.bottomLeft.x - c.topLeft.x, c.bottomLeft.y - c.topLeft.y) : bb.bottom - bb.top;
+      var rx = cx * cs - cy * sn, ry = cx * sn + cy * cs;
+      return { t: l.text, x: rx - w / 2, x2: rx + w / 2, y: ry, h: h, cw: w / Math.max(1, l.text.length) };
+    });
+    function med(a){ a = a.slice().sort(function(p, q){ return p - q; }); return a[a.length >> 1]; }
+    var H = med(items.map(function(i){ return i.h; })) || 20, CW = med(items.map(function(i){ return i.cw; })) || 10;
+    items.sort(function(a, b){ return a.y - b.y; });
+    var out = [];
+    items.forEach(function(it){
+      var r = out[out.length - 1];
+      if (r && Math.abs(it.y - r.y) < H * 0.55) { r.items.push(it); r.y = (r.y * (r.items.length - 1) + it.y) / r.items.length; }
+      else out.push({ y: it.y, items: [it] });
+    });
+    return out.map(function(r){
+      r.items.sort(function(a, b){ return a.x - b.x; });
+      var s = '', px = null;
+      r.items.forEach(function(it){
+        if (px !== null) s += ' '.repeat(Math.max(1, Math.min(16, Math.round((it.x - px) / CW))));
+        s += it.t; px = it.x2;
+      });
+      return s;
+    }).filter(function(s){ return s.trim(); });
+  }
+  function trim(){
+    txt.value = txt.value.split('\n').filter(function(l){
+      return /\d[.,]\s?\d{2}(?!\d)/.test(l) || /\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}/.test(l);
+    }).join('\n');
+    note('✓ Kept only the lines with an amount or a date.');
   }
 
   // ---------- memory: names you corrected ----------
@@ -24868,7 +24943,7 @@ syncInit();
     var list = [['📋 Copy', copy], ['＋ Insert', function(){
       try { localStorage.setItem('rc_cur', sel.value); } catch(e) {}
       addCur(sel.value); note('✓ ' + (syms()[sel.value] || sel.value) + ' put before the last number on every line.');
-    }], ['✎ Raw', pasteMode]];
+    }], ['✂ Trim', trim], ['✎ Raw', pasteMode]];
     if (window.RCP) list.push(['▦ Items', items]);
     list.push(['Done', RC.close, 'p']);
     buttons(list);
@@ -24886,6 +24961,17 @@ syncInit();
     open: function(){ build(); ov.classList.add('on'); document.body.style.overflow = 'hidden'; raw = ''; pasteMode(); },
     close: function(){ if (ov) { ov.classList.remove('on'); txt.value = ''; note(''); } raw = ''; document.body.style.overflow = ''; }
   };
+
+    // close the receipt screen whenever the app locks, so nothing stays visible over the lock screen
+  function hookLock(){
+    if (typeof window.lockApp === 'function' && !window.lockApp._rc) {
+      var o = window.lockApp;
+      window.lockApp = function(){ try { RC.close(); } catch(e) {} return o.apply(this, arguments); };
+      window.lockApp._rc = 1;
+    }
+  }
+  hookLock();
+  setInterval(hookLock, 3000);
 
   // 🧾 button on the left of "Parse Expenses" (Expenses → Import), 50/50
   function mount(){
