@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.12.9')) {
+          if (!key.startsWith('mel-v2.13.0')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18848,7 +18848,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.12.9';
+var APP_VERSION = '2.13.0';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -24519,6 +24519,586 @@ syncInit();
   }, true);
   hook(); mount();
   var n = 0, t = setInterval(function(){ hook(); mount(); if (++n > 40) clearInterval(t); }, 500);
+})();
+</script>
+<style>
+.rc-pair{display:flex!important;gap:8px!important;align-items:stretch;width:100%;}
+.rc-pair > button{flex:1 1 0!important;width:auto!important;min-width:0!important;margin:0!important;}
+#rc-btn{font-family:"DM Mono",monospace;font-weight:700;border-radius:20px;border:1.5px solid var(--gold);background:white;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#rc-ov{position:fixed;inset:0;z-index:99999;background:#111;display:none;flex-direction:column;color:#fff;font-family:"DM Sans",sans-serif;}
+#rc-ov.on{display:flex;}
+.rc-top{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));}
+.rc-top b{font-family:"DM Mono",monospace;font-size:0.72rem;letter-spacing:1.5px;color:var(--gold,#c9a84c);}
+.rc-x{background:none;border:none;color:#fff;font-size:1.3rem;cursor:pointer;padding:4px 8px;}
+.rc-stage{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;}
+#rc-video{width:100%;height:100%;object-fit:contain;display:none;}
+#rc-disp{display:none;}
+.rc-box{position:absolute;display:none;border:2px solid var(--gold,#c9a84c);box-shadow:0 0 0 9999px rgba(0,0,0,.55);touch-action:none;cursor:move;}
+.rc-h{position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:var(--gold,#c9a84c);border:2px solid #fff;touch-action:none;}
+.rc-msg{display:none;font-family:"DM Mono",monospace;font-size:0.74rem;line-height:1.6;text-align:center;padding:24px;max-width:420px;}
+.rc-prog{height:6px;background:#333;border-radius:4px;overflow:hidden;width:220px;margin:14px auto 0;}
+.rc-prog i{display:block;height:100%;width:0;background:var(--gold,#c9a84c);transition:width .2s;}
+#rc-text{display:none;width:100%;height:100%;box-sizing:border-box;background:#fffdf8;color:#1f1a14;font-family:"DM Mono",monospace;font-size:0.76rem;line-height:1.55;padding:12px 14px;border:none;resize:none;white-space:pre;overflow:auto;outline:none;}
+.rc-note{font-family:"DM Mono",monospace;font-size:0.64rem;color:#9fd3a8;text-align:center;padding:6px 10px 0;min-height:1em;}
+.rc-bar{display:flex;gap:8px;justify-content:center;align-items:center;padding:12px 14px;padding-bottom:max(14px,env(safe-area-inset-bottom));}
+.rc-bar button{font-family:"DM Mono",monospace;font-size:0.72rem;font-weight:700;border-radius:20px;padding:10px 16px;border:1.5px solid var(--gold,#c9a84c);background:#222;color:#fff;cursor:pointer;}
+.rc-bar button.p{background:var(--gold,#c9a84c);color:#1f1a14;}
+.rc-bar button.rc-snap{width:68px;height:68px;border-radius:50%;padding:0;background:#fff;border:4px solid var(--gold,#c9a84c);}
+</style>
+<script>
+// Receipt scanner v3: in-app camera (sharpest of 6 frames) -> crop -> clean-up -> two-pass text reading -> editable text,
+// currency insert, optional items check. The photo only exists in memory and is wiped once the text is read.
+(function(){
+  var TESS = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+  var ov, video, stage, disp, box, txt, bar, title, stream = null, FULL = null, R = null, drag = null, worker = null, phase = 1, camRes = '';
+  function $(id){ return document.getElementById(id); }
+
+  function build(){
+    if (ov) return;
+    ov = document.createElement('div'); ov.id = 'rc-ov';
+    ov.innerHTML =
+      '<div class="rc-top"><b id="rc-title">SCAN RECEIPT</b><button class="rc-x" style="background:none;border:none;box-shadow:none" onclick="RC.close()">&#10005;</button></div>' +
+      '<div class="rc-stage" id="rc-stage"><video id="rc-video" playsinline muted></video><canvas id="rc-disp"></canvas>' +
+      '<div class="rc-box" id="rc-box"><span class="rc-h" data-h="tl" style="left:0;top:0"></span><span class="rc-h" data-h="tr" style="left:100%;top:0"></span><span class="rc-h" data-h="bl" style="left:0;top:100%"></span><span class="rc-h" data-h="br" style="left:100%;top:100%"></span></div>' +
+      '<div class="rc-msg" id="rc-msg"></div><textarea id="rc-text" spellcheck="false"></textarea></div>' +
+      '<div class="rc-note" id="rc-note"></div><div class="rc-bar" id="rc-bar"></div>';
+    document.body.appendChild(ov);
+    video = $('rc-video'); stage = $('rc-stage'); disp = $('rc-disp'); box = $('rc-box'); txt = $('rc-text'); bar = $('rc-bar'); title = $('rc-title');
+    stage.addEventListener('pointerdown', down);
+    stage.addEventListener('pointermove', move);
+    stage.addEventListener('pointerup', up);
+    stage.addEventListener('pointercancel', up);
+    window.addEventListener('resize', function(){ if (FULL && box.style.display === 'block') drawDisp(true); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && ov.classList.contains('on')) RC.close(); });
+  }
+
+  function view(v){
+    video.style.display = v === 'cam' ? 'block' : 'none';
+    disp.style.display = box.style.display = v === 'crop' ? 'block' : 'none';
+    $('rc-msg').style.display = v === 'msg' ? 'block' : 'none';
+    txt.style.display = v === 'text' ? 'block' : 'none';
+    var rr = $('rc-res'); if (rr) rr.style.display = v === 'res' ? 'block' : 'none';
+  }
+  function buttons(list){
+    bar.innerHTML = list.map(function(b){ return '<button type="button" class="' + (b[2] || '') + '">' + b[0] + '</button>'; }).join('');
+    [].forEach.call(bar.children, function(el, i){ el.onclick = list[i][1]; });
+  }
+  function msg(h){ $('rc-msg').innerHTML = h; view('msg'); }
+  function note(t){ $('rc-note').textContent = t || ''; }
+
+  // ---------- camera ----------
+  function stopCam(){ if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; } if (video) video.srcObject = null; }
+  function wipe(){ if (FULL) { FULL.width = FULL.height = 0; FULL = null; } if (disp) { disp.width = disp.height = 0; } R = null; }
+  function cam(){
+    wipe(); note(''); title.textContent = 'SCAN RECEIPT';
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return noCam('This device does not let the app use a camera.');
+    msg('Opening camera…'); buttons([['Cancel', RC.close]]);
+    navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 4096 }, height: { ideal: 2160 } } })
+      .then(function(s){
+        stream = s;
+        var tr = s.getVideoTracks()[0];
+        try { var cp = tr.getCapabilities ? tr.getCapabilities() : {}; if (cp.focusMode && cp.focusMode.indexOf('continuous') > -1) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function(){}); } catch(e) {}
+        video.srcObject = s; return video.play();
+      })
+      .then(function(){
+        view('cam'); camRes = video.videoWidth + '×' + video.videoHeight;
+        note('Camera ' + camRes + ' · fill the screen with the receipt, then tap the button.');
+        buttons([['🖼 Image', pick], ['', snap, 'rc-snap'], ['Cancel', RC.close]]);
+      })
+      .catch(function(e){ stopCam(); noCam('Camera not available (' + ((e && e.name) || 'error') + ').'); });
+  }
+  function noCam(t){ msg(t + '<br><br>You can pick an existing image instead.'); buttons([['🖼 Pick image', pick, 'p'], ['Cancel', RC.close]]); }
+  function lapVar(img){
+    var p = img.data, w = img.width, h = img.height, g = new Float32Array(w * h), i, j, x, y, s = 0, s2 = 0, n = 0, L;
+    for (i = 0, j = 0; j < w * h; i += 4, j++) g[j] = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
+    for (y = 1; y < h - 1; y++) for (x = 1; x < w - 1; x++) { j = y * w + x; L = 4 * g[j] - g[j - 1] - g[j + 1] - g[j - w] - g[j + w]; s += L; s2 += L * L; n++; }
+    var m = s / n; return s2 / n - m * m;
+  }
+  function snap(){
+    if (!video.videoWidth) return;
+    buttons([]); note('Hold still…');
+    var vw = video.videoWidth, vh = video.videoHeight, best = null, bestS = -1, n = 0;
+    var t = document.createElement('canvas'), tw = 640, th = Math.max(1, Math.round(vh * tw / vw)); t.width = tw; t.height = th;
+    var tx = t.getContext('2d', { willReadFrequently: true });
+    (function grab(){
+      if (!stream) return;
+      var f = document.createElement('canvas'); f.width = vw; f.height = vh; f.getContext('2d').drawImage(video, 0, 0);
+      tx.drawImage(f, vw * 0.2, vh * 0.2, vw * 0.6, vh * 0.6, 0, 0, tw, th);
+      var sc = lapVar(tx.getImageData(0, 0, tw, th));
+      if (sc > bestS) { if (best) best.width = best.height = 0; best = f; bestS = sc; } else { f.width = f.height = 0; }
+      if (++n < 6) setTimeout(grab, 90);
+      else { t.width = t.height = 0; FULL = best; stopCam(); crop(); }
+    })();
+  }
+  function pick(){
+    var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = function(){
+      var f = inp.files && inp.files[0]; inp.value = ''; if (!f) return;
+      createImageBitmap(f).then(function(b){
+        stopCam();
+        FULL = document.createElement('canvas'); FULL.width = b.width; FULL.height = b.height;
+        FULL.getContext('2d').drawImage(b, 0, 0); if (b.close) b.close();
+        camRes = FULL.width + '×' + FULL.height;
+        crop();
+      }).catch(function(){ msg('Could not open that image.'); });
+    };
+    inp.click();
+  }
+
+  // ---------- crop ----------
+  function crop(){
+    title.textContent = 'CROP THE EXPENSE LINES'; note('Drag the corners around the item lines and the TOTAL line.');
+    view('crop'); drawDisp(false);
+    buttons([['⟲ Retake', cam], ['⟳ Rotate', rotate], ['✓ Read text', read, 'p']]);
+  }
+  function drawDisp(keep){
+    var sw = stage.clientWidth - 24, sh = stage.clientHeight - 24, s = Math.min(sw / FULL.width, sh / FULL.height);
+    var ow = disp.width;
+    disp.width = Math.max(1, Math.round(FULL.width * s)); disp.height = Math.max(1, Math.round(FULL.height * s));
+    disp.getContext('2d').drawImage(FULL, 0, 0, disp.width, disp.height);
+    if (keep && R && ow) { var k = disp.width / ow; R = { x: R.x * k, y: R.y * k, w: R.w * k, h: R.h * k }; }
+    else R = { x: disp.width * 0.08, y: disp.height * 0.08, w: disp.width * 0.84, h: disp.height * 0.84 };
+    place();
+  }
+  function place(){
+    var sr = stage.getBoundingClientRect(), dr = disp.getBoundingClientRect();
+    box.style.left = (dr.left - sr.left + R.x) + 'px'; box.style.top = (dr.top - sr.top + R.y) + 'px';
+    box.style.width = R.w + 'px'; box.style.height = R.h + 'px';
+  }
+  function down(e){
+    if (!R || box.style.display !== 'block') return;
+    var h = e.target.dataset && e.target.dataset.h, t = h || (e.target === box ? 'mv' : null); if (!t) return;
+    drag = { t: t, x: e.clientX, y: e.clientY, r: { x: R.x, y: R.y, w: R.w, h: R.h } };
+    try { e.target.setPointerCapture(e.pointerId); } catch(_) {}
+    e.preventDefault();
+  }
+  function move(e){
+    if (!drag) return; e.preventDefault();
+    var dx = e.clientX - drag.x, dy = e.clientY - drag.y, o = drag.r, W = disp.width, H = disp.height, M = 40;
+    if (drag.t === 'mv') {
+      R = { x: Math.min(Math.max(0, o.x + dx), W - o.w), y: Math.min(Math.max(0, o.y + dy), H - o.h), w: o.w, h: o.h };
+    } else {
+      var x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h;
+      if (drag.t[1] === 'l') x1 = Math.min(Math.max(0, o.x + dx), x2 - M); else x2 = Math.max(Math.min(W, x2 + dx), x1 + M);
+      if (drag.t[0] === 't') y1 = Math.min(Math.max(0, o.y + dy), y2 - M); else y2 = Math.max(Math.min(H, y2 + dy), y1 + M);
+      R = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+    }
+    place();
+  }
+  function up(){ drag = null; }
+  function rotate(){
+    var c = document.createElement('canvas'); c.width = FULL.height; c.height = FULL.width;
+    var x = c.getContext('2d'); x.translate(c.width, 0); x.rotate(Math.PI / 2); x.drawImage(FULL, 0, 0);
+    FULL.width = FULL.height = 0; FULL = c; drawDisp(false);
+  }
+
+  // ---------- image clean-up ----------
+  function enhance(src){
+    var w = src.width, h = src.height, sc = Math.min(3, Math.max(0.6, 1800 / w));
+    if (w * sc * h * sc > 7e6) sc = Math.sqrt(7e6 / (w * h));
+    var W = Math.max(1, Math.round(w * sc)), H = Math.max(1, Math.round(h * sc)), N = W * H, W1 = W + 1;
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, W, H);
+    var d = x.getImageData(0, 0, W, H), p = d.data, g = new Float32Array(N), s = new Uint8ClampedArray(N), i, j, X, Y;
+    for (i = 0, j = 0; j < N; i += 4, j++) g[j] = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
+    for (Y = 0; Y < H; Y++) for (X = 0; X < W; X++) {
+      j = Y * W + X;
+      s[j] = (X === 0 || Y === 0 || X === W - 1 || Y === H - 1) ? g[j] : g[j] + 0.6 * (4 * g[j] - g[j - 1] - g[j + 1] - g[j - W] - g[j + W]);
+    }
+    g = null;
+    var I = new Uint32Array(W1 * (H + 1));
+    for (Y = 0; Y < H; Y++) { var row = 0; for (X = 0; X < W; X++) { row += s[Y * W + X]; I[(Y + 1) * W1 + X + 1] = I[Y * W1 + X + 1] + row; } }
+    var r = Math.max(8, Math.round(Math.min(W, H) / 20));
+    var c2 = document.createElement('canvas'); c2.width = W; c2.height = H;
+    var x2 = c2.getContext('2d'), d2 = x2.createImageData(W, H), q = d2.data;
+    for (Y = 0; Y < H; Y++) {
+      var y1 = Math.max(0, Y - r), y2 = Math.min(H - 1, Y + r);
+      for (X = 0; X < W; X++) {
+        var xa = Math.max(0, X - r), xb = Math.min(W - 1, X + r), cnt = (xb - xa + 1) * (y2 - y1 + 1);
+        var m = (I[(y2 + 1) * W1 + xb + 1] - I[y1 * W1 + xb + 1] - I[(y2 + 1) * W1 + xa] + I[y1 * W1 + xa]) / cnt;
+        j = Y * W + X; i = j * 4;
+        var v = s[j], f = Math.min(255, v / (m + 1) * 240);
+        p[i] = p[i + 1] = p[i + 2] = f; p[i + 3] = 255;
+        var b = v < m * 0.82 ? 0 : 255; q[i] = q[i + 1] = q[i + 2] = b; q[i + 3] = 255;
+      }
+    }
+    x.putImageData(d, 0, 0); x2.putImageData(d2, 0, 0);
+    return { gray: c, bin: c2 };
+  }
+
+  // ---------- two-pass reading ----------
+  function loadTess(){
+    if (window.Tesseract) return Promise.resolve();
+    return new Promise(function(res, rej){
+      var s = document.createElement('script'); s.src = TESS; s.onload = res;
+      s.onerror = function(){ rej(new Error('the text reader could not be downloaded. Check your connection.')); };
+      document.head.appendChild(s);
+    });
+  }
+  function endWorker(){ var w = worker; worker = null; return w ? w.terminate().catch(function(){}) : Promise.resolve(); }
+  function numish(t){ var n = (t.match(/[\d.,]/g) || []).length; return t.length > 0 && n / t.length >= 0.5; }
+  function layout(ws){
+    ws.sort(function(a, b){ return a.b.x0 - b.b.x0; });
+    var cw = []; ws.forEach(function(w){ if (w.t.length) cw.push((w.b.x1 - w.b.x0) / w.t.length); });
+    cw.sort(function(a, b){ return a - b; });
+    var ch = cw.length ? cw[cw.length >> 1] : 10, s = '', px = null;
+    ws.forEach(function(w){
+      if (px !== null) s += ' '.repeat(Math.max(1, Math.min(14, Math.round((w.b.x0 - px) / ch))));
+      s += w.t; px = w.b.x1;
+    });
+    return { text: s, words: ws.map(function(w){ return { t: w.t, c: Math.round(w.c), fix: !!w.fix }; }) };
+  }
+  function merge(A, B){
+    if (!A.lines) return { lines: String(A.text || '').split(/\r?\n/).map(function(t){ return { text: t, words: [] }; }), fixes: 0 };
+    var nums = [], fixes = 0;
+    (B.lines || []).forEach(function(l){ (l.words || []).forEach(function(w){
+      var t = w.text.replace(/[^\d.,]/g, '');
+      if (/\d/.test(t) && w.confidence >= 55) nums.push({ t: t, c: w.confidence, b: w.bbox, used: false });
+    }); });
+    var lines = A.lines.map(function(l){
+      var ws = (l.words || []).map(function(w){ return { t: w.text, c: w.confidence, b: w.bbox }; });
+      nums.forEach(function(n){
+        if (n.used) return;
+        var pad = (n.b.y1 - n.b.y0) * 0.3, hit = [], k;
+        for (k = 0; k < ws.length; k++) {
+          var b = ws[k].b, cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+          if (cx >= n.b.x0 - pad && cx <= n.b.x1 + pad && cy >= n.b.y0 - pad && cy <= n.b.y1 + pad) hit.push(k);
+        }
+        if (!hit.length) return;
+        var avg = hit.reduce(function(s, k){ return s + ws[k].c; }, 0) / hit.length;
+        var allNum = hit.every(function(k){ return numish(ws[k].t); });
+        var joined = hit.map(function(k){ return ws[k].t; }).join('');
+        if ((allNum && n.c >= avg - 3) || n.c > avg + 10) {
+          if (joined !== n.t) fixes++;
+          ws[hit[0]] = { t: n.t, c: n.c, b: n.b, fix: joined !== n.t };
+          for (k = hit.length - 1; k > 0; k--) ws.splice(hit[k], 1);
+          n.used = true;
+        }
+      });
+      return layout(ws);
+    }).filter(function(l){ return l.text.trim(); });
+    return { lines: lines, fixes: fixes };
+  }
+  function ocr(im){
+    return loadTess()
+      .then(function(){
+        return Tesseract.createWorker(['spa', 'eng'], 1, { logger: function(m){
+          var i = $('rc-pi'), t = $('rc-mt'); if (!i || m.status !== 'recognizing text') return;
+          i.style.width = Math.round((phase === 1 ? 0 : 50) + m.progress * 50) + '%';
+          if (t) t.textContent = phase === 1 ? 'Reading the text (1/2)…' : 'Checking the numbers (2/2)…';
+        } });
+      })
+      .then(function(w){
+        worker = w; phase = 1;
+        return w.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: '6', user_defined_dpi: '300' })
+          .then(function(){ return w.recognize(im.gray); })
+          .then(function(r1){
+            phase = 2;
+            return w.setParameters({ tessedit_char_whitelist: '0123456789,.' })
+              .then(function(){ return w.recognize(im.bin); })
+              .then(function(r2){ return merge(r1.data, r2.data); });
+          });
+      })
+      .then(function(res){ return endWorker().then(function(){ return res; }); },
+            function(e){ return endWorker().then(function(){ throw e; }); });
+  }
+  function read(){
+    var k = FULL.width / disp.width;
+    var sx = Math.round(R.x * k), sy = Math.round(R.y * k), sw = Math.round(R.w * k), sh = Math.round(R.h * k);
+    var c = document.createElement('canvas'); c.width = sw; c.height = sh;
+    c.getContext('2d').drawImage(FULL, sx, sy, sw, sh, 0, 0, sw, sh);
+    wipe();
+    title.textContent = 'READING TEXT'; note('');
+    msg('<span id="rc-mt">Preparing the image…</span><div class="rc-prog"><i id="rc-pi"></i></div>');
+    buttons([['Cancel', RC.close]]);
+    setTimeout(function(){
+      var im = enhance(c); c.width = c.height = 0;
+      var mt = $('rc-mt'); if (mt) mt.textContent = 'Loading the text reader…';
+      function clear(){ im.gray.width = im.gray.height = im.bin.width = im.bin.height = 0; }
+      ocr(im).then(function(res){
+        clear();
+        if (ov.classList.contains('on')) show(res);
+      }).catch(function(e){
+        clear();
+        if (!ov.classList.contains('on')) return;
+        console.error('Receipt scanner:', e);
+        msg('Something went wrong: ' + ((e && e.message) || e)); note('Photo deleted.');
+        buttons([['↻ Scan again', cam, 'p'], ['Close', RC.close]]);
+      });
+    }, 30);
+  }
+
+  // ---------- currency before the last number of each line ----------
+  function syms(){
+    var S = window.SYMS || {}, o = {};
+    Object.keys(S).forEach(function(c){ if (S[c]) o[c] = S[c]; });
+    if (!Object.keys(o).length) o = { EUR: '€', NGN: '₦', USD: '$', GBP: '£' };
+    return o;
+  }
+  function rx(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function addCur(code){
+    var S = syms(), sym = S[code] || code;
+    var all = Object.keys(S).map(function(c){ return S[c]; }).concat(Object.keys(S), ['€', '$', '£', '₦'])
+      .filter(function(v, i, a){ return v && a.indexOf(v) === i; })
+      .sort(function(a, b){ return b.length - a.length; }).map(rx).join('|');
+    var tail = new RegExp('\\s*(?:' + all + ')\\s*$'), head = new RegExp('(?:' + all + ')\\s*$');
+    txt.value = txt.value.split('\n').map(function(line){
+      var re = /\d[\d.,]*\d|\d/g, m, last = null;
+      while ((m = re.exec(line))) last = m;
+      if (!last) return line;
+      var before = line.slice(0, last.index).replace(head, ''), num = last[0], after = line.slice(last.index + num.length).replace(tail, '');
+      var c = num.lastIndexOf(','), d = num.lastIndexOf('.');
+      if (c > -1 && d > -1) num = c > d ? num.replace(/\./g, '').replace(',', '.') : num.replace(/,/g, '');
+      else if (c > -1) num = num.replace(/,/g, '.');
+      return before + sym + num + after;
+    }).join('\n');
+  }
+  function curSel(){
+    var S = syms(), cur = 'EUR'; try { cur = localStorage.getItem('rc_cur') || 'EUR'; } catch(e) {}
+    var s = document.createElement('select'); s.className = 'rc-cur'; s.title = 'Currency to put before the last number on every line';
+    s.innerHTML = Object.keys(S).map(function(c){ return '<option value="' + c + '"' + (c === cur ? ' selected' : '') + '>' + S[c] + ' ' + c + '</option>'; }).join('');
+    return s;
+  }
+
+  // ---------- result: editable text (default) / items check ----------
+  function show(res){
+    var lines = res.lines.map(function(l){ return l.text.replace(/\s+$/, ''); });
+    window.__rcData = res.lines; window.__rcLines = lines;
+    txt.value = lines.join('\n');
+    var base = '✓ Photo deleted. Only the text was kept.' + (camRes ? ' · ' + camRes : '');
+    var sel = null;
+    function ins(){
+      if (!sel || !sel.value) return;
+      try { localStorage.setItem('rc_cur', sel.value); } catch(e) {}
+      addCur(sel.value);
+      note('✓ ' + (syms()[sel.value] || sel.value) + ' put before the last number on every line.');
+    }
+    function asText(){
+      title.textContent = lines.length + ' LINE' + (lines.length === 1 ? '' : 'S') + ' READ';
+      view('text');
+      note(base + (res.fixes ? ' · ' + res.fixes + ' number' + (res.fixes === 1 ? '' : 's') + ' corrected by the second pass' : ''));
+      var list = [['📋', copy], ['＋', ins], ['↻', cam]];
+      if (window.RCP) list.push(['▦', asTable]);
+      list.push(['Done', RC.close, 'p']);
+      buttons(list);
+      try { sel = curSel(); bar.insertBefore(sel, bar.children[1]); } catch(e) { console.error('Currency picker:', e); }
+    }
+    function asTable(){
+      try {
+        var P = RCP.parse(txt.value.split('\n')); RCP.render(stage, P);
+        title.textContent = P.items.length + ' ITEM' + (P.items.length === 1 ? '' : 'S') + ' FOUND'; view('res'); note(base);
+        buttons([['≡ Text', asText], ['↻ Scan', cam], ['Done', RC.close, 'p']]);
+      } catch(e) { console.error('Items check:', e); note('The items check failed: ' + e.message); }
+    }
+    asText();
+  }
+  function copy(){
+    var v = txt.value;
+    (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject())
+      .then(function(){ note('✓ Text copied. Photo deleted, only the text was kept.'); })
+      .catch(function(){ txt.focus(); txt.select(); try { document.execCommand('copy'); note('✓ Text copied.'); } catch(e) {} });
+  }
+
+  window.RC = {
+    open: function(){ build(); ov.classList.add('on'); document.body.style.overflow = 'hidden'; cam(); },
+    close: function(){ stopCam(); wipe(); endWorker(); if (ov) { ov.classList.remove('on'); txt.value = ''; note(''); } document.body.style.overflow = ''; }
+  };
+
+  // 📷 button on the left of "Parse Expenses" (Expenses → Import), 50/50
+  function mount(){
+    var p = $('panel-import'); if (!p || $('rc-btn')) return;
+    var parse = [].find.call(p.querySelectorAll('button'), function(b){ return /parse/i.test(b.textContent); });
+    if (!parse) return;
+    var pair = document.createElement('div'); pair.className = 'rc-pair';
+    parse.parentNode.insertBefore(pair, parse);
+    var b = document.createElement('button'); b.id = 'rc-btn'; b.type = 'button'; b.className = parse.className;
+    b.innerHTML = '📷 Scan receipt'; b.onclick = RC.open;
+    pair.appendChild(b); pair.appendChild(parse);
+  }
+  // keep looking until the Parse button exists (it appears after login), then stop
+  mount();
+  var iv = setInterval(function(){ mount(); if (document.getElementById('rc-btn')) clearInterval(iv); }, 1000);
+  var ip = document.getElementById('panel-import');
+  if (ip) new MutationObserver(function(){ if (!document.getElementById('rc-btn')) mount(); }).observe(ip, { childList: true, subtree: true });
+})();
+</script>  
+<style>
+#rc-res{display:none;width:100%;height:100%;box-sizing:border-box;overflow:auto;background:#fffdf8;color:#1f1a14;padding:10px 12px;font-family:"DM Mono",monospace;}
+.rp-sum{font-size:0.7rem;line-height:1.5;border-radius:10px;padding:8px 12px;margin-bottom:10px;border:1px solid;}
+.rp-sum b{display:block;font-size:0.62rem;font-weight:400;opacity:.8;}
+.rp-sum.ok{background:#eef7f0;border-color:#9fd3a8;color:#1d5c32;}
+.rp-sum.warn{background:#fff6e0;border-color:#e6c46a;color:#7a5a00;}
+.rp-sum.bad{background:#fdf0ee;border-color:#f0c4bd;color:#a5281b;}
+.rp-t{width:100%;border-collapse:collapse;font-size:0.7rem;}
+.rp-t th{font-size:0.56rem;letter-spacing:1px;text-transform:uppercase;color:#8a8070;text-align:right;padding:4px;border-bottom:1.5px solid #e2d9c6;}
+.rp-t th:first-child,.rp-t td:first-child{text-align:left;}
+.rp-t td{padding:6px 4px;border-bottom:1px solid #efe8da;text-align:right;white-space:nowrap;}
+.rp-t td:first-child{white-space:normal;word-break:break-word;}
+.rp-t td.fx{background:#fff3c4;}
+.rc-bar{flex-wrap:wrap;}
+.rc-bar .rc-cur{font-family:"DM Mono",monospace;font-size:0.72rem;font-weight:700;border-radius:20px;padding:9px 12px;border:1.5px solid var(--gold,#c9a84c);background:#222;color:#fff;cursor:pointer;}
+.rp-t td s{color:#b0a690;font-size:0.6rem;margin-right:4px;}
+.rp-t tfoot td{font-weight:700;border-top:1.5px solid #e2d9c6;border-bottom:none;}
+.rp-pay{font-size:0.66rem;color:#8a8070;margin-top:8px;}
+</style>
+<script>
+// Receipt interpreter: lines -> items (qty, price, total), self-corrects common OCR digit swaps using qty x price = total and the ticket TOTAL
+(function(){
+  var SW = [['5','6'],['3','8'],['8','9'],['6','8'],['0','8'],['1','7'],['3','9'],['2','7'],['0','6'],['5','8']];
+  var SKIP = /descrip|cantidad|precio|factura|fecha|tienda|caja|cajero|base|iva|importe|gracias|cambio|ejemplar/i;
+  var TOT = /total/i, PAY = /tarjeta|efectivo|visa|cr[eé]dito|d[eé]bito|bizum|contado/i;
+
+  function fixTok(t){ return t.replace(/[Oo]/g, '0').replace(/[Il]/g, '1'); }
+  function isNum(t){ return /\d/.test(t) && /^\d[\d.,]*$/.test(fixTok(t)); }
+  function looksQty(t){ return /^\d+[.,]\d{3}$/.test(t) || /^\d{4}$/.test(t); }
+  function num(tok, dec){
+    var t = fixTok(tok).replace(/[^\d.,]/g, ''); if (!/\d/.test(t)) return null;
+    var m = t.match(/^(\d*)[.,](\d+)$/);
+    if (m) {
+      if (dec === 2 && m[2].length === 3 && m[1].length) return parseFloat(m[1] + m[2]);
+      return parseFloat((m[1] || '0') + '.' + m[2]);
+    }
+    var d = t.replace(/[.,]/g, '');
+    if (dec === 3 && d.length <= 2) return parseFloat(d);
+    if (d.length <= dec) return parseFloat('0.' + d.padStart(dec, '0'));
+    return parseFloat(d.slice(0, d.length - dec) + '.' + d.slice(-dec));
+  }
+  function split(raw){
+    var cur = /€|\bEUR\b/i.test(raw) ? 'EUR' : null;
+    var s = raw.replace(/[€$£₦]/g, ' ').replace(/\bEUR\b/ig, ' ').replace(/[—–|_'"`´¡!¿?*]/g, ' ').replace(/\s+/g, ' ').trim();
+    var toks = s ? s.split(' ') : [], nums = [];
+    while (toks.length && isNum(toks[toks.length - 1])) nums.unshift(toks.pop());
+    if (nums.length >= 4 && /^\d$/.test(nums[0]) && /^\d{3}$/.test(nums[1])) nums.splice(0, 2, nums[0] + nums[1]);
+    // "25 13" -> 25,13 when the comma was lost (total/payment lines, or item lines with one number too many)
+    var money = /total|tarjeta|arjeta|efectivo|cr[eé]dito|d[eé]bito|visa|bizum/i.test(toks.join(' '));
+    for (var gi = nums.length - 1; gi > 0; gi--) {
+      if (/^\d{2}$/.test(nums[gi]) && /^\d{1,4}$/.test(nums[gi - 1]) && (nums.length > 3 || (money && nums.length === 2))) nums.splice(gi - 1, 2, nums[gi - 1] + ',' + nums[gi]);
+    }
+    return { desc: toks.join(' ').trim(), nums: nums, cur: cur };
+  }
+  function norm(s){ return String(s).toUpperCase().replace(/[^A-ZÑ]/g, ''); }
+  function swaps(c){
+    var s = String(c), out = [];
+    for (var i = 0; i < s.length; i++) SW.forEach(function(pr){ for (var k = 0; k < 2; k++) if (s[i] === pr[k]) out.push(+(s.slice(0, i) + pr[1 - k] + s.slice(i + 1))); });
+    return out;
+  }
+  function cands(it){
+    var M = {}, A = {}, T = it.T, P = Math.round(it.p * 100), QP = Math.round(it.q * P), ok = Math.abs(QP - T) <= 1;
+    function add(v, c, alt){ if (v > 0 && (M[v] === undefined || c < M[v])) { M[v] = c; if (alt) A[v] = alt; } }
+    it.ok = ok; it.P = P;
+    add(T, ok ? 0 : 10, ok ? { q: it.q, p: P } : null);
+    if (!ok) add(QP, 10, { q: it.q, p: P });
+    var ts = swaps(T), tset = {};
+    ts.forEach(function(v){ add(v, 30); tset[v] = 1; });
+    var ps = [P].concat(swaps(P));
+    var qc = Math.round(it.q * 1000), qs = it.q === 1 ? [1] : [qc].concat(swaps(qc)).map(function(x){ return x / 1000; });
+    qs.forEach(function(qv, qi){ ps.forEach(function(pv, pi){
+      if (!qi && !pi) return;
+      var v = Math.round(qv * pv);
+      if (Math.abs(v - T) <= 1) add(T, ok ? 0 : 5, { q: qv, p: pv });
+      else if (tset[v]) add(v, ok ? 25 : 15, { q: qv, p: pv });
+    }); });
+    it.C = M; it.A = A;
+  }
+  function solve(items, S){
+    if (S == null || S <= 0 || S > 200000 || !items.length) return null;
+    var n = items.length, INF = 1e9, cost = new Int32Array(S + 1).fill(INF), cnt = new Uint8Array(S + 1), back = [], i, s, k;
+    cost[0] = 0; cnt[0] = 1;
+    for (i = 0; i < n; i++) {
+      var C = items[i].C, vs = Object.keys(C).map(Number), nc = new Int32Array(S + 1).fill(INF), nn = new Uint8Array(S + 1), ch = new Int32Array(S + 1);
+      for (s = 0; s <= S; s++) {
+        if (cost[s] >= INF) continue;
+        for (k = 0; k < vs.length; k++) {
+          var v = vs[k], s2 = s + v; if (s2 > S) continue;
+          var val = cost[s] + C[v];
+          if (val < nc[s2]) { nc[s2] = val; nn[s2] = cnt[s]; ch[s2] = v; }
+          else if (val === nc[s2]) nn[s2] = Math.min(2, nn[s2] + cnt[s]);
+        }
+      }
+      cost = nc; cnt = nn; back.push(ch);
+    }
+    if (cost[S] >= INF) return null;
+    var pick = []; s = S;
+    for (i = n - 1; i >= 0; i--) { pick[i] = back[i][s]; s -= pick[i]; }
+    return { pick: pick, cost: cost[S], unique: cnt[S] === 1 };
+  }
+
+    function parse(lines){
+    var items = [], total = null, pay = null, payTxt = '', cur = null, after = false;
+    lines.forEach(function(raw){
+      var sp = split(raw), d = sp.desc, n = sp.nums;
+      if (sp.cur) cur = sp.cur;
+      if (TOT.test(d) && !/sub/i.test(d)) { if (n.length) { total = Math.round(num(n[n.length - 1], 2) * 100); after = true; } return; }
+      if (PAY.test(d)) { if (n.length) { pay = Math.round(num(n[n.length - 1], 2) * 100); payTxt = d.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ ]/g, '').trim(); } return; }
+      if (after || SKIP.test(d) || !n.length) return;
+      var q = 1, p = null, t;
+      if (n.length === 3) { q = num(n[0], 3); p = num(n[1], 2); t = num(n[2], 2); }
+      else if (n.length === 2) {
+        if (looksQty(fixTok(n[0]))) { q = num(n[0], 3); t = num(n[1], 2); }
+        else { p = num(n[0], 2); t = num(n[1], 2); }
+      } else t = num(n[0], 2);
+      if (t == null || !(t > 0)) return;
+      if (!q) q = 1;
+      if (p == null) p = t / q;
+      items.push({ desc: d || '?', q: q, p: p, T: Math.round(t * 100), raw: raw });
+    });
+    items.forEach(cands);
+    items.forEach(function(a, i){ items.forEach(function(b, j){
+      if (i !== j && b.ok && norm(a.desc) === norm(b.desc) && a.C[b.T] !== undefined) a.C[b.T] = Math.max(0, a.C[b.T] - 4);
+    }); });
+
+    // try every total the receipt gives (TOTAL line, payment line); keep the one that needs the fewest item corrections
+    var best = null;
+    function tryT(v, extra, src){
+      var s = solve(items, v);
+      if (s && (!best || s.cost + extra < best.sc)) best = { sol: s, sc: s.cost + extra, v: v, src: src };
+    }
+    var tc = [];
+    if (total != null) tc.push([total, 'TOTAL']);
+    if (pay != null && pay !== total) tc.push([pay, 'payment']);
+    tc.forEach(function(t){ tryT(t[0], 0, t[1]); });
+    if (!best) tc.forEach(function(t){ swaps(t[0]).forEach(function(v){ tryT(v, 20, t[1]); }); });
+
+    var sol = best && best.sol, used = best ? best.v : (total != null ? total : pay);
+    items.forEach(function(it, i){ it.v = sol ? sol.pick[i] : it.T; });
+    var sum = items.reduce(function(s, it){ return s + it.v; }, 0);
+    var tnote = '';
+    if (best && total != null && best.v !== total) tnote = 'TOTAL line read as ' + f(total) + (best.v === pay ? ', the payment line says ' + f(pay) : '') + ', so ' + f(best.v) + ' was used.';
+    else if (best && total == null) tnote = 'No TOTAL line found, so the payment line total was used.';
+    var status = used == null ? 'nototal' : (!sol ? 'mismatch' : (sol.cost === 0 && !tnote ? 'ok' : (sol.unique ? 'fixed' : 'ambig')));
+    return { items: items, total: used, read: total, pay: pay, payTxt: payTxt, cur: cur, sum: sum, status: status, tnote: tnote };
+  }
+
+  function f(c){ return (c / 100).toFixed(2).replace('.', ','); }
+  function fq(q){ return q === 1 ? '1' : String(+q.toFixed(3)).replace('.', ','); }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function render(stage, P){
+    var el = document.getElementById('rc-res');
+    if (!el) { el = document.createElement('div'); el.id = 'rc-res'; stage.appendChild(el); }
+    var M = {
+      ok: ['ok', '✓ The items add up to the ticket total.'],
+      fixed: ['warn', '✓ The items add up to the ticket total after correcting the highlighted values. Check them.'],
+      ambig: ['warn', 'The items add up to the total, but more than one correction fits. Check the highlighted values.'],
+      mismatch: ['bad', 'The items do not add up to the ticket total. Check the highlighted lines.'],
+      nototal: ['warn', 'No TOTAL line found, so the items could not be checked. Include the TOTAL line in the crop.']
+    }[P.status];
+    var flagAll = P.status === 'mismatch' || P.status === 'nototal';
+    var rows = P.items.map(function(it){
+      var alt = it.A[it.v], q = alt ? alt.q : it.q, pc = alt ? alt.p : (it.q === 1 ? it.v : it.P);
+      var pFix = pc !== it.P, qFix = q !== it.q, tFix = it.v !== it.T, bad = flagAll && !it.ok;
+      return '<tr><td>' + esc(it.desc) + '</td>' +
+        '<td class="' + (qFix ? 'fx' : '') + '">' + (qFix ? '<s>' + fq(it.q) + '</s>' : '') + fq(q) + '</td>' +
+        '<td class="' + (pFix || bad ? 'fx' : '') + '">' + (pFix ? '<s>' + f(it.P) + '</s>' : '') + f(pc) + '</td>' +
+        '<td class="' + (tFix || bad ? 'fx' : '') + '">' + (tFix ? '<s>' + f(it.T) + '</s>' : '') + f(it.v) + '</td></tr>';
+    }).join('');
+    el.innerHTML =
+      '<div class="rp-sum ' + M[0] + '">' + M[1] + '<b>Items ' + f(P.sum) + (P.total != null ? ' · Ticket ' + f(P.total) : '') + (P.cur ? ' · ' + P.cur : '') + '</b>' + (P.tnote ? '<b>' + esc(P.tnote) + '</b>' : '') + '</div>' +
+      '<table class="rp-t"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>' + rows + '</tbody>' +
+      '<tfoot><tr><td>' + P.items.length + ' items</td><td></td><td></td><td>' + f(P.sum) + '</td></tr></tfoot></table>' +
+      (P.pay != null ? '<div class="rp-pay">Paid: ' + esc(P.payTxt) + ' ' + f(P.pay) + '</div>' : '');
+  }
+
+  window.RCP = { parse: parse, render: render };
 })();
 </script>
 </body>
