@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.13.0')) {
+          if (!key.startsWith('mel-v2.15.3')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18848,7 +18848,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.13.0';
+var APP_VERSION = '2.15.3';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -24546,296 +24546,264 @@ syncInit();
 .rc-bar button.rc-snap{width:68px;height:68px;border-radius:50%;padding:0;background:#fff;border:4px solid var(--gold,#c9a84c);}
 </style>
 <script>
-// Receipt scanner v3: in-app camera (sharpest of 6 frames) -> crop -> clean-up -> two-pass text reading -> editable text,
-// currency insert, optional items check. The photo only exists in memory and is wiped once the text is read.
+// Receipt text v2: paste the text from the keyboard's "Scan text" -> one line per item (name  qty  price  total) + TOTAL + payment.
+// Single-amount receipts (tickets, passes, bills) -> one line. Learns your corrections: names you fix are applied next time (also to near-identical misreads).
 (function(){
-  var TESS = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-  var ov, video, stage, disp, box, txt, bar, title, stream = null, FULL = null, R = null, drag = null, worker = null, phase = 1, camRes = '';
+  var ov, txt, bar, title, stage, raw = '', lastTitle = '', lastNote = '', rawNames = [];
   function $(id){ return document.getElementById(id); }
-
-  function build(){
-    if (ov) return;
-    ov = document.createElement('div'); ov.id = 'rc-ov';
-    ov.innerHTML =
-      '<div class="rc-top"><b id="rc-title">SCAN RECEIPT</b><button class="rc-x" style="background:none;border:none;box-shadow:none" onclick="RC.close()">&#10005;</button></div>' +
-      '<div class="rc-stage" id="rc-stage"><video id="rc-video" playsinline muted></video><canvas id="rc-disp"></canvas>' +
-      '<div class="rc-box" id="rc-box"><span class="rc-h" data-h="tl" style="left:0;top:0"></span><span class="rc-h" data-h="tr" style="left:100%;top:0"></span><span class="rc-h" data-h="bl" style="left:0;top:100%"></span><span class="rc-h" data-h="br" style="left:100%;top:100%"></span></div>' +
-      '<div class="rc-msg" id="rc-msg"></div><textarea id="rc-text" spellcheck="false"></textarea></div>' +
-      '<div class="rc-note" id="rc-note"></div><div class="rc-bar" id="rc-bar"></div>';
-    document.body.appendChild(ov);
-    video = $('rc-video'); stage = $('rc-stage'); disp = $('rc-disp'); box = $('rc-box'); txt = $('rc-text'); bar = $('rc-bar'); title = $('rc-title');
-    stage.addEventListener('pointerdown', down);
-    stage.addEventListener('pointermove', move);
-    stage.addEventListener('pointerup', up);
-    stage.addEventListener('pointercancel', up);
-    window.addEventListener('resize', function(){ if (FULL && box.style.display === 'block') drawDisp(true); });
-    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && ov.classList.contains('on')) RC.close(); });
-  }
-
-  function view(v){
-    video.style.display = v === 'cam' ? 'block' : 'none';
-    disp.style.display = box.style.display = v === 'crop' ? 'block' : 'none';
-    $('rc-msg').style.display = v === 'msg' ? 'block' : 'none';
-    txt.style.display = v === 'text' ? 'block' : 'none';
-    var rr = $('rc-res'); if (rr) rr.style.display = v === 'res' ? 'block' : 'none';
-  }
+  function note(t){ var n = $('rc-note'); if (n) n.textContent = t || ''; }
   function buttons(list){
     bar.innerHTML = list.map(function(b){ return '<button type="button" class="' + (b[2] || '') + '">' + b[0] + '</button>'; }).join('');
     [].forEach.call(bar.children, function(el, i){ el.onclick = list[i][1]; });
   }
-  function msg(h){ $('rc-msg').innerHTML = h; view('msg'); }
-  function note(t){ $('rc-note').textContent = t || ''; }
-
-  // ---------- camera ----------
-  function stopCam(){ if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; } if (video) video.srcObject = null; }
-  function wipe(){ if (FULL) { FULL.width = FULL.height = 0; FULL = null; } if (disp) { disp.width = disp.height = 0; } R = null; }
-  function cam(){
-    wipe(); note(''); title.textContent = 'SCAN RECEIPT';
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return noCam('This device does not let the app use a camera.');
-    msg('Opening camera…'); buttons([['Cancel', RC.close]]);
-    navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 4096 }, height: { ideal: 2160 } } })
-      .then(function(s){
-        stream = s;
-        var tr = s.getVideoTracks()[0];
-        try { var cp = tr.getCapabilities ? tr.getCapabilities() : {}; if (cp.focusMode && cp.focusMode.indexOf('continuous') > -1) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function(){}); } catch(e) {}
-        video.srcObject = s; return video.play();
-      })
-      .then(function(){
-        view('cam'); camRes = video.videoWidth + '×' + video.videoHeight;
-        note('Camera ' + camRes + ' · fill the screen with the receipt, then tap the button.');
-        buttons([['🖼 Image', pick], ['', snap, 'rc-snap'], ['Cancel', RC.close]]);
-      })
-      .catch(function(e){ stopCam(); noCam('Camera not available (' + ((e && e.name) || 'error') + ').'); });
+  function build(){
+    if (ov) return;
+    ov = document.createElement('div'); ov.id = 'rc-ov';
+    ov.innerHTML =
+      '<div class="rc-top"><b id="rc-title">RECEIPT TEXT</b><button class="rc-x" style="background:none;border:none;box-shadow:none" onclick="RC.close()">&#10005;</button></div>' +
+      '<div class="rc-stage" id="rc-stage" style="touch-action:auto"><textarea id="rc-text" spellcheck="false"></textarea></div>' +
+      '<div class="rc-note" id="rc-note"></div><div class="rc-bar" id="rc-bar"></div>';
+    document.body.appendChild(ov);
+    txt = $('rc-text'); bar = $('rc-bar'); title = $('rc-title'); stage = $('rc-stage');
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && ov.classList.contains('on')) RC.close(); });
   }
-  function noCam(t){ msg(t + '<br><br>You can pick an existing image instead.'); buttons([['🖼 Pick image', pick, 'p'], ['Cancel', RC.close]]); }
-  function lapVar(img){
-    var p = img.data, w = img.width, h = img.height, g = new Float32Array(w * h), i, j, x, y, s = 0, s2 = 0, n = 0, L;
-    for (i = 0, j = 0; j < w * h; i += 4, j++) g[j] = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
-    for (y = 1; y < h - 1; y++) for (x = 1; x < w - 1; x++) { j = y * w + x; L = 4 * g[j] - g[j - 1] - g[j + 1] - g[j - w] - g[j + w]; s += L; s2 += L * L; n++; }
-    var m = s / n; return s2 / n - m * m;
-  }
-  function snap(){
-    if (!video.videoWidth) return;
-    buttons([]); note('Hold still…');
-    var vw = video.videoWidth, vh = video.videoHeight, best = null, bestS = -1, n = 0;
-    var t = document.createElement('canvas'), tw = 640, th = Math.max(1, Math.round(vh * tw / vw)); t.width = tw; t.height = th;
-    var tx = t.getContext('2d', { willReadFrequently: true });
-    (function grab(){
-      if (!stream) return;
-      var f = document.createElement('canvas'); f.width = vw; f.height = vh; f.getContext('2d').drawImage(video, 0, 0);
-      tx.drawImage(f, vw * 0.2, vh * 0.2, vw * 0.6, vh * 0.6, 0, 0, tw, th);
-      var sc = lapVar(tx.getImageData(0, 0, tw, th));
-      if (sc > bestS) { if (best) best.width = best.height = 0; best = f; bestS = sc; } else { f.width = f.height = 0; }
-      if (++n < 6) setTimeout(grab, 90);
-      else { t.width = t.height = 0; FULL = best; stopCam(); crop(); }
-    })();
-  }
-  function pick(){
-    var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
-    inp.onchange = function(){
-      var f = inp.files && inp.files[0]; inp.value = ''; if (!f) return;
-      createImageBitmap(f).then(function(b){
-        stopCam();
-        FULL = document.createElement('canvas'); FULL.width = b.width; FULL.height = b.height;
-        FULL.getContext('2d').drawImage(b, 0, 0); if (b.close) b.close();
-        camRes = FULL.width + '×' + FULL.height;
-        crop();
-      }).catch(function(){ msg('Could not open that image.'); });
-    };
-    inp.click();
+  function show(v){
+    txt.style.display = v === 'text' ? 'block' : 'none';
+    var rr = $('rc-res'); if (rr) rr.style.display = v === 'res' ? 'block' : 'none';
   }
 
-  // ---------- crop ----------
-  function crop(){
-    title.textContent = 'CROP THE EXPENSE LINES'; note('Drag the corners around the item lines and the TOTAL line.');
-    view('crop'); drawDisp(false);
-    buttons([['⟲ Retake', cam], ['⟳ Rotate', rotate], ['✓ Read text', read, 'p']]);
+  // ---------- paste ----------
+  function pasteMode(){
+    title.textContent = 'PASTE RECEIPT TEXT'; show('text');
+    txt.style.whiteSpace = 'pre-wrap';
+    txt.placeholder = 'Scan the receipt with your keyboard\'s "Scan text", then paste the text here.';
+    txt.value = raw || '';
+    note('');
+    buttons([['📋 Paste', pasteClip], ['⚙ Process', process, 'p'], ['Cancel', RC.close]]);
   }
-  function drawDisp(keep){
-    var sw = stage.clientWidth - 24, sh = stage.clientHeight - 24, s = Math.min(sw / FULL.width, sh / FULL.height);
-    var ow = disp.width;
-    disp.width = Math.max(1, Math.round(FULL.width * s)); disp.height = Math.max(1, Math.round(FULL.height * s));
-    disp.getContext('2d').drawImage(FULL, 0, 0, disp.width, disp.height);
-    if (keep && R && ow) { var k = disp.width / ow; R = { x: R.x * k, y: R.y * k, w: R.w * k, h: R.h * k }; }
-    else R = { x: disp.width * 0.08, y: disp.height * 0.08, w: disp.width * 0.84, h: disp.height * 0.84 };
-    place();
+  function pasteClip(){
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function(t){ txt.value = t; note(''); })
+        .catch(function(){ note('Long-press in the box and choose Paste.'); txt.focus(); });
+    } else { note('Long-press in the box and choose Paste.'); txt.focus(); }
   }
-  function place(){
-    var sr = stage.getBoundingClientRect(), dr = disp.getBoundingClientRect();
-    box.style.left = (dr.left - sr.left + R.x) + 'px'; box.style.top = (dr.top - sr.top + R.y) + 'px';
-    box.style.width = R.w + 'px'; box.style.height = R.h + 'px';
+  function process(){
+    raw = txt.value;
+    if (!raw.trim()) { note('Paste the receipt text first.'); return; }
+    var r = rebuild(raw);
+    txt.value = r.text;
+    lastTitle = r.n + ' ITEM' + (r.n === 1 ? '' : 'S'); lastNote = r.msg;
+    resultMode();
   }
-  function down(e){
-    if (!R || box.style.display !== 'block') return;
-    var h = e.target.dataset && e.target.dataset.h, t = h || (e.target === box ? 'mv' : null); if (!t) return;
-    drag = { t: t, x: e.clientX, y: e.clientY, r: { x: R.x, y: R.y, w: R.w, h: R.h } };
-    try { e.target.setPointerCapture(e.pointerId); } catch(_) {}
-    e.preventDefault();
+
+  // ---------- memory: names you corrected ----------
+  function getJ(k){ try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch(e) { return {}; } }
+  function setJ(k, o){
+    var keys = Object.keys(o); if (keys.length > 800) keys.slice(0, keys.length - 800).forEach(function(x){ delete o[x]; });
+    try { localStorage.setItem(k, JSON.stringify(o)); } catch(e) {}
   }
-  function move(e){
-    if (!drag) return; e.preventDefault();
-    var dx = e.clientX - drag.x, dy = e.clientY - drag.y, o = drag.r, W = disp.width, H = disp.height, M = 40;
-    if (drag.t === 'mv') {
-      R = { x: Math.min(Math.max(0, o.x + dx), W - o.w), y: Math.min(Math.max(0, o.y + dy), H - o.h), w: o.w, h: o.h };
-    } else {
-      var x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h;
-      if (drag.t[1] === 'l') x1 = Math.min(Math.max(0, o.x + dx), x2 - M); else x2 = Math.max(Math.min(W, x2 + dx), x1 + M);
-      if (drag.t[0] === 't') y1 = Math.min(Math.max(0, o.y + dy), y2 - M); else y2 = Math.max(Math.min(H, y2 + dy), y1 + M);
-      R = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+  function learned(){ return getJ('rc_names'); }
+  function fixes(){ return getJ('rc_fix'); }
+  function deacc(s){ return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  function flatKey(s){ return deacc(s).toUpperCase().replace(/[^A-Z]/g, ''); }
+  function lev(a, b){
+    var m = a.length, n = b.length, d = [], i, j;
+    if (!m) return n; if (!n) return m;
+    for (j = 0; j <= n; j++) d[j] = j;
+    for (i = 1; i <= m; i++) {
+      var prev = d[0]; d[0] = i;
+      for (j = 1; j <= n; j++) { var t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; }
     }
-    place();
+    return d[n];
   }
-  function up(){ drag = null; }
-  function rotate(){
-    var c = document.createElement('canvas'); c.width = FULL.height; c.height = FULL.width;
-    var x = c.getContext('2d'); x.translate(c.width, 0); x.rotate(Math.PI / 2); x.drawImage(FULL, 0, 0);
-    FULL.width = FULL.height = 0; FULL = c; drawDisp(false);
+  function correct(rawName){
+    var fx = fixes(), k = learned();
+    if (fx[rawName]) return fx[rawName];
+    if (k[rawName]) return rawName;
+    var f = flatKey(rawName), best = null, bd = 1e9, lim = Math.max(1, Math.floor(f.length * 0.15));
+    if (f.length < 4) return rawName;
+    Object.keys(fx).forEach(function(x){ var d = lev(f, flatKey(x)); if (d < bd) { bd = d; best = fx[x]; } });
+    Object.keys(k).forEach(function(x){ var d = lev(f, flatKey(x)); if (d < bd) { bd = d; best = x; } });
+    return best && bd <= lim ? best : rawName;
   }
 
-  // ---------- image clean-up ----------
-  function enhance(src){
-    var w = src.width, h = src.height, sc = Math.min(3, Math.max(0.6, 1800 / w));
-    if (w * sc * h * sc > 7e6) sc = Math.sqrt(7e6 / (w * h));
-    var W = Math.max(1, Math.round(w * sc)), H = Math.max(1, Math.round(h * sc)), N = W * H, W1 = W + 1;
-    var c = document.createElement('canvas'); c.width = W; c.height = H;
-    var x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, W, H);
-    var d = x.getImageData(0, 0, W, H), p = d.data, g = new Float32Array(N), s = new Uint8ClampedArray(N), i, j, X, Y;
-    for (i = 0, j = 0; j < N; i += 4, j++) g[j] = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
-    for (Y = 0; Y < H; Y++) for (X = 0; X < W; X++) {
-      j = Y * W + X;
-      s[j] = (X === 0 || Y === 0 || X === W - 1 || Y === H - 1) ? g[j] : g[j] + 0.6 * (4 * g[j] - g[j - 1] - g[j + 1] - g[j - W] - g[j + W]);
+  // ---------- rebuild the lines ----------
+    var LABEL = /^(factura|fecha|t[il1]enda|caja|cajero|cantidad|precio|[dp]to|total|ticket|importe|iva|cambio|telf?|base|euros?|eur|uds?|tarjeta|e)$/;
+  var STOP = {};
+  ('simplificada articulo articulos tfno telefono movil nif cif cliente consumidor final fiscal tasa ctd kg incluido imponible pst moneda cuota gracias visita operacion operador terminal comercio ejemplar venta aut pedido aplicacion resp tvr cad contactless unidades subtotal descuento oferta socio puntos saldo vendedor dependiente hora num numero ref no do').split(' ').forEach(function(w){ STOP[w] = 1; });
+  function isJunk(k){
+    var kk = k.replace(/[^a-zñ]/g, '');
+    if (kk.length <= 1) return true;
+    if (LABEL.test(kk) || STOP[kk] || /^descrip/.test(kk) || /^supervis/.test(kk)) return true;
+    return !!getJ('rc_stop')[kk];
+  }
+  function val(x){ return parseFloat(String(x).replace(',', '.')); }
+  function near(q, p, t){ return Math.abs(q * p - t) < (q === 1 ? 0.005 : 0.011); }
+  function pad(x, w){ x = String(x); return x.length >= w ? x : x + ' '.repeat(w - x.length); }
+  function lpad(x, w){ x = String(x); return x.length >= w ? x : ' '.repeat(w - x.length) + x; }
+  function align(Q, X, stream, streamIsTotal){
+    var n = Q.length, m = stream.length, NEG = -1e9, dp = [], i, j;
+    if (m < n) return null;
+    for (i = 0; i <= n; i++) dp.push(new Array(m + 1).fill(NEG));
+    for (j = 0; j <= m; j++) dp[0][j] = 0;
+    for (i = 1; i <= n; i++) for (j = i; j <= m; j++) {
+      var q = val(Q[i - 1]), a = val(X[i - 1]), b = val(stream[j - 1]);
+      var hit = streamIsTotal ? near(q, a, b) : near(q, b, a);
+      var take = dp[i - 1][j - 1] + (hit ? 1 : 0), skip = dp[i][j - 1];
+      dp[i][j] = take >= skip ? take : skip;
     }
-    g = null;
-    var I = new Uint32Array(W1 * (H + 1));
-    for (Y = 0; Y < H; Y++) { var row = 0; for (X = 0; X < W; X++) { row += s[Y * W + X]; I[(Y + 1) * W1 + X + 1] = I[Y * W1 + X + 1] + row; } }
-    var r = Math.max(8, Math.round(Math.min(W, H) / 20));
-    var c2 = document.createElement('canvas'); c2.width = W; c2.height = H;
-    var x2 = c2.getContext('2d'), d2 = x2.createImageData(W, H), q = d2.data;
-    for (Y = 0; Y < H; Y++) {
-      var y1 = Math.max(0, Y - r), y2 = Math.min(H - 1, Y + r);
-      for (X = 0; X < W; X++) {
-        var xa = Math.max(0, X - r), xb = Math.min(W - 1, X + r), cnt = (xb - xa + 1) * (y2 - y1 + 1);
-        var m = (I[(y2 + 1) * W1 + xb + 1] - I[y1 * W1 + xb + 1] - I[(y2 + 1) * W1 + xa] + I[y1 * W1 + xa]) / cnt;
-        j = Y * W + X; i = j * 4;
-        var v = s[j], f = Math.min(255, v / (m + 1) * 240);
-        p[i] = p[i + 1] = p[i + 2] = f; p[i + 3] = 255;
-        var b = v < m * 0.82 ? 0 : 255; q[i] = q[i + 1] = q[i + 2] = b; q[i + 3] = 255;
+    var idx = []; i = n; j = m;
+    while (i > 0) {
+      if (j > i && dp[i][j] === dp[i][j - 1]) { j--; continue; }
+      idx[i - 1] = j - 1; i--; j--;
+    }
+    return { score: dp[n][m], idx: idx };
+  }
+  function splitNames(words, n){
+    var W = words.length, i, j, s, L, k;
+    if (!n) return [];
+    if (W <= n) { var o = words.slice(); while (o.length < n) o.push('?'); return o; }
+    function key(a, b){ return words.slice(a, b).join(' '); }
+    var cnt = {}, maxi = {}, known = learned();
+    for (i = 0; i < W; i++) for (L = 1; L <= 4 && i + L <= W; L++) { k = key(i, i + L); cnt[k] = (cnt[k] || 0) + 1; }
+    for (i = 0; i < W; i++) for (L = 1; L <= 3 && i + L <= W; L++) {
+      k = key(i, i + L); if (cnt[k] < 2 || maxi[k] === false) continue;
+      var ext = (i > 0 && cnt[key(i - 1, i + L)] === cnt[k]) || (i + L < W && cnt[key(i, i + L + 1)] === cnt[k]);
+      maxi[k] = ext ? false : true;
+    }
+    function cost(a, b){
+      var len = b - a, kk = key(a, b), c = len === 2 ? 0 : len === 1 ? 1 : len === 3 ? 1 : len === 4 ? 4 : 9;
+      if (maxi[kk] === true) c -= 2;
+      else {
+        for (var x = a; x < b; x++) {
+          for (var y = x + 1; y <= b && y - x <= 3; y++) {
+            if (!(x === a && y === b) && maxi[key(x, y)] === true) { c += 2; x = b; break; }
+          }
+        }
       }
+      if (known[kk]) c -= 5;
+      if (words[a].replace(/[^A-ZÑ]/g, '').length <= 2) c += 3;
+      return c;
     }
-    x.putImageData(d, 0, 0); x2.putImageData(d2, 0, 0);
-    return { gray: c, bin: c2 };
+    var INF = 1e9, dp = [], bk = [];
+    for (s = 0; s <= n; s++) { dp.push(new Array(W + 1).fill(INF)); bk.push(new Array(W + 1).fill(-1)); }
+    dp[0][0] = 0;
+    for (s = 1; s <= n; s++) for (j = s; j <= W; j++) for (i = Math.max(s - 1, j - 8); i < j; i++) {
+      if (dp[s - 1][i] >= INF) continue;
+      var v = dp[s - 1][i] + cost(i, j);
+      if (v < dp[s][j]) { dp[s][j] = v; bk[s][j] = i; }
+    }
+    if (dp[n][W] >= INF) {
+      var per = Math.ceil(W / n), out2 = [];
+      for (s = 0; s < n; s++) out2.push(words.slice(s * per, (s + 1) * per).join(' ') || '?');
+      return out2;
+    }
+    var out = []; j = W;
+    for (s = n; s > 0; s--) { i = bk[s][j]; out[s - 1] = key(i, j); j = i; }
+    return out;
   }
 
-  // ---------- two-pass reading ----------
-  function loadTess(){
-    if (window.Tesseract) return Promise.resolve();
-    return new Promise(function(res, rej){
-      var s = document.createElement('script'); s.src = TESS; s.onload = res;
-      s.onerror = function(){ rej(new Error('the text reader could not be downloaded. Check your connection.')); };
-      document.head.appendChild(s);
+  // one amount, no item columns (tickets, passes, bills)
+  function single(text, money, date, cur){
+    var flat = text.replace(/[\r\n\t]+/g, ' ');
+    var m = flat.match(/(importe|total|precio|a\s+pagar|amount)\s*:?\s*(\d+[.,]\s?\d{2})(?!\d)/i);
+    var amt = m ? m[2].replace(/\s/g, '') : (money.length ? money.slice().sort(function(a, b){ return val(b) - val(a); })[0] : '');
+    var t = flat.match(/(t[ií]tulo|concepto|producto|art[ií]culo|descripci[oó]n|servicio)\s*:\s*(.+?)(?=\s+[A-Za-zÀ-ÿ.]+\s*:|$)/i);
+    var mer = [];
+    flat.split(/\s+/).some(function(tk){
+      if (/:/.test(tk)) return true;
+      if (/^[A-Za-zÀ-ÿ.&]{2,}$/.test(tk) && mer.length < 4) mer.push(tk);
+      return false;
     });
-  }
-  function endWorker(){ var w = worker; worker = null; return w ? w.terminate().catch(function(){}) : Promise.resolve(); }
-  function numish(t){ var n = (t.match(/[\d.,]/g) || []).length; return t.length > 0 && n / t.length >= 0.5; }
-  function layout(ws){
-    ws.sort(function(a, b){ return a.b.x0 - b.b.x0; });
-    var cw = []; ws.forEach(function(w){ if (w.t.length) cw.push((w.b.x1 - w.b.x0) / w.t.length); });
-    cw.sort(function(a, b){ return a - b; });
-    var ch = cw.length ? cw[cw.length >> 1] : 10, s = '', px = null;
-    ws.forEach(function(w){
-      if (px !== null) s += ' '.repeat(Math.max(1, Math.min(14, Math.round((w.b.x0 - px) / ch))));
-      s += w.t; px = w.b.x1;
-    });
-    return { text: s, words: ws.map(function(w){ return { t: w.t, c: Math.round(w.c), fix: !!w.fix }; }) };
-  }
-  function merge(A, B){
-    if (!A.lines) return { lines: String(A.text || '').split(/\r?\n/).map(function(t){ return { text: t, words: [] }; }), fixes: 0 };
-    var nums = [], fixes = 0;
-    (B.lines || []).forEach(function(l){ (l.words || []).forEach(function(w){
-      var t = w.text.replace(/[^\d.,]/g, '');
-      if (/\d/.test(t) && w.confidence >= 55) nums.push({ t: t, c: w.confidence, b: w.bbox, used: false });
-    }); });
-    var lines = A.lines.map(function(l){
-      var ws = (l.words || []).map(function(w){ return { t: w.text, c: w.confidence, b: w.bbox }; });
-      nums.forEach(function(n){
-        if (n.used) return;
-        var pad = (n.b.y1 - n.b.y0) * 0.3, hit = [], k;
-        for (k = 0; k < ws.length; k++) {
-          var b = ws[k].b, cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
-          if (cx >= n.b.x0 - pad && cx <= n.b.x1 + pad && cy >= n.b.y0 - pad && cy <= n.b.y1 + pad) hit.push(k);
-        }
-        if (!hit.length) return;
-        var avg = hit.reduce(function(s, k){ return s + ws[k].c; }, 0) / hit.length;
-        var allNum = hit.every(function(k){ return numish(ws[k].t); });
-        var joined = hit.map(function(k){ return ws[k].t; }).join('');
-        if ((allNum && n.c >= avg - 3) || n.c > avg + 10) {
-          if (joined !== n.t) fixes++;
-          ws[hit[0]] = { t: n.t, c: n.c, b: n.b, fix: joined !== n.t };
-          for (k = hit.length - 1; k > 0; k--) ws.splice(hit[k], 1);
-          n.used = true;
-        }
-      });
-      return layout(ws);
-    }).filter(function(l){ return l.text.trim(); });
-    return { lines: lines, fixes: fixes };
-  }
-  function ocr(im){
-    return loadTess()
-      .then(function(){
-        return Tesseract.createWorker(['spa', 'eng'], 1, { logger: function(m){
-          var i = $('rc-pi'), t = $('rc-mt'); if (!i || m.status !== 'recognizing text') return;
-          i.style.width = Math.round((phase === 1 ? 0 : 50) + m.progress * 50) + '%';
-          if (t) t.textContent = phase === 1 ? 'Reading the text (1/2)…' : 'Checking the numbers (2/2)…';
-        } });
-      })
-      .then(function(w){
-        worker = w; phase = 1;
-        return w.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: '6', user_defined_dpi: '300' })
-          .then(function(){ return w.recognize(im.gray); })
-          .then(function(r1){
-            phase = 2;
-            return w.setParameters({ tessedit_char_whitelist: '0123456789,.' })
-              .then(function(){ return w.recognize(im.bin); })
-              .then(function(r2){ return merge(r1.data, r2.data); });
-          });
-      })
-      .then(function(res){ return endWorker().then(function(){ return res; }); },
-            function(e){ return endWorker().then(function(){ throw e; }); });
-  }
-  function read(){
-    var k = FULL.width / disp.width;
-    var sx = Math.round(R.x * k), sy = Math.round(R.y * k), sw = Math.round(R.w * k), sh = Math.round(R.h * k);
-    var c = document.createElement('canvas'); c.width = sw; c.height = sh;
-    c.getContext('2d').drawImage(FULL, sx, sy, sw, sh, 0, 0, sw, sh);
-    wipe();
-    title.textContent = 'READING TEXT'; note('');
-    msg('<span id="rc-mt">Preparing the image…</span><div class="rc-prog"><i id="rc-pi"></i></div>');
-    buttons([['Cancel', RC.close]]);
-    setTimeout(function(){
-      var im = enhance(c); c.width = c.height = 0;
-      var mt = $('rc-mt'); if (mt) mt.textContent = 'Loading the text reader…';
-      function clear(){ im.gray.width = im.gray.height = im.bin.width = im.bin.height = 0; }
-      ocr(im).then(function(res){
-        clear();
-        if (ov.classList.contains('on')) show(res);
-      }).catch(function(e){
-        clear();
-        if (!ov.classList.contains('on')) return;
-        console.error('Receipt scanner:', e);
-        msg('Something went wrong: ' + ((e && e.message) || e)); note('Photo deleted.');
-        buttons([['↻ Scan again', cam, 'p'], ['Close', RC.close]]);
-      });
-    }, 30);
+    var rawName = (mer.join(' ') + (t ? ' ' + t[2] : '')).toUpperCase().replace(/\s+/g, ' ').trim() || 'RECEIPT';
+    rawNames = [rawName];
+    var name = correct(rawName), w = Math.max(14, name.length);
+    var out = [];
+    if (date) out.push('Fecha ' + date);
+    out.push(pad(name, w) + '  ' + (amt || '?'));
+    if (amt) out.push(pad('TOTAL', w) + '  ' + amt + cur);
+    var msg = 'Single-amount receipt · ' + (m ? 'amount taken from "' + m[1] + '"' : (amt ? 'largest amount used' : 'no amount found')) +
+      (name !== rawName ? ' · name corrected from memory' : ' · fix the name once and it is remembered');
+    return { text: out.join('\n'), n: 1, msg: msg };
   }
 
-  // ---------- currency before the last number of each line ----------
+  function rebuild(text){
+    var s = ' ' + text.replace(/[\r\n\t]+/g, ' ') + ' ', payLabel = '', date = '', cur = /€|\bEUR\b/i.test(text) ? ' €' : '';
+    s = s.replace(/(\d)[.,]\s+(\d{2})(?!\d)/g, '$1,$2');
+    s = s.replace(/tarjeta\s+de\s+cr[eé]dito|tarjeta\s+de\s+d[eé]bito|efectivo|bizum|contado/ig, function(m){ if (!payLabel) payLabel = m; return ' '; });
+    s = s.replace(/total\s+ticket/ig, ' ');
+    s = s.replace(/\b(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})(?:\s+\d{1,2}[:.]\d{2}(?:[:.]\d{2})?)?/g, function(m, d){ if (!date) date = d; return ' '; });
+    s = s.replace(/[€%]/g, ' ');
+    var words = [], qty = [], money = [], skipNext = false;
+    s.split(/\s+/).forEach(function(t){
+      if (!t) return;
+      var dn = t.replace(/[Oo]/g, '0').replace(/[lI]/g, '1').replace(/[.,]{2,}/g, ',');
+      if (/^\d+[.,]\d{3}$/.test(dn) || dn === '1000') { qty.push(dn); skipNext = false; return; }
+      if (/^\d+[.,]\d{2}$/.test(dn)) { money.push(dn); skipNext = false; return; }
+      var D = (t.match(/\d/g) || []).length, L = (t.match(/[A-Za-zÀ-ÿ]/g) || []).length;
+      if (D && (D >= 2 || L < 2 || /^\d/.test(t))) { skipNext = /^\d{5}$/.test(t); return; }
+      if (skipNext) { skipNext = false; return; }
+      var w = t.replace(/0/g, 'O').replace(/[,;:]+$/, '');
+      var k = deacc(w).toLowerCase().replace(/[.:]+$/, '');
+      if (!k || /[\/@]/.test(k) || !/[a-z]/.test(k) || isJunk(k)) return;
+      words.push(w.toUpperCase());
+    });
+
+    var n = qty.length;
+    if (!n) return single(text, money, date, cur);
+
+    var P = [], T = [], tail = [], i;
+    if (money.length >= 2 * n) {
+      var a = align(qty, money.slice(0, n), money.slice(n), true), b = null;
+      if (!a || a.score < n / 2) b = align(qty, money.slice(0, n), money.slice(n), false);
+      if (b && (!a || b.score > a.score)) {
+        T = money.slice(0, n); P = b.idx.map(function(x){ return money[n + x]; }); tail = money.slice(n + b.idx[n - 1] + 1);
+      } else if (a) {
+        P = money.slice(0, n); T = a.idx.map(function(x){ return money[n + x]; }); tail = money.slice(n + a.idx[n - 1] + 1);
+      }
+    } else {
+      P = money.slice(0, n); T = money.slice(n, 2 * n); tail = money.slice(2 * n);
+    }
+
+    var raws = splitNames(words, n), fixedCount = 0;
+    rawNames = raws.map(function(x){ return String(x).toUpperCase(); });
+    var names = rawNames.map(function(x){ var c = correct(x); if (c !== x) fixedCount++; return c; });
+    var sum = 0, bad = 0, rows = [];
+    for (i = 0; i < n; i++) {
+      var r = [names[i] || '?', qty[i] || '', P[i] || '', T[i] || ''];
+      if (r[3]) sum += val(r[3]);
+      if (!(r[1] && r[2] && r[3] && near(val(r[1]), val(r[2]), val(r[3])))) bad++;
+      rows.push(r);
+    }
+    var ticket = '', pay = '';
+    if (tail.length) {
+      var match = tail.filter(function(x){ return Math.abs(val(x) - sum) < 0.005; })[0];
+      ticket = match || tail[0];
+      var after = tail.slice(tail.indexOf(ticket) + 1);
+      pay = after.length ? after[0] : '';
+    }
+    var nw = Math.min(26, Math.max(12, rows.reduce(function(m, r){ return Math.max(m, r[0].length); }, 0)));
+    var out = [];
+    if (date) out.push('Fecha ' + date);
+    rows.forEach(function(r){ out.push(pad(r[0], nw) + '  ' + lpad(r[1], 5) + '  ' + lpad(r[2], 6) + '  ' + lpad(r[3], 6)); });
+    if (ticket) out.push(pad('TOTAL TICKET', nw) + '  ' + ticket + cur);
+    if (payLabel && pay) out.push(payLabel.replace(/\s+/g, ' ') + '  ' + pay + cur);
+
+    var msg = n + ' item' + (n === 1 ? '' : 's') + ' · lines add up to ' + sum.toFixed(2).replace('.', ',');
+    if (ticket) msg += Math.abs(sum - val(ticket)) < 0.005 ? ' = TOTAL ✓' : ' but TOTAL says ' + ticket;
+    if (bad) msg += ' · ' + bad + ' line' + (bad === 1 ? '' : 's') + ' where qty × price ≠ total';
+    if (fixedCount) msg += ' · ' + fixedCount + ' name' + (fixedCount === 1 ? '' : 's') + ' corrected from memory';
+    return { text: out.join('\n'), n: n, msg: msg };
+  }
+
+  // ---------- result ----------
   function syms(){
     var S = window.SYMS || {}, o = {};
     Object.keys(S).forEach(function(c){ if (S[c]) o[c] = S[c]; });
     if (!Object.keys(o).length) o = { EUR: '€', NGN: '₦', USD: '$', GBP: '£' };
     return o;
   }
-  function rx(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function rx(x){ return x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
   function addCur(code){
     var S = syms(), sym = S[code] || code;
     var all = Object.keys(S).map(function(c){ return S[c]; }).concat(Object.keys(S), ['€', '$', '£', '₦'])
@@ -24843,6 +24811,7 @@ syncInit();
       .sort(function(a, b){ return b.length - a.length; }).map(rx).join('|');
     var tail = new RegExp('\\s*(?:' + all + ')\\s*$'), head = new RegExp('(?:' + all + ')\\s*$');
     txt.value = txt.value.split('\n').map(function(line){
+      if (/\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}/.test(line)) return line;
       var re = /\d[\d.,]*\d|\d/g, m, last = null;
       while ((m = re.exec(line))) last = m;
       if (!last) return line;
@@ -24855,56 +24824,70 @@ syncInit();
   }
   function curSel(){
     var S = syms(), cur = 'EUR'; try { cur = localStorage.getItem('rc_cur') || 'EUR'; } catch(e) {}
-    var s = document.createElement('select'); s.className = 'rc-cur'; s.title = 'Currency to put before the last number on every line';
-    s.innerHTML = Object.keys(S).map(function(c){ return '<option value="' + c + '"' + (c === cur ? ' selected' : '') + '>' + S[c] + ' ' + c + '</option>'; }).join('');
-    return s;
+    var x = document.createElement('select'); x.className = 'rc-cur'; x.title = 'Currency to put before the last number on every line';
+    x.innerHTML = Object.keys(S).map(function(c){ return '<option value="' + c + '"' + (c === cur ? ' selected' : '') + '>' + S[c] + ' ' + c + '</option>'; }).join('');
+    return x;
   }
-
-  // ---------- result: editable text (default) / items check ----------
-  function show(res){
-    var lines = res.lines.map(function(l){ return l.text.replace(/\s+$/, ''); });
-    window.__rcData = res.lines; window.__rcLines = lines;
-    txt.value = lines.join('\n');
-    var base = '✓ Photo deleted. Only the text was kept.' + (camRes ? ' · ' + camRes : '');
-    var sel = null;
-    function ins(){
-      if (!sel || !sel.value) return;
-      try { localStorage.setItem('rc_cur', sel.value); } catch(e) {}
-      addCur(sel.value);
-      note('✓ ' + (syms()[sel.value] || sel.value) + ' put before the last number on every line.');
-    }
-    function asText(){
-      title.textContent = lines.length + ' LINE' + (lines.length === 1 ? '' : 'S') + ' READ';
-      view('text');
-      note(base + (res.fixes ? ' · ' + res.fixes + ' number' + (res.fixes === 1 ? '' : 's') + ' corrected by the second pass' : ''));
-      var list = [['📋', copy], ['＋', ins], ['↻', cam]];
-      if (window.RCP) list.push(['▦', asTable]);
-      list.push(['Done', RC.close, 'p']);
-      buttons(list);
-      try { sel = curSel(); bar.insertBefore(sel, bar.children[1]); } catch(e) { console.error('Currency picker:', e); }
-    }
-    function asTable(){
-      try {
-        var P = RCP.parse(txt.value.split('\n')); RCP.render(stage, P);
-        title.textContent = P.items.length + ' ITEM' + (P.items.length === 1 ? '' : 'S') + ' FOUND'; view('res'); note(base);
-        buttons([['≡ Text', asText], ['↻ Scan', cam], ['Done', RC.close, 'p']]);
-      } catch(e) { console.error('Items check:', e); note('The items check failed: ' + e.message); }
-    }
-    asText();
+  // remember only what you corrected by hand
+    // remember only what you corrected by hand: the corrected names, and the words you deleted (as noise)
+  function learn(){
+    var k = learned(), fx = fixes(), stop = getJ('rc_stop'), finals = [], rawSet = {}, finalWords = {};
+    rawNames.forEach(function(x){ rawSet[x] = 1; });
+    txt.value.split('\n').forEach(function(l){
+      if (/^\s*(fecha|total|tarjeta|efectivo|bizum|contado)/i.test(l)) return;
+      var m = l.match(/^\s*(.*?[A-Za-zÀ-ÿ].*?)\s+[€$£₦]?\d/); if (!m) return;
+      finals.push(m[1].trim().toUpperCase().replace(/\s+/g, ' '));
+    });
+    finals.forEach(function(f){ f.split(' ').forEach(function(w){ finalWords[flatKey(w).toLowerCase()] = 1; }); });
+    var same = finals.length === rawNames.length;
+    finals.forEach(function(name, i){
+      if (!name || name === '?') return;
+      if (same) {
+        var r = rawNames[i];
+        if (name === r) { delete fx[r]; return; }
+        if (r !== 'RECEIPT') fx[r] = name;
+        r.split(' ').forEach(function(w){ var kk = flatKey(w).toLowerCase(); if (kk.length > 1 && !finalWords[kk]) stop[kk] = 1; });
+      } else if (rawSet[name]) return;
+      if (name.split(' ').length <= 5) k[name] = 1;
+    });
+    Object.keys(finalWords).forEach(function(w){ delete stop[w]; });
+    setJ('rc_names', k); setJ('rc_fix', fx); setJ('rc_stop', stop);
   }
   function copy(){
+    learn();
     var v = txt.value;
     (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject())
-      .then(function(){ note('✓ Text copied. Photo deleted, only the text was kept.'); })
-      .catch(function(){ txt.focus(); txt.select(); try { document.execCommand('copy'); note('✓ Text copied.'); } catch(e) {} });
+      .then(function(){ note('✓ Copied. Your corrections are remembered for next time.'); })
+      .catch(function(){ txt.focus(); txt.select(); try { document.execCommand('copy'); note('✓ Copied.'); } catch(e) {} });
+  }
+  function resultMode(){
+    title.textContent = lastTitle; show('text');
+    txt.style.whiteSpace = 'pre';
+    note(lastNote);
+    var sel = curSel();
+    var list = [['📋 Copy', copy], ['＋ Insert', function(){
+      try { localStorage.setItem('rc_cur', sel.value); } catch(e) {}
+      addCur(sel.value); note('✓ ' + (syms()[sel.value] || sel.value) + ' put before the last number on every line.');
+    }], ['✎ Raw', pasteMode]];
+    if (window.RCP) list.push(['▦ Items', items]);
+    list.push(['Done', RC.close, 'p']);
+    buttons(list);
+    bar.insertBefore(sel, bar.children[1]);
+  }
+  function items(){
+    try {
+      var P = RCP.parse(txt.value.split('\n')); RCP.render(stage, P);
+      title.textContent = P.items.length + ' ITEM' + (P.items.length === 1 ? '' : 'S') + ' CHECKED'; show('res'); note('');
+      buttons([['≡ Text', resultMode], ['Done', RC.close, 'p']]);
+    } catch(e) { console.error('Items check:', e); note('The items check failed: ' + e.message); }
   }
 
   window.RC = {
-    open: function(){ build(); ov.classList.add('on'); document.body.style.overflow = 'hidden'; cam(); },
-    close: function(){ stopCam(); wipe(); endWorker(); if (ov) { ov.classList.remove('on'); txt.value = ''; note(''); } document.body.style.overflow = ''; }
+    open: function(){ build(); ov.classList.add('on'); document.body.style.overflow = 'hidden'; raw = ''; pasteMode(); },
+    close: function(){ if (ov) { ov.classList.remove('on'); txt.value = ''; note(''); } raw = ''; document.body.style.overflow = ''; }
   };
 
-  // 📷 button on the left of "Parse Expenses" (Expenses → Import), 50/50
+  // 🧾 button on the left of "Parse Expenses" (Expenses → Import), 50/50
   function mount(){
     var p = $('panel-import'); if (!p || $('rc-btn')) return;
     var parse = [].find.call(p.querySelectorAll('button'), function(b){ return /parse/i.test(b.textContent); });
@@ -24912,16 +24895,15 @@ syncInit();
     var pair = document.createElement('div'); pair.className = 'rc-pair';
     parse.parentNode.insertBefore(pair, parse);
     var b = document.createElement('button'); b.id = 'rc-btn'; b.type = 'button'; b.className = parse.className;
-    b.innerHTML = '📷 Scan receipt'; b.onclick = RC.open;
+    b.innerHTML = '🧾 Receipt text'; b.onclick = RC.open;
     pair.appendChild(b); pair.appendChild(parse);
   }
-  // keep looking until the Parse button exists (it appears after login), then stop
   mount();
   var iv = setInterval(function(){ mount(); if (document.getElementById('rc-btn')) clearInterval(iv); }, 1000);
   var ip = document.getElementById('panel-import');
   if (ip) new MutationObserver(function(){ if (!document.getElementById('rc-btn')) mount(); }).observe(ip, { childList: true, subtree: true });
 })();
-</script>  
+</script>
 <style>
 #rc-res{display:none;width:100%;height:100%;box-sizing:border-box;overflow:auto;background:#fffdf8;color:#1f1a14;padding:10px 12px;font-family:"DM Mono",monospace;}
 .rp-sum{font-size:0.7rem;line-height:1.5;border-radius:10px;padding:8px 12px;margin-bottom:10px;border:1px solid;}

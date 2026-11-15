@@ -1,5 +1,5 @@
 /* JAR My Expense Ledger — Service Worker */
-var CACHE = 'mel-v2.13.0';
+var CACHE = 'mel-v2.15.3';
 var APP_URL = '/';
 
 self.addEventListener('install', function(e) {
