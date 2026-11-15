@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.15.4')) {
+          if (!key.startsWith('mel-v2.15.5')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18848,7 +18848,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.15.4';
+var APP_VERSION = '2.15.5';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -24552,7 +24552,8 @@ syncInit();
   var ov, txt, bar, title, stage, raw = '', lastTitle = '', lastNote = '', rawNames = [];
   function $(id){ return document.getElementById(id); }
   function note(t){ var n = $('rc-note'); if (n) n.textContent = t || ''; }
-  function buttons(list){
+    function buttons(list){
+    bar.classList.remove('rc-grid');
     bar.innerHTML = list.map(function(b){ return '<button type="button" class="' + (b[2] || '') + '">' + b[0] + '</button>'; }).join('');
     [].forEach.call(bar.children, function(el, i){ el.onclick = list[i][1]; });
   }
@@ -24935,19 +24936,34 @@ syncInit();
       .then(function(){ note('✓ Copied. Your corrections are remembered for next time.'); })
       .catch(function(){ txt.focus(); txt.select(); try { document.execCommand('copy'); note('✓ Copied.'); } catch(e) {} });
   }
+    // Aa: ALL CAPS -> Capital First Letters -> all small -> ALL CAPS (selection only, if something is selected)
+  var caseStep = 0;
+  function cycleCase(){
+    caseStep = (caseStep + 1) % 3;
+    var a = txt.selectionStart, b = txt.selectionEnd, v = txt.value, hasSel = b > a;
+    var part = hasSel ? v.slice(a, b) : v;
+    var out = caseStep === 0 ? part.toLocaleUpperCase('es')
+      : caseStep === 2 ? part.toLocaleLowerCase('es')
+      : part.toLocaleLowerCase('es').replace(/(^|[\s\-\/.(])(\p{L})/gu, function(m, p, c){ return p + c.toLocaleUpperCase('es'); });
+    txt.value = hasSel ? v.slice(0, a) + out + v.slice(b) : out;
+    if (hasSel) { txt.selectionStart = a; txt.selectionEnd = a + out.length; }
+    note(['✓ ALL CAPS', '✓ Capital First Letters', '✓ all small letters'][caseStep] + (hasSel ? ' (selection)' : ''));
+  }
   function resultMode(){
     title.textContent = lastTitle; show('text');
     txt.style.whiteSpace = 'pre';
     note(lastNote);
+    caseStep = 0;
     var sel = curSel();
     var list = [['📋 Copy', copy], ['＋ Insert', function(){
       try { localStorage.setItem('rc_cur', sel.value); } catch(e) {}
       addCur(sel.value); note('✓ ' + (syms()[sel.value] || sel.value) + ' put before the last number on every line.');
-    }], ['✂ Trim', trim], ['✎ Raw', pasteMode]];
+    }], ['Aa', cycleCase], ['✂ Trim', trim], ['✎ Raw', pasteMode]];
     if (window.RCP) list.push(['▦ Items', items]);
     list.push(['Done', RC.close, 'p']);
     buttons(list);
     bar.insertBefore(sel, bar.children[1]);
+    bar.classList.add('rc-grid');
   }
   function items(){
     try {
@@ -25008,6 +25024,8 @@ syncInit();
 .rp-t td s{color:#b0a690;font-size:0.6rem;margin-right:4px;}
 .rp-t tfoot td{font-weight:700;border-top:1.5px solid #e2d9c6;border-bottom:none;}
 .rp-pay{font-size:0.66rem;color:#8a8070;margin-top:8px;}
+.rc-bar.rc-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
+.rc-bar.rc-grid > *{width:100%;min-width:0;padding:9px 4px;font-size:0.68rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;}
 </style>
 <script>
 // Receipt interpreter: lines -> items (qty, price, total), self-corrects common OCR digit swaps using qty x price = total and the ticket TOTAL
