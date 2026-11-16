@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.15.7')) {
+          if (!key.startsWith('mel-v2.16.0')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18849,7 +18849,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.15.7';
+var APP_VERSION = '2.16.0';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -25297,6 +25297,535 @@ syncInit();
       if (hasRaw(t) || (m && m.cols !== cols(t))) { if (m) normalize(t); format(t); }
     });
   }, 800);
+})();
+</script>
+<style>
+/* Transfers › Recipients: nothing may be wider than the screen (this was pushing the header and the ⇧⇩ arrows off the right edge) */
+html, body{ max-width:100%; overflow-x:hidden; }
+[id^="trf-"]:not(#trf-modal):not(#trf-mbox), [class*="trf-"]{ max-width:100%; box-sizing:border-box; }
+div:has(> input[placeholder^="Search name"]){ display:flex; flex-wrap:wrap; gap:6px; align-items:center; min-width:0; }
+input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width:auto !important; }
+</style>
+<style>
+/* ===== Bank statements: compare and add missing NGN records ===== */
+#bs-ov{position:fixed;inset:0;z-index:99990;background:var(--paper,#faf6ee);display:none;flex-direction:column;font-family:"DM Sans",sans-serif;color:var(--ink,#1f1a14);}
+#bs-ov.on{display:flex;}
+.bs-top{display:flex;align-items:center;gap:8px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--border,#e2d9c6);background:white;}
+.bs-top b{flex:1;font-family:"Playfair Display",serif;font-size:1rem;}
+.bs-x{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--ink,#1f1a14);}
+.bs-body{flex:1;overflow:auto;padding:12px 14px 90px;max-width:980px;width:100%;box-sizing:border-box;margin:0 auto;}
+.bs-card{background:white;border:1px solid var(--border,#e2d9c6);border-left:4px solid var(--gold,#c9a84c);border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+.bs-card h4{margin:0 0 6px;font-size:0.82rem;}
+.bs-muted{font-family:"DM Mono",monospace;font-size:0.66rem;color:var(--muted,#8a8070);line-height:1.5;}
+.bs-btn{font-family:"DM Mono",monospace;font-size:0.68rem;font-weight:700;border-radius:20px;padding:8px 14px;border:1.5px solid var(--gold,#c9a84c);background:white;color:var(--ink,#1f1a14);cursor:pointer;}
+.bs-btn.p{background:var(--gold,#c9a84c);}
+.bs-btn.warn{border-color:#c0392b;color:#c0392b;}
+.bs-sum{width:100%;border-collapse:collapse;font-family:"DM Mono",monospace;font-size:0.68rem;}
+.bs-sum th,.bs-sum td{padding:5px 6px;text-align:right;border-bottom:1px solid #efe8da;}
+.bs-sum th:first-child,.bs-sum td:first-child{text-align:left;}
+.bs-sum td.m{color:#c0392b;font-weight:700;} .bs-sum td.f{color:#2e7d4f;} .bs-sum td.q{color:#b07d00;}
+.bs-seg{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0;}
+.bs-seg button{flex:1 1 0;min-width:0;font-family:"DM Mono",monospace;font-size:0.64rem;font-weight:700;padding:7px 4px;border-radius:16px;border:1.5px solid var(--border,#e2d9c6);background:white;color:var(--muted,#8a8070);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bs-seg button.on{background:var(--ink,#1f1a14);border-color:var(--ink,#1f1a14);color:white;}
+.bs-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;}
+.bs-tools select{font-family:"DM Mono",monospace;font-size:0.7rem;padding:6px 8px;border:1.5px solid var(--border,#e2d9c6);border-radius:10px;background:white;}
+.bs-row{display:grid;grid-template-columns:22px 78px 86px 1fr 22px;gap:6px;align-items:start;padding:7px 4px;border-bottom:1px solid #efe8da;font-size:0.72rem;cursor:pointer;}
+.bs-row .a{font-family:"DM Mono",monospace;text-align:right;font-weight:700;}
+.bs-row .d{font-family:"DM Mono",monospace;color:var(--muted,#8a8070);font-size:0.66rem;}
+.bs-row .t{min-width:0;word-break:break-word;}
+.bs-row small{display:block;font-family:"DM Mono",monospace;font-size:0.58rem;color:var(--muted,#8a8070);margin-top:2px;}
+.bs-row .st{font-weight:700;text-align:center;}
+.bs-row.missing .st{color:#c0392b;} .bs-row.possible .st{color:#b07d00;} .bs-row.found .st{color:#2e7d4f;}
+.bs-row.found{opacity:.7;}
+.bs-row .raw{display:none;grid-column:2/-1;font-family:"DM Mono",monospace;font-size:0.6rem;color:var(--muted,#8a8070);background:#fffaf0;border-radius:6px;padding:5px 8px;}
+.bs-row.open .raw{display:block;}
+.bs-map{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;align-items:center;font-size:0.7rem;}
+.bs-map select{width:100%;font-family:"DM Mono",monospace;font-size:0.68rem;padding:5px 6px;border:1.5px solid var(--border,#e2d9c6);border-radius:8px;background:white;}
+.bs-foot{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;justify-content:center;align-items:center;padding:10px 14px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:white;border-top:1px solid var(--border,#e2d9c6);z-index:2;}
+.bs-note{font-family:"DM Mono",monospace;font-size:0.66rem;color:#2e7d4f;min-height:1em;margin:4px 0 8px;}
+#bs-open{display:block;width:100%;margin:0 0 12px;}
+</style>
+<script>
+// Bank statements: load the processed statement file (JSON), compare every line with Expenses / Income / Transfers,
+// and add only the missing ones (you choose). Each added entry carries src:"bank:<id>" so it is never added twice; Undo removes the last import.
+(function(){
+  var S = { recs: [], st: {}, dest: 'expense', year: 'all', show: 'missing', sel: {}, limit: 300, armed: false };
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function naira(n){ return '₦' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+  function lsGet(k, d){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e) { return d; } }
+  function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
+
+  // ---------- your data ----------
+  function expAll(){ var f = window.__realLoadData || window.loadData; try { return typeof f === 'function' ? f() || [] : []; } catch(e) { return []; } }
+  function incAll(){ var f = window.__realLoadIncomeData || window.loadIncomeData; try { return typeof f === 'function' ? f() || [] : []; } catch(e) { return []; } }
+  function incSave(){ return ['saveIncomeData', 'saveIncome', 'saveIncomeLedger'].map(function(n){ return window[n]; }).filter(function(f){ return typeof f === 'function'; })[0]; }
+  function iso(d){
+    if (typeof d !== 'string') return '';
+    var m = d.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0];
+    m = d.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/); if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+    return '';
+  }
+  function trfAll(){
+    try {
+      var k = Object.keys(localStorage).filter(function(x){ return /^ngt_data_v1_/.test(x) && !/_meta$/.test(x); })[0]; if (!k) return [];
+      var d = JSON.parse(localStorage.getItem(k) || '{}'), t = d.transfers || [];
+      if (!Array.isArray(t)) t = Object.keys(t).map(function(x){ return t[x]; });
+      return t.map(function(x){
+        if (!x || typeof x !== 'object') return null;
+        var cur = x.currency || x.cur || 'NGN'; if (cur !== 'NGN') return null;
+        var a = [x.amount, x.ngn, x.amt, x.value, x.naira].map(Number).filter(function(v){ return v > 0; })[0];
+        var dt = iso([x.date, x.d, x.day, x.sentAt, x.when].filter(function(v){ return typeof v === 'string'; })[0] || '');
+        return a && dt ? { amount: a, date: dt, desc: x.recipient || x.name || x.to || x.note || 'transfer', where: 'Transfers' } : null;
+      }).filter(Boolean);
+    } catch(e) { return []; }
+  }
+  function days(a, b){ return Math.round((Date.parse(a) - Date.parse(b)) / 864e5); }
+
+  // ---------- compare ----------
+  function compare(){
+    var E = expAll().filter(function(e){ return e && e.currency === 'NGN'; }).map(function(e){ return { amount: +e.amount, date: iso(e.date), desc: e.desc || '', src: e.src || '', where: 'Expenses' }; });
+    var I = incAll().filter(function(e){ return e && e.currency === 'NGN'; }).map(function(e){ return { amount: +e.amount, date: iso(e.date), desc: e.desc || '', src: e.src || '', where: 'Income' }; });
+    var T = trfAll();
+    function index(arr){ var m = {}; arr.forEach(function(x){ x.used = false; var k = Math.round(x.amount); (m[k] = m[k] || []).push(x); }); return m; }
+    var ix = { E: index(E), I: index(I), T: index(T) }, bySrc = {};
+    E.concat(I).forEach(function(x){ if (x.src) bySrc[x.src] = x; });
+    S.st = {};
+    var recs = S.recs.slice().sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    recs.forEach(function(r){ var h = bySrc['bank:' + r.id]; if (h) { h.used = true; S.st[r.id] = { s: 'found', m: h }; } });
+    function find(r, tolA, tolD){
+      var lists = r.dest === 'income' ? [ix.I] : [ix.E, ix.T], best = null, bs = 1e9;
+      lists.forEach(function(L){
+        for (var k = Math.floor(r.amount - tolA); k <= Math.ceil(r.amount + tolA); k++) (L[k] || []).forEach(function(x){
+          if (x.used || Math.abs(x.amount - r.amount) > tolA) return;
+          var dd = Math.abs(days(x.date, r.date)); if (dd > tolD) return;
+          var sc = dd + Math.abs(x.amount - r.amount) / 100;
+          if (sc < bs) { bs = sc; best = x; }
+        });
+      });
+      return best;
+    }
+    recs.forEach(function(r){ if (S.st[r.id]) return; var h = find(r, 1, 3); if (h) { h.used = true; S.st[r.id] = { s: 'found', m: h }; } });
+    recs.forEach(function(r){
+      if (S.st[r.id]) return;
+      var h = find(r, Math.min(Math.max(50, r.amount * 0.02), 2000), 6);
+      if (h) { h.used = true; S.st[r.id] = { s: 'possible', m: h }; } else S.st[r.id] = { s: 'missing' };
+    });
+    S.sel = {}; S.recs.forEach(function(r){ if (S.st[r.id].s === 'missing') S.sel[r.id] = 1; });
+    S.cats = { exp: uniq(expAll().map(function(e){ return e.category; })), inc: uniq(incAll().map(function(e){ return e.category; })) };
+  }
+  function uniq(a){ var o = {}; a.forEach(function(x){ if (x) o[x] = 1; }); return Object.keys(o).sort(); }
+
+  // ---------- categories: your choice for each statement category ----------
+  function catKey(r){ return (r.dest === 'transfer' ? 'Money sent to people' : (r.category || 'Other')) + (r.dest === 'income' ? ' (income)' : ''); }
+  function catMap(){
+    var m = lsGet('bs_catmap', {});
+    if (!m['Money sent to people'] && S.cats && S.cats.exp.indexOf('Family Support (Nigeria)') > -1) m['Money sent to people'] = 'Family Support (Nigeria)';
+    return m;
+  }
+
+  // ---------- add / undo ----------
+  function picked(){ return S.recs.filter(function(r){ return S.sel[r.id] && S.st[r.id] && S.st[r.id].s !== 'found'; }); }
+  function add(){
+    var P = picked(); if (!P.length) return note('Nothing selected.');
+    if (!S.armed) { S.armed = true; render(); setTimeout(function(){ S.armed = false; render(); }, 5000); return; }
+    S.armed = false;
+    var map = catMap(), now = Date.now(), exp = [], inc = [];
+    P.forEach(function(r, i){
+      var k = catKey(r), cat = map[k] && map[k] !== '(keep)' ? map[k] : (r.dest === 'transfer' ? 'Money sent to people' : r.category || 'Other');
+      var e = { id: now + i + Math.random(), date: r.date, desc: r.description, amount: r.amount, currency: 'NGN', category: cat, src: 'bank:' + r.id };
+      (r.dest === 'income' ? inc : exp).push(e);
+    });
+    var sv = incSave();
+    if (inc.length && !sv) return note('Income could not be saved: the app has no income save function under the expected name. Nothing was added.');
+    if (typeof window.saveData !== 'function' && exp.length) return note('Expenses could not be saved: saveData was not found. Nothing was added.');
+    try {
+      var e0 = expAll().length, i0 = incAll().length;
+      if (exp.length) window.saveData(expAll().concat(exp));
+      if (inc.length) sv(incAll().concat(inc));
+      if (expAll().length !== e0 + exp.length || incAll().length !== i0 + inc.length) {
+        return note('The app did not keep the new entries (Expenses ' + (expAll().length - e0) + ' of ' + exp.length + ', Income ' + (incAll().length - i0) + ' of ' + inc.length + '). Send me this message before trying again.');
+      }
+      lsSet('bs_last', { at: now, srcs: exp.concat(inc).map(function(e){ return e.src; }) });
+      try { if (typeof window.syncPush === 'function') window.syncPush(); } catch(e) {}
+    } catch(err) { console.error('Bank statements add:', err); return note('Something went wrong: ' + err.message); }
+    compare(); render();
+    note('✓ Added ' + exp.length + ' to Expenses and ' + inc.length + ' to Income. Undo is available below.');
+  }
+  function undo(){
+    var L = lsGet('bs_last', null); if (!L || !L.srcs || !L.srcs.length) return note('Nothing to undo.');
+    var set = {}; L.srcs.forEach(function(s){ set[s] = 1; });
+    var e0 = expAll(), i0 = incAll(), e1 = e0.filter(function(e){ return !set[e.src]; }), i1 = i0.filter(function(e){ return !set[e.src]; });
+    if (e1.length !== e0.length) window.saveData(e1);
+    if (i1.length !== i0.length) { var sv = incSave(); if (sv) sv(i1); }
+    try { if (typeof window.syncPush === 'function') window.syncPush(); } catch(e) {}
+    localStorage.removeItem('bs_last'); compare(); render();
+    note('✓ Removed ' + (e0.length - e1.length + i0.length - i1.length) + ' entries from the last import.');
+  }
+
+  // ---------- view ----------
+  var ov;
+  function note(t){ var n = $('bs-note'); if (n) n.textContent = t || ''; }
+  function build(){
+    if (ov) return;
+    ov = document.createElement('div'); ov.id = 'bs-ov';
+    ov.innerHTML = '<div class="bs-top"><b>🏦 Bank statements</b><button class="bs-x" onclick="BS.close()">&#10005;</button></div><div class="bs-body" id="bs-body"></div><div class="bs-foot" id="bs-foot"></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){
+      var t = e.target;
+      if (t.matches('input[type=checkbox][data-id]')) { if (t.checked) S.sel[t.dataset.id] = 1; else delete S.sel[t.dataset.id]; renderFoot(); return; }
+      var row = t.closest('.bs-row'); if (row && !t.closest('input')) row.classList.toggle('open');
+    });
+  }
+  function load(){
+    var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+    inp.onchange = function(){
+      var f = inp.files && inp.files[0]; if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function(){
+        try { var d = JSON.parse(rd.result); S.recs = (d.records || d).filter(function(r){ return r && r.id && r.date && r.amount > 0; }); S.source = d.source || f.name; }
+        catch(e) { return note('That file is not a statement file.'); }
+        compare(); S.dest = 'expense'; S.year = 'all'; S.show = 'missing'; render();
+      };
+      rd.readAsText(f);
+    };
+    inp.click();
+  }
+  function counts(){
+    var c = {};
+    S.recs.forEach(function(r){
+      var y = r.date.slice(0, 4), s = S.st[r.id].s;
+      [y, 'all'].forEach(function(k){ var o = c[k] = c[k] || { expense: {}, transfer: {}, income: {} }; o[r.dest][s] = (o[r.dest][s] || 0) + 1; });
+    });
+    return c;
+  }
+  function render(){
+    var b = $('bs-body'); if (!b) return;
+    if (!S.recs.length) {
+      b.innerHTML = '<div class="bs-card"><h4>Load a statement file</h4><div class="bs-muted">Choose the processed file (bank-statements-ngn.json). Every line is checked against your Expenses, Income and Transfers in naira: same amount within ₦1 and within 3 days counts as already there. Nothing is added until you confirm. The file stays on this device.</div><div style="margin-top:10px"><button class="bs-btn p" onclick="BS.load()">📂 Choose file</button></div></div><div class="bs-note" id="bs-note"></div>';
+      renderFoot(); return;
+    }
+    var C = counts(), years = Object.keys(C).filter(function(y){ return y !== 'all'; }).sort();
+    var cur = C[S.year] || C.all, D = { expense: 'Expenses', transfer: 'Sent to people', income: 'Income' };
+    var h = '<div class="bs-card"><h4>' + esc(S.source || 'Statement') + '</h4><div class="bs-muted">' + S.recs.length + ' lines · ✓ already in the app · ? close but not exact · + missing</div>' +
+      '<table class="bs-sum" style="margin-top:8px"><tr><th></th><th>✓</th><th>?</th><th>+</th></tr>' +
+      ['expense', 'transfer', 'income'].map(function(d){ var o = cur[d] || {}; return '<tr><td>' + D[d] + '</td><td class="f">' + (o.found || 0) + '</td><td class="q">' + (o.possible || 0) + '</td><td class="m">' + (o.missing || 0) + '</td></tr>'; }).join('') + '</table></div>';
+    h += '<div class="bs-seg">' + ['expense', 'transfer', 'income'].map(function(d){ return '<button class="' + (S.dest === d ? 'on' : '') + '" onclick="BS.set(\'dest\',\'' + d + '\')">' + D[d] + '</button>'; }).join('') + '</div>';
+    h += '<div class="bs-tools"><select onchange="BS.set(\'year\',this.value)"><option value="all">All years</option>' + years.map(function(y){ return '<option' + (S.year === y ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select>' +
+      '<select onchange="BS.set(\'show\',this.value)">' + [['missing', '+ Missing'], ['possible', '? Possible'], ['found', '✓ Already in'], ['all', 'All']].map(function(o){ return '<option value="' + o[0] + '"' + (S.show === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+      '<button class="bs-btn" onclick="BS.all(1)">Tick all shown</button><button class="bs-btn" onclick="BS.all(0)">Untick all shown</button></div>';
+    var list = S.recs.filter(function(r){ return r.dest === S.dest && (S.year === 'all' || r.date.slice(0, 4) === S.year) && (S.show === 'all' || S.st[r.id].s === S.show); })
+      .sort(function(a, b){ return a.date < b.date ? -1 : 1; });
+    h += '<div class="bs-card" style="padding:4px 8px">' + (list.length ? list.slice(0, S.limit).map(function(r){
+      var st = S.st[r.id], m = st.m, sym = { missing: '+', possible: '?', found: '✓' }[st.s];
+      return '<div class="bs-row ' + st.s + '">' + (st.s === 'found' ? '<span></span>' : '<input type="checkbox" data-id="' + r.id + '"' + (S.sel[r.id] ? ' checked' : '') + '>') +
+        '<span class="d">' + r.date + '</span><span class="a">' + naira(r.amount) + '</span><span class="t">' + esc(r.description) + '<small>' + esc(r.bank) + (r.category && r.dest !== 'transfer' ? ' · ' + esc(r.category) : '') + '</small>' +
+        (m ? '<small>' + (st.s === 'found' ? 'In ' : 'Close to ') + esc(m.where) + ': ' + esc(m.desc) + ' · ' + naira(m.amount) + ' · ' + m.date + '</small>' : '') + '</span><span class="st">' + sym + '</span>' +
+        '<div class="raw">' + esc(r.raw || '') + '</div></div>';
+    }).join('') + (list.length > S.limit ? '<div style="text-align:center;padding:10px"><button class="bs-btn" onclick="BS.more()">Show ' + Math.min(300, list.length - S.limit) + ' more of ' + (list.length - S.limit) + '</button></div>' : '')
+      : '<div class="bs-muted" style="padding:12px">Nothing here.</div>') + '</div>';
+    // category choices for what is ticked
+    var P = picked(), keys = uniq(P.map(catKey));
+    if (keys.length) {
+      var map = catMap();
+      h += '<div class="bs-card"><h4>Categories for what you add</h4><div class="bs-muted" style="margin-bottom:8px">Pick one of your own categories for each statement category, or keep the statement\'s name.</div><div class="bs-map">' +
+        keys.map(function(k){
+          var opts = /\(income\)$/.test(k) ? S.cats.inc : S.cats.exp;
+          return '<span>' + esc(k) + '</span><select onchange="BS.map(\'' + esc(k).replace(/'/g, "\\'") + '\',this.value)"><option value="(keep)">(keep as is)</option>' +
+            opts.map(function(o){ return '<option' + (map[k] === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+        }).join('') + '</div></div>';
+    }
+    h += '<div class="bs-note" id="bs-note"></div>';
+    b.innerHTML = h; renderFoot();
+  }
+  function renderFoot(){
+    var f = $('bs-foot'); if (!f) return;
+    if (!S.recs.length) { f.innerHTML = '<button class="bs-btn" onclick="BS.close()">Close</button>'; return; }
+    var n = picked().length, last = lsGet('bs_last', null);
+    f.innerHTML = (last && last.srcs && last.srcs.length ? '<button class="bs-btn warn" onclick="BS.undo()">↶ Undo last (' + last.srcs.length + ')</button>' : '') +
+      '<button class="bs-btn" onclick="BS.load()">📂 Other file</button>' +
+      '<button class="bs-btn p" onclick="BS.add()"' + (n ? '' : ' disabled') + '>' + (S.armed ? 'Tap again to add ' + n : '＋ Add ' + n + ' selected') + '</button>';
+  }
+
+  window.BS = {
+    open: function(){ build(); ov.classList.add('on'); document.body.style.overflow = 'hidden'; if (S.recs.length) compare(); render(); },
+    close: function(){ if (ov) ov.classList.remove('on'); document.body.style.overflow = ''; },
+    load: load, add: add, undo: undo, records: function(){ return S.recs; },
+    set: function(k, v){ S[k] = v; S.limit = 300; render(); },
+    more: function(){ S.limit += 300; render(); },
+    all: function(on){
+      S.recs.forEach(function(r){
+        if (r.dest !== S.dest || (S.year !== 'all' && r.date.slice(0, 4) !== S.year) || S.st[r.id].s === 'found' || (S.show !== 'all' && S.st[r.id].s !== S.show)) return;
+        if (on) S.sel[r.id] = 1; else delete S.sel[r.id];
+      });
+      render();
+    },
+    map: function(k, v){ var m = lsGet('bs_catmap', {}); m[k] = v; lsSet('bs_catmap', m); renderFoot(); }
+  };
+
+  // close with the app lock, like the receipt screen
+  setInterval(function(){
+    if (typeof window.lockApp === 'function' && !window.lockApp._bs) {
+      var o = window.lockApp; window.lockApp = function(){ try { BS.close(); } catch(e) {} return o.apply(this, arguments); }; window.lockApp._bs = 1;
+    }
+  }, 3000);
+
+  // 🏦 button at the top of Manage → 📦 Data
+  setInterval(function(){
+    var d = $('mg-data'); if (!d || $('bs-open')) return;
+    var b = document.createElement('button'); b.id = 'bs-open'; b.type = 'button'; b.className = 'bs-btn p'; b.textContent = '🏦 Bank statements: find what is missing';
+    b.onclick = BS.open; d.insertBefore(b, d.firstChild);
+  }, 1500);
+})();
+</script>
+<script>
+// Bank statements -> Transfers module: adds every "sent to people" statement line that the Transfers module does not have yet,
+// under the right recipient (matched by your 2025-2026 transfers, account number, or name), creating recipients that are missing.
+// Uses the module's own Import, after saving a backup of the current Transfers data (↶ restores it).
+(function(){
+  var STOP = { SUNDAY: 1, JOHN: 1, DAMILOLA: 1, MR: 1, MRS: 1, THE: 1, AND: 1, FOR: 1, LTD: 1, LIMITED: 1, NIGERIA: 1, BANK: 1 };
+  var BANKS = [[/FIRST BANK|\bFBN\b/i, 'FBN'], [/GUARANTY|GTBANK|\bGTB\b/i, 'GTB'], [/ACCESS|\bACC\b/i, 'ACCESS'], [/ZENITH|\bZIB\b/i, 'ZENITH'], [/WEMA|\bWEM\b|ALAT/i, 'WEMA'],
+               [/\bUBA\b|UNITED BANK/i, 'UBA'], [/POLARIS|\bPBL\b/i, 'POLARIS'], [/FIRST CITY|FCMB|\bFCM\b/i, 'FCMB'], [/OPAY/i, 'OPAY'], [/PALMPAY|\bPLP\b/i, 'PALMPAY'],
+               [/MONIE|\bMMB\b|\bMNP\b/i, 'MNP'], [/KUDA|\bKMB\b/i, 'KUDA'], [/PAYCOM/i, 'PAYCOM'], [/HERITAGE|\bHBP\b/i, 'HERITAGE'], [/STERLING/i, 'STERLING'], [/UNION/i, 'UNION'], [/FIDELITY|\bFID\b/i, 'FIDELITY'], [/KEYSTONE/i, 'KEYSTONE'], [/PROVIDUS|\bPCM\b/i, 'PROVIDUS'], [/STANBIC|\bIBT\b/i, 'STANBIC'], [/ECOBANK/i, 'ECOBANK'], [/JAIZ/i, 'JAIZ']];
+  function key(){ return Object.keys(localStorage).filter(function(x){ return /^ngt_data_v1_/.test(x) && !/_meta$/.test(x); })[0]; }
+  function toks(s){ return String(s || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\[[^\]]*\]/g, ' ').split(/[^A-Z]+/).filter(function(t){ return t.length >= 3 && !STOP[t]; }); }
+  function tc(s){ return String(s).toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); }).replace(/\s+/g, ' ').trim(); }
+  function bankOf(raw){ var m = raw.match(/\bTO\b:?\s+(.*)$/), seg = /^FIP:MB:/.test(raw) || !m ? raw : m[1]; for (var i = 0; i < BANKS.length; i++) if (BANKS[i][0].test(seg)) return BANKS[i][1]; return ''; }
+  function rid(){ return 'rb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function tid(){ return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function nameOf(r){
+    var nm = r.description.split(' · ')[0];
+    if (/^transfer between customers/i.test(nm)) { var m = r.raw.match(/\bto ([A-Z][A-Z ,.'-]+?)(?:\s+\d|$)/); if (m) nm = m[1]; }
+    return nm.replace(/,/g, ' ').trim();
+  }
+
+  function plan(recs){
+    var k = key(); if (!k) throw new Error('Transfers data not found on this device.');
+    var cur = JSON.parse(localStorage.getItem(k) || '{}');
+    var R = (cur.recipients || []).slice(), T = (cur.transfers || []).slice();
+    var lines = recs.filter(function(r){
+      if (r.dest !== 'transfer' || r.amount < 10 || /^interest/i.test(r.description)) return false;
+      var nm = nameOf(r); return !(/DAMILOLA|AJIROGHENE/i.test(nm) && !toks(nm).length);   // your own accounts
+    }).sort(function(a, b){ return a.date < b.date ? -1 : 1; });
+    // 1) statement lines already in Transfers (same month, amount within N1); learn the bank's name for a recipient only when the match is unambiguous
+    var alias = {}, have = {}, already = 0, byMonth = {}, Rmap = {};
+    T.forEach(function(t){ if (t.src) have[t.src] = 1; });
+    R.forEach(function(x){ Rmap[x.id] = x; });
+    lines.forEach(function(r){
+      if (have['bank:' + r.id]) { already++; r._done = 1; return; }
+      var kk = r.date.slice(0, 7) + '|' + Math.round(r.amount); (byMonth[kk] = byMonth[kk] || []).push(r);
+    });
+    var open = T.filter(function(t){ return t.status !== 'planned' && t.month && !t.src; });
+    [1, 2].forEach(function(pass){
+      open.forEach(function(t){
+        if (t._m) return;
+        var c = (byMonth[t.month + '|' + Math.round(t.amount)] || []).filter(function(r){ return !r._done; }); if (!c.length) return;
+        var xt = toks((Rmap[t.rid] || {}).name), pick = null;
+        if (c.length === 1) pick = c[0];
+        else pick = c.filter(function(r){ return alias[toks(nameOf(r)).join(' ')] === t.rid || toks(nameOf(r)).some(function(w){ return xt.indexOf(w) > -1; }); })[0];
+        if (!pick && pass === 1) return;
+        if (!pick) { c[0]._done = 1; t._m = 1; already++; return; }
+        pick._done = 1; t._m = 1; already++;
+        var kk = toks(nameOf(pick)).join(' '); if (kk && !alias[kk]) alias[kk] = t.rid;
+      });
+    });
+    open.forEach(function(t){ delete t._m; });
+    // 2) find or create the recipient for each remaining line
+    var byAcct = {}; R.forEach(function(x){ var a = String(x.account || '').replace(/\D/g, ''); if (a.length >= 10) byAcct[a.slice(-10)] = x.id; });
+    var newR = 0, add = [], made = {};
+    function findRecipient(r){
+      var acct = (r.raw.match(/\b(\d{10})\b/) || [])[1];
+      if (acct && byAcct[acct]) return byAcct[acct];
+      var nm = nameOf(r), tk = toks(nm), kk = tk.join(' ');
+      if (alias[kk]) return alias[kk];
+      var best = null, bs = 0;
+      R.forEach(function(x){
+        var xt = toks(x.name), shared = tk.filter(function(t){ return xt.indexOf(t) > -1; }).length;
+        if (shared >= 2 || (shared === 1 && tk.length === 1 && xt.length === 1)) { if (shared > bs) { bs = shared; best = x.id; } }
+      });
+      if (best) return best;
+      if (made[kk]) return made[kk];
+      var x = { id: rid(), name: tc(nm || 'Unknown'), account: acct || '', bank: bankOf(r.raw), type: 'person', note: 'Added from bank statement', archived: false };
+      R.push(x); made[kk] = x.id; if (acct) byAcct[acct] = x.id; newR++;
+      return x.id;
+    }
+    lines.forEach(function(r){
+      if (r._done) { delete r._done; return; }
+      var note = r.description.split(' · ').slice(1).join(' · ');
+      add.push({ id: tid(), rid: findRecipient(r), month: r.date.slice(0, 7), amount: Math.round(r.amount * 100) / 100, status: 'sent', note: note || r.bank, date: r.date, src: 'bank:' + r.id });
+    });
+    var years = {}; add.forEach(function(t){ var y = t.month.slice(0, 4); years[y] = (years[y] || 0) + 1; });
+    return { cur: cur, merged: { version: cur.version || 1, recipients: R, transfers: T.concat(add) }, add: add.length, newR: newR, already: already, years: years };
+  }
+  function feed(obj){
+    if (typeof window.trfImportJSON !== 'function') throw new Error('The Transfers import function was not found.');
+    window.trfImportJSON({ files: [new File([JSON.stringify(obj)], 'transfers-merge.json', { type: 'application/json' })], value: '' });
+  }
+  window.BSTRF = {
+    run: function(){
+      var recs = window.BS && BS.records ? BS.records() : [];
+      if (!recs.length) return alert('Open 🏦 Bank statements and load the statement file first.');
+      var P; try { P = plan(recs); } catch(e) { return alert(e.message); }
+      if (!P.add) return alert('Transfers already has every statement transfer (' + P.already + ' found). Nothing to add.');
+      var ys = Object.keys(P.years).sort().map(function(y){ return y + ': ' + P.years[y]; }).join(', ');
+      if (!confirm('Add ' + P.add + ' transfers to Transfers (' + ys + '), with ' + P.newR + ' new recipients?\n' + P.already + ' statement transfers are already there and will be skipped.\n\nYour current Transfers data is backed up first. On the next question, press OK to let Transfers take the merged file.')) return;
+      try { localStorage.setItem('bs_trf_backup', JSON.stringify(P.cur)); feed(P.merged); } catch(e) { alert('Something went wrong: ' + e.message); }
+    },
+    undo: function(){
+      var b = localStorage.getItem('bs_trf_backup'); if (!b) return alert('No Transfers backup on this device.');
+      if (!confirm('Put Transfers back to how it was before the statement import?')) return;
+      try { feed(JSON.parse(b)); localStorage.removeItem('bs_trf_backup'); } catch(e) { alert('Something went wrong: ' + e.message); }
+    }
+  };
+  // two buttons in the 🏦 Bank statements header
+  setInterval(function(){
+    var top = document.querySelector('#bs-ov .bs-top'); if (!top || document.getElementById('bs-trf')) return;
+    var b = document.createElement('button'); b.id = 'bs-trf'; b.className = 'bs-btn p'; b.textContent = '↗ To Transfers'; b.onclick = BSTRF.run;
+    var u = document.createElement('button'); u.className = 'bs-btn warn'; u.textContent = '↶'; u.title = 'Restore Transfers from the backup'; u.onclick = BSTRF.undo;
+    top.insertBefore(u, top.lastChild); top.insertBefore(b, u);
+  }, 1500);
+})();
+</script>
+<script>
+// Transfers: floating ⇧⇩ arrows follow whichever box actually scrolls (window, body or an inner list)
+(function(){
+  function vis(e){ return !!(e && (e.offsetWidth || e.offsetHeight || e.getClientRects().length)); }
+  function trfEls(){ return [].filter.call(document.querySelectorAll('[id^="trf-"]:not(#trf-modal):not(#trf-mbox), [class*="trf-"]'), function(e){ return vis(e) && !e.closest('#trf-modal'); }).slice(0, 60); }
+  function inTransfers(){ return trfEls().some(function(e){ return e.offsetHeight > 150; }); }
+  function scroller(){
+    var best = null, seen = [];
+    trfEls().forEach(function(e){
+      for (var p = e; p; p = p.parentElement) {
+        if (seen.indexOf(p) > -1) break;
+        if (p.scrollHeight > p.clientHeight + 40 && p.clientHeight >= 150) {
+          var o = getComputedStyle(p).overflowY;
+          if (o === 'auto' || o === 'scroll' || p === document.body || p === document.documentElement) { seen.push(p); if (!best || p.scrollTop > best.scrollTop) best = p; break; }
+        }
+      }
+    });
+    return best || document.scrollingElement || document.documentElement;
+  }
+  function sync(){
+    var f = document.getElementById('scroll-fab'); if (!f || !inTransfers()) return;
+    var s = scroller(), y = s.scrollTop, max = s.scrollHeight - s.clientHeight, on = y > 120;
+    f.style.setProperty('display', 'flex', 'important'); f.style.setProperty('visibility', 'visible', 'important'); f.style.setProperty('z-index', '99000', 'important');
+    f.style.setProperty('opacity', on ? '1' : '0', 'important'); f.style.setProperty('pointer-events', on ? 'auto' : 'none', 'important');
+    var t = document.getElementById('scroll-top-btn'), b = document.getElementById('scroll-bot-btn');
+    if (t) t.style.opacity = y > 200 ? '1' : '0.35';
+    if (b) b.style.opacity = y >= max - 60 ? '0.35' : '1';
+  }
+  var last = false;
+  setInterval(function(){
+    var now = inTransfers();
+    if (!now && last) { var f = document.getElementById('scroll-fab'); if (f) ['display', 'visibility', 'z-index', 'opacity', 'pointer-events'].forEach(function(p){ f.style.removeProperty(p); }); }
+    last = now; if (now) sync();
+  }, 400);
+  document.addEventListener('scroll', function(){ if (last) sync(); }, true);
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest && e.target.closest('#scroll-top-btn, #scroll-bot-btn');
+    if (!btn || !inTransfers()) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    var s = scroller(); s.scrollTo({ top: btn.id === 'scroll-top-btn' ? 0 : s.scrollHeight, behavior: 'smooth' });
+  }, true);
+})();
+</script>
+<script>
+// In-app dialogs: alert() shows an in-app box; melAsk(msg) is the in-app OK/Cancel (returns a Promise)
+(function(){
+  var css = document.createElement('style');
+  css.textContent = '#mel-dlg{position:fixed;inset:0;z-index:100000;background:rgba(20,14,6,.55);display:flex;align-items:center;justify-content:center;padding:16px;}' +
+    '#mel-dlg .b{background:var(--card,#fff);border:1.5px solid var(--gold,#c9a227);border-radius:14px;max-width:420px;width:100%;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);font-family:DM Mono,monospace;font-size:0.8rem;color:var(--text,#222);}' +
+    '#mel-dlg .m{white-space:pre-wrap;overflow-wrap:anywhere;max-height:60vh;overflow-y:auto;margin-bottom:14px;line-height:1.45;}' +
+    '#mel-dlg .r{display:flex;gap:8px;justify-content:flex-end;}';
+  document.head.appendChild(css);
+  var queue = Promise.resolve();
+  function show(msg, ask){
+    return queue = queue.then(function(){ return new Promise(function(res){
+      var o = document.createElement('div'); o.id = 'mel-dlg';
+      o.innerHTML = '<div class="b"><div class="m"></div><div class="r">' + (ask ? '<button class="trf-b ghost" data-v="0">Cancel</button>' : '') + '<button class="trf-b" data-v="1">OK</button></div></div>';
+      o.querySelector('.m').textContent = String(msg == null ? '' : msg);
+      o.onclick = function(e){ var v = e.target.dataset && e.target.dataset.v; if (v == null) return; o.remove(); res(v === '1'); };
+      document.body.appendChild(o); o.querySelector('[data-v="1"]').focus();
+    }); });
+  }
+  window.melAsk = function(m){ return show(m, true); };
+  window.alert = function(m){ show(m, false); };
+  // Imports started by add-on scripts were already confirmed in-app, so the import's own browser question is answered OK
+  var t = setInterval(function(){
+    if (typeof window.trfImportJSON !== 'function') return;
+    clearInterval(t);
+    var orig = window.trfImportJSON;
+    window.trfImportJSON = function(inp){
+      var f = inp && inp.files && inp.files[0];
+      if (f && /^(merge|transfers-merge)\.json$/.test(f.name)) {
+        var c = window.confirm; window.confirm = function(){ return true; };
+        setTimeout(function(){ window.confirm = c; }, 4000);
+      }
+      return orig.apply(this, arguments);
+    };
+  }, 500);
+})();
+</script>
+<script>
+// Transfers: 🔗 Merge other recipients INTO the card you have open (the open card stays). Backup first; ↶ undoes the last merge.
+(function(){
+  function vis(e){ return !!(e && (e.offsetWidth || e.offsetHeight || e.getClientRects().length)); }
+  function key(){ return Object.keys(localStorage).filter(function(x){ return /^ngt_data_v1_/.test(x) && !/_meta$/.test(x); })[0]; }
+  function data(){ return JSON.parse(localStorage.getItem(key()) || '{}'); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function toks(s){ return String(s || '').toUpperCase().split(/[^A-Z]+/).filter(function(t){ return t.length >= 3; }); }
+  function feed(obj){ window.trfImportJSON({ files: [new File([JSON.stringify(obj)], 'merge.json', { type: 'application/json' })], value: '' }); }
+  function panel(){
+    var box = document.getElementById('trf-mbox'), rid = window._trfViewRid; if (!box || !rid) return;
+    var old = document.getElementById('rm-panel'); if (old) { old.remove(); return; }
+    var d = data(), me = (d.recipients || []).filter(function(r){ return r.id === rid; })[0]; if (!me) return;
+    var c = {}; (d.transfers || []).forEach(function(t){ c[t.rid] = (c[t.rid] || 0) + 1; });
+    var mt = toks(me.name);
+    var others = d.recipients.filter(function(r){ return r.id !== rid; }).map(function(r){ return { r: r, s: toks(r.name).filter(function(t){ return mt.indexOf(t) > -1; }).length }; })
+      .sort(function(a, b){ return b.s - a.s || a.r.name.localeCompare(b.r.name); });
+    var rows = others.map(function(o){
+      return '<label class="rm-row" data-n="' + esc(o.r.name.toLowerCase()) + '" style="display:flex;gap:8px;align-items:center;padding:5px 2px;border-bottom:1px solid var(--border);' + (o.s ? 'font-weight:600;' : '') + '">' +
+        '<input type="checkbox" value="' + o.r.id + '"><span style="flex:1">' + esc(o.r.name) + '</span><span style="color:var(--muted)">' + (c[o.r.id] || 0) + '</span></label>';
+    }).join('');
+    var p = document.createElement('div'); p.id = 'rm-panel';
+    p.style.cssText = 'margin:8px 0;padding:10px;border:1.5px solid var(--gold);border-radius:10px;background:#fffaf0;font-size:0.74rem;';
+    p.innerHTML = 'Tick the duplicates of <b>' + esc(me.name) + '</b>. Their transfers move into <b>' + esc(me.name) + '</b>, who stays.' +
+      '<input id="rm-q" placeholder="Search name…" style="display:block;width:100%;margin:6px 0;padding:7px;border:1.5px solid var(--border);border-radius:8px;font-family:DM Mono,monospace;font-size:0.72rem;">' +
+      '<div style="max-height:220px;overflow-y:auto;margin-bottom:8px;">' + rows + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="trf-b" id="rm-go">Merge ticked into ' + esc(me.name) + '</button><button class="trf-b ghost" id="rm-x">Cancel</button>' +
+      (localStorage.getItem('trf_merge_backup') ? '<button class="trf-b ghost" id="rm-undo">↶ Undo last merge</button>' : '') + '</div>';
+    box.insertBefore(p, box.children[1] || null);
+    document.getElementById('rm-q').oninput = function(){ var q = this.value.toLowerCase(); p.querySelectorAll('.rm-row').forEach(function(l){ l.style.display = l.dataset.n.indexOf(q) > -1 ? 'flex' : 'none'; }); };
+    document.getElementById('rm-x').onclick = function(){ p.remove(); };
+    document.getElementById('rm-go').onclick = function(){ merge([].map.call(p.querySelectorAll('input[type=checkbox]:checked'), function(i){ return i.value; }), rid); };
+    var u = document.getElementById('rm-undo'); if (u) u.onclick = undo;
+  }
+  async function merge(srcs, dst){
+    if (!srcs.length) return alert('Tick at least one name to merge.');
+    var d = data(), D = d.recipients.filter(function(r){ return r.id === dst; })[0]; if (!D) return;
+    var S = d.recipients.filter(function(r){ return srcs.indexOf(r.id) > -1; });
+    if (!await melAsk('Merge into "' + D.name + '":\n• ' + S.map(function(s){ return s.name; }).join('\n• ') + '\n\nThose names are removed and their transfers go to ' + D.name + '.')) return;
+    localStorage.setItem('trf_merge_backup', JSON.stringify(d));
+    S.forEach(function(s){
+      d.transfers.forEach(function(t){ if (t.rid === s.id) t.rid = dst; });
+      if (!D.account && s.account) { D.account = s.account; if (!D.bank) D.bank = s.bank; }
+      D.note = ((D.note ? D.note + ' · ' : '') + 'Also: ' + s.name).slice(0, 300);
+    });
+    d.recipients = d.recipients.filter(function(r){ return srcs.indexOf(r.id) < 0; });
+    try { feed(d); } catch(e) { return alert('Something went wrong: ' + e.message); }
+    setTimeout(function(){ try { window.trfRecipientView(dst); } catch(e) {} }, 900);
+  }
+  async function undo(){
+    var b = localStorage.getItem('trf_merge_backup'); if (!b) return;
+    if (!await melAsk('Undo the last merge? Transfers goes back to how it was just before it.')) return;
+    try { feed(JSON.parse(b)); localStorage.removeItem('trf_merge_backup'); } catch(e) { alert('Something went wrong: ' + e.message); }
+  }
+  setInterval(function(){
+    var box = document.getElementById('trf-mbox'); if (!box || !vis(box) || !window._trfViewRid || document.getElementById('rm-btn')) return;
+    var head = box.firstElementChild; if (!head) return;
+    var b = document.createElement('button'); b.id = 'rm-btn'; b.className = 'trf-b ghost'; b.textContent = '🔗 Merge'; b.onclick = panel;
+    head.insertBefore(b, head.lastElementChild);
+  }, 600);
 })();
 </script>
 </body>
