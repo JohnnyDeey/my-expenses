@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.16.0')) {
+          if (!key.startsWith('mel-v2.16.1')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18849,7 +18849,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.16.0';
+var APP_VERSION = '2.16.1';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -25821,11 +25821,140 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
     try { feed(JSON.parse(b)); localStorage.removeItem('trf_merge_backup'); } catch(e) { alert('Something went wrong: ' + e.message); }
   }
   setInterval(function(){
-    var box = document.getElementById('trf-mbox'); if (!box || !vis(box) || !window._trfViewRid || document.getElementById('rm-btn')) return;
+    var box = document.getElementById('trf-mbox'); if (!box || !vis(box) || !window._trfViewRid || document.getElementById('rm-btn') || box.querySelector('input:not([type=checkbox]):not(#rm-q)')) return;
     var head = box.firstElementChild; if (!head) return;
     var b = document.createElement('button'); b.id = 'rm-btn'; b.className = 'trf-b ghost'; b.textContent = '🔗 Merge'; b.onclick = panel;
     head.insertBefore(b, head.lastElementChild);
   }, 600);
+})();
+</script>
+<style>
+/* Transfers dialogs: fields fill their column and never spill */
+#trf-mbox input:not([type=checkbox]), #trf-mbox select, #trf-mbox textarea{ width:100% !important; max-width:100% !important; min-width:0 !important; box-sizing:border-box !important; }
+#trf-mbox div, #trf-mbox label{ min-width:0 !important; }
+.mel-arch{ display:inline-flex; align-items:center; justify-content:center; padding:6px 9px !important; line-height:0; }
+.mel-arch.on{ background:var(--gold) !important; color:#fff !important; border-color:var(--gold) !important; }
+.mel-sw{ position:relative; display:flex; flex:1 1 160px; min-width:0; }
+.mel-clr{ position:absolute; right:6px; top:50%; transform:translateY(-50%); width:22px; height:22px; border:none; border-radius:50%; background:var(--border,#ddd); color:var(--text,#333); font-size:14px; line-height:22px; padding:0; cursor:pointer; display:none; }
+</style>
+<script>
+// Transfers: "Archived" tick boxes become an SVG archive toggle; the recipient search gets a ✕ clear button
+(function(){
+  var SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>';
+  function hideOld(cb){
+    var lab = cb.closest('label');
+    if (lab && !lab.querySelector('input:not([type=checkbox]), select, button')) { lab.style.display = 'none'; return lab; }
+    cb.style.display = 'none';
+    for (var n = cb.nextSibling; n; n = n.nextSibling) {
+      if (n.nodeType === 3) { n.textContent = ''; continue; }
+      if (/archived/i.test(n.textContent) && n.textContent.length < 60) n.style.display = 'none';
+      break;
+    }
+    if (cb.id) document.querySelectorAll('label[for="' + cb.id + '"]').forEach(function(l){ l.style.display = 'none'; });
+    return cb;
+  }
+  function archive(){
+    document.querySelectorAll('input[type=checkbox]:not([data-mel-arch])').forEach(function(cb){
+      var p = cb.closest('label') || cb.parentElement;
+      if (!p || !/archived/i.test(p.textContent) || !p.closest('[id^="trf-"], [class*="trf-"]')) return;
+      cb.dataset.melArch = 1;
+      var inList = !cb.closest('#trf-mbox');
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'trf-b ghost mel-arch'; b.innerHTML = SVG;
+      b.title = inList ? 'Show / hide archived recipients' : 'Archived (hidden, history kept)';
+      function sync(){ b.classList.toggle('on', cb.checked); b.innerHTML = cb.checked ? SVG : SVG.replace('</svg>', '<path d="M3 3l18 18"/></svg>'); }
+      b.onclick = function(e){ e.preventDefault(); cb.click(); sync(); };
+      cb.addEventListener('change', sync);
+      var at = hideOld(cb); at.parentNode.insertBefore(b, at); sync();
+    });
+  }
+  function clearBtn(){
+    var inp = document.querySelector('input[placeholder^="Search name"]:not([data-mel-clr])'); if (!inp) return;
+    inp.dataset.melClr = 1;
+    var w = document.createElement('span'); w.className = 'mel-sw';
+    inp.parentNode.insertBefore(w, inp); w.appendChild(inp);
+    inp.style.setProperty('width', '100%', 'important'); inp.style.paddingRight = '30px';
+    var x = document.createElement('button'); x.type = 'button'; x.className = 'mel-clr'; x.textContent = '✕'; x.title = 'Clear';
+    function sync(){ x.style.display = inp.value ? 'block' : 'none'; }
+    x.onclick = function(){ inp.value = ''; ['input', 'keyup', 'change'].forEach(function(t){ inp.dispatchEvent(new Event(t, { bubbles: true })); }); sync(); inp.focus(); };
+    inp.addEventListener('input', sync); w.appendChild(x); sync();
+  }
+  setInterval(function(){ archive(); clearBtn(); }, 600);
+})();
+</script>
+<script>
+// Bank statements → Transfers: fill EMPTY recipient account numbers from that person's own statement lines. Backup first; ↶ restores.
+(function(){
+  var BANKS = [[/FIRST BANK|\bFBN\b/i, 'FBN'], [/GUARANTY|GTBANK|\bGTB\b/i, 'GTB'], [/ACCESS|\bACC\b/i, 'ACCESS'], [/ZENITH|\bZIB\b/i, 'ZENITH'], [/WEMA|\bWEM\b|ALAT/i, 'WEMA'],
+               [/\bUBA\b|UNITED BANK/i, 'UBA'], [/POLARIS|\bPBL\b/i, 'POLARIS'], [/FIRST CITY|FCMB|\bFCM\b/i, 'FCMB'], [/OPAY/i, 'OPAY'], [/PALMPAY|\bPLP\b/i, 'PALMPAY'],
+               [/MONIE|\bMMB\b|\bMNP\b/i, 'MNP'], [/KUDA|\bKMB\b/i, 'KUDA'], [/PAYCOM/i, 'PAYCOM'], [/HERITAGE|\bHBP\b/i, 'HERITAGE'], [/STERLING/i, 'STERLING'], [/UNION/i, 'UNION'], [/FIDELITY|\bFID\b/i, 'FIDELITY'], [/KEYSTONE/i, 'KEYSTONE'], [/PROVIDUS|\bPCM\b/i, 'PROVIDUS'], [/STANBIC|\bIBT\b/i, 'STANBIC'], [/ECOBANK/i, 'ECOBANK'], [/JAIZ/i, 'JAIZ']];
+  function bankOf(raw){ var m = raw.match(/\bTO\b:?\s+(.*)$/), seg = /^FIP:MB:/.test(raw) || !m ? raw : m[1]; for (var i = 0; i < BANKS.length; i++) if (BANKS[i][0].test(seg)) return BANKS[i][1]; return ''; }
+  function key(){ return Object.keys(localStorage).filter(function(x){ return /^ngt_data_v1_/.test(x) && !/_meta$/.test(x); })[0]; }
+  function feed(obj){ window.trfImportJSON({ files: [new File([JSON.stringify(obj)], 'transfers-merge.json', { type: 'application/json' })], value: '' }); }
+  async function run(){
+    var recs = window.BS && BS.records ? BS.records() : [];
+    if (!recs.length) return alert('Load the statement file in 🏦 Bank statements first.');
+    var k = key(); if (!k) return alert('Transfers data not found on this device.');
+    var d = JSON.parse(localStorage.getItem(k) || '{}'), byId = {};
+    recs.forEach(function(r){ byId['bank:' + r.id] = r; });
+    // which 10-digit numbers belong to which recipients
+    var seen = {}, per = {};
+    (d.transfers || []).forEach(function(t){
+      var r = t.src && byId[t.src]; if (!r) return;
+      var a = (r.raw.match(/\b(\d{10})\b/) || [])[1]; if (!a) return;
+      (seen[a] = seen[a] || {})[t.rid] = 1;
+      var p = per[t.rid] = per[t.rid] || {}; p[a] = p[a] || { n: 0, bank: bankOf(r.raw) }; p[a].n++;
+    });
+    var filled = [];
+    (d.recipients || []).forEach(function(x){
+      if (String(x.account || '').replace(/\D/g, '').length >= 10 || !per[x.id]) return;
+      // only numbers used for this one person (skips your own accounts and references shared across people)
+      var best = Object.keys(per[x.id]).filter(function(a){ return Object.keys(seen[a]).length === 1; })
+        .sort(function(a, b){ return per[x.id][b].n - per[x.id][a].n; })[0];
+      if (!best) return;
+      x.account = best; if (!x.bank && per[x.id][best].bank) x.bank = per[x.id][best].bank;
+      filled.push(x.name + ': ' + best);
+    });
+    if (!filled.length) return alert('No empty account could be filled from the statements.');
+    if (!await melAsk('Fill ' + filled.length + ' account numbers?\n\n' + filled.slice(0, 40).join('\n') + (filled.length > 40 ? '\n… and ' + (filled.length - 40) + ' more' : ''))) return;
+    localStorage.setItem('bs_acct_backup', localStorage.getItem(k));
+    try { feed(d); } catch(e) { alert('Something went wrong: ' + e.message); }
+  }
+  async function undo(){
+    var b = localStorage.getItem('bs_acct_backup'); if (!b) return alert('No account-fill backup on this device.');
+    if (!await melAsk('Put the account numbers back to how they were before the fill?')) return;
+    try { feed(JSON.parse(b)); localStorage.removeItem('bs_acct_backup'); } catch(e) { alert('Something went wrong: ' + e.message); }
+  }
+  setInterval(function(){
+    var top = document.querySelector('#bs-ov .bs-top'); if (!top || document.getElementById('bs-acct')) return;
+    var b = document.createElement('button'); b.id = 'bs-acct'; b.className = 'bs-btn p'; b.textContent = '🔢 Fill accounts'; b.onclick = run;
+    var u = document.createElement('button'); u.className = 'bs-btn warn'; u.textContent = '↶'; u.title = 'Undo account fill'; u.onclick = undo;
+    top.insertBefore(u, top.lastChild); top.insertBefore(b, u);
+  }, 1500);
+})();
+</script>
+<script>
+// Full-screen add-on screens start below the app header instead of covering it
+(function(){
+  var OVERLAYS = ['#bs-ov'];   // add more screen ids here
+  function hdrBottom(){
+    var b = 0;
+    [].forEach.call(document.body.querySelectorAll('body > *, body > * > *'), function(e){
+      if (OVERLAYS.some(function(s){ return e.matches(s); }) || e.id === 'mel-dlg') return;
+      var s = getComputedStyle(e); if (s.position !== 'fixed' && s.position !== 'sticky') return;
+      var r = e.getBoundingClientRect();
+      if (r.top <= 1 && r.height >= 40 && r.height <= 250 && r.width >= innerWidth * 0.9) b = Math.max(b, r.bottom);
+    });
+    return Math.round(b);
+  }
+  setInterval(function(){
+    var h = hdrBottom(); if (!h) return;
+    OVERLAYS.forEach(function(sel){
+      var o = document.querySelector(sel); if (!o) return;
+      o.style.setProperty('top', h + 'px', 'important');
+      o.style.setProperty('height', 'calc(100dvh - ' + h + 'px)', 'important');
+      o.style.setProperty('bottom', 'auto', 'important');
+    });
+  }, 400);
 })();
 </script>
 </body>
