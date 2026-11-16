@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.15.5')) {
+          if (!key.startsWith('mel-v2.15.6')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18848,7 +18848,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.15.5';
+var APP_VERSION = '2.15.6';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -25185,6 +25185,117 @@ syncInit();
   }
 
   window.RCP = { parse: parse, render: render };
+})();
+</script>
+
+<script>
+// Import notepads (Expenses + Income): item lines laid out as text left / amount right-aligned on the last line (display only).
+// Converted back to each notepad's own format just before Parse: Expenses "\tdesc\tamount", Income "desc: amount".
+(function(){
+  var META = new WeakMap(), IND = '  ', CONT = '    ', canvas = null;
+  var COLON = /^(\S.*?\S):\s+([€₦$£]\s?-?\d[\d.,]*|-?\d[\d.,]*\s?[€₦$£])\s*$/;
+  function areas(){
+    return ['panel-import', 'panel-inc-import'].map(function(id){ var p = document.getElementById(id); return p && p.querySelector('textarea'); }).filter(Boolean);
+  }
+  function style(t){ return t.closest('#panel-inc-import') ? 'colon' : 'tab'; }
+  function dw(s){ var n = 0; for (var ch of s) n += /\p{Extended_Pictographic}/u.test(ch) ? 2 : (/[\u200d\ufe0f\u0300-\u036f]/.test(ch) ? 0 : 1); return n; }
+  function cols(t){
+    var cs = getComputedStyle(t), c = (canvas || (canvas = document.createElement('canvas'))).getContext('2d');
+    c.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    var cw = c.measureText('0'.repeat(40)).width / 40 || 8;
+    var w = t.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    return Math.max(24, Math.floor(w / cw) - 1);
+  }
+  // split a raw line into [desc, amount], or null if it is not an item line
+  function item(line){
+    if (/^\s{2}/.test(line) && line.indexOf('\t') < 0) return null;
+    if (line.indexOf('\t') > -1) {
+      var p = line.split('\t').map(function(x){ return x.trim(); }).filter(Boolean);
+      return p.length >= 2 ? [p.slice(0, -1).join(' '), p[p.length - 1]] : null;
+    }
+    var m = line.match(COLON);
+    return m ? [m[1], m[2]] : null;
+  }
+  // wrap: first line width w1, following lines width w2
+  function wrap2(s, w1, w2){
+    var out = [], cur = '';
+    s.split(' ').forEach(function(x){
+      if (!x) return;
+      var w = out.length ? w2 : w1;
+      if (!cur) cur = x; else if (dw(cur + ' ' + x) <= w) cur += ' ' + x; else { out.push(cur); cur = x; }
+    });
+    if (cur) out.push(cur);
+    return out.length ? out : [''];
+  }
+  function layout(desc, amt, C){
+    var W1 = C - IND.length, W2 = C - CONT.length, a = dw(amt);
+    var lines = dw(desc) + 1 + a <= W1 ? [desc] : wrap2(desc, W1, W2);
+    // the amount goes on the last line; if that line is too full, its last word drops to a new line
+    var lastW = lines.length === 1 ? W1 : W2, last = lines[lines.length - 1], carry = '';
+    while (dw(last) + 1 + a > lastW && last.indexOf(' ') > -1) {
+      var k = last.lastIndexOf(' ');
+      carry = last.slice(k + 1) + (carry ? ' ' + carry : '');
+      last = last.slice(0, k);
+    }
+    lines[lines.length - 1] = last;
+    if (carry) lines.push(carry);
+    return lines.map(function(txt, i){
+      var pre = i === 0 ? IND : CONT;
+      if (i < lines.length - 1) return pre + txt;
+      return pre + txt + ' '.repeat(Math.max(1, C - dw(pre) - dw(txt) - a)) + amt;
+    }).join('\n');
+  }
+  function format(t){
+    var C = cols(t), map = {}, out = [];
+    t.value.split('\n').forEach(function(line){
+      var it = item(line);
+      if (!it) { out.push(line); return; }
+      var key = layout(it[0], it[1], C);
+      map[key] = line;
+      out.push(key);
+    });
+    var v = out.join('\n');
+    META.set(t, { map: map, cols: C });
+    if (t.value !== v) t.value = v;
+    t.setAttribute('wrap', 'off'); t.style.whiteSpace = 'pre'; t.style.overflowX = 'auto';
+  }
+  function normalize(t){
+    var m = META.get(t) || { map: {} }, st = style(t), lines = t.value.split('\n'), out = [], i = 0, changed = false;
+    while (i < lines.length) {
+      var line = lines[i];
+      if (/^ {2}\S/.test(line)) {
+        var block = [line], j = i + 1;
+        while (j < lines.length && /^ {4}\S/.test(lines[j])) { block.push(lines[j]); j++; }
+        var key = block.join('\n');
+        if (m.map[key] !== undefined) out.push(m.map[key]);
+        else {
+          var full = block.map(function(x){ return x.trim(); }).join(' ');
+          var mm = full.match(/^(.*?\S)\s+(\S*\d\S*)\s*$/);
+          if (mm) out.push(st === 'colon' ? mm[1].trim() + ': ' + mm[2] : '\t' + mm[1].trim() + '\t' + mm[2]);
+          else out.push.apply(out, block);
+        }
+        changed = true; i = j;
+      } else { out.push(line); i++; }
+    }
+    if (changed) t.value = out.join('\n');
+    META.delete(t);
+  }
+  function hasRaw(t){ return t.value.split('\n').some(function(l){ return !!item(l); }); }
+
+  // back to the app's format right before Parse (Expenses or Income)
+  window.addEventListener('click', function(e){
+    var b = e.target && e.target.closest && e.target.closest('button');
+    if (b && /parse/i.test(b.textContent)) areas().forEach(normalize);
+  }, true);
+
+  // lay out whenever a notepad has unformatted item lines or its width changed; never while you are typing in it
+  setInterval(function(){
+    areas().forEach(function(t){
+      if (!t.offsetParent || document.activeElement === t) return;
+      var m = META.get(t);
+      if (hasRaw(t) || (m && m.cols !== cols(t))) { if (m) normalize(t); format(t); }
+    });
+  }, 800);
 })();
 </script>
 </body>
