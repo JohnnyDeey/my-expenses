@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.15.6')) {
+          if (!key.startsWith('mel-v2.15.7')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -171,6 +171,7 @@ function _checkForUpdate() {
 }
 
 function _showUpdateBanner(newVer) {
+  return; // green banner disabled: the brown "Update ready" pill handles updates
   if (document.getElementById('update-banner')) return; // already showing
   var banner = document.createElement('div');
   banner.id = 'update-banner';
@@ -18848,7 +18849,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.15.6';
+var APP_VERSION = '2.15.7';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
