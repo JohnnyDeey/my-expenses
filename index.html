@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.16.1')) {
+          if (!key.startsWith('mel-v2.16.2')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18849,7 +18849,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.16.1';
+var APP_VERSION = '2.16.2';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -25870,13 +25870,8 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
   function clearBtn(){
     var inp = document.querySelector('input[placeholder^="Search name"]:not([data-mel-clr])'); if (!inp) return;
     inp.dataset.melClr = 1;
-    var w = document.createElement('span'); w.className = 'mel-sw';
-    inp.parentNode.insertBefore(w, inp); w.appendChild(inp);
-    inp.style.setProperty('width', '100%', 'important'); inp.style.paddingRight = '30px';
-    var x = document.createElement('button'); x.type = 'button'; x.className = 'mel-clr'; x.textContent = '✕'; x.title = 'Clear';
-    function sync(){ x.style.display = inp.value ? 'block' : 'none'; }
-    x.onclick = function(){ inp.value = ''; ['input', 'keyup', 'change'].forEach(function(t){ inp.dispatchEvent(new Event(t, { bubbles: true })); }); sync(); inp.focus(); };
-    inp.addEventListener('input', sync); w.appendChild(x); sync();
+    inp.type = 'search';   // browser's own ✕, same as the 🔍 search box
+    inp.addEventListener('search', function(){ ['input', 'keyup', 'change'].forEach(function(t){ inp.dispatchEvent(new Event(t, { bubbles: true })); }); });
   }
   setInterval(function(){ archive(); clearBtn(); }, 600);
 })();
@@ -25955,6 +25950,301 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
       o.style.setProperty('bottom', 'auto', 'important');
     });
   }, 400);
+})();
+</script>
+<script>
+// Dashboard charts (Expenses + Income):
+// 1) a picker or ↻ in one chart card only animates that chart; the others redraw silently
+// 2) year/month pickers always list the FULL range, so ↻ really goes back to the start
+// 3) pickers reset to the full range when the currency changes or older/newer data appears
+(function(){
+  // ---- 1) independent animation ----
+  window._melOnly = null;
+  function mark(e){
+    var t = e.target; if (!t || !t.closest) return;
+    if (e.type === 'click' && !t.closest('button')) return;
+    if (e.type === 'change' && t.tagName !== 'SELECT') return;
+    var card = t.closest('.chart-card'), cv = card && card.querySelector('canvas'); if (!cv) return;
+    window._melOnly = cv.id;
+    setTimeout(function(){ window._melOnly = null; }, 0);
+  }
+  document.addEventListener('change', mark, true);
+  document.addEventListener('click', mark, true);
+  var tc = setInterval(function(){
+    if (!window.Chart || window.Chart._mel) return;
+    clearInterval(tc);
+    var C = window.Chart;
+    window.Chart = new Proxy(C, {
+      construct: function(T, args){
+        var el = args[0], id = el && (el.canvas || el).id;
+        if (window._melOnly && id !== window._melOnly) { args[1] = args[1] || {}; args[1].options = args[1].options || {}; args[1].options.animation = false; }
+        return new T(args[0], args[1]);
+      },
+      get: function(T, k){ return k === '_mel' ? true : T[k]; }
+    });
+  }, 300);
+
+  // ---- 2 + 3) full-range pickers ----
+  var seen = {};
+  function cur(p){ return (p.indexOf('inc') === 0 ? window._incDashCurSelected : window._dashCurSelected) || ''; }
+  function fix(p, list, ids){
+    var c = cur(p), s = seen[p], first = list[0], last = list[list.length - 1];
+    if (!s || s.cur !== c || first < s.list[0] || last > s.list[s.list.length - 1]) {
+      if (s) ids.forEach(function(id){ var e = document.getElementById(id); if (e) e.innerHTML = ''; });   // new currency or wider data → full range
+      seen[p] = { cur: c, list: list.slice() };
+      return list;
+    }
+    return s.list;   // a narrower list (already filtered) → keep offering the full range
+  }
+  var tp = setInterval(function(){
+    if (typeof window._populateMonthlyRangePickers !== 'function') return;
+    clearInterval(tp);
+    ['_populateMonthlyRangePickers', '_populateCatRangePicker'].forEach(function(name){
+      var o = window[name]; if (typeof o !== 'function') return;
+      window[name] = function(keys, prefix){
+        if (keys && keys.length) keys = fix(prefix, keys, [prefix + '-from-year', prefix + '-from-month', prefix + '-to-year', prefix + '-to-month']);
+        return o.call(this, keys, prefix);
+      };
+    });
+    var oy = window._populateYearRangePicker;
+    if (typeof oy === 'function') window._populateYearRangePicker = function(years, fromId, toId){
+      if (years && years.length) years = fix(fromId, years, [fromId, toId]);
+      return oy.call(this, years, fromId, toId);
+    };
+  }, 300);
+})();
+</script>
+<script>
+// Currency chip = fresh view: range charts show inception → today, Daily Flow shows the current month (Expenses + Income)
+(function(){
+  var SIDES = {
+    'dash-cur-strip':     { ranges: ['monthly', 'cat', 'yearly'],             flow: 'daily-flow' },
+    'inc-dash-cur-strip': { ranges: ['inc-monthly', 'inc-cat', 'inc-yearly'], flow: 'inc-daily-flow' }
+  };
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function fresh(side){
+    ['heatmap-container', 'inc-heatmap-container'].forEach(function(id){ var h = document.getElementById(id); if (h) { delete h._expHeatmapYearIdx; delete h._incHeatmapYearIdx; } });
+    side.ranges.forEach(function(p){
+      ['-from-year', '-from-month', '-to-year', '-to-month'].forEach(function(s){ var e = document.getElementById(p + s); if (e) e.innerHTML = ''; });   // empty → app defaults to full range
+    });
+    var now = new Date(), y = document.getElementById(side.flow + '-year'), m = document.getElementById(side.flow + '-month');
+    if (y && y.querySelector('option[value="' + now.getFullYear() + '"]')) y.value = String(now.getFullYear());
+    if (m && m.options.length) m.value = pad(now.getMonth() + 1);
+  }
+  // before the chip's own handler redraws the dashboard
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('#dash-cur-strip button, #inc-dash-cur-strip button'); if (!b) return;
+    fresh(SIDES[b.parentElement.id] || SIDES[b.closest('[id$="cur-strip"]').id]);
+  }, true);
+  // once when the app opens
+  var done = {};
+  var t = setInterval(function(){
+    Object.keys(SIDES).forEach(function(id){
+      if (done[id] || !document.getElementById(id) || !document.getElementById(id).children.length) return;
+      done[id] = 1; fresh(SIDES[id]);
+      try { if (id.indexOf('inc') === 0) window.renderIncomeDashboard(); else window.renderDashboard(); } catch(e) {}
+    });
+    if (done['dash-cur-strip'] && done['inc-dash-cur-strip']) clearInterval(t);
+  }, 700);
+})();
+</script>
+<script>
+// Tour: never auto-start for an existing user with data (it fired when Firebase answered later than the 2.5 s startup timer)
+(function(){
+  var t = setInterval(function(){
+    if (typeof window.startTour !== 'function' || window.startTour._mel) return;
+    clearInterval(t);
+    var orig = window.startTour;
+    window.startTour = function(mode, force, isReplay){
+      if (isReplay !== true) {
+        var hasUser = !!localStorage.getItem('expense_user_uid');
+        var hasData = (localStorage.getItem('expense_ledger') || '[]').length > 2;
+        if (hasUser && hasData) {
+          try {
+            localStorage.setItem(_tourKey(), '1');
+            localStorage.setItem('expense_onboard_expenses_done', '1');
+            localStorage.setItem('expense_onboard_income_done', '1');
+          } catch(e) {}
+          if (typeof window._seqNext === 'function') setTimeout(window._seqNext, 0);   // carry on with any next startup step
+          return;
+        }
+      }
+      return orig.apply(this, arguments);
+    };
+    window.startTour._mel = 1;
+  }, 50);
+})();
+</script>
+<script>
+// Performance: fast dates, cached ledger, upload only changed months
+(function(){
+  // 1) date normaliser: entries already in YYYY-MM-DD skip the regex work
+  var nd = window.normDateToISO;
+  if (typeof nd === 'function') window.normDateToISO = function(d){
+    return (typeof d === 'string' && d.length === 10 && d.charAt(4) === '-' && d.charAt(7) === '-') ? d : nd(d);
+  };
+
+  // 2) loadData: parse once, reuse until the stored ledger changes (each caller gets its own copies)
+  var ld = window.loadData, lastRaw = null, cache = null;
+  if (typeof ld === 'function') window.loadData = function(){
+    var raw = localStorage.getItem('expense_ledger') || '[]';
+    if (raw !== lastRaw || !cache) { cache = ld.apply(this, arguments); lastRaw = localStorage.getItem('expense_ledger') || '[]'; }
+    return cache.map(function(o){ return Object.assign({}, o); });
+  };
+
+  // 3) sync: upload only the months that changed since the last successful upload
+  function hk(){ return 'mel_push_hash_' + (_userId || ''); }
+  function hash(s){ var x = 5381, i = s.length; while (i) x = (x * 33) ^ s.charCodeAt(--i); return (x >>> 0).toString(36) + ':' + s.length; }
+  window.syncPush = function(){
+    if (!_db || !_userId || _isMerging) { syncSetStatus('live'); return; }
+    clearTimeout(_syncPushTimer);
+    _syncPushTimer = setTimeout(function(){
+      syncSetStatus('syncing');
+      var entries = []; try { entries = JSON.parse(localStorage.getItem('expense_ledger') || '[]'); } catch(e) {}
+      var byMonth = {};
+      entries.forEach(function(e){ var k = e.date ? e.date.substring(0, 7) : 'unknown'; (byMonth[k] = byMonth[k] || []).push(e); });
+      var months = Object.keys(byMonth), old = {}, nh = {}, changed = [];
+      try { old = JSON.parse(localStorage.getItem(hk()) || '{}'); } catch(e) {}
+      months.forEach(function(ym){ nh[ym] = hash(JSON.stringify(byMonth[ym])); if (old[ym] !== nh[ym]) changed.push(ym); });
+      var batch = _db.batch();
+      changed.forEach(function(ym){ batch.set(userCol('expense_months').doc(ym), { entries: byMonth[ym], updated: Date.now() }); });
+      (window._knownFirebaseMonths || []).forEach(function(ym){ if (months.indexOf(ym) === -1) batch.delete(userCol('expense_months').doc(ym)); });
+      window._knownFirebaseMonths = months;
+      batch.set(userCol('settings').doc('default'), {
+        custom_categories: localStorage.getItem('custom_categories') || '[]',
+        custom_cat_rules:  localStorage.getItem('custom_cat_rules')  || '[]',
+        user_currencies:   localStorage.getItem(CURRENCY_STORAGE_KEY) || '',
+        display_name: _userName, updated: Date.now()
+      });
+      batch.commit()
+        .then(function(){ try { localStorage.setItem(hk(), JSON.stringify(nh)); } catch(e) {} syncSetStatus('live'); console.log('Synced ' + changed.length + ' of ' + months.length + ' months'); })
+        .catch(function(e){ console.error('Push error:', e); syncSetStatus('error'); });
+    }, 1500);
+  };
+})();
+</script>
+<script>
+// Header 🔍 search (Expenses / Income): overlay, start-of-word matching, AND words, -exclude, amounts, dates; max 100 drawn
+(function(){
+  var MON = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  var SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
+  var MAX = 100, timer = null, cacheKey = null, index = [];
+
+  // ---- header button, just before the 🔓 ----
+  setInterval(function(){
+    var bar = document.getElementById('hdr-user-bar-btns'); if (!bar || document.getElementById('hdr-search-btn')) return;
+    var lock = [].filter.call(bar.querySelectorAll('button'), function(b){ return /logOut|showPinScreen/.test(b.getAttribute('onclick') || ''); })[0];
+    if (!lock) return;
+    var b = document.createElement('button'); b.id = 'hdr-search-btn'; b.title = 'Search  [X]'; b.innerHTML = SVG;
+    b.style.cssText = 'background:none;border:1px solid rgba(200,150,46,0.4);border-radius:4px;color:var(--gold);cursor:pointer;padding:5px 9px;line-height:0;display:flex;align-items:center;';
+    b.onclick = open;
+    bar.insertBefore(b, lock);
+    var lab = document.getElementById('hdr-mode-label'); if (lab) { lab.style.minWidth = '0'; lab.style.overflow = 'hidden'; lab.style.textOverflow = 'ellipsis'; }
+  }, 600);
+  document.addEventListener('keydown', function(e){
+    if ((e.key !== 'x' && e.key !== 'X') || e.ctrlKey || e.metaKey || e.altKey) return;
+    var t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    e.preventDefault(); open();
+  });
+
+  // ---- data ----
+  function mode(){ return window._appMode === 'income' ? 'income' : 'expenses'; }
+  function items(){ try { return mode() === 'income' ? (window.loadIncomeData() || []) : (window.loadData() || []); } catch(e) { return []; } }
+  function build(){
+    var list = items(), key = mode() + '|' + list.length + '|' + (list.length ? list[list.length - 1].id : '');
+    if (key === cacheKey) return;
+    cacheKey = key;
+    index = list.map(function(i){
+      var d = i.date || '', y = d.slice(0, 4), m = d.slice(5, 7), dd = d.slice(8, 10), mi = parseInt(m, 10) - 1;
+      var hay = ' ' + [(i.desc || ''), (i.category || ''), d, dd + '/' + m + '/' + y, dd + '-' + m + '-' + y, m + '/' + y, (MON[mi] || '') + ' ' + y].join(' ').toLowerCase().replace(/\s+/g, ' ') + ' ';
+      return { i: i, hay: hay, amt: Math.abs(+i.amount || 0) };
+    }).sort(function(a, b){ return a.i.date < b.i.date ? 1 : a.i.date > b.i.date ? -1 : 0; });   // newest first
+  }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function reEsc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  // query: words (all must match, at the START of a word), "-word" excludes, >N / <N amount range, a plain number matches the amount
+  function parse(q){
+    var inc = [], words = [], exc = [], gt = null, lt = null, nums = [];
+    q.toLowerCase().split(/[\s,]+/).filter(Boolean).forEach(function(t){
+      var mm;
+      if ((mm = t.match(/^([<>])=?([\d.]+)(k?)$/))) { var v = +mm[2] * (mm[3] ? 1000 : 1); if (mm[1] === '>') gt = v; else lt = v; return; }
+      if (t.charAt(0) === '-' && t.length > 1) { exc.push(new RegExp('[\\s/(\\-]' + reEsc(t.slice(1)))); return; }
+      var n = t.replace(/[₦€$£,]/g, '');
+      if (/^\d+(\.\d+)?k?$/.test(n) && !/^\d{4}$/.test(n) && n.length >= 3) { nums.push(/k$/.test(n) ? +n.slice(0, -1) * 1000 : +n); return; }
+      inc.push(new RegExp('[\\s/(\\-]' + reEsc(t))); words.push(reEsc(t));
+    });
+    return { inc: inc, words: words, exc: exc, gt: gt, lt: lt, nums: nums };
+  }
+  function run(q){
+    var box = document.getElementById('gs-res'), sum = document.getElementById('gs-sum');
+    q = q.trim();
+    if (q.replace(/[^a-z0-9₦€$£<>]/gi, '').length < 2) { sum.textContent = 'Type at least 2 letters. Use several words to narrow down, e.g. "sunday oluwa 2023".'; box.innerHTML = ''; return; }
+    build();
+    var P = parse(q), hits = [], tot = {};
+    for (var k = 0; k < index.length; k++) {
+      var r = index[k], ok = true, j;
+      for (j = 0; ok && j < P.inc.length; j++) ok = P.inc[j].test(r.hay);
+      for (j = 0; ok && j < P.exc.length; j++) ok = !P.exc[j].test(r.hay);
+      for (j = 0; ok && j < P.nums.length; j++) ok = Math.abs(r.amt - P.nums[j]) < 0.5;
+      if (ok && P.gt != null) ok = r.amt > P.gt;
+      if (ok && P.lt != null) ok = r.amt < P.lt;
+      if (!ok) continue;
+      hits.push(r); var c = r.i.currency || ''; tot[c] = (tot[c] || 0) + r.amt;
+    }
+    var SY = window.SYMS || {};
+    sum.innerHTML = '<b>' + hits.length.toLocaleString() + '</b> found' + (hits.length ? ' · ' + Object.keys(tot).map(function(c){ return (SY[c] || '') + tot[c].toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' ' + c; }).join(' · ') : '') +
+      (hits.length > MAX ? '<br><span style="color:var(--muted)">Showing the newest ' + MAX + '. Add a word, year or amount to narrow down.</span>' : '');
+    var words = P.words;
+    var hl = words.length ? new RegExp('(^|[\\s/(\\-])(' + words.join('|') + ')', 'gi') : null;
+    box.innerHTML = !hits.length ? '' :
+      '<table style="width:100%;border-collapse:collapse;font-family:DM Mono,monospace;font-size:0.64rem;">' +
+      '<thead><tr style="background:var(--ink,#1a140a);color:var(--gold2,#e8b84b);position:sticky;top:0;">' +
+      '<th style="padding:5px 6px;text-align:left;font-weight:600;">DATE</th><th style="padding:5px 6px;text-align:left;font-weight:600;">DESCRIPTION</th><th style="padding:5px 6px;text-align:right;font-weight:600;">AMOUNT</th></tr></thead><tbody>' +
+      hits.slice(0, MAX).map(function(r, n){
+        var i = r.i, d = i.date || '', desc = esc(i.desc);
+        if (hl) desc = desc.replace(hl, '$1<mark style="background:#f6e3a6;padding:0;">$2</mark>');
+        return '<tr style="background:' + (n % 2 ? 'rgba(200,150,46,0.10)' : 'transparent') + ';">' +
+          '<td style="padding:5px 6px;white-space:nowrap;color:var(--muted);vertical-align:top;">' + d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) + '</td>' +
+          '<td style="padding:5px 6px;overflow-wrap:anywhere;font-family:DM Sans,sans-serif;font-size:0.7rem;">' + desc + (i.category ? '<div style="color:var(--muted);font-family:DM Mono,monospace;font-size:0.58rem;">' + esc(i.category) + '</div>' : '') + '</td>' +
+          '<td style="padding:5px 6px;text-align:right;white-space:nowrap;vertical-align:top;">' + (SY[i.currency] || '') + r.amt.toLocaleString(undefined, { maximumFractionDigits: 2 }) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  // ---- overlay ----
+  function open(){
+    var ov = document.getElementById('gs-ov');
+    if (!ov) {
+      ov = document.createElement('div'); ov.id = 'gs-ov';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:99500;background:rgba(20,14,6,.55);display:flex;justify-content:center;align-items:flex-start;padding:60px 10px 10px;box-sizing:border-box;';
+      ov.innerHTML = '<div style="background:var(--paper,#f5f0e6);border:1.5px solid var(--gold);border-radius:12px;width:100%;max-width:560px;max-height:calc(100dvh - 80px);display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.35);">' +
+        '<div style="display:flex;gap:6px;align-items:center;padding:10px;border-bottom:1px solid var(--border);">' +
+        '<span id="gs-mode" style="font-family:DM Mono,monospace;font-size:0.66rem;color:var(--muted);white-space:nowrap;"></span>' +
+        '<input id="gs-q" type="search" autocomplete="off" placeholder="Search description, date, amount…" style="flex:1;min-width:0;padding:9px 10px;border:1.5px solid var(--gold);border-radius:8px;font-family:DM Mono,monospace;font-size:0.85rem;background:#fff;color:var(--ink);outline:none;">' +
+        '<button id="gs-i" title="Search tips" style="background:none;border:1.5px solid var(--gold);border-radius:50%;width:24px;height:24px;font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:0.8rem;cursor:pointer;color:var(--gold);padding:0;line-height:1;flex-shrink:0;">i</button>' +
+        '<button id="gs-x" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:0 4px;">✕</button></div>' +
+        '<div id="gs-help" style="display:none;padding:8px 12px;font-family:DM Mono,monospace;font-size:0.66rem;line-height:1.7;color:var(--ink);background:#fffaf0;border-bottom:1px solid var(--border);">' +
+        '<b>sunday oluwa</b> · all words, each at the start of a word<br><b>-2025</b> · leave out anything matching 2025<br><b>15000</b> or <b>15k</b> · exact amount<br><b>&gt;50k</b> / <b>&lt;5000</b> · amount above / below<br><b>2014</b> · <b>nov 2014</b> · <b>11/2014</b> · <b>06/11/2014</b> · dates<br><b>X</b> opens search · <b>Esc</b> closes</div>' +
+        '<div id="gs-sum" style="padding:8px 12px;font-family:DM Mono,monospace;font-size:0.7rem;line-height:1.5;"></div>' +
+        '<div id="gs-res" style="overflow-y:auto;padding:0 0 6px;"></div>' +
+        '</div>';
+      document.body.appendChild(ov);
+      ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
+      document.getElementById('gs-x').onclick = close;
+      document.getElementById('gs-i').onclick = function(){ var h = document.getElementById('gs-help'); h.style.display = h.style.display === 'none' ? 'block' : 'none'; };
+      var q = document.getElementById('gs-q');
+      q.addEventListener('input', function(){ clearTimeout(timer); var v = q.value; timer = setTimeout(function(){ run(v); }, 250); });
+      q.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+    }
+    cacheKey = null;
+    document.getElementById('gs-mode').textContent = mode() === 'income' ? '💰 INCOME' : '💸 EXPENSES';
+    ov.style.display = 'flex';
+    var q2 = document.getElementById('gs-q'); run(q2.value); setTimeout(function(){ q2.focus(); q2.select(); }, 50);
+  }
+  function close(){ var ov = document.getElementById('gs-ov'); if (ov) ov.style.display = 'none'; }
+
+  // close the search when the app locks or logs out, so results never show over the lock screen
+  ['lockApp', 'logOut'].forEach(function(n){ var o = window[n]; if (typeof o === 'function') window[n] = function(){ close(); return o.apply(this, arguments); }; });
 })();
 </script>
 </body>
