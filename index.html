@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.16.5')) {
+          if (!key.startsWith('mel-v2.16.6')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18852,7 +18852,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.16.5';
+var APP_VERSION = '2.16.6';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -22521,7 +22521,7 @@ syncInit();
   function hook(){
     if (typeof window.runDateLookup === 'function' && !window.runDateLookup._wk) {
       var oRun = window.runDateLookup;
-      window.runDateLookup = function(){ if (window._dlWeek) return renderWeek(function(){ return oRun.apply(this, arguments); }); return oRun.apply(this, arguments); };
+      window.runDateLookup = function(){ if (window._dlWeek && !window._dlInWeek) { window._dlInWeek = true; try { return renderWeek(function(){ return oRun.apply(this, arguments); }); } finally { window._dlInWeek = false; } } return oRun.apply(this, arguments); };
       window.runDateLookup._wk = 1;
     }
     if (typeof window.shiftLookupDate === 'function' && !window.shiftLookupDate._wk) {
@@ -22544,6 +22544,7 @@ syncInit();
   var n = 0, t = setInterval(function(){ hook(); if (++n > 40) clearInterval(t); }, 500);
 })();
 </script>
+
 <script>
 // Loans tab inside Budget Targets (reads expenses, never changes them)
 (function(){
@@ -26459,37 +26460,8 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
   }, 400);
 })();
 </script>
-<style>
-/* No scroll chaining from pop-ups / inner lists to the page */
-body *{ overscroll-behavior: contain; }
-html.mel-lock, html.mel-lock body{ overflow: hidden !important; }
-</style>
-<script>
-// While a pop-up is open: freeze the page; the pop-up's frame ignores swipes, its own lists still scroll (no touch tracking)
-(function(){
-  var KNOWN = ['trf-modal', 'gs-ov', 'mel-dlg', 'bs-ov', 'radial-menu', 'date-lookup-overlay'];
-  var last = null;
-  function covers(e){
-    if (!e || e.nodeType !== 1) return false;
-    var s = getComputedStyle(e);
-    if (s.position !== 'fixed' || s.display === 'none' || s.visibility === 'hidden' || +s.opacity === 0) return false;
-    var r = e.getBoundingClientRect();
-    return r.width >= innerWidth * 0.9 && r.height >= innerHeight * 0.6;
-  }
-  setInterval(function(){
-    var el = KNOWN.map(function(id){ return document.getElementById(id); }).filter(covers)[0] ||
-      [].filter.call(document.body.children, function(e){ return e.id !== 'scroll-fab' && covers(e) && (+getComputedStyle(e).zIndex || 0) >= 100; }).pop() || null;
-    document.documentElement.classList.toggle('mel-lock', !!el);
-    if (last && last !== el) last.style.removeProperty('touch-action');
-    if (el) {
-      // the frame itself only blocks swipes when it is not the thing that scrolls
-      if (el.scrollHeight > el.clientHeight + 1) el.style.removeProperty('touch-action');
-      else el.style.setProperty('touch-action', 'none');
-    }
-    last = el;
-  }, 200);
-})();
-</script>
+
+
 <script>
 // Transfers "Type" boxes: show ALL suggestions on tap (the browser only lists matches for what is already typed)
 (function(){
@@ -26612,5 +26584,19 @@ html.mel-lock, html.mel-lock body{ overflow: hidden !important; }
   }, 300);
 })();
 </script>
+<style>
+/* Date Lookup: header and date row stay fixed, only the results scroll */
+#date-lookup-overlay{ overflow:hidden !important; padding-top:60px !important; padding-bottom:16px !important; }
+#date-lookup-overlay > div{ display:flex !important; flex-direction:column; max-height:calc(100dvh - 76px); overflow:hidden; }
+#date-lookup-overlay > div > :not(#date-lookup-results){ flex-shrink:0; }
+#date-lookup-results{ flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; min-height:80px; }
+</style>
+<style>
+/* Transfers lookup: header and date row stay fixed, only the results scroll */
+#trf-cal-overlay{ overflow:hidden !important; padding-top:60px !important; padding-bottom:16px !important; }
+#trf-cal-overlay > div{ display:flex !important; flex-direction:column; max-height:calc(100dvh - 76px); overflow:hidden; }
+#trf-cal-overlay > div > :not(#trf-cal-results){ flex-shrink:0; }
+#trf-cal-results{ flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; min-height:80px; }
+</style>
 </body>
 </html>
