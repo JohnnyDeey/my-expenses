@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.16.2')) {
+          if (!key.startsWith('mel-v2.16.3')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -11483,6 +11483,7 @@ function openRadialMenu(x, y) {
   var outerItems = [
     {icon:'🔁',label:'Switch',fn:'trfModeChooser()',color:'#c8962e'},
     {icon:'📅',label:'Calendar',fn:'openDateLookup()',color:'#3d6b8a'},
+    {icon:'🔍',label:'Search',fn:'melSearch()',color:'#8a6d1f'},
     {icon:'❓',label:'Help',fn:'openHelp()',color:'#6b3d8c'},
     {icon:'📖',label:'Guide',fn:'startOnboarding(_appMode,true,true)',color:'#4a7c59'},
     {icon:'🌙',label:'Theme',fn:'toggleAppTheme()',color:'#2e4a6b'},
@@ -18592,7 +18593,9 @@ function updateUserDisplay() {
       var isInc = _appMode === 'income';
       var mlBg  = isInc ? 'rgba(74,124,89,0.25)' : 'rgba(200,150,46,0.15)';
       var mlClr = isInc ? '#8dd4a8' : 'var(--gold2)';
-      var mlTxt = isInc ? '&#128176;' : '&#128184;';
+      var _oml = document.getElementById('hdr-mode-label');
+      var mlTxt = (_oml && _oml.textContent.trim().length > 2) ? _oml.innerHTML : (isInc ? '&#128176; INCOME' : '&#128184; EXPENSES');
+      if (_oml && _oml.style.background) { mlBg = _oml.style.background; mlClr = _oml.style.color; }
       btns.innerHTML =
         '<button id="burger-btn" onclick="toggleBurgerMenu()" aria-label="Open menu" style="background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;flex-direction:column;gap:4px;justify-content:center;"><span class=\"bline\"></span><span class=\"bline\"></span><span class=\"bline\"></span></button>' +
         '<button id="mode-switch-btn" onclick="selectMode(_appMode===&quot;income&quot;?&quot;expenses&quot;:&quot;income&quot;)" title="Switch module" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:rgba(255,255,255,0.6);cursor:pointer;padding:5px 10px;font-size:1rem;line-height:1;">&#128260;</button>' +
@@ -18849,7 +18852,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.16.2';
+var APP_VERSION = '2.16.3';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -26124,11 +26127,14 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
 })();
 </script>
 <script>
-// Header 🔍 search (Expenses / Income): overlay, start-of-word matching, AND words, -exclude, amounts, dates; max 100 drawn
+// Header / radial 🔍 search: Expenses & Income (table), Transfers (people first, with totals). X opens, Esc closes.
 (function(){
   var MON = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  var MONC = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
   var MAX = 100, timer = null, cacheKey = null, index = [];
+  var TH = 'padding:5px 6px;font-weight:600;';
+  var STC = { planned: '#c8962e', early: '#2980b9', sent: '#4a7c59' };
 
   // ---- header button, just before the 🔓 ----
   setInterval(function(){
@@ -26143,25 +26149,22 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
   }, 600);
   document.addEventListener('keydown', function(e){
     if ((e.key !== 'x' && e.key !== 'X') || e.ctrlKey || e.metaKey || e.altKey) return;
-    var t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    var t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
     e.preventDefault(); open();
   });
+  window.melSearch = function(){ open(); };   // for the radial menu
 
-  // ---- data ----
-  function mode(){ return window._appMode === 'income' ? 'income' : 'expenses'; }
-  function items(){ try { return mode() === 'income' ? (window.loadIncomeData() || []) : (window.loadData() || []); } catch(e) { return []; } }
-  function build(){
-    var list = items(), key = mode() + '|' + list.length + '|' + (list.length ? list[list.length - 1].id : '');
-    if (key === cacheKey) return;
-    cacheKey = key;
-    index = list.map(function(i){
-      var d = i.date || '', y = d.slice(0, 4), m = d.slice(5, 7), dd = d.slice(8, 10), mi = parseInt(m, 10) - 1;
-      var hay = ' ' + [(i.desc || ''), (i.category || ''), d, dd + '/' + m + '/' + y, dd + '-' + m + '-' + y, m + '/' + y, (MON[mi] || '') + ' ' + y].join(' ').toLowerCase().replace(/\s+/g, ' ') + ' ';
-      return { i: i, hay: hay, amt: Math.abs(+i.amount || 0) };
-    }).sort(function(a, b){ return a.i.date < b.i.date ? 1 : a.i.date > b.i.date ? -1 : 0; });   // newest first
-  }
+  // ---- helpers ----
+  function mode(){ return window._appMode === 'income' ? 'income' : window._appMode === 'transfers' ? 'transfers' : 'expenses'; }
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function reEsc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function money(n){ return '₦' + (+n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 }); }
+  function dateHay(d){
+    if (!d) return '';
+    var y = d.slice(0, 4), m = d.slice(5, 7), dd = d.slice(8, 10), mi = parseInt(m, 10) - 1;
+    return [d, dd ? dd + '/' + m + '/' + y : '', dd ? dd + '-' + m + '-' + y : '', m + '/' + y, (MON[mi] || '') + ' ' + y, y].join(' ');
+  }
+  function norm(s){ return ' ' + s.toLowerCase().replace(/\s+/g, ' ') + ' '; }
 
   // query: words (all must match, at the START of a word), "-word" excludes, >N / <N amount range, a plain number matches the amount
   function parse(q){
@@ -26169,65 +26172,128 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
     q.toLowerCase().split(/[\s,]+/).filter(Boolean).forEach(function(t){
       var mm;
       if ((mm = t.match(/^([<>])=?([\d.]+)(k?)$/))) { var v = +mm[2] * (mm[3] ? 1000 : 1); if (mm[1] === '>') gt = v; else lt = v; return; }
-      if (t.charAt(0) === '-' && t.length > 1) { exc.push(new RegExp('[\\s/(\\-]' + reEsc(t.slice(1)))); return; }
+      if (t.charAt(0) === '-' && t.length > 1) { exc.push(new RegExp('[\\s/(\\-:]' + reEsc(t.slice(1)))); return; }
       var n = t.replace(/[₦€$£,]/g, '');
-      if (/^\d+(\.\d+)?k?$/.test(n) && !/^\d{4}$/.test(n) && n.length >= 3) { nums.push(/k$/.test(n) ? +n.slice(0, -1) * 1000 : +n); return; }
-      inc.push(new RegExp('[\\s/(\\-]' + reEsc(t))); words.push(reEsc(t));
+      if (/^\d+(\.\d+)?k?$/.test(n) && !/^\d{4}$/.test(n) && n.length >= 3 && n.length < 10) { nums.push(/k$/.test(n) ? +n.slice(0, -1) * 1000 : +n); return; }
+      inc.push(new RegExp('[\\s/(\\-:]' + reEsc(t))); words.push(reEsc(t));
     });
     return { inc: inc, words: words, exc: exc, gt: gt, lt: lt, nums: nums };
   }
-  function run(q){
-    var box = document.getElementById('gs-res'), sum = document.getElementById('gs-sum');
-    q = q.trim();
-    if (q.replace(/[^a-z0-9₦€$£<>]/gi, '').length < 2) { sum.textContent = 'Type at least 2 letters. Use several words to narrow down, e.g. "sunday oluwa 2023".'; box.innerHTML = ''; return; }
+  function test(P, hay, amt){
+    var j;
+    for (j = 0; j < P.inc.length; j++) if (!P.inc[j].test(hay)) return false;
+    for (j = 0; j < P.exc.length; j++) if (P.exc[j].test(hay)) return false;
+    for (j = 0; j < P.nums.length; j++) if (Math.abs(amt - P.nums[j]) >= 0.5) return false;
+    if (P.gt != null && !(amt > P.gt)) return false;
+    if (P.lt != null && !(amt < P.lt)) return false;
+    return true;
+  }
+  function highlighter(P){ return P.words.length ? new RegExp('(^|[\\s/(\\-:])(' + P.words.join('|') + ')', 'gi') : null; }
+  function hl(s, re){ s = esc(s); return re ? s.replace(re, '$1<mark style="background:#f6e3a6;padding:0;">$2</mark>') : s; }
+
+  // ---- Expenses / Income ----
+  function items(){ try { return mode() === 'income' ? (window.loadIncomeData() || []) : (window.loadData() || []); } catch(e) { return []; } }
+  function build(){
+    var list = items(), key = mode() + '|' + list.length + '|' + (list.length ? list[list.length - 1].id : '');
+    if (key === cacheKey) return;
+    cacheKey = key;
+    index = list.map(function(i){
+      return { i: i, hay: norm([(i.desc || ''), (i.category || ''), dateHay(i.date || '')].join(' ')), amt: Math.abs(+i.amount || 0) };
+    }).sort(function(a, b){ return a.i.date < b.i.date ? 1 : a.i.date > b.i.date ? -1 : 0; });   // newest first
+  }
+  function runLedger(P, box, sum){
     build();
-    var P = parse(q), hits = [], tot = {};
-    for (var k = 0; k < index.length; k++) {
-      var r = index[k], ok = true, j;
-      for (j = 0; ok && j < P.inc.length; j++) ok = P.inc[j].test(r.hay);
-      for (j = 0; ok && j < P.exc.length; j++) ok = !P.exc[j].test(r.hay);
-      for (j = 0; ok && j < P.nums.length; j++) ok = Math.abs(r.amt - P.nums[j]) < 0.5;
-      if (ok && P.gt != null) ok = r.amt > P.gt;
-      if (ok && P.lt != null) ok = r.amt < P.lt;
-      if (!ok) continue;
-      hits.push(r); var c = r.i.currency || ''; tot[c] = (tot[c] || 0) + r.amt;
-    }
-    var SY = window.SYMS || {};
+    var hits = [], tot = {};
+    for (var k = 0; k < index.length; k++) { var r = index[k]; if (!test(P, r.hay, r.amt)) continue; hits.push(r); var c = r.i.currency || ''; tot[c] = (tot[c] || 0) + r.amt; }
+    var SY = window.SYMS || {}, re = highlighter(P);
     sum.innerHTML = '<b>' + hits.length.toLocaleString() + '</b> found' + (hits.length ? ' · ' + Object.keys(tot).map(function(c){ return (SY[c] || '') + tot[c].toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' ' + c; }).join(' · ') : '') +
       (hits.length > MAX ? '<br><span style="color:var(--muted)">Showing the newest ' + MAX + '. Add a word, year or amount to narrow down.</span>' : '');
-    var words = P.words;
-    var hl = words.length ? new RegExp('(^|[\\s/(\\-])(' + words.join('|') + ')', 'gi') : null;
     box.innerHTML = !hits.length ? '' :
       '<table style="width:100%;border-collapse:collapse;font-family:DM Mono,monospace;font-size:0.64rem;">' +
       '<thead><tr style="background:var(--ink,#1a140a);color:var(--gold2,#e8b84b);position:sticky;top:0;">' +
-      '<th style="padding:5px 6px;text-align:left;font-weight:600;">DATE</th><th style="padding:5px 6px;text-align:left;font-weight:600;">DESCRIPTION</th><th style="padding:5px 6px;text-align:right;font-weight:600;">AMOUNT</th></tr></thead><tbody>' +
+      '<th style="' + TH + 'text-align:left;">DATE</th><th style="' + TH + 'text-align:left;">DESCRIPTION</th><th style="' + TH + 'text-align:right;">AMOUNT</th></tr></thead><tbody>' +
       hits.slice(0, MAX).map(function(r, n){
-        var i = r.i, d = i.date || '', desc = esc(i.desc);
-        if (hl) desc = desc.replace(hl, '$1<mark style="background:#f6e3a6;padding:0;">$2</mark>');
+        var i = r.i, d = i.date || '';
         return '<tr style="background:' + (n % 2 ? 'rgba(200,150,46,0.10)' : 'transparent') + ';">' +
           '<td style="padding:5px 6px;white-space:nowrap;color:var(--muted);vertical-align:top;">' + d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) + '</td>' +
-          '<td style="padding:5px 6px;overflow-wrap:anywhere;font-family:DM Sans,sans-serif;font-size:0.7rem;">' + desc + (i.category ? '<div style="color:var(--muted);font-family:DM Mono,monospace;font-size:0.58rem;">' + esc(i.category) + '</div>' : '') + '</td>' +
+          '<td style="padding:5px 6px;overflow-wrap:anywhere;font-family:DM Sans,sans-serif;font-size:0.7rem;">' + hl(i.desc, re) + (i.category ? '<div style="color:var(--muted);font-family:DM Mono,monospace;font-size:0.58rem;">' + esc(i.category) + '</div>' : '') + '</td>' +
           '<td style="padding:5px 6px;text-align:right;white-space:nowrap;vertical-align:top;">' + (SY[i.currency] || '') + r.amt.toLocaleString(undefined, { maximumFractionDigits: 2 }) + '</td></tr>';
       }).join('') + '</tbody></table>';
   }
 
+  // ---- Transfers: people first, with totals ----
+  function tdata(){
+    var u = window._userId || localStorage.getItem('expense_user_uid'), k = u && localStorage.getItem('ngt_data_v1_' + u) ? 'ngt_data_v1_' + u :
+      Object.keys(localStorage).filter(function(x){ return /^ngt_data_v1_/.test(x) && !/_meta$/.test(x); })[0];
+    try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch(e) { return {}; }
+  }
+  function runTransfers(P, box, sum){
+    var d = tdata(), R = {}, G = {}, re = highlighter(P), textOnly = !P.nums.length && P.gt == null && P.lt == null;
+    (d.recipients || []).forEach(function(r){ R[r.id] = { r: r, hay: [r.name, r.note, r.account, r.bank, r.type].join(' ') }; });
+    (d.transfers || []).forEach(function(t){
+      var x = R[t.rid]; if (!x) return;
+      var hay = norm(x.hay + ' ' + [t.note || '', t.status, t.status === 'early' ? 'sent' : '', dateHay(t.month), dateHay(t.date)].join(' '));
+      if (!test(P, hay, Math.abs(+t.amount || 0))) return;
+      var g = G[t.rid] = G[t.rid] || { r: x.r, list: [], sent: 0, planned: 0 };
+      g.list.push(t); if (t.status === 'planned') g.planned += +t.amount || 0; else g.sent += +t.amount || 0;
+    });
+    if (textOnly) Object.keys(R).forEach(function(id){ if (!G[id] && test(P, norm(R[id].hay), 0)) G[id] = { r: R[id].r, list: [], sent: 0, planned: 0 }; });   // people with no transfers yet
+    var groups = Object.keys(G).map(function(k){ return G[k]; }).sort(function(a, b){ return b.sent - a.sent || a.r.name.localeCompare(b.r.name); });
+    var nT = 0, sS = 0, sP = 0; groups.forEach(function(g){ nT += g.list.length; sS += g.sent; sP += g.planned; });
+    sum.innerHTML = '<b>' + groups.length + '</b> ' + (groups.length === 1 ? 'person' : 'people') + ' · <b>' + nT + '</b> transfers · <b>' + money(sS) + '</b> sent' + (sP ? ' · ' + money(sP) + ' planned' : '');
+    var rows = 0;
+    box.innerHTML = groups.slice(0, 40).map(function(g){
+      g.list.sort(function(a, b){ return (b.date || b.month) < (a.date || a.month) ? -1 : 1; });
+      var yrs = {}; g.list.forEach(function(t){ if (t.status !== 'planned') { var y = t.month.slice(0, 4); yrs[y] = (yrs[y] || 0) + (+t.amount || 0); } });
+      var chips = Object.keys(yrs).sort().reverse().map(function(y){ return '<span style="white-space:nowrap;">' + y + ': ' + money(yrs[y]) + '</span>'; }).join(' · ');
+      var show = g.list.slice(0, Math.max(0, Math.min(12, 150 - rows))); rows += show.length;
+      return '<div style="margin:0 0 8px;">' +
+        '<div onclick="document.getElementById(\'gs-ov\').style.display=\'none\';trfRecipientView(\'' + g.r.id + '\')" style="cursor:pointer;background:var(--ink,#1a140a);color:var(--gold2,#e8b84b);padding:6px 8px;font-family:DM Mono,monospace;font-size:0.68rem;display:flex;gap:8px;align-items:baseline;">' +
+          '<b style="flex:1;min-width:0;overflow-wrap:anywhere;font-family:DM Sans,sans-serif;font-size:0.76rem;">' + hl(g.r.name, re) + '</b><span style="white-space:nowrap;">' + money(g.sent) + ' · ' + g.list.length + '</span></div>' +
+        (chips || g.r.account ? '<div style="padding:3px 8px;font-family:DM Mono,monospace;font-size:0.58rem;color:var(--muted);background:rgba(200,150,46,0.08);">' + (g.r.account ? hl(g.r.account, re) + ' ' + esc(g.r.bank || '') + (chips ? ' · ' : '') : '') + chips + '</div>' : '') +
+        (show.length ? '<table style="width:100%;border-collapse:collapse;font-family:DM Mono,monospace;font-size:0.62rem;"><tbody>' + show.map(function(t, n){
+          var m = t.month, c = STC[t.status] || STC.sent;
+          return '<tr style="background:' + (n % 2 ? 'rgba(200,150,46,0.10)' : 'transparent') + ';">' +
+            '<td style="padding:4px 8px;white-space:nowrap;color:var(--muted);vertical-align:top;">' + MONC[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4) + '</td>' +
+            '<td style="padding:4px 4px;vertical-align:top;"><span style="color:' + c + ';font-size:0.56rem;">' + (t.status === 'early' ? 'early' : t.status) + '</span></td>' +
+            '<td style="padding:4px 4px;overflow-wrap:anywhere;font-family:DM Sans,sans-serif;font-size:0.66rem;">' + hl(t.note || '', re) + '</td>' +
+            '<td style="padding:4px 8px;text-align:right;white-space:nowrap;vertical-align:top;">' + money(t.amount) + '</td></tr>';
+        }).join('') + '</tbody></table>' : '') +
+        (g.list.length > show.length ? '<div style="padding:3px 8px;font-family:DM Mono,monospace;font-size:0.58rem;color:var(--muted);">+' + (g.list.length - show.length) + ' more · tap the name to open the card</div>' : '') +
+        '</div>';
+    }).join('') + (groups.length > 40 ? '<div style="padding:6px 8px;font-family:DM Mono,monospace;font-size:0.6rem;color:var(--muted);">Showing 40 of ' + groups.length + ' people. Add a word to narrow down.</div>' : '');
+  }
+
+  function run(q){
+    var box = document.getElementById('gs-res'), sum = document.getElementById('gs-sum');
+    q = q.trim();
+    if (q.replace(/[^a-z0-9₦€$£<>]/gi, '').length < 2) {
+      sum.textContent = mode() === 'transfers' ? 'Type a name, account, note, amount or month, e.g. "ojo 2025".' : 'Type at least 2 letters. Use several words to narrow down, e.g. "sunday oluwa 2023".';
+      box.innerHTML = ''; return;
+    }
+    var P = parse(q);
+    if (mode() === 'transfers') runTransfers(P, box, sum); else runLedger(P, box, sum);
+  }
+
   // ---- overlay ----
+  var HELP = {
+    ledger: '<b>sunday oluwa</b> · all words, each at the start of a word<br><b>-2025</b> · leave out anything matching 2025<br><b>15000</b> or <b>15k</b> · exact amount<br><b>&gt;50k</b> / <b>&lt;5000</b> · amount above / below<br><b>2014</b> · <b>nov 2014</b> · <b>11/2014</b> · <b>06/11/2014</b> · dates<br><b>X</b> opens search · <b>Esc</b> closes',
+    transfers: '<b>ojo</b> · a name or part of it (merged names too)<br><b>8030736264</b> · <b>opay</b> · account number or bank<br><b>school</b> · a word from the note<br><b>50000</b> · <b>&gt;100k</b> · amount, exact or range<br><b>2025</b> · <b>nov 2025</b> · month or year<br><b>planned</b> · <b>sent</b> · <b>early</b> · status<br>Tap a name to open that person\'s card · <b>X</b> opens · <b>Esc</b> closes'
+  };
   function open(){
     var ov = document.getElementById('gs-ov');
     if (!ov) {
       ov = document.createElement('div'); ov.id = 'gs-ov';
       ov.style.cssText = 'position:fixed;inset:0;z-index:99500;background:rgba(20,14,6,.55);display:flex;justify-content:center;align-items:flex-start;padding:60px 10px 10px;box-sizing:border-box;';
-      ov.innerHTML = '<div style="background:var(--paper,#f5f0e6);border:1.5px solid var(--gold);border-radius:12px;width:100%;max-width:560px;max-height:calc(100dvh - 80px);display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.35);">' +
+      ov.innerHTML = '<div style="background:var(--paper,#f5f0e6);border:1.5px solid var(--gold);border-radius:12px;width:100%;max-width:560px;max-height:calc(100dvh - 80px);display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden;">' +
         '<div style="display:flex;gap:6px;align-items:center;padding:10px;border-bottom:1px solid var(--border);">' +
         '<span id="gs-mode" style="font-family:DM Mono,monospace;font-size:0.66rem;color:var(--muted);white-space:nowrap;"></span>' +
-        '<input id="gs-q" type="search" autocomplete="off" placeholder="Search description, date, amount…" style="flex:1;min-width:0;padding:9px 10px;border:1.5px solid var(--gold);border-radius:8px;font-family:DM Mono,monospace;font-size:0.85rem;background:#fff;color:var(--ink);outline:none;">' +
+        '<input id="gs-q" type="search" autocomplete="off" placeholder="Search…" style="flex:1;min-width:0;padding:9px 10px;border:1.5px solid var(--gold);border-radius:8px;font-family:DM Mono,monospace;font-size:0.85rem;background:#fff;color:var(--ink);outline:none;">' +
         '<button id="gs-i" title="Search tips" style="background:none;border:1.5px solid var(--gold);border-radius:50%;width:24px;height:24px;font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:0.8rem;cursor:pointer;color:var(--gold);padding:0;line-height:1;flex-shrink:0;">i</button>' +
         '<button id="gs-x" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:0 4px;">✕</button></div>' +
-        '<div id="gs-help" style="display:none;padding:8px 12px;font-family:DM Mono,monospace;font-size:0.66rem;line-height:1.7;color:var(--ink);background:#fffaf0;border-bottom:1px solid var(--border);">' +
-        '<b>sunday oluwa</b> · all words, each at the start of a word<br><b>-2025</b> · leave out anything matching 2025<br><b>15000</b> or <b>15k</b> · exact amount<br><b>&gt;50k</b> / <b>&lt;5000</b> · amount above / below<br><b>2014</b> · <b>nov 2014</b> · <b>11/2014</b> · <b>06/11/2014</b> · dates<br><b>X</b> opens search · <b>Esc</b> closes</div>' +
+        '<div id="gs-help" style="display:none;padding:8px 12px;font-family:DM Mono,monospace;font-size:0.66rem;line-height:1.7;color:var(--ink);background:#fffaf0;border-bottom:1px solid var(--border);"></div>' +
         '<div id="gs-sum" style="padding:8px 12px;font-family:DM Mono,monospace;font-size:0.7rem;line-height:1.5;"></div>' +
-        '<div id="gs-res" style="overflow-y:auto;padding:0 0 6px;"></div>' +
-        '</div>';
+        '<div id="gs-res" style="overflow-y:auto;padding:0 0 6px;"></div></div>';
       document.body.appendChild(ov);
       ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
       document.getElementById('gs-x').onclick = close;
@@ -26237,7 +26303,10 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
       q.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
     }
     cacheKey = null;
-    document.getElementById('gs-mode').textContent = mode() === 'income' ? '💰 INCOME' : '💸 EXPENSES';
+    var m = mode();
+    document.getElementById('gs-mode').textContent = m === 'income' ? '💰 INCOME' : m === 'transfers' ? '🇳🇬 TRANSFERS' : '💸 EXPENSES';
+    document.getElementById('gs-q').placeholder = m === 'transfers' ? 'Name, account, note, amount, month…' : 'Description, date, amount…';
+    document.getElementById('gs-help').innerHTML = HELP[m === 'transfers' ? 'transfers' : 'ledger'];
     ov.style.display = 'flex';
     var q2 = document.getElementById('gs-q'); run(q2.value); setTimeout(function(){ q2.focus(); q2.select(); }, 50);
   }
@@ -26245,6 +26314,149 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
 
   // close the search when the app locks or logs out, so results never show over the lock screen
   ['lockApp', 'logOut'].forEach(function(n){ var o = window[n]; if (typeof o === 'function') window[n] = function(){ close(); return o.apply(this, arguments); }; });
+})();
+</script>
+<script>
+// Transfers → Expenses: a transfer marked Sent / Sent early (dated from CUTOFF on) becomes one linked expense, kept in step
+(function(){
+  var CUTOFF = '2026-11-17';                       // transfers sent before this date are never linked
+  var DEF_CAT = 'Family Support (Nigeria)';
+  var PEND = 'trf_cat_pending', RECDEF = 'trf_cat_rec';
+
+  function get(k){ try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch(e) { return {}; } }
+  function put(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
+  function tkey(){
+    var u = window._userId || localStorage.getItem('expense_user_uid');
+    if (u && localStorage.getItem('ngt_data_v1_' + u)) return 'ngt_data_v1_' + u;
+    return Object.keys(localStorage).filter(function(x){ return /^ngt_data_v1_/.test(x) && !/_meta$/.test(x); })[0];
+  }
+  function tdata(){ var k = tkey(); try { return k ? JSON.parse(localStorage.getItem(k) || 'null') : null; } catch(e) { return null; } }
+  function snap(){
+    var d = tdata() || { recipients: [], transfers: [] }, T = {}, R = {};
+    (d.transfers || []).forEach(function(t){ T[t.id] = JSON.stringify(t); });
+    (d.recipients || []).forEach(function(r){ R[r.id] = r.name; });
+    return { T: T, R: R };
+  }
+  function cats(){ try { return window.getAllCategories(); } catch(e) { return [DEF_CAT]; } }
+  function qualifies(t){ return t && t.status !== 'planned' && t.date && t.date >= CUTOFF; }
+  function descOf(t, r){ var n = (t.note || '').split('\n')[0].trim().slice(0, 60); return 'Transfer: ' + ((r && r.name) || 'Unknown') + (n ? ' (' + n + ')' : ''); }
+  function learned(exps, rid, tmap){
+    var best = null;
+    exps.forEach(function(e){
+      if (typeof e.src !== 'string' || e.src.indexOf('trf:') !== 0) return;
+      var t = tmap[e.src.slice(4)]; if (!t || t.rid !== rid || !e.category) return;
+      if (!best || e.date > best.date) best = e;
+    });
+    return best && best.category;
+  }
+  function catFor(tid, rid, exps, tmap){
+    var p = get(PEND), rd = get(RECDEF);
+    return p[tid] || rd[rid] || learned(exps, rid, tmap) || (cats().indexOf(DEF_CAT) > -1 ? DEF_CAT : cats()[0]);
+  }
+  function toast(msg){
+    var b = document.createElement('div'); b.textContent = msg;
+    b.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:100001;background:#1a140a;color:#e8b84b;border:1px solid #c8962e;border-radius:20px;padding:7px 14px;font-family:DM Mono,monospace;font-size:0.72rem;box-shadow:0 4px 14px rgba(0,0,0,.3);';
+    document.body.appendChild(b); setTimeout(function(){ b.remove(); }, 2600);
+  }
+
+  // bring Expenses in line with the transfers touched by this action
+  function reconcile(tids, deleted){
+    var d = tdata(); if (!d || !Array.isArray(d.transfers)) return;
+    var R = {}, T = {}; d.recipients.forEach(function(r){ R[r.id] = r; }); d.transfers.forEach(function(t){ T[t.id] = t; });
+    var exps = window.loadData(), bySrc = {}, added = 0, upd = 0, rem = 0, pend = get(PEND);
+    exps.forEach(function(e){ if (typeof e.src === 'string' && e.src.indexOf('trf:') === 0) bySrc[e.src] = e; });
+    tids.forEach(function(tid){
+      var t = T[tid], src = 'trf:' + tid, e = bySrc[src];
+      if (!t) { if (deleted[tid] && e) { e._drop = 1; rem++; } return; }
+      if (!qualifies(t)) { if (e) { e._drop = 1; rem++; if (e.category) pend[tid] = e.category; } return; }   // keep its category for when it is sent again
+      var want = { date: t.date, desc: descOf(t, R[t.rid]), amount: t.amount, currency: 'NGN' };
+      if (!e) {
+        e = { id: Date.now() + Math.random(), date: want.date, desc: want.desc, amount: want.amount, currency: 'NGN', category: catFor(tid, t.rid, exps, T), src: src };
+        exps.push(e); bySrc[src] = e; added++;
+      } else {
+        var ch = false;
+        ['date', 'desc', 'amount', 'currency'].forEach(function(k){ if (e[k] !== want[k]) { e[k] = want[k]; ch = true; } });
+        if (pend[tid] && e.category !== pend[tid]) { e.category = pend[tid]; ch = true; }
+        if (ch) upd++;
+      }
+      if (pend[tid]) delete pend[tid];
+    });
+    put(PEND, pend);
+    if (!added && !upd && !rem) return;
+    window.saveData(exps.filter(function(e){ return !e._drop; }));
+    toast('↪ Expenses: ' + [added && added + ' added', upd && upd + ' updated', rem && rem + ' removed'].filter(Boolean).join(', '));
+  }
+
+  function wrap(name, opts){
+    var o = window[name]; if (typeof o !== 'function' || o._melx) return;
+    window[name] = function(){
+      var args = arguments, before = snap(), pre = opts && opts.pre ? opts.pre.apply(this, args) : null;
+      var res = o.apply(this, args);
+      setTimeout(function(){
+        var after = snap(), tids = {}, deleted = {};
+        Object.keys(after.T).forEach(function(id){ if (after.T[id] !== before.T[id]) tids[id] = 1; });
+        Object.keys(before.T).forEach(function(id){ if (!(id in after.T)) { tids[id] = 1; deleted[id] = 1; } });
+        var renamed = Object.keys(after.R).filter(function(rid){ return after.R[rid] !== before.R[rid]; });
+        if (renamed.length) { var d = tdata(); (d && d.transfers || []).forEach(function(t){ if (renamed.indexOf(t.rid) > -1) tids[t.id] = 1; }); }
+        if (opts && opts.post) opts.post(pre, before, after);
+        var list = Object.keys(tids); if (list.length) reconcile(list, deleted);
+      }, 0);
+      return res;
+    };
+    window[name]._melx = 1;
+  }
+
+  var t0 = setInterval(function(){
+    if (typeof window.trfSet !== 'function' || typeof window.saveData !== 'function') return;
+    clearInterval(t0);
+    ['trfSet', 'trfAdd', 'trfDeleteTransfer', 'trfDoPush', 'trfDeleteRecipient', 'trfImportPaste'].forEach(function(n){ wrap(n); });
+    // Edit transfer: remember the chosen category before the form closes
+    wrap('trfSaveTransfer', { pre: function(id){
+      var s = document.getElementById('trf-et-cat'); if (s && s.value) { var p = get(PEND); p[id] = s.value; put(PEND, p); }
+    }});
+    // Edit recipient: default category for that person
+    wrap('trfSaveRecipient', {
+      pre: function(id){ var s = document.getElementById('trf-er-cat'), n = document.getElementById('trf-er-name'); return { id: id, cat: s ? s.value : null, name: n ? n.value.trim() : '' }; },
+      post: function(pre){
+        if (!pre || pre.cat === null) return;
+        var rid = pre.id; if (!rid) { var d = tdata(); var r = (d && d.recipients || []).filter(function(x){ return x.name === pre.name; })[0]; rid = r && r.id; }
+        if (!rid) return;
+        var rd = get(RECDEF); if (pre.cat) rd[rid] = pre.cat; else delete rd[rid]; put(RECDEF, rd);
+      }
+    });
+  }, 400);
+
+  // ---- category pickers inside the Transfers forms ----
+  function sel(id, val, blank){
+    return '<select id="' + id + '" style="width:100%;">' + (blank ? '<option value="">' + blank + '</option>' : '') +
+      cats().map(function(c){ return '<option' + (c === val ? ' selected' : '') + '>' + String(c).replace(/</g, '&lt;') + '</option>'; }).join('') + '</select>';
+  }
+  setInterval(function(){
+    // Edit transfer
+    var st = document.getElementById('trf-et-status');
+    if (st && !document.getElementById('trf-et-cat')) {
+      var box = st.closest('#trf-mbox') || document, btn = box.querySelector('[onclick^="trfSaveTransfer"]');
+      var tid = btn && (btn.getAttribute('onclick').match(/trfSaveTransfer\('([^']+)'/) || [])[1];
+      var d = tdata(), t = d && (d.transfers || []).filter(function(x){ return x.id === tid; })[0];
+      if (t && !(t.status !== 'planned' && t.date && t.date < CUTOFF)) {
+        var T = {}; d.transfers.forEach(function(x){ T[x.id] = x; });
+        var exps = window.loadData(), e = exps.filter(function(x){ return x.src === 'trf:' + tid; })[0];
+        var cur = (e && e.category) || catFor(tid, t.rid, exps, T);
+        var w = document.createElement('div');
+        w.innerHTML = '<label>Expense category <span style="font-weight:400;opacity:.7;">(goes to Expenses when sent)</span></label>' + sel('trf-et-cat', cur);
+        var btns = btn.closest('.btns'); btns.parentNode.insertBefore(w, btns);
+      }
+    }
+    // Edit recipient
+    var ty = document.getElementById('trf-er-type');
+    if (ty && !document.getElementById('trf-er-cat')) {
+      var b2 = (ty.closest('#trf-mbox') || document).querySelector('[onclick^="trfSaveRecipient"]');
+      var rid = b2 && (b2.getAttribute('onclick').match(/trfSaveRecipient\('([^']*)'/) || [])[1];
+      var w2 = document.createElement('div');
+      w2.innerHTML = '<label>Default expense category</label>' + sel('trf-er-cat', rid ? get(RECDEF)[rid] : '', 'Same as last transfer');
+      ty.parentNode.insertBefore(w2, ty.nextSibling);
+    }
+  }, 400);
 })();
 </script>
 </body>
