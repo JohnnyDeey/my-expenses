@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.16.3')) {
+          if (!key.startsWith('mel-v2.16.4')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18852,7 +18852,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.16.3';
+var APP_VERSION = '2.16.4';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -26339,7 +26339,7 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
   }
   function cats(){ try { return window.getAllCategories(); } catch(e) { return [DEF_CAT]; } }
   function qualifies(t){ return t && t.status !== 'planned' && t.date && t.date >= CUTOFF; }
-  function descOf(t, r){ var n = (t.note || '').split('\n')[0].trim().slice(0, 60); return 'Transfer: ' + ((r && r.name) || 'Unknown') + (n ? ' (' + n + ')' : ''); }
+  function descOf(t, r){ return (r && r.name) || 'Unknown'; }
   function learned(exps, rid, tmap){
     var best = null;
     exps.forEach(function(e){
@@ -26457,6 +26457,171 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
       ty.parentNode.insertBefore(w2, ty.nextSibling);
     }
   }, 400);
+})();
+</script>
+<style>
+/* No scroll chaining from pop-ups / inner lists to the page */
+body *{ overscroll-behavior: contain; }
+html.mel-lock, html.mel-lock body{ overflow: hidden !important; }
+</style>
+<script>
+// While a pop-up is open: freeze the page and swallow any swipe that isn't on a scrollable list inside that pop-up
+(function(){
+  var KNOWN = ['trf-modal', 'gs-ov', 'mel-dlg', 'bs-ov', 'radial-menu', 'date-lookup-overlay'];
+  var openEl = null;
+  function covers(e){
+    if (!e || e.nodeType !== 1) return false;
+    var s = getComputedStyle(e);
+    if (s.position !== 'fixed' || s.display === 'none' || s.visibility === 'hidden' || +s.opacity === 0) return false;
+    var r = e.getBoundingClientRect();
+    return r.width >= innerWidth * 0.9 && r.height >= innerHeight * 0.6;
+  }
+  setInterval(function(){
+    openEl = KNOWN.map(function(id){ return document.getElementById(id); }).filter(covers)[0] ||
+      [].filter.call(document.body.children, function(e){ return e.id !== 'scroll-fab' && covers(e) && (+getComputedStyle(e).zIndex || 0) >= 100; }).pop() || null;
+    document.documentElement.classList.toggle('mel-lock', !!openEl);
+  }, 200);
+  function scrollable(el, root){
+    for (var e = el; e && e !== root.parentNode; e = e.parentElement) {
+      var o = getComputedStyle(e).overflowY;
+      if ((o === 'auto' || o === 'scroll') && e.scrollHeight > e.clientHeight + 1) return e;
+    }
+    return null;
+  }
+  var y0 = 0;
+  document.addEventListener('touchstart', function(e){ y0 = e.touches[0].clientY; }, { passive: true });
+  document.addEventListener('touchmove', function(e){
+    if (!openEl) return;
+    var t = e.target;
+    if (!openEl.contains(t)) { e.preventDefault(); return; }          // touch outside the pop-up
+    if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT') return;
+    var s = scrollable(t, openEl);
+    if (!s) { e.preventDefault(); return; }                            // nothing to scroll here
+    var dy = e.touches[0].clientY - y0;                                // >0 = finger moving down = scrolling up
+    if ((dy > 0 && s.scrollTop <= 0) || (dy < 0 && s.scrollTop + s.clientHeight >= s.scrollHeight - 1)) e.preventDefault();   // at the end: stop here
+  }, { passive: false });
+})();
+</script>
+<script>
+// Transfers "Type" boxes: show ALL suggestions on tap (the browser only lists matches for what is already typed)
+(function(){
+  var SEL = '#trf-er-type, #trf-af-type';
+  document.addEventListener('focusin', function(e){
+    var i = e.target; if (!i.matches || !i.matches(SEL)) return;
+    i.dataset.melPrev = i.value; i.dataset.melPh = i.placeholder;
+    if (i.value) { i.placeholder = i.value; i.value = ''; }
+    if (typeof window.trfFillTypes === 'function') try { window.trfFillTypes(); } catch(x) {}
+  });
+  document.addEventListener('focusout', function(e){
+    var i = e.target; if (!i.matches || !i.matches(SEL) || !('melPrev' in i.dataset)) return;
+    if (!i.value.trim()) i.value = i.dataset.melPrev;          // nothing chosen → keep the old type
+    i.placeholder = i.dataset.melPh || '';
+    delete i.dataset.melPrev; delete i.dataset.melPh;
+  });
+})();
+</script>
+<script>
+// Transfers "Type" and "Bank" boxes: show ALL suggestions on tap (the browser only lists matches for what is already typed)
+(function(){
+  var SEL = '#trf-er-type, #trf-af-type, #trf-er-bank, #trf-af-bank';
+  function banks(){
+    var dl = document.getElementById('mel-dl-banks');
+    if (!dl) { dl = document.createElement('datalist'); dl.id = 'mel-dl-banks'; document.body.appendChild(dl); }
+    var u = window._userId || localStorage.getItem('expense_user_uid'), d = {};
+    try { d = JSON.parse(localStorage.getItem('ngt_data_v1_' + u) || '{}'); } catch(e) {}
+    var seen = {};
+    (d.recipients || []).forEach(function(r){ var b = String(r.bank || '').trim().toUpperCase(); if (b) seen[b] = (seen[b] || 0) + 1; });
+    dl.innerHTML = Object.keys(seen).sort(function(a, b){ return seen[b] - seen[a] || a.localeCompare(b); })
+      .map(function(b){ return '<option value="' + b.replace(/"/g, '&quot;') + '">'; }).join('');
+    return dl.id;
+  }
+  document.addEventListener('focusin', function(e){
+    var i = e.target; if (!i.matches || !i.matches(SEL)) return;
+    if (/bank$/.test(i.id)) { var id = banks(); if (!i.getAttribute('list')) i.setAttribute('list', id); i.setAttribute('autocomplete', 'off'); }
+    else if (typeof window.trfFillTypes === 'function') try { window.trfFillTypes(); } catch(x) {}
+    i.dataset.melPrev = i.value; i.dataset.melPh = i.placeholder;
+    if (i.value) { i.placeholder = i.value; i.value = ''; }
+  });
+  document.addEventListener('focusout', function(e){
+    var i = e.target; if (!i.matches || !i.matches(SEL) || !('melPrev' in i.dataset)) return;
+    if (!i.value.trim()) i.value = i.dataset.melPrev;          // nothing chosen → keep the old value
+    i.placeholder = i.dataset.melPh || '';
+    delete i.dataset.melPrev; delete i.dataset.melPh;
+  });
+})();
+</script>
+<script>
+// Edit recipient: "+" beside the name adds extra Account no / Bank rows (kept as "Acct: … · BANK" lines in the note)
+(function(){
+  var RX = /^\s*Acct:\s*([0-9 ]{6,})\s*(?:·\s*(.*))?$/;
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function split(note){
+    var acc = [], rest = [];
+    String(note || '').split('\n').forEach(function(l){ var m = l.match(RX); if (m) acc.push({ a: m[1].replace(/\s/g, ''), b: (m[2] || '').trim() }); else rest.push(l); });
+    return { acc: acc, note: rest.join('\n').trim() };
+  }
+  function banksList(){
+    var dl = document.getElementById('mel-dl-banks');
+    if (!dl) { dl = document.createElement('datalist'); dl.id = 'mel-dl-banks'; document.body.appendChild(dl); }
+    if (!dl.options.length) {
+      var u = window._userId || localStorage.getItem('expense_user_uid'), d = {}, seen = {};
+      try { d = JSON.parse(localStorage.getItem('ngt_data_v1_' + u) || '{}'); } catch(e) {}
+      (d.recipients || []).forEach(function(r){ var b = String(r.bank || '').trim().toUpperCase(); if (b) seen[b] = 1; });
+      dl.innerHTML = Object.keys(seen).sort().map(function(b){ return '<option value="' + esc(b) + '">'; }).join('');
+    }
+    return dl.id;
+  }
+  function addRow(box, a, b){
+    var row = document.createElement('div'); row.className = 'mel-acc-row';
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;margin:6px 0 0;';
+    row.innerHTML = '<input class="mel-acc-a" inputmode="numeric" placeholder="Account no" value="' + esc(a || '') + '" style="flex:1.4;min-width:0;">' +
+      '<input class="mel-acc-b" list="' + banksList() + '" autocomplete="off" placeholder="Bank" value="' + esc(b || '') + '" style="flex:1;min-width:0;text-transform:uppercase;">' +
+      '<button type="button" class="trf-b ghost" title="Remove this account" style="padding:4px 9px;flex-shrink:0;">✕</button>';
+    row.querySelector('button').onclick = function(){ row.remove(); };
+    box.appendChild(row);
+    return row;
+  }
+  function lines(){
+    return [].map.call(document.querySelectorAll('#mel-acc-rows .mel-acc-row'), function(r){
+      var a = r.querySelector('.mel-acc-a').value.replace(/\D/g, ''), b = r.querySelector('.mel-acc-b').value.trim().toUpperCase();
+      return a ? 'Acct: ' + a + (b ? ' · ' + b : '') : '';
+    }).filter(Boolean);
+  }
+
+  // build the extra-account rows when the Edit recipient form opens
+  setInterval(function(){
+    var name = document.getElementById('trf-er-name'), acct = document.getElementById('trf-er-acct'), note = document.getElementById('trf-er-note');
+    if (!name || !acct || !note || document.getElementById('mel-acc-add')) return;
+    // + button beside the name
+    var w = document.createElement('div'); w.style.cssText = 'display:flex;gap:6px;align-items:center;';
+    name.parentNode.insertBefore(w, name); w.appendChild(name);
+    name.style.setProperty('flex', '1');
+    var plus = document.createElement('button'); plus.type = 'button'; plus.id = 'mel-acc-add'; plus.className = 'trf-b ghost'; plus.textContent = '+';
+    plus.title = 'Add another account number and bank';
+    plus.style.cssText = 'padding:4px 12px;font-size:1.05rem;line-height:1;flex-shrink:0;';
+    w.appendChild(plus);
+    // rows go right under the main Account / Bank row
+    var box = document.createElement('div'); box.id = 'mel-acc-rows';
+    var anchor = acct.closest('.row2') || acct.parentNode;
+    anchor.parentNode.insertBefore(box, anchor.nextSibling);
+    var s = split(note.value); note.value = s.note;
+    s.acc.forEach(function(x){ addRow(box, x.a, x.b); });
+    plus.onclick = function(){ var r = addRow(box, '', ''); r.querySelector('.mel-acc-a').focus(); };
+  }, 300);
+
+  // on Save: the extra accounts are kept as "Acct: … · BANK" lines in the recipient's note, so they save and sync with it
+  var t = setInterval(function(){
+    var o = window.trfSaveRecipient; if (typeof o !== 'function') return;
+    clearInterval(t);
+    window.trfSaveRecipient = function(){
+      var note = document.getElementById('trf-er-note'), keep = note ? note.value : null, L = lines();
+      if (note && document.getElementById('mel-acc-rows')) note.value = (split(note.value).note + (L.length ? '\n' + L.join('\n') : '')).trim();
+      var res = o.apply(this, arguments);
+      var still = document.getElementById('trf-er-note');                     // form still open (e.g. name error) → show the note without the lines again
+      if (still && still === note && keep !== null) still.value = split(still.value).note;
+      return res;
+    };
+  }, 300);
 })();
 </script>
 </body>
