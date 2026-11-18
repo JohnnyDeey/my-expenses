@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.17.2')) {
+          if (!key.startsWith('mel-v2.17.3')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -9709,9 +9709,10 @@ function ledDeleteSelected() {
   var count = toTrash.length;
   _showDeleteConfirm(
     'Delete ' + count + ' item' + (count===1?'':'s') + '?',
-    'Permanently delete ' + count + ' selected ' + (count===1?'entry':'entries') + '? This cannot be undone.',
+    'Move ' + count + ' selected ' + (count===1?'entry':'entries') + ' to the Recycle Bin? You can restore them from Manage.',
     function() {
       window._lastDeleteTime = Date.now(); window._deletePending = true;
+      addToTrash(toTrash, 'deleted'); try { pushTrashToFirebase(); } catch(e) {}
       saveData(remaining); syncPushNow();
       showToast(count + ' item'+(count===1?'':'s')+' deleted');
       _ledAllSelected = false; renderLedger();
@@ -10452,10 +10453,11 @@ function deleteEntry(id){
   var label = item ? ('"' + item.desc.substring(0,35) + '"') : 'this entry';
   _showDeleteConfirm(
     'Delete entry?',
-    'Permanently delete ' + label + '? This cannot be undone.',
+    'Move ' + label + ' to the Recycle Bin? You can restore it from Manage.',
     function() {
       window._lastDeleteTime = Date.now();
       window._deletePending  = true;
+      if (item) { addToTrash([item], 'deleted'); try { pushTrashToFirebase(); } catch(e) {} }
       var newData = loadData().filter(function(i){ return String(i.id)!==String(id); });
       saveData(newData);
       syncPushNow();
@@ -15455,7 +15457,7 @@ function incLedDeleteSelected() {
   toTrash.forEach(function(t){
     incTrash.push(Object.assign({},t,{_trash_source:'deleted',_trash_date:now,_trash_id:Date.now()+Math.random()}));
   });
-  // trash removed
+  localStorage.setItem(getIncTrashKey(), JSON.stringify(incTrash)); try { pushIncTrashToFirebase(); } catch(e) {}
   saveIncomeData(data.filter(function(i){ return !ids[String(i.id)]; }));
   showToast(toTrash.length + ' item'+(toTrash.length===1?'':'s')+' deleted');
   _incLedAllSelected = false;
@@ -18852,7 +18854,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.17.2';
+var APP_VERSION = '2.17.3';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
