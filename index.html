@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.17.4')) {
+          if (!key.startsWith('mel-v2.17.5')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18854,7 +18854,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.17.4';
+var APP_VERSION = '2.17.5';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -27428,6 +27428,14 @@ window.melCodeSuffix=function(s){return s.replace(/(\s)(-?[\d,]+(?:\.\d+)?)\s*([
 window.melCurReason=function(s){var k=known(),t=null,m=s.match(/(?:^|\s)([^\s\d.,]{1,4}?)\s?-?[\d,]+(?:\.\d+)?\s*$/);if(m&&(/\p{Sc}/u.test(m[1])||/^[A-Z]{3}$/.test(m[1])))t=m[1];if(!t){m=s.match(/[\d,]+(?:\.\d+)?\s*([A-Z]{3})\s*$/);if(m)t=m[1]}if(!t||k[t])return null;return 'New currency "'+t+'": add it under Manage → Currencies (use + Own), then parse again'};
 window.melActivateCur=function(code){try{var act=loadUserCurrencies();if(code&&act.indexOf(code)===-1){var w=(ALL_WORLD_CURRENCIES||[]).some(function(c){return c.code===code});if(w){act.push(code);saveUserCurrencies(act);try{renderCurrencyManager()}catch(e){}showToast(code+' added to your currencies')}}}catch(e){}return code};
 })();
+(function(){function sync(){try{if(typeof loadUserCurrencies!=='function')return;var act=loadUserCurrencies(),before=act.join(','),cust=[];try{cust=JSON.parse(localStorage.getItem('expense_custom_currencies')||'[]')}catch(e){}var cb=JSON.stringify(cust);
+var add=function(c){c=String(c||'').toUpperCase().trim();if(c&&act.indexOf(c)===-1)act.push(c)};try{loadData().forEach(function(i){add(i.currency)})}catch(e){}try{loadIncomeData().forEach(function(i){add(i.currency)})}catch(e){}
+var live=typeof _db!=='undefined'&&_db&&typeof _userId!=='undefined'&&_userId;
+var finish=function(r,rc){(r||[]).forEach(add);(rc||[]).forEach(function(x){if(x&&x.code&&!cust.some(function(y){return y.code===x.code}))cust.push(x)});
+if(act.join(',')!==before||JSON.stringify(cust)!==cb){localStorage.setItem('expense_user_currencies',JSON.stringify(act));localStorage.setItem('expense_custom_currencies',JSON.stringify(cust));try{buildSYMS()}catch(e){}try{refreshAllCurrencyDropdowns()}catch(e){}try{renderCurrencyManager()}catch(e){}}
+if(live&&(JSON.stringify(r)!==JSON.stringify(act)||JSON.stringify(rc||[])!==JSON.stringify(cust)))userCol('settings').doc('default').set({user_currencies:JSON.stringify(act),custom_currencies:JSON.stringify(cust)},{merge:true}).catch(function(){})};
+if(live)userCol('settings').doc('default').get().then(function(s){var v=s.exists?s.data():{},r=[],rc=[];try{r=JSON.parse(v.user_currencies||'[]')}catch(e){}try{rc=JSON.parse(v.custom_currencies||'[]')}catch(e){}finish(r,rc)}).catch(function(){finish(null,null)});else finish(null,null)}catch(e){}}
+setTimeout(sync,3000);setTimeout(sync,12000);window.addEventListener('focus',function(){setTimeout(sync,500)});window.melSyncCurrencies=sync;})();
 </script>
 </body>
 </html>
