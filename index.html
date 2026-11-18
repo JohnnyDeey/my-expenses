@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.17.1')) {
+          if (!key.startsWith('mel-v2.17.2')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18852,7 +18852,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.17.1';
+var APP_VERSION = '2.17.2';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -25352,7 +25352,13 @@ syncInit();
     var part = hasSel ? v.slice(a, b) : v;
     var out = caseStep === 0 ? part.toLocaleUpperCase('es')
       : caseStep === 2 ? part.toLocaleLowerCase('es')
-      : part.toLocaleLowerCase('es').replace(/(^|[\s\-\/.(])(\p{L})/gu, function(m, p, c){ return p + c.toLocaleUpperCase('es'); });
+      : String(part).split('\n').map(function(line){
+          var first = true, SM = ' of to and or the a an in on at for by with from as per vs via de del la las el los y e o u en con por para al ';
+          return line.toLocaleLowerCase('es').replace(/(\p{L}[\p{L}'’]*)/gu, function(w){
+            var keep = !first && SM.indexOf(' ' + w + ' ') > -1; first = false;
+            return keep ? w : w.charAt(0).toLocaleUpperCase('es') + w.slice(1);
+          });
+        }).join('\n');
     txt.value = hasSel ? v.slice(0, a) + out + v.slice(b) : out;
     if (hasSel) { txt.selectionStart = a; txt.selectionEnd = a + out.length; }
     note(['✓ ALL CAPS', '✓ Capital First Letters', '✓ all small letters'][caseStep] + (hasSel ? ' (selection)' : ''));
@@ -27111,7 +27117,19 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
     s = String(s);
     if (step === 0) return s.toLocaleUpperCase('es');
     if (step === 2) return s.toLocaleLowerCase('es');
-    return s.toLocaleLowerCase('es').replace(/(^|[\s\-\/.(])(\p{L})/gu, function(m, p, c){ return p + c.toLocaleUpperCase('es'); });
+    return titleCase(s);
+  }
+  var SMALL = {}; 'of to and or the a an in on at for by with from as per vs via de del la las el los y e o u en con por para al'.split(' ').forEach(function(w){ SMALL[w] = 1; });
+  function titleCase(s){
+    return String(s).split('\n').map(function(line){
+      var first = true;
+      return line.toLocaleLowerCase('es').replace(/(\p{L}[\p{L}'’]*)/gu, function(w, x, off, all){
+        var lead = first || /[.:!?(\-\/]\s*$/.test(all.slice(0, off)) && !/^\s*$/.test(all.slice(0, off)) && /[.:!?]\s*$/.test(all.slice(0, off));
+        var keep = !first && SMALL[w];
+        first = false;
+        return keep && !lead ? w : w.charAt(0).toLocaleUpperCase('es') + w.slice(1);
+      });
+    }).join('\n');
   }
   function getStep(m){ var v = parseInt(localStorage.getItem('mel_case_' + m), 10); return isNaN(v) ? -1 : v; }
   window.melCase = function(m){
@@ -27120,12 +27138,16 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
     try { localStorage.setItem('mel_case_' + m, step); } catch(e) {}
     var k = M.key(), data = M.load(), n = 0;
     data.forEach(function(e){
-      if (!e.desc || !e.date || e.date.slice(0, 7) !== k) return;
+      if (!e.desc) return;
       var v = tf(e.desc, step); if (v !== e.desc) { e.desc = v; n++; }
     });
     if (n) M.save(data);
     var ta = document.getElementById(M.ta);
-    if (ta && ta.value) { ta.value = tf(ta.value, step); ta.dispatchEvent(new Event('input', { bubbles: true })); }
+    if (ta) {
+      var L = m === 'inc' ? window.loadIncomeMonthIntoTextarea : window.loadMonthIntoTextarea;
+      if (n && typeof L === 'function') L();                                   // redraw the box from the saved (correctly cased) entries
+      else if (ta.value) { ta.value = tf(ta.value, step); ta.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
     var b = document.getElementById('mel-case-' + m); if (b) b.textContent = LABEL[step];
     if (n && typeof window[M.ledger] === 'function') try { window[M.ledger](); } catch(e) {}
   };
@@ -27134,7 +27156,7 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
       var M = MOD[m], parse = document.getElementById(M.parse);
       if (!parse || document.getElementById('mel-case-' + m)) return;
       var b = document.createElement('button'); b.type = 'button'; b.id = 'mel-case-' + m; b.className = 'mel-3d';
-      b.title = 'Font case for this month'; b.textContent = LABEL[Math.max(0, getStep(m))];
+      b.title = 'Font case for all entries'; b.textContent = LABEL[Math.max(0, getStep(m))];
       b.style.flex = '0 0 auto'; b.style.width = 'auto'; b.style.minWidth = '0'; b.style.padding = '0 12px';
       b.onclick = function(){ window.melCase(m); };
       var row = parse.parentNode;
