@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.16.6')) {
+          if (!key.startsWith('mel-v2.17.0')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18852,7 +18852,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.16.6';
+var APP_VERSION = '2.17.0';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -24580,7 +24580,7 @@ syncInit();
 
   // ---------- paste ----------
   function pasteMode(){
-    title.textContent = 'PASTE RECEIPT TEXT'; show('text');
+    title.textContent = 'PASTE RECEIPT TEXT'; show('text'); setCols(false); inResult = false;
     txt.style.whiteSpace = 'pre-wrap';
     txt.placeholder = 'Scan the receipt with your keyboard\'s "Scan text", then paste the text here.';
     txt.value = raw || '';
@@ -24603,35 +24603,235 @@ syncInit();
   }
 
     // ---------- photo -> Google ML Kit (in the app) -> rows rebuilt from where each piece of text sits ----------
+  
+    // reader: ML Kit inside the installed app, Tesseract (same output shape) in a browser
+  function isNative(){ var C = window.Capacitor; return !!(C && C.isNativePlatform && C.isNativePlatform()); }
+  var webOCR = null;
   function mlkit(){
     var C = window.Capacitor;
-    if (!C || !C.isNativePlatform || !C.isNativePlatform()) return null;
-    if (C.Plugins && C.Plugins.CapacitorPluginMlKitTextRecognition) return C.Plugins.CapacitorPluginMlKitTextRecognition;
-    return C.registerPlugin ? C.registerPlugin('CapacitorPluginMlKitTextRecognition') : null;
+    if (isNative()) {
+      if (C.Plugins && C.Plugins.CapacitorPluginMlKitTextRecognition) return C.Plugins.CapacitorPluginMlKitTextRecognition;
+      return C.registerPlugin ? C.registerPlugin('CapacitorPluginMlKitTextRecognition') : null;
+    }
+    if (webOCR) return webOCR;
+    var worker = null;
+    function loadT(){
+      return window.Tesseract ? Promise.resolve() : new Promise(function(ok, no){
+        var s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+        s.onload = ok; s.onerror = function(){ no(new Error('Could not load the text reader (check the internet connection)')); }; document.head.appendChild(s);
+      });
+    }
+    webOCR = { detectText: function(o){
+      return loadT().then(function(){ return worker || Tesseract.createWorker('spa+eng').then(function(w){ worker = w; return w; }); })
+        .then(function(w){ return w.recognize('data:image/jpeg;base64,' + o.base64Image); })
+        .then(function(r){
+          var d = r.data, lines = (d.lines || []).map(function(l){
+            var b = l.bbox;
+            return { text: l.text.replace(/\n/g, '').trim(), boundingBox: { left: b.x0, top: b.y0, right: b.x1, bottom: b.y1 },
+              cornerPoints: { topLeft: { x: b.x0, y: b.y0 }, topRight: { x: b.x1, y: b.y0 }, bottomLeft: { x: b.x0, y: b.y1 } } };
+          }).filter(function(l){ return l.text; });
+          return { text: d.text, blocks: [{ lines: lines }] };
+        });
+    }};
+    return webOCR;
+  }
+  // browser camera (laptop webcam / phone browser): Snap → a File, like the app's camera gives
+  function webcam(cb){
+    var ui = document.createElement('div'); ui.id = 'rc-cam';
+    ui.style.cssText = 'position:fixed;inset:0;z-index:100004;background:#000;display:flex;flex-direction:column;';
+    var B = 'flex:1;padding:11px;border:none;border-radius:8px;font-weight:700;font-family:DM Mono,monospace;cursor:pointer;';
+    ui.innerHTML = '<video autoplay playsinline style="flex:1;min-height:0;width:100%;object-fit:contain;"></video>' +
+      '<div style="display:flex;gap:8px;padding:10px;background:#1a140a;"><button data-a="x" style="' + B + 'background:#333;color:#ddd;">Cancel</button>' +
+      '<button data-a="snap" style="' + B + 'background:#c8962e;color:#1a140a;">📸 Snap</button></div>';
+    document.body.appendChild(ui);
+    var v = ui.querySelector('video'), stream = null;
+    function stop(){ if (stream) stream.getTracks().forEach(function(t){ t.stop(); }); ui.remove(); }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } })
+      .then(function(s){ stream = s; v.srcObject = s; })
+      .catch(function(e){ stop(); alert('Camera not available: ' + e.message); });
+    ui.onclick = function(e){
+      var a = e.target.getAttribute && e.target.getAttribute('data-a'); if (!a) return;
+      if (a === 'x') return stop();
+      if (!v.videoWidth) return;
+      var c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+      c.getContext('2d').drawImage(v, 0, 0); stop();
+      c.toBlob(function(b){ c.width = c.height = 0; cb(new File([b], 'snap.jpg', { type: 'image/jpeg' })); }, 'image/jpeg', 0.92);
+    };
   }
   function photo(useCam){
-    var ml = mlkit();
-    if (!ml) { note('Photo reading works in the installed app.'); return; }
+    function got(f){
+      if (!f) return;
+      (useCam ? cropImage(f, function(){ photo(useCam); }) : plainImage(f)).then(readCanvas)
+        .catch(function(e){ busy(false); console.error('Read:', e); alert('Could not read the photo: ' + ((e && e.message) || e)); });
+    }
+    if (useCam && !isNative()) { webcam(got); return; }
     var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
     if (useCam) inp.setAttribute('capture', 'environment');
-    inp.onchange = function(){
-      var f = inp.files && inp.files[0]; inp.value = ''; if (!f) return;
-      note('Reading the photo…');
-      createImageBitmap(f).then(function(b){
-        var s = Math.min(1, 2200 / Math.max(b.width, b.height)), c = document.createElement('canvas');
-        c.width = Math.round(b.width * s); c.height = Math.round(b.height * s);
-        c.getContext('2d').drawImage(b, 0, 0, c.width, c.height); if (b.close) b.close();
-        var data = c.toDataURL('image/jpeg', 0.92).split(',')[1]; c.width = c.height = 0;
-        return ml.detectText({ base64Image: data, rotation: 0 });
-      }).then(function(res){
-        var lines = rows(res);
-        if (!lines.length) { note('No text found. Try again with more light.'); return; }
-        raw = lines.join('\n'); txt.value = raw; rawNames = [];
-        lastTitle = lines.length + ' LINES'; lastNote = '✓ Read line by line. The photo is not kept.';
-        resultMode();
-      }).catch(function(e){ console.error('ML Kit:', e); note('Could not read the photo: ' + ((e && e.message) || e)); });
-    };
+    inp.onchange = function(){ var f = inp.files && inp.files[0]; inp.value = ''; got(f); };
     inp.click();
+  }
+  // canvas → ML Kit → lines → text page (replaces the text if the page is already open; Undo brings it back)
+  function readCanvas(c){
+    if (!c) return;
+    var ml = mlkit(); if (!ml) { alert('Photo reading works in the installed app.'); return; }
+    busy(true);
+    var data = c.toDataURL('image/jpeg', 0.92).split(',')[1]; c.width = c.height = 0;
+    return ml.detectText({ base64Image: data, rotation: 0 }).then(function(res){
+      busy(false);
+      var lines = rows(res);
+      if (!lines.length) { alert('No text found.'); return; }
+      raw = lines.join('\n'); rawNames = [];
+      if (inResult) { if (tableOn) showText(); txt.value = raw; snap(); title.textContent = lines.length + ' LINES'; return; }
+      build(); ov.classList.add('on'); document.body.style.overflow = 'hidden';
+      txt.value = raw; lastTitle = lines.length + ' LINES'; lastNote = '';
+      resultMode();
+    }).catch(function(e){ busy(false); console.error('ML Kit:', e); alert('Could not read the photo: ' + ((e && e.message) || e)); });
+  }
+  function readFile(f){
+    if (!f || !/^image\//.test(f.type)) { alert('That is not an image.'); return; }
+    plainImage(f).then(readCanvas).catch(function(e){ busy(false); alert('Could not read the image: ' + ((e && e.message) || e)); });
+  }
+  // Image: paste or drop first; Select opens the folder picker
+  function imagePicker(){
+    var old = $('rc-pick'); if (old) old.remove();
+    var d = document.createElement('div'); d.id = 'rc-pick';
+    d.style.cssText = 'position:fixed;inset:0;z-index:100001;background:rgba(20,14,6,.55);display:flex;align-items:center;justify-content:center;padding:16px;';
+    var B = 'flex:1;border-radius:8px;padding:10px 0;font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;cursor:pointer;background:none;border:1.5px solid var(--border,#ccc);color:var(--ink,#222);';
+    d.innerHTML = '<div style="background:var(--paper,#f5f0e6);border:1.5px solid var(--gold,#c8962e);border-radius:12px;padding:14px;width:100%;max-width:340px;box-shadow:0 10px 30px rgba(0,0,0,.35);">' +
+      '<div id="rc-drop" tabindex="0" style="border:2px dashed var(--gold,#c8962e);border-radius:10px;padding:28px 10px;text-align:center;font-family:DM Mono,monospace;font-size:0.8rem;color:var(--muted,#777);outline:none;">🖼️<br>Paste or drop an image</div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px;">' +
+        '<button id="rc-pk-x" style="' + B + '">Cancel</button>' +
+        '<button id="rc-pk-paste" style="' + B + '">📋 Paste</button>' +
+        '<button id="rc-pk-sel" style="' + B + 'background:var(--gold,#c8962e);border-color:var(--gold,#c8962e);color:var(--ink,#1a140a);">📁 Select</button></div></div>';
+    document.body.appendChild(d);
+    var drop = $('rc-drop');
+    function close(){ document.removeEventListener('paste', onPaste, true); d.remove(); }
+    function take(f){ close(); readFile(f); }
+    function onPaste(e){
+      var it = [].filter.call((e.clipboardData && e.clipboardData.items) || [], function(x){ return /^image\//.test(x.type); })[0];
+      if (!it) return; e.preventDefault(); take(it.getAsFile());
+    }
+    document.addEventListener('paste', onPaste, true);
+    d.onclick = function(e){ if (e.target === d) close(); };
+    ['dragenter', 'dragover'].forEach(function(t){ drop.addEventListener(t, function(e){ e.preventDefault(); drop.style.background = 'rgba(200,150,46,.12)'; }); });
+    drop.addEventListener('dragleave', function(){ drop.style.background = ''; });
+    drop.addEventListener('drop', function(e){ e.preventDefault(); var f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) take(f); });
+    $('rc-pk-x').onclick = close;
+    $('rc-pk-paste').onclick = function(){
+      if (!navigator.clipboard || !navigator.clipboard.read) { drop.focus(); return; }
+      navigator.clipboard.read().then(function(items){
+        for (var i = 0; i < items.length; i++) {
+          var ty = items[i].types.filter(function(t){ return /^image\//.test(t); })[0];
+          if (ty) return items[i].getType(ty).then(function(b){ take(new File([b], 'paste', { type: ty })); });
+        }
+        drop.textContent = 'No image on the clipboard';
+      }).catch(function(){ drop.focus(); });
+    };
+    $('rc-pk-sel').onclick = function(){ close(); photo(false); };
+    drop.focus();
+  }
+  function busy(on){
+    var b = $('rc-busy');
+    if (!on) { if (b) b.remove(); return; }
+    if (b) return;
+    b = document.createElement('div'); b.id = 'rc-busy'; b.textContent = 'Reading the receipt…';
+    b.style.cssText = 'position:fixed;left:50%;top:45%;transform:translate(-50%,-50%);z-index:100003;background:#1a140a;color:#e8b84b;border:1px solid #c8962e;border-radius:20px;padding:10px 18px;font-family:DM Mono,monospace;font-size:0.8rem;box-shadow:0 6px 20px rgba(0,0,0,.4);';
+    document.body.appendChild(b);
+  }
+
+  // ---------- crop: drag the frame (or its corners) to keep only the part with the items ----------
+    function cropImage(file, retake){
+    return createImageBitmap(file).then(function(bm){
+      var s = Math.min(1, 2200 / Math.max(bm.width, bm.height)), src = document.createElement('canvas');
+      src.width = Math.round(bm.width * s); src.height = Math.round(bm.height * s);
+      src.getContext('2d').drawImage(bm, 0, 0, src.width, src.height); if (bm.close) bm.close();
+      return new Promise(function(resolve){
+        var B = 'border:none;border-radius:8px;padding:11px 0;font-family:DM Mono,monospace;font-size:0.8rem;font-weight:700;cursor:pointer;flex:1;';
+        var ui = document.createElement('div'); ui.id = 'rc-crop';
+        ui.style.cssText = 'position:fixed;inset:0;z-index:100002;background:#111;display:flex;flex-direction:column;';
+        ui.innerHTML = '<div style="padding:9px 12px;background:#1a140a;color:#e8b84b;font-family:DM Mono,monospace;font-size:0.72rem;">✂ Drag the frame or its corners around the items · ⟳ turns the photo</div>' +
+          '<div id="rc-cw" style="flex:1;position:relative;overflow:hidden;touch-action:none;"></div>' +
+          '<div style="display:flex;gap:8px;padding:10px;background:#1a140a;">' +
+            '<button id="rc-c-x" style="' + B + 'background:#333;color:#ddd;">Cancel</button>' +
+            '<button id="rc-c-r" style="' + B + 'background:#333;color:#ddd;">↺ Retake</button>' +
+            '<button id="rc-c-rot" style="' + B + 'background:#333;color:#e8b84b;">⟳ Rotate</button>' +
+            '<button id="rc-c-ok" style="' + B + 'background:#c8962e;color:#1a140a;">✓ Use</button></div>';
+        document.body.appendChild(ui);
+        var wrap = $('rc-cw'), view = document.createElement('canvas'), box = document.createElement('div');
+        view.style.position = 'absolute'; wrap.appendChild(view);
+        box.style.cssText = 'position:absolute;border:2px solid #e8b84b;box-shadow:0 0 0 9999px rgba(0,0,0,.55);box-sizing:border-box;';
+        ['tl', 'tr', 'bl', 'br'].forEach(function(h){
+          var d = document.createElement('div'); d.setAttribute('data-h', h);
+          d.style.cssText = 'position:absolute;width:30px;height:30px;' + (h[0] === 't' ? 'top:-15px;' : 'bottom:-15px;') + (h[1] === 'l' ? 'left:-15px;' : 'right:-15px;') +
+            'border-radius:50%;background:#e8b84b;border:3px solid #1a140a;box-sizing:border-box;';
+          box.appendChild(d);
+        });
+        wrap.appendChild(box);
+        var k, dw, dh, ox, oy, R, MIN = 40;
+        function draw(){ box.style.left = (ox + R.x) + 'px'; box.style.top = (oy + R.y) + 'px'; box.style.width = R.w + 'px'; box.style.height = R.h + 'px'; }
+        function layout(){
+          var W = wrap.clientWidth, H = wrap.clientHeight;
+          k = Math.min(W / src.width, H / src.height); dw = src.width * k; dh = src.height * k; ox = (W - dw) / 2; oy = (H - dh) / 2;
+          view.width = Math.round(dw); view.height = Math.round(dh);
+          view.style.left = ox + 'px'; view.style.top = oy + 'px'; view.style.width = dw + 'px'; view.style.height = dh + 'px';
+          view.getContext('2d').drawImage(src, 0, 0, view.width, view.height);
+          R = { x: dw * 0.05, y: dh * 0.05, w: dw * 0.9, h: dh * 0.9 }; draw();
+        }
+        layout();
+        var drag = null;
+        wrap.addEventListener('pointerdown', function(e){
+          var h = e.target.getAttribute && e.target.getAttribute('data-h');
+          if (!h && e.target !== box) return;
+          drag = { h: h || 'move', x: e.clientX, y: e.clientY, r: { x: R.x, y: R.y, w: R.w, h: R.h } };
+          wrap.setPointerCapture(e.pointerId); e.preventDefault();
+        });
+        wrap.addEventListener('pointermove', function(e){
+          if (!drag) return;
+          var dx = e.clientX - drag.x, dy = e.clientY - drag.y, r = drag.r, n = { x: r.x, y: r.y, w: r.w, h: r.h };
+          if (drag.h === 'move') { n.x = Math.max(0, Math.min(dw - r.w, r.x + dx)); n.y = Math.max(0, Math.min(dh - r.h, r.y + dy)); }
+          else {
+            if (drag.h[1] === 'l') { var nx = Math.max(0, Math.min(r.x + r.w - MIN, r.x + dx)); n.w = r.w + (r.x - nx); n.x = nx; }
+            else n.w = Math.max(MIN, Math.min(dw - r.x, r.w + dx));
+            if (drag.h[0] === 't') { var ny = Math.max(0, Math.min(r.y + r.h - MIN, r.y + dy)); n.h = r.h + (r.y - ny); n.y = ny; }
+            else n.h = Math.max(MIN, Math.min(dh - r.y, r.h + dy));
+          }
+          R = n; draw();
+        });
+        wrap.addEventListener('pointerup', function(){ drag = null; });
+        wrap.addEventListener('pointercancel', function(){ drag = null; });
+        function clean(){ ui.remove(); view.width = view.height = 0; }
+        $('rc-c-x').onclick = function(){ clean(); src.width = src.height = 0; resolve(null); };
+        $('rc-c-r').onclick = function(){ clean(); src.width = src.height = 0; resolve(null); retake(); };
+        $('rc-c-rot').onclick = function(){
+          var r = document.createElement('canvas'); r.width = src.height; r.height = src.width;
+          var g = r.getContext('2d'); g.translate(r.width, 0); g.rotate(Math.PI / 2); g.drawImage(src, 0, 0);
+          src.width = src.height = 0; src = r; layout();
+        };
+        $('rc-c-ok').onclick = function(){
+          var sx = Math.round(R.x / k), sy = Math.round(R.y / k), sw = Math.round(R.w / k), sh = Math.round(R.h / k);
+          var out = document.createElement('canvas'); out.width = sw; out.height = sh;
+          out.getContext('2d').drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh);
+          src.width = src.height = 0; clean(); resolve(out);
+        };
+      });
+    });
+  }
+
+  // ---------- first step: a small dialog with Camera / Cancel ----------
+  function chooser(){
+    var d = $('rc-choose'); if (d) d.remove();
+    d = document.createElement('div'); d.id = 'rc-choose';
+    d.style.cssText = 'position:fixed;inset:0;z-index:100001;background:rgba(20,14,6,.55);display:flex;align-items:center;justify-content:center;padding:16px;';
+    var B = 'flex:1;border-radius:8px;padding:11px 0;font-family:DM Mono,monospace;font-size:0.8rem;font-weight:700;cursor:pointer;';
+    d.innerHTML = '<div style="background:var(--paper,#f5f0e6);border:1.5px solid var(--gold,#c8962e);border-radius:12px;padding:16px;width:100%;max-width:320px;box-shadow:0 10px 30px rgba(0,0,0,.35);text-align:center;">' +
+      '<div style="font-family:Playfair Display,serif;font-weight:700;font-size:1.05rem;margin-bottom:4px;">🧾 Receipt text</div>' +
+      '<div style="font-family:DM Mono,monospace;font-size:0.66rem;color:var(--muted,#777);margin-bottom:14px;line-height:1.5;">Take a photo, crop to the items, and the text is read line by line. The photo is not saved.</div>' +
+      '<div style="display:flex;gap:8px;"><button id="rc-ch-x" style="' + B + 'background:none;border:1.5px solid var(--border,#ccc);color:var(--ink,#222);">Cancel</button>' +
+      '<button id="rc-ch-cam" style="' + B + 'background:var(--gold,#c8962e);border:1.5px solid var(--gold,#c8962e);color:var(--ink,#1a140a);">📷 Camera</button></div></div>';
+    document.body.appendChild(d);
+    d.onclick = function(e){ if (e.target === d) d.remove(); };
+    $('rc-ch-x').onclick = function(){ d.remove(); };
+    $('rc-ch-cam').onclick = function(){ d.remove(); raw = ''; photo(true); };
   }
   function rows(res){
     var L = [];
@@ -24670,11 +24870,214 @@ syncInit();
       return s;
     }).filter(function(s){ return s.trim(); });
   }
+    // ---------- history (undo / redo) ----------
+  var hist = [], hpos = -1, htimer = null, inResult = false, tableOn = false, trimStep = 0, trimFrom = 0;
+  function snap(){ var v = txt.value; if (hist[hpos] === v) return; hist = hist.slice(0, hpos + 1); hist.push(v); if (hist.length > 60) hist.shift(); hpos = hist.length - 1; }
+  function undo(){ if (tableOn) showText(); if (hpos > 0) { hpos--; txt.value = hist[hpos]; } }
+  function redo(){ if (tableOn) showText(); if (hpos < hist.length - 1) { hpos++; txt.value = hist[hpos]; } }
+
+  // ---------- image from the gallery: no crop, read straight away ----------
+  function plainImage(f){
+    return createImageBitmap(f).then(function(bm){
+      var s = Math.min(1, 2200 / Math.max(bm.width, bm.height)), c = document.createElement('canvas');
+      c.width = Math.round(bm.width * s); c.height = Math.round(bm.height * s);
+      c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height); if (bm.close) bm.close();
+      return c;
+    });
+  }
+
+  // ---------- trim: tap the first line to keep, then the last ----------
+  function lineRange(i){
+    var L = txt.value.split('\n'), a = 0;
+    for (var j = 0; j < i; j++) a += L[j].length + 1;
+    return [a, a + (L[i] || '').length];
+  }
   function trim(){
-    txt.value = txt.value.split('\n').filter(function(l){
-      return /\d[.,]\s?\d{2}(?!\d)/.test(l) || /\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}/.test(l);
-    }).join('\n');
-    note('✓ Kept only the lines with an amount or a date.');
+    if (tableOn) showText();
+    trimStep = 1; txt.inputMode = 'none'; mark('rc-i-trim', true);
+    note('✂ 1/2');
+  }
+  function trimTap(){
+    if (!trimStep) return;
+    var li = txt.value.slice(0, txt.selectionStart).split('\n').length - 1;
+    if (trimStep === 1) {
+      trimFrom = li; trimStep = 2; note('✂ 2/2');
+      var r = lineRange(li); txt.setSelectionRange(r[0], r[1]);
+      return;
+    }
+    var a = Math.min(trimFrom, li), b = Math.max(trimFrom, li);
+    txt.value = txt.value.split('\n').slice(a, b + 1).join('\n'); snap();
+    trimStep = 0; txt.inputMode = ''; mark('rc-i-trim', false); note('');
+    txt.setSelectionRange(0, 0); txt.blur();
+  }
+
+  // ---------- items: the text as a table (toggle) ----------
+    function showText(){
+    tableOn = false; show('text'); mark('rc-i-items', false);
+    var t = $('rc-tbl'); if (t) t.style.display = 'none';
+    var c = $('rc-tcopy'); if (c) c.style.display = 'none';
+  }
+  // decimal comma → dot inside the table (2,20 → 2.20), and a 📋 that copies only the item rows
+  function dotTable(root){
+    [].forEach.call(root.querySelectorAll('td, th'), function(c){
+      if (c.children.length) return;
+      var v = c.textContent, w = v.replace(/(\d),(\d{1,2})(?!\d)/g, '$1.$2');
+      if (w !== v) c.textContent = w;
+    });
+  }
+    function itemRows(root){
+    var code = 'EUR'; try { code = localStorage.getItem('rc_cur') || 'EUR'; } catch(e) {}
+    var sym = syms()[code] || code;
+    return [].filter.call(root.querySelectorAll('tr'), function(r){
+      if (r.querySelector('th') || r.closest('thead') || r.closest('tfoot')) return false;
+      return !/\b(total|subtotal|iva|cambio|tarjeta|efectivo|bizum|pagado|importe)\b/i.test(r.textContent);
+    }).map(function(r){
+      var cells = [].map.call(r.querySelectorAll('td'), function(c){ return c.textContent.trim(); }).filter(Boolean);
+      if (cells.length && /^\d+\s+\S*[A-Za-zÀ-ÿ]/.test(cells[0])) cells[0] = cells[0].replace(/^\d+\s+/, '');   // drop the row number
+      return cells.map(function(c, i){ return i === cells.length - 1 && /^\d+\.\d{2}$/.test(c) ? sym + c : c; }).join('\t');   // currency on the total only
+    }).filter(Boolean);
+  }
+  function copyItems(root, btn){
+    var v = itemRows(root).join('\n');
+    var ok = function(){ var t = btn.innerHTML; btn.innerHTML = '✓ Copied'; setTimeout(function(){ btn.innerHTML = t; }, 1200); };
+    (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(ok).catch(function(){
+      var t = document.createElement('textarea'); t.value = v; document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); ok(); } catch(e) {} t.remove();
+    });
+  }
+      function toExpenses(root){
+    var rows = itemRows(root).map(function(l){ var p = l.split('\t'); return { n: p[0], t: p[p.length - 1] }; })
+      .filter(function(r){ return r.n && /\d/.test(r.t) && r.n !== r.t; });
+    if (!rows.length) { alert('No items to add.'); return; }
+    function p2(n){ return (n < 10 ? '0' : '') + n; }
+    var m = txt.value.match(/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/), now = new Date(), def = now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-' + p2(now.getDate());
+    if (m) { var yy0 = +m[3]; if (yy0 < 100) yy0 += 2000; def = yy0 + '-' + p2(+m[2]) + '-' + p2(+m[1]); }
+    // ask for the date first (the receipt may be from yesterday or last month)
+    var d = document.createElement('div'); d.id = 'rc-date';
+    d.style.cssText = 'position:fixed;inset:0;z-index:100006;background:rgba(20,14,6,.55);display:flex;align-items:center;justify-content:center;padding:16px;';
+    var B = 'flex:1;border-radius:8px;padding:10px 0;font-family:DM Mono,monospace;font-size:0.8rem;font-weight:700;cursor:pointer;';
+    d.innerHTML = '<div style="background:var(--paper,#f5f0e6);border:1.5px solid var(--gold,#c8962e);border-radius:12px;padding:16px;width:100%;max-width:300px;box-shadow:0 10px 30px rgba(0,0,0,.35);">' +
+      '<div style="font-family:Playfair Display,serif;font-weight:700;margin-bottom:10px;">📅 Date of these items</div>' +
+      '<input id="rc-date-in" type="date" value="' + def + '" style="width:100%;box-sizing:border-box;padding:9px;border:1.5px solid var(--gold,#c8962e);border-radius:6px;font-family:DM Mono,monospace;font-size:0.9rem;background:#fff;">' +
+      '<div style="display:flex;gap:8px;margin-top:12px;"><button id="rc-date-x" style="' + B + 'background:none;border:1.5px solid var(--border,#ccc);color:var(--ink,#222);">Cancel</button>' +
+      '<button id="rc-date-ok" style="' + B + 'background:var(--gold,#c8962e);border:1.5px solid var(--gold,#c8962e);color:var(--ink,#1a140a);">OK</button></div></div>';
+    document.body.appendChild(d);
+    document.getElementById('rc-date-x').onclick = function(){ d.remove(); };
+    document.getElementById('rc-date-ok').onclick = function(){
+      var v = document.getElementById('rc-date-in').value; if (!v) return;
+      d.remove(); RC.close();
+      addToImport(v, rows.map(function(r){ return '\t' + r.n + '\t' + r.t; }));
+    };
+  }
+  // open Import on that month (with everything already saved there), add the items under their date as if typed, then Parse
+  function addToImport(iso, itemLines){
+    var ta = document.getElementById('raw-input'); if (!ta || typeof parseInput !== 'function') return;
+    var yy = +iso.slice(0, 4), mm = +iso.slice(5, 7), dmy = iso.slice(8, 10) + '-' + iso.slice(5, 7) + '-' + yy;
+    var prevY = pickerYear, prevM = pickerMonth;
+    if (typeof changeYear === 'function' && yy !== pickerYear) changeYear(yy - pickerYear);
+    if (typeof selectMonth === 'function') selectMonth(mm);                      // loads the month's saved text into the box
+    function p2(n){ return (n < 10 ? '0' : '') + n; }
+    function dkey(l){ var x = l.match(/^\s*(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})\s*$/); return x ? x[3] + '-' + p2(+x[2]) + '-' + p2(+x[1]) : null; }
+    var lines = ta.value.replace(/\s+$/, '').split('\n'); if (lines.length === 1 && !lines[0].trim()) lines = [];
+    var hdr = lines.findIndex(function(l){ return dkey(l) === iso; });
+    if (hdr > -1) {                                                              // date already there: add at the end of that day
+      var end = hdr + 1; while (end < lines.length && !dkey(lines[end])) end++;
+      while (end > hdr + 1 && !lines[end - 1].trim()) end--;
+      Array.prototype.splice.apply(lines, [end, 0].concat(itemLines));
+    } else {                                                                     // new date: put the day in date order
+      var pos = lines.findIndex(function(l){ var k = dkey(l); return k && k > iso; });
+      var blk = [dmy].concat(itemLines);
+      if (pos < 0) { if (lines.length) lines.push(''); lines = lines.concat(blk); }
+      else Array.prototype.splice.apply(lines, [pos, 0].concat(blk, ['']));
+    }
+    ta.value = lines.join('\n');
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    // "✕ Cancel import" → nothing added, back to the month you were on
+    var oCancel = window._crCancel, oToast = window.showToast, done = false;
+    function unhook(){ window._crCancel = oCancel; window.showToast = oToast; }
+    window.showToast = function(msg){ if (!done && /^Parsed /.test(String(msg))) { done = true; unhook(); } return oToast.apply(this, arguments); };
+    window._crCancel = function(){
+      var r = oCancel.apply(this, arguments); done = true; unhook();
+      pendingItems = [];
+      var ps = document.getElementById('parse-stats'); if (ps) ps.style.display = 'none';
+      if (typeof changeYear === 'function' && prevY !== pickerYear) changeYear(prevY - pickerYear);
+      if (typeof selectMonth === 'function' && prevM) selectMonth(prevM);
+      return r;
+    };
+    parseInput();
+    var o = document.getElementById('conflict-resolve-overlay');
+    if (!done && !(o && o.style.display === 'flex')) { done = true; unhook(); }
+  }
+  function items(){
+    if (tableOn) { showText(); return resultMode(true); }
+    trimStep = 0; txt.inputMode = '';
+    var lines = txt.value.split('\n').filter(function(l){ return l.trim(); }), root = null;
+    if (window.RCP) {
+      try { var P = RCP.parse(lines); RCP.render(stage, P); show('res'); root = $('rc-res') || stage; }
+      catch(e) { console.error('Items check:', e); }
+    }
+    if (!root) {
+      root = $('rc-tbl');
+      if (!root) { root = document.createElement('div'); root.id = 'rc-tbl'; root.style.cssText = 'height:100%;overflow:auto;background:#fff;'; stage.appendChild(root); }
+      root.innerHTML = '<table style="width:100%;border-collapse:collapse;font-family:DM Mono,monospace;font-size:0.72rem;">' + lines.map(function(l, n){
+        var m = l.match(/^(.*?)\s*([€$£₦]?\s?\d[\d.,]*)\s*[€$£₦]?\s*$/), name = m ? m[1] : l, amt = m ? m[2] : '';
+        return '<tr style="background:' + (n % 2 ? 'rgba(200,150,46,0.10)' : 'transparent') + ';"><td style="padding:5px 8px;">' + esc(name) + '</td><td style="padding:5px 8px;text-align:right;white-space:nowrap;">' + esc(amt) + '</td></tr>';
+      }).join('') + '</table>';
+      txt.style.display = 'none'; root.style.display = 'block';
+    }
+    tableOn = true; dotTable(root);
+    bar.style.gridTemplateColumns = '';
+    buttons([['≡ Text', function(){ showText(); resultMode(true); }], ['📋 Copy', function(){ copyItems(root, this); }], ['▼ Parse', function(){ toExpenses(root); }, 'p'], ['Done', RC.close]]);
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  // ---------- layout: icons left and right, text in the middle ----------
+  function mark(id, on){ var b = $(id); if (b) b.style.background = on ? 'var(--gold,#c8962e)' : ''; }
+    function icon(id, ic, tip, fn, gold){
+    var b = document.createElement('button'); b.type = 'button'; b.id = id; b.title = tip; b.innerHTML = ic; b.onclick = fn;
+    b.style.cssText = 'width:34px;height:32px;padding:0;font-size:0.95rem;line-height:1;border-radius:7px;cursor:pointer;flex-shrink:0;background:var(--paper2,#f3ecdd);' +
+      (gold ? 'background:var(--gold,#c8962e);border:1.5px solid var(--gold,#c8962e);color:var(--ink,#1a140a);' : 'border:1.5px solid var(--border,#ccc);color:var(--ink,#222);');
+    return b;
+  }
+  function cols(){
+    if ($('rc-mid')) return;
+    var mid = document.createElement('div'); mid.id = 'rc-mid';
+    mid.style.cssText = 'flex:1;display:flex;gap:6px;min-height:0;align-items:stretch;padding:0 6px;';
+    stage.parentNode.insertBefore(mid, stage);
+    var cs = 'display:flex;flex-direction:column;gap:5px;flex-shrink:0;width:34px;padding:6px 0;';
+    var L = document.createElement('div'); L.id = 'rc-left'; L.style.cssText = cs;
+    var R = document.createElement('div'); R.id = 'rc-right'; R.style.cssText = cs;
+    L.appendChild(icon('rc-i-img', '🖼️', 'Image', function(){ photo(false); }));
+    L.appendChild(icon('rc-i-trim', '✂️', 'Trim', trim));
+    L.appendChild(icon('rc-i-items', '📊', 'Items', items));
+    L.appendChild(icon('rc-i-undo', '↩️', 'Undo', undo));
+    L.appendChild(icon('rc-i-redo', '↪️', 'Redo', redo));
+    var S = syms(), sel = document.createElement('select'); sel.id = 'rc-i-cur'; sel.title = 'Currency';
+    var cur = 'EUR'; try { cur = localStorage.getItem('rc_cur') || 'EUR'; } catch(e) {}
+    sel.innerHTML = Object.keys(S).map(function(c){ return '<option value="' + c + '"' + (c === cur ? ' selected' : '') + '>' + S[c] + '</option>'; }).join('');
+    sel.style.cssText = 'width:34px;height:32px;padding:0;text-align:center;text-align-last:center;font-size:0.95rem;border:1.5px solid var(--border,#ccc);border-radius:7px;background:var(--paper2,#f3ecdd);flex-shrink:0;';
+    sel.onchange = function(){ try { localStorage.setItem('rc_cur', sel.value); } catch(e) {} };
+    R.appendChild(sel);
+    R.appendChild(icon('rc-i-ins', '➕', 'Insert currency', function(){ if (tableOn) showText(); addCur(sel.value); snap(); }));
+    R.appendChild(icon('rc-i-font', '🔠', 'Font case', function(){ if (tableOn) showText(); cycleCase(); snap(); }));
+    R.appendChild(icon('rc-i-done', '✅', 'Done (copies the text)', done, true));
+    R.appendChild(icon('rc-i-x', '❌', 'Cancel', RC.close));
+    mid.appendChild(L); mid.appendChild(stage); mid.appendChild(R);
+    stage.style.flex = '1'; stage.style.minWidth = '0';
+    txt.addEventListener('input', function(){ if (!inResult) return; clearTimeout(htimer); htimer = setTimeout(snap, 500); });
+    txt.addEventListener('click', trimTap);
+  }
+    function setCols(on){
+    var l = $('rc-left'), r = $('rc-right');
+    if (l) { l.style.display = 'none'; r.style.display = 'none'; }
+    bar.style.gridTemplateColumns = '';
+  }
+  function done(){
+    learn();
+    var v = txt.value;
+    (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject())
+      .catch(function(){ try { txt.style.display = 'block'; txt.focus(); txt.select(); document.execCommand('copy'); } catch(e) {} })
+      .then(function(){ RC.close(); });
   }
 
   // ---------- memory: names you corrected ----------
@@ -24954,33 +25357,38 @@ syncInit();
     if (hasSel) { txt.selectionStart = a; txt.selectionEnd = a + out.length; }
     note(['✓ ALL CAPS', '✓ Capital First Letters', '✓ all small letters'][caseStep] + (hasSel ? ' (selection)' : ''));
   }
-  function resultMode(){
+      function resultMode(keep){
     title.textContent = lastTitle; show('text');
     txt.style.whiteSpace = 'pre';
     note(lastNote);
-    caseStep = 0;
+    caseStep = 0; tableOn = false; trimStep = 0; txt.inputMode = '';
+    setCols(false);
+    var t = $('rc-tbl'); if (t) t.style.display = 'none';
+    if (!txt._rcH) {
+      txt._rcH = 1;
+      txt.addEventListener('input', function(){ if (!inResult) return; clearTimeout(htimer); htimer = setTimeout(snap, 500); });
+      txt.addEventListener('click', trimTap);
+    }
     var sel = curSel();
-    var list = [['📋 Copy', copy], ['＋ Insert', function(){
-      try { localStorage.setItem('rc_cur', sel.value); } catch(e) {}
-      addCur(sel.value); note('✓ ' + (syms()[sel.value] || sel.value) + ' put before the last number on every line.');
-    }], ['Aa', cycleCase], ['✂ Trim', trim], ['✎ Raw', pasteMode]];
-    if (window.RCP) list.push(['▦ Items', items]);
-    list.push(['Done', RC.close, 'p']);
-    buttons(list);
-    bar.insertBefore(sel, bar.children[1]);
+    sel.onchange = function(){ try { localStorage.setItem('rc_cur', sel.value); } catch(e) {} };
+    buttons([
+      ['🖼 Image', imagePicker], ['✂ Trim', trim], ['▦ Items', items], ['↶', undo], ['↷', redo],
+      ['＋ Insert', function(){ if (tableOn) showText(); addCur(sel.value); snap(); }],
+      ['Aa', function(){ if (tableOn) showText(); cycleCase(); snap(); }],
+      ['Done', done, 'p'], ['Cancel', RC.close]
+    ]);
+    ['rc-i-img', 'rc-i-trim', 'rc-i-items'].forEach(function(id, i){ bar.children[i].id = id; });
+    bar.insertBefore(sel, bar.children[5]);
     bar.classList.add('rc-grid');
-  }
-  function items(){
-    try {
-      var P = RCP.parse(txt.value.split('\n')); RCP.render(stage, P);
-      title.textContent = P.items.length + ' ITEM' + (P.items.length === 1 ? '' : 'S') + ' CHECKED'; show('res'); note('');
-      buttons([['≡ Text', resultMode], ['Done', RC.close, 'p']]);
-    } catch(e) { console.error('Items check:', e); note('The items check failed: ' + e.message); }
+    bar.style.gridTemplateColumns = 'repeat(5, 1fr)';
+    if (!keep) { hist = []; hpos = -1; } snap();
+    inResult = true;
   }
 
+
   window.RC = {
-    open: function(){ build(); ov.classList.add('on'); document.body.style.overflow = 'hidden'; raw = ''; pasteMode(); },
-    close: function(){ if (ov) { ov.classList.remove('on'); txt.value = ''; note(''); } raw = ''; document.body.style.overflow = ''; }
+    open: function(){ chooser(); }, image: function(){ imagePicker(); }, camera: function(){ photo(true); },
+    close: function(){ ['rc-choose', 'rc-crop', 'rc-busy', 'rc-cam', 'rc-pick'].forEach(function(id){ var e = document.getElementById(id); if (e) e.remove(); }); inResult = false; trimStep = 0; if (txt) txt.inputMode = ''; if (ov) { ov.classList.remove('on'); txt.value = ''; note(''); } raw = ''; document.body.style.overflow = ''; }
   };
 
     // close the receipt screen whenever the app locks, so nothing stays visible over the lock screen
@@ -24994,21 +25402,29 @@ syncInit();
   hookLock();
   setInterval(hookLock, 3000);
 
-  // 🧾 button on the left of "Parse Expenses" (Expenses → Import), 50/50
+    // 🖼 Image · 📷 Camera (Expenses → Import), before Aa and Parse
   function mount(){
-    var p = $('panel-import'); if (!p || $('rc-btn')) return;
-    var parse = [].find.call(p.querySelectorAll('button'), function(b){ return /parse/i.test(b.textContent); });
+    var p = $('panel-import'); if (!p || $('rc-img-btn')) return;
+    var parse = $('exp-parse-btn') || [].find.call(p.querySelectorAll('button'), function(b){ return /parse/i.test(b.textContent); });
     if (!parse) return;
-    var pair = document.createElement('div'); pair.className = 'rc-pair';
-    parse.parentNode.insertBefore(pair, parse);
-    var b = document.createElement('button'); b.id = 'rc-btn'; b.type = 'button'; b.className = parse.className;
-    b.innerHTML = '🧾 Receipt text'; b.onclick = RC.open;
-    pair.appendChild(b); pair.appendChild(parse);
+    var old = $('rc-btn'); if (old) old.remove();
+    var row = parse.parentNode;
+    if (!row.classList.contains('rc-pair')) { var w = document.createElement('div'); w.className = 'rc-pair'; row.insertBefore(w, parse); w.appendChild(parse); row = w; }
+    row.style.display = 'flex'; row.style.gap = '6px'; row.style.gridTemplateColumns = 'none';
+    parse.style.flex = '1'; parse.style.width = 'auto'; parse.style.minWidth = '0';
+    var anchor = $('mel-case-exp') || parse;
+    var IMG = '<svg viewBox="0 0 32 26" width="26" height="21"><rect x="1" y="1" width="30" height="24" rx="4" fill="#fff" stroke="#1a140a" stroke-width="1.6"/><rect x="3.5" y="3.5" width="25" height="19" rx="2" fill="#7cc6f2"/><circle cx="23" cy="8.5" r="3" fill="#ffd23f"/><path d="M3.5 22.5 L12 12 L18 18.5 L21.5 15 L28.5 22.5 Z" fill="#4caf50"/><path d="M3.5 22.5 L12 12 L15.5 16.3 L9.5 22.5 Z" fill="#2e7d32"/></svg>';
+    var CAM = '<svg viewBox="0 0 32 26" width="26" height="21"><path d="M10 5 L12.5 1.5 H19.5 L22 5 Z" fill="#555"/><rect x="1" y="5" width="30" height="20" rx="4" fill="#3a3a3a" stroke="#1a140a" stroke-width="1.4"/><rect x="3" y="7" width="5" height="3" rx="1" fill="#c8962e"/><circle cx="16" cy="15" r="7.2" fill="#1a140a"/><circle cx="16" cy="15" r="5.6" fill="#2f6fb5"/><circle cx="16" cy="15" r="3" fill="#123d6b"/><circle cx="14" cy="13" r="1.4" fill="#fff" opacity=".85"/><circle cx="27" cy="8.5" r="1.3" fill="#ff5a4e"/></svg>';
+    [['rc-img-btn', IMG, function(){ RC.image(); }], ['rc-cam-btn', CAM, function(){ RC.camera(); }]].forEach(function(x){
+      var b = document.createElement('button'); b.id = x[0]; b.type = 'button'; b.className = parse.className; b.innerHTML = x[1]; b.onclick = x[2];
+      b.title = x[0] === 'rc-img-btn' ? 'Image' : 'Camera'; b.className = 'mel-3d';
+      row.insertBefore(b, anchor);
+    });
   }
   mount();
-  var iv = setInterval(function(){ mount(); if (document.getElementById('rc-btn')) clearInterval(iv); }, 1000);
+  var iv = setInterval(function(){ mount(); if (document.getElementById('rc-img-btn')) clearInterval(iv); }, 1000);
   var ip = document.getElementById('panel-import');
-  if (ip) new MutationObserver(function(){ if (!document.getElementById('rc-btn')) mount(); }).observe(ip, { childList: true, subtree: true });
+  if (ip) new MutationObserver(function(){ if (!document.getElementById('rc-img-btn')) mount(); }).observe(ip, { childList: true, subtree: true });
 })();
 </script>
 <style>
@@ -26597,6 +27013,135 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
 #trf-cal-overlay > div{ display:flex !important; flex-direction:column; max-height:calc(100dvh - 76px); overflow:hidden; }
 #trf-cal-overlay > div > :not(#trf-cal-results){ flex-shrink:0; }
 #trf-cal-results{ flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; min-height:80px; }
+</style>
+<script>
+// Import → Aa: ALL CAPS → Capital First → small, for the selected month (saved descriptions + the text box), Expenses and Income
+(function(){
+  var MOD = {
+    exp: { ta: 'raw-input',     parse: 'exp-parse-btn', load: function(){ return loadData(); },       save: function(d){ saveData(d); },       key: function(){ return pickerYear + '-' + p2(pickerMonth); },       ledger: 'renderLedger' },
+    inc: { ta: 'inc-raw-input', parse: 'inc-parse-btn', load: function(){ return loadIncomeData(); }, save: function(d){ saveIncomeData(d); }, key: function(){ return incPickerYear + '-' + p2(incPickerMonth); }, ledger: 'renderIncomeLedger' }
+  };
+  var LABEL = ['AA', 'Aa', 'aa'];
+  function p2(n){ n = +n; return (n < 10 ? '0' : '') + n; }
+  function tf(s, step){
+    s = String(s);
+    if (step === 0) return s.toLocaleUpperCase('es');
+    if (step === 2) return s.toLocaleLowerCase('es');
+    return s.toLocaleLowerCase('es').replace(/(^|[\s\-\/.(])(\p{L})/gu, function(m, p, c){ return p + c.toLocaleUpperCase('es'); });
+  }
+  function getStep(m){ var v = parseInt(localStorage.getItem('mel_case_' + m), 10); return isNaN(v) ? -1 : v; }
+  window.melCase = function(m){
+    var M = MOD[m]; if (!M) return;
+    var step = (getStep(m) + 1) % 3;
+    try { localStorage.setItem('mel_case_' + m, step); } catch(e) {}
+    var k = M.key(), data = M.load(), n = 0;
+    data.forEach(function(e){
+      if (!e.desc || !e.date || e.date.slice(0, 7) !== k) return;
+      var v = tf(e.desc, step); if (v !== e.desc) { e.desc = v; n++; }
+    });
+    if (n) M.save(data);
+    var ta = document.getElementById(M.ta);
+    if (ta && ta.value) { ta.value = tf(ta.value, step); ta.dispatchEvent(new Event('input', { bubbles: true })); }
+    var b = document.getElementById('mel-case-' + m); if (b) b.textContent = LABEL[step];
+    if (n && typeof window[M.ledger] === 'function') try { window[M.ledger](); } catch(e) {}
+  };
+  setInterval(function(){
+    Object.keys(MOD).forEach(function(m){
+      var M = MOD[m], parse = document.getElementById(M.parse);
+      if (!parse || document.getElementById('mel-case-' + m)) return;
+      var b = document.createElement('button'); b.type = 'button'; b.id = 'mel-case-' + m; b.className = 'mel-3d';
+      b.title = 'Font case for this month'; b.textContent = LABEL[Math.max(0, getStep(m))];
+      b.style.flex = '0 0 auto'; b.style.width = 'auto'; b.style.minWidth = '0'; b.style.padding = '0 12px';
+      b.onclick = function(){ window.melCase(m); };
+      var row = parse.parentNode;
+      if (!row.classList.contains('rc-pair') && !row.dataset.melRow) { var w = document.createElement('div'); w.className = 'rc-pair'; w.dataset.melRow = 1; row.insertBefore(w, parse); w.appendChild(parse); row = w; }
+      row.style.display = 'flex'; row.style.gap = '6px'; row.style.gridTemplateColumns = 'none';
+      parse.style.flex = '1'; parse.style.width = 'auto'; parse.style.minWidth = '0';
+      row.insertBefore(b, parse);
+    });
+  }, 800);
+})();
+</script>
+<style>
+/* Import row: Parse = half the row, the small 3D buttons share the other half */
+.rc-pair{ display:flex !important; gap:6px !important; align-items:stretch; }
+#exp-parse-btn, #inc-parse-btn{ flex:0 0 calc(50% - 3px) !important; width:auto !important; min-width:0 !important; }
+.rc-pair .mel-3d{
+  flex:1 1 0 !important; min-width:0 !important; width:auto !important; padding:0 !important; height:auto; min-height:38px;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(#fffaf0, #efe3c8) !important; color:#1a140a !important;
+  border:1px solid #c8962e !important; border-radius:8px !important;
+  box-shadow:0 3px 0 #9c7420, 0 4px 6px rgba(0,0,0,.18) !important;
+  font-family:'DM Mono',monospace; font-weight:700; font-size:0.85rem; cursor:pointer;
+  transform:translateY(0); transition:transform .06s, box-shadow .06s;
+}
+.rc-pair .mel-3d:active{ transform:translateY(2px); box-shadow:0 1px 0 #9c7420, 0 2px 3px rgba(0,0,0,.18) !important; }
+.rc-pair .mel-3d svg{ display:block; }
+</style>
+<script>
+// Import: the "Supported: € ₦ $ £ …" tip goes behind a small ⓘ at the start of the button row (Expenses and Income)
+(function(){
+  setInterval(function(){
+    ['exp-parse-btn', 'inc-parse-btn'].forEach(function(pid){
+      var parse = document.getElementById(pid), id = 'mel-tip-' + pid; if (!parse || document.getElementById(id)) return;
+      var row = parse.parentNode, panel = parse.closest('.panel') || document;
+      if (!row.classList.contains('rc-pair')) return;                 // wait until the row is built
+      var tip = panel.querySelector('.import-tip'); if (!tip) return;
+      tip.style.display = 'none';
+      var b = document.createElement('button'); b.type = 'button'; b.id = id; b.className = 'mel-3d'; b.title = 'Info';
+      b.innerHTML = '<span style="font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:1rem;color:#9c7420;">i</span>';
+      b.onclick = function(){ tip.style.display = tip.style.display === 'none' ? '' : 'none'; };
+      row.insertBefore(b, row.firstChild);
+    });
+  }, 900);
+})();
+</script>
+<style>
+.year-display{ cursor:pointer; user-select:none; }
+#mel-yr-pop{ position:fixed; z-index:100005; background:var(--paper,#f5f0e6); border:1.5px solid var(--gold,#c8962e); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.25); max-height:240px; overflow-y:auto; overscroll-behavior:contain; padding:4px; }
+#mel-yr-pop div{ font-family:'Playfair Display',serif; font-weight:700; font-size:1rem; padding:6px 22px; border-radius:5px; cursor:pointer; text-align:center; color:var(--ink,#1a140a); }
+#mel-yr-pop div:hover{ background:rgba(200,150,46,.15); }
+#mel-yr-pop div.on{ background:var(--gold,#c8962e); }
+</style>
+<script>
+// Tap the year (e.g. 2026) on the month picker → small list of years → jump straight there (Expenses, Income, Transfers)
+(function(){
+  var SEL = '.year-display, [id$="year-display"]';
+  function close(){ var p = document.getElementById('mel-yr-pop'); if (p) p.remove(); }
+  function jump(el, from, to){
+    var d = to - from; if (!d) return;
+    if (el.id === 'picker-year-display' && typeof window.changeYear === 'function') return window.changeYear(d);
+    if (el.id === 'inc-picker-year-display' && typeof window.incChangeYear === 'function') return window.incChangeYear(d);
+    // any other picker: press its own ‹ / › button the right number of times
+    var box = el.parentNode, btns = [].filter.call(box.querySelectorAll('button'), function(b){ return b.offsetParent !== null; });
+    var prev = btns.filter(function(b){ return b.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING; }).pop();
+    var next = btns.filter(function(b){ return b.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING; })[0];
+    var b = d > 0 ? next : prev; if (!b) return;
+    for (var i = 0; i < Math.abs(d); i++) b.click();
+  }
+  document.addEventListener('click', function(e){
+    var el = e.target.closest && e.target.closest(SEL);
+    if (!el) { if (!(e.target.closest && e.target.closest('#mel-yr-pop'))) close(); return; }
+    var cur = parseInt(el.textContent, 10); if (!cur) return;
+    if (document.getElementById('mel-yr-pop')) return close();
+    var now = new Date().getFullYear(), lo = Math.min(2010, cur), hi = Math.max(now + 1, cur), html = '';
+    for (var y = hi; y >= lo; y--) html += '<div data-y="' + y + '"' + (y === cur ? ' class="on"' : '') + '>' + y + '</div>';
+    var p = document.createElement('div'); p.id = 'mel-yr-pop'; p.innerHTML = html;
+    document.body.appendChild(p);
+    var r = el.getBoundingClientRect();
+    p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.left + r.width / 2 - p.offsetWidth / 2)) + 'px';
+    p.style.top = Math.min(innerHeight - p.offsetHeight - 8, r.bottom + 6) + 'px';
+    var on = p.querySelector('.on'); if (on) p.scrollTop = on.offsetTop - p.clientHeight / 2 + on.offsetHeight / 2;
+    p.onclick = function(ev){ var t = ev.target.closest('[data-y]'); if (!t) return; close(); jump(el, cur, +t.getAttribute('data-y')); };
+    e.stopPropagation();
+  }, true);
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+  window.addEventListener('scroll', function(e){ if (e.target && e.target.id === 'mel-yr-pop') return; close(); }, true);
+})();
+</script>
+<style>
+/* conflict box: "✕ Cancel import" was almost invisible */
+#conflict-resolve-overlay button[onclick^="_crCancel"]{ color:#fff !important; font-weight:700 !important; font-size:0.74rem !important; opacity:1 !important; }
 </style>
 </body>
 </html>
