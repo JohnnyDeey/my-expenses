@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.17.0')) {
+          if (!key.startsWith('mel-v2.17.1')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18852,7 +18852,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.17.0';
+var APP_VERSION = '2.17.1';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -26618,8 +26618,8 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
       return { i: i, hay: norm([(i.desc || ''), (i.category || ''), dateHay(i.date || '')].join(' ')), amt: Math.abs(+i.amount || 0) };
     }).sort(function(a, b){ return a.i.date < b.i.date ? 1 : a.i.date > b.i.date ? -1 : 0; });   // newest first
   }
-  function runLedger(P, box, sum){
-    build();
+    function runLedger(P, box, sum){
+    build(); wireEdits(box);
     var hits = [], tot = {};
     for (var k = 0; k < index.length; k++) { var r = index[k]; if (!test(P, r.hay, r.amt)) continue; hits.push(r); var c = r.i.currency || ''; tot[c] = (tot[c] || 0) + r.amt; }
     var SY = window.SYMS || {}, re = highlighter(P);
@@ -26627,15 +26627,99 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
       (hits.length > MAX ? '<br><span style="color:var(--muted)">Showing the newest ' + MAX + '. Add a word, year or amount to narrow down.</span>' : '');
     box.innerHTML = !hits.length ? '' :
       '<table style="width:100%;border-collapse:collapse;font-family:DM Mono,monospace;font-size:0.64rem;">' +
-      '<thead><tr style="background:var(--ink,#1a140a);color:var(--gold2,#e8b84b);position:sticky;top:0;">' +
-      '<th style="' + TH + 'text-align:left;">DATE</th><th style="' + TH + 'text-align:left;">DESCRIPTION</th><th style="' + TH + 'text-align:right;">AMOUNT</th></tr></thead><tbody>' +
+      '<thead><tr style="background:var(--ink,#1a140a);color:var(--gold2,#e8b84b);position:sticky;top:0;z-index:1;">' +
+      '<th style="' + TH + 'text-align:left;">DATE</th><th style="' + TH + 'text-align:left;">DESCRIPTION</th><th style="width:18px;"></th><th style="' + TH + 'text-align:right;">AMOUNT</th></tr></thead><tbody>' +
       hits.slice(0, MAX).map(function(r, n){
         var i = r.i, d = i.date || '';
-        return '<tr style="background:' + (n % 2 ? 'rgba(200,150,46,0.10)' : 'transparent') + ';">' +
+        return '<tr data-id="' + esc(i.id) + '" style="background:' + (n % 2 ? 'rgba(200,150,46,0.10)' : 'transparent') + ';">' +
           '<td style="padding:5px 6px;white-space:nowrap;color:var(--muted);vertical-align:top;">' + d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) + '</td>' +
-          '<td style="padding:5px 6px;overflow-wrap:anywhere;font-family:DM Sans,sans-serif;font-size:0.7rem;">' + hl(i.desc, re) + (i.category ? '<div style="color:var(--muted);font-family:DM Mono,monospace;font-size:0.58rem;">' + esc(i.category) + '</div>' : '') + '</td>' +
+          '<td style="padding:5px 6px;overflow-wrap:anywhere;font-family:DM Sans,sans-serif;font-size:0.7rem;">' +
+            '<span class="gs-desc" title="Tap to edit" style="cursor:text;">' + hl(i.desc, re) + '</span>' +
+            '<div class="gs-cat" title="Tap to change" style="color:var(--muted);font-family:DM Mono,monospace;font-size:0.58rem;cursor:pointer;">' + (esc(i.category) || '—') + '</div></td>' +
+          '<td style="padding:5px 0;vertical-align:top;text-align:center;"><button class="gs-del" title="Delete (goes to the Recycle Bin)" style="width:14px;height:14px;padding:0;border:none;border-radius:3px;background:#d63a3a;color:#fff;font-size:9px;line-height:14px;cursor:pointer;">✕</button></td>' +
           '<td style="padding:5px 6px;text-align:right;white-space:nowrap;vertical-align:top;">' + (SY[i.currency] || '') + r.amt.toLocaleString(undefined, { maximumFractionDigits: 2 }) + '</td></tr>';
       }).join('') + '</tbody></table>';
+  }
+
+  // ---- edit description / category, delete to the Recycle Bin (Expenses & Income) ----
+  function store(){
+    return mode() === 'income'
+      ? { load: function(){ return window.loadIncomeData() || []; }, save: function(d){ window.saveIncomeData(d); }, cats: function(){ try { return window.getAllIncomeCats(); } catch(e) { return []; } }, ledger: 'renderIncomeLedger' }
+      : { load: function(){ return window.loadData() || []; }, save: function(d){ window.saveData(d); }, cats: function(){ try { return window.getAllCategories(); } catch(e) { return []; } }, ledger: 'renderLedger' };
+  }
+  function refreshApp(name){ [name, 'updateHeaderContext'].forEach(function(f){ try { if (typeof window[f] === 'function') window[f](); } catch(e) {} }); }
+  function updateItem(id, field, val){
+    var S = store(), data = S.load(), e = data.filter(function(x){ return String(x.id) === String(id); })[0];
+    if (!e || e[field] === val) return;
+    e[field] = val; S.save(data); refreshApp(S.ledger);
+    index.forEach(function(r){ if (String(r.i.id) === String(id)) { r.i[field] = val; r.hay = norm([(r.i.desc || ''), (r.i.category || ''), dateHay(r.i.date || '')].join(' ')); } });
+  }
+  function deleteItem(id){
+    var S = store(), data = S.load(), e = data.filter(function(x){ return String(x.id) === String(id); })[0]; if (!e) return;
+    var now = new Date().toISOString().substring(0, 10);
+    if (mode() === 'income') {
+      var tk = window.getIncTrashKey(), t = []; try { t = JSON.parse(localStorage.getItem(tk) || '[]'); } catch(x) {}
+      t.push(Object.assign({}, e, { _trash_source: 'deleted', _trash_date: now, _trash_id: Date.now() + Math.random() }));
+      localStorage.setItem(tk, JSON.stringify(t));
+      try { window.pushIncTrashToFirebase(); } catch(x) {}
+    } else {
+      window.addToTrash([e], 'deleted');
+      try { window.pushTrashToFirebase(); } catch(x) {}
+    }
+    window._lastDeleteTime = Date.now(); window._deletePending = true;
+    S.save(data.filter(function(x){ return String(x.id) !== String(id); }));
+    if (mode() !== 'income') try { window.syncPushNow(); } catch(x) {}
+    refreshApp(S.ledger);
+    cacheKey = null; run(document.getElementById('gs-q').value);
+  }
+  function wireEdits(box){
+    if (box._gsWired) return; box._gsWired = 1;
+    box.addEventListener('click', function(e){
+      var tr = e.target.closest('tr[data-id]'); if (!tr) return;
+      var id = tr.getAttribute('data-id'), it = index.filter(function(r){ return String(r.i.id) === id; })[0]; if (!it) return;
+            // description → small edit box
+      var ds = e.target.closest('.gs-desc');
+      if (ds) {
+        var p = document.createElement('div'); p.id = 'gs-edit';
+        p.style.cssText = 'position:fixed;inset:0;z-index:100006;background:rgba(20,14,6,.55);display:flex;align-items:center;justify-content:center;padding:16px;';
+        var B = 'flex:1;border-radius:8px;padding:9px 0;font-family:DM Mono,monospace;font-size:0.78rem;font-weight:700;cursor:pointer;border:1px solid #c8962e;background:linear-gradient(#fffaf0,#efe3c8);box-shadow:0 3px 0 #9c7420;color:#1a140a;';
+        p.innerHTML = '<div style="background:var(--paper,#f5f0e6);border:1.5px solid #c8962e;border-radius:12px;padding:14px;width:100%;max-width:420px;box-shadow:0 10px 30px rgba(0,0,0,.35);">' +
+          '<textarea id="gs-edit-t" rows="3" style="width:100%;box-sizing:border-box;padding:9px;border:1.5px solid #c8962e;border-radius:8px;font-family:DM Sans,sans-serif;font-size:0.9rem;background:#fff;resize:vertical;"></textarea>' +
+          '<div style="display:flex;gap:8px;margin-top:10px;"><button id="gs-edit-x" style="' + B + '">Cancel</button><button id="gs-edit-ok" style="' + B + 'background:#c8962e;">Save</button></div></div>';
+        document.body.appendChild(p);
+        var ta = document.getElementById('gs-edit-t'); ta.value = it.i.desc || ''; ta.focus(); ta.select();
+        var shut = function(){ p.remove(); };
+        var save = function(){ var v = ta.value.replace(/\s+/g, ' ').trim(); if (v && v !== it.i.desc) { updateItem(id, 'desc', v); ds.textContent = v; } shut(); };
+        document.getElementById('gs-edit-x').onclick = shut;
+        document.getElementById('gs-edit-ok').onclick = save;
+        p.onclick = function(ev){ if (ev.target === p) shut(); };
+        ta.onkeydown = function(k){ if (k.key === 'Enter' && !k.shiftKey) { k.preventDefault(); save(); } else if (k.key === 'Escape') { k.stopPropagation(); shut(); } };
+        return;
+      }
+      // category → type or pick
+      var cs = e.target.closest('.gs-cat');
+      if (cs && !cs.querySelector('input')) {
+        var dl = document.getElementById('gs-cats'); if (!dl) { dl = document.createElement('datalist'); dl.id = 'gs-cats'; document.body.appendChild(dl); }
+        dl.innerHTML = store().cats().map(function(c){ return '<option value="' + esc(c) + '">'; }).join('');
+        var old = it.i.category || '';
+        cs.innerHTML = '<input list="gs-cats" placeholder="' + esc(old) + '" style="width:100%;box-sizing:border-box;font-family:DM Mono,monospace;font-size:0.62rem;padding:2px 4px;border:1.5px solid var(--gold,#c8962e);border-radius:3px;background:#fff;">';
+        var inp = cs.querySelector('input'); inp.focus();
+        var done = function(save){
+          var v = inp.value.trim(); inp.onblur = null;
+          if (save && v && v !== old) { updateItem(id, 'category', v); old = v; }
+          cs.textContent = old || '—';
+        };
+        inp.onblur = function(){ done(true); };
+        inp.onkeydown = function(k){ if (k.key === 'Enter') { k.preventDefault(); inp.blur(); } else if (k.key === 'Escape') { k.stopPropagation(); inp.value = ''; inp.blur(); } };
+        inp.onchange = function(){ if (store().cats().indexOf(inp.value) > -1) inp.blur(); };
+        return;
+      }
+      // delete
+      if (e.target.closest('.gs-del')) {
+        var ask = window.melAsk || function(m){ return Promise.resolve(confirm(m)); };
+        ask('Delete "' + (it.i.desc || '').slice(0, 60) + '"?\nIt goes to the Recycle Bin and can be restored from there.').then(function(ok){ if (ok) deleteItem(id); });
+      }
+    });
   }
 
   // ---- Transfers: people first, with totals ----
@@ -27143,5 +27227,167 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
 /* conflict box: "✕ Cancel import" was almost invisible */
 #conflict-resolve-overlay button[onclick^="_crCancel"]{ color:#fff !important; font-weight:700 !important; font-size:0.74rem !important; opacity:1 !important; }
 </style>
+<script>
+// Typing in any box never triggers the app's letter shortcuts (S, E, I, X, W, D …)
+window.addEventListener('keydown', function(e){
+  if (e.ctrlKey || e.metaKey || e.altKey || !/^[a-z]$/i.test(e.key || '')) return;
+  var t = e.target; if (!t) return;
+  if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) e.stopImmediatePropagation();
+}, true);
+</script>
+<script>
+// 🗑 Recycle Bin (Expenses + Income): card in Manage, fixed-frame overlay like 🔍, restore / delete forever, search
+(function(){
+  var S = { mod: 'exp', q: '' };
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function dmy(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : ''; }
+  function money(c, n){ return ((window.SYMS || {})[c] || '') + (+n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 }); }
+  var M = {
+    exp: { label: '💸 Expenses', tkey: function(){ return window.getTrashKey(); }, push: function(){ try { window.pushTrashToFirebase(); } catch(e) {} },
+           load: function(){ return window.loadData() || []; }, save: function(d){ window.saveData(d); }, ledger: 'renderLedger' },
+    inc: { label: '💰 Income', tkey: function(){ return window.getIncTrashKey(); }, push: function(){ try { window.pushIncTrashToFirebase(); } catch(e) {} },
+           load: function(){ return window.loadIncomeData() || []; }, save: function(d){ window.saveIncomeData(d); }, ledger: 'renderIncomeLedger' }
+  };
+  function trash(m){ try { return JSON.parse(localStorage.getItem(M[m].tkey()) || '[]'); } catch(e) { return []; } }
+  function setTrash(m, t){ localStorage.setItem(M[m].tkey(), JSON.stringify(t)); M[m].push(); }
+  function refresh(m){ [M[m].ledger, 'updateHeaderContext', 'renderTrashPanel', 'renderIncomeTrash'].forEach(function(f){ try { if (typeof window[f] === 'function') window[f](); } catch(e) {} }); }
+  function clean(t){ var o = {}; Object.keys(t).forEach(function(k){ if (k.indexOf('_trash_') !== 0 && k !== '_group_id' && k !== '_group_label') o[k] = t[k]; }); return o; }
+  function restorable(t){ return t._trash_source !== 'skipped' && t.date && (t.amount !== undefined); }
+  function ask(m){ return (window.melAsk || function(x){ return Promise.resolve(confirm(x)); })(m); }
+
+  function restore(ids){
+    var m = S.mod, t = trash(m), back = [], keep = [];
+    t.forEach(function(x){ (ids.indexOf(String(x._trash_id)) > -1 && restorable(x) ? back : keep).push(x); });
+    if (!back.length) return;
+    var data = M[m].load(), have = {}; data.forEach(function(e){ have[String(e.id)] = 1; });
+    back.forEach(function(x){ var e = clean(x); if (!e.id || have[String(e.id)]) e.id = Date.now() + Math.random(); data.push(e); });
+    data.sort(function(a, b){ return (a.date || '').localeCompare(b.date || ''); });
+    M[m].save(data); setTrash(m, keep); refresh(m); render();
+    try { window.showToast('Restored ' + back.length + ' item' + (back.length === 1 ? '' : 's')); } catch(e) {}
+  }
+  function purge(ids){
+    var m = S.mod; setTrash(m, trash(m).filter(function(x){ return ids.indexOf(String(x._trash_id)) < 0; })); refresh(m); render();
+  }
+
+  function shown(){
+    var q = S.q.toLowerCase().trim(), words = q.split(/\s+/).filter(Boolean);
+    return trash(S.mod).filter(function(x){
+      if (!words.length) return true;
+      var h = ' ' + [x.desc, x._raw_line, x.category, dmy(x.date), x.date, x.amount, x._group_label].join(' ').toLowerCase();
+      return words.every(function(w){ return h.indexOf(w) > -1; });
+    }).sort(function(a, b){ return (b._trash_date || '').localeCompare(a._trash_date || '') || (b.date || '').localeCompare(a.date || ''); });
+  }
+  function render(){
+    var ov = document.getElementById('bin-ov'); if (!ov) return;
+    ['exp', 'inc'].forEach(function(m){
+      var b = document.getElementById('bin-t-' + m); b.classList.toggle('on', S.mod === m);
+      b.innerHTML = M[m].label + ' <span class="n">' + trash(m).length + '</span>';
+    });
+    var list = shown(), tot = {}, html = '', lastDay = null, n = 0;
+    list.forEach(function(x){ if (restorable(x)) tot[x.currency || ''] = (tot[x.currency || ''] || 0) + Math.abs(+x.amount || 0); });
+    document.getElementById('bin-sum').innerHTML = list.length
+      ? '<b>' + list.length + '</b> in the bin' + (Object.keys(tot).length ? ' · ' + Object.keys(tot).map(function(c){ return money(c, tot[c]) + ' ' + c; }).join(' · ') : '')
+      : '';
+    list.slice(0, 300).forEach(function(x){
+      if (x._trash_date !== lastDay) { lastDay = x._trash_date; html += '<div class="day">Deleted ' + (dmy(lastDay) || '—') + '</div>'; n = 0; }
+      var ok = restorable(x), id = esc(x._trash_id);
+      html += '<div class="row' + (n++ % 2 ? ' alt' : '') + '">' +
+        '<span class="d">' + dmy(x.date) + '</span>' +
+        '<span class="t">' + esc(ok ? x.desc : (x._raw_line || x.desc || '')) +
+          '<i>' + (ok ? esc(x.category || '') : 'skipped import line') + (x._group_label ? ' · ' + esc(x._group_label) : '') + '</i></span>' +
+        '<span class="a">' + (ok ? money(x.currency, Math.abs(+x.amount || 0)) : '') + '</span>' +
+        (ok ? '<button class="r" data-r="' + id + '" title="Restore">↺</button>' : '<span class="r"></span>') +
+        '<button class="x" data-x="' + id + '" title="Delete forever">✕</button></div>';
+    });
+    if (list.length > 300) html += '<div class="more">Showing the newest 300. Search to narrow down.</div>';
+    document.getElementById('bin-list').innerHTML = html || '<div class="empty">🗑 The bin is empty</div>';
+    document.getElementById('bin-all').disabled = !list.some(restorable);
+    document.getElementById('bin-empty').disabled = !list.length;
+  }
+
+  function build(){
+    var ov = document.createElement('div'); ov.id = 'bin-ov';
+    ov.innerHTML = '<style>' +
+      '#bin-ov{position:fixed;inset:0;z-index:99500;background:rgba(20,14,6,.55);display:none;justify-content:center;align-items:flex-start;padding:60px 10px 10px;box-sizing:border-box;}' +
+      '#bin-ov .box{background:var(--paper,#f5f0e6);border:1.5px solid var(--gold,#c8962e);border-radius:12px;width:100%;max-width:560px;max-height:calc(100dvh - 80px);display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden;}' +
+      '#bin-ov .hd{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--ink,#1a140a);color:var(--gold2,#e8b84b);}' +
+      '#bin-ov .hd b{font-family:"Playfair Display",serif;font-size:1rem;flex:1;}' +
+      '#bin-ov .hd button{background:none;border:none;color:rgba(255,255,255,.6);font-size:1.25rem;cursor:pointer;padding:0 2px;}' +
+      '#bin-ov .tabs{display:flex;gap:6px;padding:8px 12px 0;}' +
+      '#bin-ov .tabs button{flex:1;padding:7px 0;border-radius:8px;border:1px solid #c8962e;background:linear-gradient(#fffaf0,#efe3c8);box-shadow:0 2px 0 #9c7420;font-family:"DM Mono",monospace;font-size:0.72rem;font-weight:700;cursor:pointer;color:#1a140a;}' +
+      '#bin-ov .tabs button.on{background:#c8962e;}' +
+      '#bin-ov .tabs .n{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:#1a140a;color:#e8b84b;font-size:0.62rem;}' +
+      '#bin-ov .srch{padding:8px 12px;}' +
+      '#bin-ov .srch input{width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #c8962e;border-radius:8px;font-family:"DM Mono",monospace;font-size:0.8rem;background:#fff;}' +
+      '#bin-sum{padding:0 12px 6px;font-family:"DM Mono",monospace;font-size:0.68rem;}' +
+      '#bin-list{overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:80px;}' +
+      '#bin-list .day{background:var(--ink,#1a140a);color:var(--gold2,#e8b84b);font-family:"DM Mono",monospace;font-size:0.62rem;padding:4px 10px;position:sticky;top:0;}' +
+      '#bin-list .row{display:flex;gap:6px;align-items:flex-start;padding:6px 8px 6px 10px;font-family:"DM Mono",monospace;font-size:0.64rem;}' +
+      '#bin-list .row.alt{background:rgba(200,150,46,.10);}' +
+      '#bin-list .d{color:var(--muted,#777);white-space:nowrap;padding-top:1px;}' +
+      '#bin-list .t{flex:1;min-width:0;overflow-wrap:anywhere;font-family:"DM Sans",sans-serif;font-size:0.72rem;}' +
+      '#bin-list .t i{display:block;font-style:normal;color:var(--muted,#777);font-family:"DM Mono",monospace;font-size:0.58rem;}' +
+      '#bin-list .a{white-space:nowrap;padding-top:1px;}' +
+      '#bin-list .r,#bin-list .x{width:22px;height:20px;flex-shrink:0;border-radius:5px;border:1px solid #c8962e;background:linear-gradient(#fffaf0,#efe3c8);box-shadow:0 2px 0 #9c7420;font-size:0.72rem;line-height:1;cursor:pointer;padding:0;}' +
+      '#bin-list span.r{border:none;background:none;box-shadow:none;}' +
+      '#bin-list .x{border-color:#d63a3a;color:#d63a3a;box-shadow:0 2px 0 #9e2a2a;}' +
+      '#bin-list .empty,#bin-list .more{padding:24px 10px;text-align:center;font-family:"DM Mono",monospace;font-size:0.72rem;color:var(--muted,#777);}' +
+      '#bin-ov .ft{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border,#ddd);}' +
+      '#bin-ov .ft button{flex:1;padding:9px 0;border-radius:8px;font-family:"DM Mono",monospace;font-size:0.74rem;font-weight:700;cursor:pointer;border:1px solid #c8962e;background:linear-gradient(#fffaf0,#efe3c8);box-shadow:0 3px 0 #9c7420;color:#1a140a;}' +
+      '#bin-ov .ft button.danger{border-color:#d63a3a;color:#d63a3a;box-shadow:0 3px 0 #9e2a2a;}' +
+      '#bin-ov .ft button:disabled{opacity:.4;cursor:default;}' +
+      '</style>' +
+      '<div class="box"><div class="hd"><b>🗑 Recycle Bin</b><button id="bin-x" title="Close">✕</button></div>' +
+      '<div class="tabs"><button id="bin-t-exp"></button><button id="bin-t-inc"></button></div>' +
+      '<div class="srch"><input id="bin-q" type="search" placeholder="Search the bin…" autocomplete="off"></div>' +
+      '<div id="bin-sum"></div><div id="bin-list"></div>' +
+      '<div class="ft"><button id="bin-all">↺ Restore all shown</button><button id="bin-empty" class="danger">✕ Delete all shown</button></div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
+    document.getElementById('bin-x').onclick = close;
+    document.getElementById('bin-t-exp').onclick = function(){ S.mod = 'exp'; render(); };
+    document.getElementById('bin-t-inc').onclick = function(){ S.mod = 'inc'; render(); };
+    var q = document.getElementById('bin-q'), tm = null;
+    q.addEventListener('input', function(){ clearTimeout(tm); tm = setTimeout(function(){ S.q = q.value; render(); }, 200); });
+    document.getElementById('bin-list').addEventListener('click', function(e){
+      var r = e.target.closest('[data-r]'), x = e.target.closest('[data-x]');
+      if (r) restore([r.getAttribute('data-r')]);
+      if (x) ask('Delete this item forever? It cannot be restored.').then(function(ok){ if (ok) purge([x.getAttribute('data-x')]); });
+    });
+    document.getElementById('bin-all').onclick = function(){
+      var ids = shown().filter(restorable).map(function(x){ return String(x._trash_id); });
+      ask('Restore ' + ids.length + ' item' + (ids.length === 1 ? '' : 's') + ' to ' + (S.mod === 'inc' ? 'Income' : 'Expenses') + '?').then(function(ok){ if (ok) restore(ids); });
+    };
+    document.getElementById('bin-empty').onclick = function(){
+      var ids = shown().map(function(x){ return String(x._trash_id); });
+      ask('Delete ' + ids.length + ' item' + (ids.length === 1 ? '' : 's') + ' forever? They cannot be restored.').then(function(ok){ if (ok) purge(ids); });
+    };
+    return ov;
+  }
+  function open(m){
+    var ov = document.getElementById('bin-ov') || build();
+    S.mod = m || (window._appMode === 'income' ? 'inc' : 'exp'); S.q = ''; document.getElementById('bin-q').value = '';
+    ov.style.display = 'flex'; render();
+  }
+  function close(){ var ov = document.getElementById('bin-ov'); if (ov) ov.style.display = 'none'; }
+  window.openRecycleBin = open;
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+  ['lockApp', 'logOut'].forEach(function(f){ var o = window[f]; if (typeof o === 'function') window[f] = function(){ close(); return o.apply(this, arguments); }; });
+
+  // card in Manage (Expenses and Income), just above Danger
+  setInterval(function(){
+    var hub = document.getElementById('mg-hub'); if (!hub || !hub.offsetParent || document.getElementById('bin-card')) return;
+    var c = document.createElement('div'); c.id = 'bin-card';
+    c.style.cssText = 'display:flex;align-items:center;gap:12px;margin:10px 0;padding:12px 14px;border:1.5px solid #c8962e;border-radius:10px;background:linear-gradient(#fffaf0,#efe3c8);box-shadow:0 3px 0 #9c7420,0 4px 8px rgba(0,0,0,.12);cursor:pointer;';
+    c.innerHTML = '<span style="font-size:1.5rem;">🗑</span><span style="flex:1;font-family:\'Playfair Display\',serif;font-weight:700;font-size:1rem;color:#1a140a;">Recycle Bin</span>' +
+      '<span id="bin-card-n" style="font-family:\'DM Mono\',monospace;font-size:0.72rem;padding:2px 8px;border-radius:10px;background:#1a140a;color:#e8b84b;"></span><span style="color:#9c7420;font-size:1.1rem;">›</span>';
+    c.onclick = function(){ open(); };
+    var danger = [].filter.call(hub.querySelectorAll('*'), function(e){ return e.children.length === 0 && /^\s*danger/i.test(e.textContent); })[0];
+    var anchor = danger; while (anchor && anchor.parentNode !== hub) anchor = anchor.parentNode;
+    if (anchor) hub.insertBefore(c, anchor); else hub.appendChild(c);
+  }, 800);
+  setInterval(function(){ var n = document.getElementById('bin-card-n'); if (n) { var m = window._appMode === 'income' ? 'inc' : 'exp'; try { n.textContent = trash(m).length; } catch(e) {} } }, 1500);
+})();
+</script>
 </body>
 </html>
