@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.17.3')) {
+          if (!key.startsWith('mel-v2.17.4')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -1009,7 +1009,7 @@ window._clearMathHighlights = function(ta) {
 };
 
 window._evalMathInLine = function _evalMathInLine(line) {
-  return line.replace(/([€₦$£₵¢#])\s*([\d\.\+\-\*\/\(\)\s]+)/g, function(match, sym, expr) {
+  return line.replace(new RegExp('('+melSymAlt()+'|[¢#])\\s*([\\d\\.\\+\\-\\*\\/\\(\\)\\s]+)','g'), function(match, sym, expr) {
     var clean = expr.replace(/\s/g,'');
     if(!/[\+\-\*\/]/.test(clean)) return match; // no operator, skip
     try {
@@ -5428,7 +5428,7 @@ var ALL_WORLD_CURRENCIES = [
   {code:'CAD', sym:'C$', name:'Canadian Dollar'},
   {code:'AUD', sym:'A$', name:'Australian Dollar'},
   {code:'JPY', sym:'¥',  name:'Japanese Yen'},
-  {code:'CNY', sym:'¥',  name:'Chinese Yuan'},
+  {code:'CNY', sym:'CN¥', name:'Chinese Yuan'},
   {code:'INR', sym:'₹',  name:'Indian Rupee'},
   {code:'BRL', sym:'R$', name:'Brazilian Real'},
   {code:'MXN', sym:'MX$',name:'Mexican Peso'},
@@ -6246,7 +6246,7 @@ function parseInput() {
     // Always include all world currencies
     ALL_WORLD_CURRENCIES.forEach(function(c){ map[c.sym] = c.code; });
     // Also include active SYMS (covers custom added currencies)
-    Object.keys(SYMS).forEach(function(code){ map[SYMS[code]] = code; });
+    Object.keys(SYMS).forEach(function(code){ map[SYMS[code]] = code; }); ALL_WORLD_CURRENCIES.concat(Object.keys(SYMS).map(function(k){return {code:k};})).forEach(function(c){ if(/^[A-Z]{3}$/.test(c.code) && !map[c.code]) map[c.code] = c.code; });
     // Legacy fallbacks
     map['#'] = 'NGN';
     return map;
@@ -6267,14 +6267,14 @@ function parseInput() {
       return {
         desc: m[1].trim().replace(/[:\s;]+$/, '').trim(),
         amtStr: m[3].replace(/,/g, ''),
-        currency: SYM_MAP[sym] || 'NGN'
+                currency: (window.melActivateCur ? melActivateCur(SYM_MAP[sym] || 'NGN') : (SYM_MAP[sym] || 'NGN'))
       };
     }
     return null;
   }
 
   lines.forEach(function(rawLine) {
-    var line = cleanLine(rawLine);
+    var line = cleanLine(rawLine); if (window.melCodeSuffix) line = melCodeSuffix(line);
 
     // -- Date detection --
     var dm = line.match(dateRe);
@@ -6335,7 +6335,7 @@ function parseInput() {
       if (!caseA) {
         var plainNum = rightPart.replace(/,/g,'');
         if (/^-?[\d.]+$/.test(plainNum)) {
-          skippedLines.push({ line: rawLine.trim(), reason: 'No currency symbol — add ₵ ₦ € $ £ or your currency symbol before the amount' });
+          skippedLines.push({ line: rawLine.trim(), reason: (window.melCurReason && melCurReason(cleaned)) || 'No currency symbol — add ₵ ₦ € $ £ or your currency symbol before the amount' });
           return;
         }
       }
@@ -6376,12 +6376,12 @@ function parseInput() {
         // Strategy 3: plain number at end but NO currency symbol → skip
         var m3 = cleaned.match(/^(.+?)\s+(mon)?(-?[\d,]+\.?\d*)\s*$/);
         if (m3) {
-          skippedLines.push({ line: rawLine.trim(), reason: 'No currency symbol — add ₵ ₦ € $ £ or your currency symbol before the amount' });
+          skippedLines.push({ line: rawLine.trim(), reason: (window.melCurReason && melCurReason(cleaned)) || 'No currency symbol — add ₵ ₦ € $ £ or your currency symbol before the amount' });
           return;
         } else {
           // Has digits but didn't parse? Flag it
           if (/\d/.test(cleaned)) {
-            skippedLines.push({ line: rawLine.trim(), reason: 'Has numbers but pattern not recognised: ' + cleaned });
+            skippedLines.push({ line: rawLine.trim(), reason: (window.melCurReason && melCurReason(cleaned)) || ('Has numbers but pattern not recognised: ' + cleaned) });
           }
           return;
         }
@@ -13108,7 +13108,7 @@ function renderCurrencyManager() {
       rm.style.cssText = 'background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;padding:0 0 0 4px;line-height:1;';
       rm.title = 'Remove ' + code;
       (function(c){ rm.addEventListener('click', function(){ removeCurrency(c); }); })(code);
-      pill.appendChild(rm);
+      /* pill.appendChild(rm); */
     }
     el.appendChild(pill);
   });
@@ -18854,7 +18854,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.17.3';
+var APP_VERSION = '2.17.4';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -25022,7 +25022,7 @@ syncInit();
       root = $('rc-tbl');
       if (!root) { root = document.createElement('div'); root.id = 'rc-tbl'; root.style.cssText = 'height:100%;overflow:auto;background:#fff;'; stage.appendChild(root); }
       root.innerHTML = '<table style="width:100%;border-collapse:collapse;font-family:DM Mono,monospace;font-size:0.72rem;">' + lines.map(function(l, n){
-        var m = l.match(/^(.*?)\s*([€$£₦]?\s?\d[\d.,]*)\s*[€$£₦]?\s*$/), name = m ? m[1] : l, amt = m ? m[2] : '';
+        var m = l.match(new RegExp('^(.*?)\\s*((?:'+melSymAlt()+')?\\s?\\d[\\d.,]*)\\s*(?:'+melSymAlt()+')?\\s*$')), name = m ? m[1] : l, amt = m ? m[2] : '';
         return '<tr style="background:' + (n % 2 ? 'rgba(200,150,46,0.10)' : 'transparent') + ';"><td style="padding:5px 8px;">' + esc(name) + '</td><td style="padding:5px 8px;text-align:right;white-space:nowrap;">' + esc(amt) + '</td></tr>';
       }).join('') + '</table>';
       txt.style.display = 'none'; root.style.display = 'block';
@@ -27411,6 +27411,22 @@ window.addEventListener('keydown', function(e){
     if (anchor) hub.insertBefore(c, anchor); else hub.appendChild(c);
   }, 800);
   setInterval(function(){ var n = document.getElementById('bin-card-n'); if (n) { var m = window._appMode === 'income' ? 'inc' : 'exp'; try { n.textContent = trash(m).length; } catch(e) {} } }, 1500);
+})();
+</script>
+<script>
+window.melSymAlt=function(){var s={};try{(window.ALL_WORLD_CURRENCIES||[]).forEach(function(c){if(c.sym)s[c.sym]=1})}catch(e){}try{for(var k in (window.SYMS||{}))s[SYMS[k]]=1}catch(e){}['€','₦','$','£','₵'].forEach(function(x){s[x]=1});return Object.keys(s).filter(function(x){return !/^[A-Za-z]+$/.test(x)}).sort(function(a,b){return b.length-a.length}).map(function(x){return x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}).join('|')};
+(function(){var DEF=['NGN','EUR','USD','GBP'];
+function fill(){if(typeof loadUserCurrencies!=='function')return;var act=loadUserCurrencies();
+document.querySelectorAll('select').forEach(function(s){var vals=[].map.call(s.options,function(o){return o.value});if(!DEF.every(function(c){return vals.indexOf(c)!==-1}))return;
+var ref=s.querySelector('option[value="GBP"]');act.forEach(function(c){if(vals.indexOf(c)!==-1)return;var o=document.createElement('option');o.value=c;o.textContent=ref.textContent.replace('GBP',c).replace('£',(window.SYMS&&SYMS[c])||c);s.appendChild(o)})})}
+var oR=window.refreshAllCurrencyDropdowns;if(oR)window.refreshAllCurrencyDropdowns=function(){var r=oR.apply(this,arguments);fill();return r};
+var t;new MutationObserver(function(ms){for(var i=0;i<ms.length;i++)for(var j=0;j<ms[i].addedNodes.length;j++){var n=ms[i].addedNodes[j];if(n.nodeType===1&&(n.tagName==='SELECT'||n.querySelector&&n.querySelector('select'))){clearTimeout(t);t=setTimeout(fill,200);return}}}).observe(document.body,{childList:true,subtree:true});
+setTimeout(fill,500);window.melFillCurrencies=fill;})();
+(function(){
+function known(){var k={};try{(ALL_WORLD_CURRENCIES||[]).forEach(function(c){k[c.code]=1;k[c.sym]=1})}catch(e){}try{for(var c in SYMS){k[c]=1;k[SYMS[c]]=1}}catch(e){}try{JSON.parse(localStorage.getItem('expense_custom_currencies')||'[]').forEach(function(c){k[c.code]=1;k[c.sym]=1})}catch(e){}return k}
+window.melCodeSuffix=function(s){return s.replace(/(\s)(-?[\d,]+(?:\.\d+)?)\s*([A-Z]{3})\s*$/,function(m,sp,n,c){return known()[c]?sp+c+n:m})};
+window.melCurReason=function(s){var k=known(),t=null,m=s.match(/(?:^|\s)([^\s\d.,]{1,4}?)\s?-?[\d,]+(?:\.\d+)?\s*$/);if(m&&(/\p{Sc}/u.test(m[1])||/^[A-Z]{3}$/.test(m[1])))t=m[1];if(!t){m=s.match(/[\d,]+(?:\.\d+)?\s*([A-Z]{3})\s*$/);if(m)t=m[1]}if(!t||k[t])return null;return 'New currency "'+t+'": add it under Manage → Currencies (use + Own), then parse again'};
+window.melActivateCur=function(code){try{var act=loadUserCurrencies();if(code&&act.indexOf(code)===-1){var w=(ALL_WORLD_CURRENCIES||[]).some(function(c){return c.code===code});if(w){act.push(code);saveUserCurrencies(act);try{renderCurrencyManager()}catch(e){}showToast(code+' added to your currencies')}}}catch(e){}return code};
 })();
 </script>
 </body>
