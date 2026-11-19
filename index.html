@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.17.8')) {
+          if (!key.startsWith('mel-v2.17.9')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -2131,7 +2131,7 @@ input[placeholder^="Symbol e.g"] ~ button{display:none!important}
     <div class="import-right">
       <div class="import-header-bar">
         <div>
-          <div class="import-title">Transaction Journal &mdash; <span id="import-period-label">Select a month</span></div>
+          <div class="import-title">Expenses Journal &mdash; <span id="import-period-label">Select a month</span></div>
           <div class="import-status" id="import-status">Select a year and month on the left to begin</div>
         </div>
         <div style="position:relative;">
@@ -6284,7 +6284,7 @@ function loadMonthIntoTextarea() {
       localStorage.removeItem(pendingBufKey);
     }
     ta.className = 'textarea-existing';
-    statusEl.textContent = monthData.length + ' entries saved for this month — you can edit and re-parse';
+    statusEl.textContent = monthData.length + ' entries saved — edit and re-parse';
     statusEl.className = 'import-status has-data';
     clearBtn.style.display = 'inline-flex';
   } else {
@@ -19015,7 +19015,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.17.8';
+var APP_VERSION = '2.17.9';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -27654,6 +27654,40 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 window.addEventListener('pagehide',flush);})();
 (function(){var st=document.createElement('style');st.textContent='body{-webkit-touch-callout:none}input,textarea,[contenteditable="true"]{-webkit-touch-callout:default}';document.head.appendChild(st);
 document.addEventListener('contextmenu',function(e){if(e.shiftKey)return;var t=e.target;if(t&&t.closest&&t.closest('input,textarea,select,[contenteditable="true"]'))return;e.preventDefault()},true);})();
+(function(){var SKIP={all:1,bam:1,bob:1,cad:1,cop:1,cup:1,gel:1,mad:1,mop:1,pen:1,ron:1,rub:1,sos:1,top:1,try:1},ALIAS={trl:'TRY',rubl:'RUB',gell:'GEL'},MAP=null,busy=false;
+function map(){if(MAP)return MAP;MAP={};(window.ALL_WORLD_CURRENCIES||[]).forEach(function(c){MAP[c.code.toLowerCase()]=c.sym||c.code});for(var a in ALIAS)if(MAP[ALIAS[a].toLowerCase()])MAP[a]=MAP[ALIAS[a].toLowerCase()];return MAP}
+function sym(t){var k=t.toLowerCase(),s=map()[k];if(!s)return null;if(SKIP[k]&&t!==t.toUpperCase())return null;return s}
+function fix(s){s=s.replace(/(^|[\s:;(])([A-Za-z]{3,4})\s?(?=\d)/g,function(m,pre,t){var y=sym(t);return y?pre+y:m});
+return s.replace(/(^|[\s:;(])(\d[\d.,]*)\s?([A-Za-z]{3,4})$/,function(m,pre,n,t){var y=SKIP[t.toLowerCase()]?null:sym(t);return y?pre+y+n:m})}
+function conv(ta){if(busy||ta.selectionStart!==ta.selectionEnd)return;var pos=ta.selectionStart,v=ta.value,ls=v.lastIndexOf('\n',pos-1)+1,before=v.slice(ls,pos),nb=fix(before);if(nb===before)return;
+ta.value=v.slice(0,ls)+nb+v.slice(pos);var np=ls+nb.length;ta.setSelectionRange(np,np);busy=true;try{ta.dispatchEvent(new Event('input',{bubbles:true}))}finally{busy=false}}
+function ok(t){return t&&t.tagName==='TEXTAREA'&&(t.id==='raw-input'||t.id==='inc-raw-input')}
+document.addEventListener('input',function(e){if(ok(e.target)&&!e.isComposing)conv(e.target)},true);
+document.addEventListener('compositionend',function(e){if(ok(e.target))setTimeout(function(){conv(e.target)},0)},true);
+window.melCurShortcuts=function(){return map()};window.melCurFix=fix;})();
+(function(){var CTRY='Abkhazia|RUB;Afghanistan|AFN;Akrotiri and Dhekelia|EUR;Albania|ALL;Algeria|DZD;Andorra|EUR;Angola|AOA;Anguilla|XCD;Antigua and Barbuda|XCD;Argentina|ARS;Armenia|AMD;Aruba|AWG;Ascension Island|SHP;Australia|AUD;Austria|EUR;Azerbaijan|AZN;Bahamas|BSD;Bahrain|BHD;Bangladesh|BDT;Barbados|BBD;Belarus|BYN;Belgium|EUR;Belize|BZD;Benin|XOF;Bermuda|BMD;Bhutan|BTN;Bolivia|BOB;Bonaire|USD;Bosnia and Herzegovina|BAM;Botswana|BWP;Brazil|BRL;British Virgin Islands|USD;Brunei|BND;Bulgaria|EUR;Burkina Faso|XOF;Burundi|BIF;Cambodia|KHR;Cameroon|XAF;Canada|CAD;Cape Verde|CVE;Cayman Islands|KYD;Central African Republic|XAF;Chad|XAF;Chile|CLP;China|CNY;Colombia|COP;Comoros|KMF;Congo (DR)|CDF;Congo (Republic)|XAF;Cook Islands|NZD;Costa Rica|CRC;Croatia|EUR;Cuba|CUP;Curaçao|XCG;Cyprus|EUR;Czech Republic|CZK;Denmark|DKK;Djibouti|DJF;Dominica|XCD;Dominican Republic|DOP;Ecuador|USD;Egypt|EGP;El Salvador|USD;Equatorial Guinea|XAF;Eritrea|ERN;Estonia|EUR;Eswatini|SZL;Ethiopia|ETB;Falkland Islands|FKP;Faroe Islands|DKK;Fiji|FJD;Finland|EUR;France|EUR;French Polynesia|XPF;Gabon|XAF;Gambia|GMD;Georgia|GEL;Germany|EUR;Ghana|GHS;Gibraltar|GIP;Greece|EUR;Greenland|DKK;Grenada|XCD;Guatemala|GTQ;Guernsey|GBP;Guinea|GNF;Guinea-Bissau|XOF;Guyana|GYD;Haiti|HTG;Honduras|HNL;Hong Kong|HKD;Hungary|HUF;Iceland|ISK;India|INR;Indonesia|IDR;Iran|IRR;Iraq|IQD;Ireland|EUR;Isle of Man|GBP;Israel|ILS;Italy|EUR;Ivory Coast|XOF;Jamaica|JMD;Japan|JPY;Jersey|GBP;Jordan|JOD;Kazakhstan|KZT;Kenya|KES;Kiribati|AUD;Kosovo|EUR;Kuwait|KWD;Kyrgyzstan|KGS;Laos|LAK;Latvia|EUR;Lebanon|LBP;Lesotho|LSL;Liberia|LRD;Libya|LYD;Liechtenstein|CHF;Lithuania|EUR;Luxembourg|EUR;Macau|MOP;Madagascar|MGA;Malawi|MWK;Malaysia|MYR;Maldives|MVR;Mali|XOF;Malta|EUR;Marshall Islands|USD;Mauritania|MRU;Mauritius|MUR;Mexico|MXN;Micronesia|USD;Moldova|MDL;Monaco|EUR;Mongolia|MNT;Montenegro|EUR;Montserrat|XCD;Morocco|MAD;Mozambique|MZN;Myanmar|MMK;Namibia|NAD;Nauru|AUD;Nepal|NPR;Netherlands|EUR;New Caledonia|XPF;New Zealand|NZD;Nicaragua|NIO;Niger|XOF;Nigeria|NGN;Niue|NZD;North Korea|KPW;North Macedonia|MKD;Northern Cyprus|TRY;Norway|NOK;Oman|OMR;Pakistan|PKR;Palau|USD;Palestine|ILS;Panama|PAB;Papua New Guinea|PGK;Paraguay|PYG;Peru|PEN;Philippines|PHP;Pitcairn Islands|NZD;Poland|PLN;Portugal|EUR;Puerto Rico|USD;Qatar|QAR;Romania|RON;Russia|RUB;Rwanda|RWF;Saint Helena|SHP;Saint Kitts and Nevis|XCD;Saint Lucia|XCD;Saint Vincent and the Grenadines|XCD;Samoa|WST;San Marino|EUR;São Tomé and Príncipe|STN;Saudi Arabia|SAR;Senegal|XOF;Serbia|RSD;Seychelles|SCR;Sierra Leone|SLE;Singapore|SGD;Sint Maarten|XCG;Slovakia|EUR;Slovenia|EUR;Solomon Islands|SBD;Somalia|SOS;South Africa|ZAR;South Korea|KRW;South Sudan|SSP;Spain|EUR;Sri Lanka|LKR;Sudan|SDG;Suriname|SRD;Sweden|SEK;Switzerland|CHF;Syria|SYP;Taiwan|TWD;Tajikistan|TJS;Tanzania|TZS;Thailand|THB;Timor-Leste|USD;Togo|XOF;Tonga|TOP;Trinidad and Tobago|TTD;Tunisia|TND;Turkey|TRY;Turkmenistan|TMT;Turks and Caicos Islands|USD;Tuvalu|AUD;Uganda|UGX;Ukraine|UAH;United Arab Emirates|AED;United Kingdom|GBP;United States|USD;Uruguay|UYU;Uzbekistan|UZS;Vanuatu|VUV;Vatican City|EUR;Venezuela|VES;Vietnam|VND;Wallis and Futuna|XPF;Yemen|YER;Zambia|ZMW;Zimbabwe|ZWG';
+var SKIP={all:1,bam:1,bob:1,cad:1,cop:1,cup:1,gel:1,mad:1,mop:1,pen:1,ron:1,rub:1,sos:1,top:1,try:1},ROWS=null,last={};
+function rowsData(){if(ROWS)return ROWS;var W={};(window.ALL_WORLD_CURRENCIES||[]).forEach(function(c){W[c.code]=c});ROWS=[];var used={};
+CTRY.split(';').forEach(function(p){var a=p.split('|'),c=W[a[1]];if(!c)return;used[c.code]=1;ROWS.push({country:a[0],code:c.code,sym:c.sym,name:c.name})});
+Object.keys(W).forEach(function(k){if(!used[k])ROWS.push({country:'',code:k,sym:W[k].sym,name:W[k].name})});return ROWS}
+function sc(r){var k=r.code.toLowerCase();return SKIP[k]?r.code:k}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function ws(t,q){return t.toLowerCase().split(/[\s\-()·]+/).some(function(w){return w.indexOf(q)===0})}
+var st=document.createElement('style');st.textContent='.mel-tj-title{font-size:clamp(1.05rem,4.6vw,1.45rem)!important;line-height:1.2!important;margin:0!important}.mel-tj-title *{font-size:inherit!important}.mel-tj-tools{display:inline-flex;align-items:center;gap:6px;vertical-align:middle;flex-shrink:0}.mel-tj-btn{width:26px!important;height:26px!important;padding:0!important;border-radius:8px!important;border:1px solid rgba(138,109,31,.45)!important;background:linear-gradient(180deg,#fff8e6,#f0dfb4)!important;color:#8a6d1f!important;font-weight:700!important;line-height:1!important;cursor:pointer!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;box-shadow:0 2px 0 #b8922f,0 3px 6px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.8)!important;transition:transform .08s,box-shadow .08s!important;font-family:Georgia,serif!important}.mel-tj-btn:active{transform:translateY(2px)!important;box-shadow:0 0 0 #b8922f,0 1px 2px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.8)!important}.mel-cf-btn{font-size:1.05rem!important}.mel-tj-i{font-size:.95rem!important;font-style:italic!important}#mel-cf{position:fixed;inset:0;z-index:100001;background:transparent}#mel-cf .card{position:fixed;width:min(280px,calc(100vw - 24px));background:var(--paper);border:1.5px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden}#mel-cf .hd{padding:8px 10px 6px;font-family:"DM Mono",monospace;font-size:.66rem;color:var(--muted);line-height:1.4}#mel-cf .hd b{color:var(--ink)}#mel-cf input{margin:0 8px 6px;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--paper2);color:var(--ink);font-family:"DM Mono",monospace;font-size:.76rem}#mel-cf .ls{overflow-y:auto;max-height:190px;padding:0 4px 4px}#mel-cf .r{display:flex;align-items:center;gap:6px;padding:5px 6px;border-bottom:1px solid var(--border);font-family:"DM Mono",monospace;font-size:.72rem;color:var(--ink);cursor:pointer}#mel-cf .r:active{background:rgba(127,127,127,.15)}#mel-cf .r .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#mel-cf .r .k{color:var(--muted)}#mel-cf .r .s{min-width:34px;text-align:right;font-weight:700}';document.head.appendChild(st);
+function insert(ta,s){if(!ta)return;var a=last[ta.id]!=null?last[ta.id]:ta.value.length;ta.value=ta.value.slice(0,a)+s+ta.value.slice(a);ta.focus();ta.setSelectionRange(a+s.length,a+s.length);ta.dispatchEvent(new Event('input',{bubbles:true}))}
+function open(taId,btn){var ta=document.getElementById(taId);var old=document.getElementById('mel-cf');if(old)old.remove();var ov=document.createElement('div');ov.id='mel-cf';ov.innerHTML='<div class="card"><div class="hd">Type the code by the amount, any case: <b>jpy 1200</b> → ¥1200. Codes in CAPS: type in caps. Tap to insert.</div><input type="search" placeholder="Country, currency or code…" autocomplete="off" spellcheck="false"><div class="ls"></div></div>';document.body.appendChild(ov);
+var card=ov.querySelector('.card'),inp=ov.querySelector('input'),ls=ov.querySelector('.ls');
+function pos(){var r=btn?btn.getBoundingClientRect():{bottom:80,top:80,right:innerWidth-12},vh=window.visualViewport?visualViewport.height:innerHeight,w=card.offsetWidth,h=card.offsetHeight,left=Math.max(12,Math.min(r.right-w,innerWidth-w-12)),top=r.bottom+6;if(top+h>vh-8&&r.top-h-6>8)top=r.top-h-6;card.style.left=left+'px';card.style.top=Math.max(8,top)+'px'}
+function close(){ov.remove();document.removeEventListener('keydown',kd,true);window.removeEventListener('resize',pos)}function kd(e){if(e.key==='Escape')close()}document.addEventListener('keydown',kd,true);window.addEventListener('resize',pos);
+ov.addEventListener('click',function(e){if(e.target===ov){close();return}var r=e.target.closest('.r');if(r){insert(ta,r.dataset.s);close()}});
+function draw(){var q=inp.value.trim().toLowerCase(),a=[],b=[];rowsData().forEach(function(r){if(!q){a.push(r);return}if(r.country.toLowerCase().indexOf(q)===0)a.push(r);else if(r.code.toLowerCase().indexOf(q)===0||ws(r.country,q)||ws(r.name,q)||r.sym.toLowerCase()===q)b.push(r)});var L=a.concat(b);
+ls.innerHTML=L.length?L.map(function(r){return '<div class="r" data-s="'+esc(r.sym)+'" title="'+esc(r.name)+'"><span class="n">'+esc(r.country||r.name)+'</span><span class="k">'+esc(sc(r))+'</span><span class="s">'+esc(r.sym)+'</span></div>'}).join(''):'<div style="padding:8px;font-family:DM Mono,monospace;font-size:.72rem;opacity:.6">No match</div>';ls.scrollTop=0}
+inp.addEventListener('input',draw);draw();pos();setTimeout(function(){inp.focus();pos()},50);if(window.visualViewport)visualViewport.addEventListener('resize',pos)}
+['raw-input','inc-raw-input'].forEach(function(id){document.addEventListener('selectionchange',function(){var t=document.activeElement;if(t&&t.id===id)last[id]=t.selectionStart});document.addEventListener('blur',function(e){if(e.target&&e.target.id===id)last[id]=e.target.selectionStart},true)});
+function mount(){['raw-input','inc-raw-input'].forEach(function(id){var ta=document.getElementById(id);if(!ta||(ta._melCf&&document.contains(ta._melCf)))return;var p=ta,dots=null,title=null;for(var i=0;i<7&&p&&!dots;i++){p=p.parentElement;if(!p)break;dots=[].find.call(p.querySelectorAll('button,span,div,a'),function(el){return el.children.length===0&&el.textContent.trim()==='⋮'})}if(!dots)return;
+var tm=[].filter.call(p.querySelectorAll('h1,h2,h3,h4,div,span'),function(el){return /^\s*(Transaction|Expenses?|Income) Journal/.test(el.textContent)&&el.textContent.indexOf('⋮')===-1&&el.textContent.length<80});title=tm.filter(function(el){return /^H[1-4]$/.test(el.tagName)})[0]||tm[0];if(title)title.classList.add('mel-tj-title')
+var wrap=document.createElement('span');wrap.className='mel-tj-tools';dots.parentNode.insertBefore(wrap,dots);wrap.appendChild(dots);dots.textContent='i';dots.classList.add('mel-tj-btn','mel-tj-i');dots.title=dots.title||'Hints';var b=document.createElement('button');b.type='button';b.className='mel-tj-btn mel-cf-btn';b.textContent='¤';b.title='Currency shortcuts';b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();open(id,b)});wrap.appendChild(b);ta._melCf=wrap})}
+mount();setTimeout(mount,1500);setInterval(mount,4000);window.melCurrencyFinder=open;})();
 </script>
 </body>
 </html>
