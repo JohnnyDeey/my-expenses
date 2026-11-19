@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.17.5')) {
+          if (!key.startsWith('mel-v2.17.7')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18854,7 +18854,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.17.5';
+var APP_VERSION = '2.17.7';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -27428,14 +27428,45 @@ window.melCodeSuffix=function(s){return s.replace(/(\s)(-?[\d,]+(?:\.\d+)?)\s*([
 window.melCurReason=function(s){var k=known(),t=null,m=s.match(/(?:^|\s)([^\s\d.,]{1,4}?)\s?-?[\d,]+(?:\.\d+)?\s*$/);if(m&&(/\p{Sc}/u.test(m[1])||/^[A-Z]{3}$/.test(m[1])))t=m[1];if(!t){m=s.match(/[\d,]+(?:\.\d+)?\s*([A-Z]{3})\s*$/);if(m)t=m[1]}if(!t||k[t])return null;return 'New currency "'+t+'": add it under Manage → Currencies (use + Own), then parse again'};
 window.melActivateCur=function(code){try{var act=loadUserCurrencies();if(code&&act.indexOf(code)===-1){var w=(ALL_WORLD_CURRENCIES||[]).some(function(c){return c.code===code});if(w){act.push(code);saveUserCurrencies(act);try{renderCurrencyManager()}catch(e){}showToast(code+' added to your currencies')}}}catch(e){}return code};
 })();
-(function(){function sync(){try{if(typeof loadUserCurrencies!=='function')return;var act=loadUserCurrencies(),before=act.join(','),cust=[];try{cust=JSON.parse(localStorage.getItem('expense_custom_currencies')||'[]')}catch(e){}var cb=JSON.stringify(cust);
-var add=function(c){c=String(c||'').toUpperCase().trim();if(c&&act.indexOf(c)===-1)act.push(c)};try{loadData().forEach(function(i){add(i.currency)})}catch(e){}try{loadIncomeData().forEach(function(i){add(i.currency)})}catch(e){}
-var live=typeof _db!=='undefined'&&_db&&typeof _userId!=='undefined'&&_userId;
-var finish=function(r,rc){(r||[]).forEach(add);(rc||[]).forEach(function(x){if(x&&x.code&&!cust.some(function(y){return y.code===x.code}))cust.push(x)});
-if(act.join(',')!==before||JSON.stringify(cust)!==cb){localStorage.setItem('expense_user_currencies',JSON.stringify(act));localStorage.setItem('expense_custom_currencies',JSON.stringify(cust));try{buildSYMS()}catch(e){}try{refreshAllCurrencyDropdowns()}catch(e){}try{renderCurrencyManager()}catch(e){}}
-if(live&&(JSON.stringify(r)!==JSON.stringify(act)||JSON.stringify(rc||[])!==JSON.stringify(cust)))userCol('settings').doc('default').set({user_currencies:JSON.stringify(act),custom_currencies:JSON.stringify(cust)},{merge:true}).catch(function(){})};
-if(live)userCol('settings').doc('default').get().then(function(s){var v=s.exists?s.data():{},r=[],rc=[];try{r=JSON.parse(v.user_currencies||'[]')}catch(e){}try{rc=JSON.parse(v.custom_currencies||'[]')}catch(e){}finish(r,rc)}).catch(function(){finish(null,null)});else finish(null,null)}catch(e){}}
+(function(){var RK='mel_cur_removed';function getRm(){try{return JSON.parse(localStorage.getItem(RK)||'[]')}catch(e){return[]}}function setRm(a){localStorage.setItem(RK,JSON.stringify(a))}
+function live(){return typeof _db!=='undefined'&&_db&&typeof _userId!=='undefined'&&_userId}
+window.melCurRemoved={get:getRm,set:setRm,push:function(){if(live())userCol('settings').doc('default').set({removed_currencies:JSON.stringify(getRm())},{merge:true}).catch(function(){})}};
+var oS=window.saveUserCurrencies;if(oS)window.saveUserCurrencies=function(codes){var rm=getRm(),n=rm.filter(function(c){return codes.indexOf(c)===-1});if(n.length!==rm.length){setRm(n);melCurRemoved.push()}return oS.apply(this,arguments)};
+function sync(){try{if(typeof loadUserCurrencies!=='function')return;var act=loadUserCurrencies(),before=act.join(','),cust=[],rm=getRm(),rmb=rm.join(',');try{cust=JSON.parse(localStorage.getItem('expense_custom_currencies')||'[]')}catch(e){}var cb=JSON.stringify(cust);
+var used={};try{loadData().forEach(function(i){if(i.currency)used[String(i.currency).toUpperCase().trim()]=1})}catch(e){}try{loadIncomeData().forEach(function(i){if(i.currency)used[String(i.currency).toUpperCase().trim()]=1})}catch(e){}
+var add=function(c){c=String(c||'').toUpperCase().trim();if(c&&act.indexOf(c)===-1)act.push(c)};
+var finish=function(r,rc,rr){(rr||[]).forEach(function(c){if(rm.indexOf(c)===-1)rm.push(c)});rm=rm.filter(function(c){return !used[c]});Object.keys(used).forEach(add);(r||[]).forEach(function(c){if(rm.indexOf(c)===-1)add(c)});
+act=act.filter(function(c){return rm.indexOf(c)===-1||DEFAULT_CURRENCIES.indexOf(c)!==-1});
+(rc||[]).forEach(function(x){if(x&&x.code&&!cust.some(function(y){return y.code===x.code}))cust.push(x)});
+if(act.join(',')!==before||JSON.stringify(cust)!==cb||rm.join(',')!==rmb){localStorage.setItem('expense_user_currencies',JSON.stringify(act));localStorage.setItem('expense_custom_currencies',JSON.stringify(cust));setRm(rm);try{buildSYMS()}catch(e){}try{refreshAllCurrencyDropdowns()}catch(e){}try{renderCurrencyManager()}catch(e){}}
+if(live()&&(JSON.stringify(r)!==JSON.stringify(act)||JSON.stringify(rc||[])!==JSON.stringify(cust)||JSON.stringify(rr||[])!==JSON.stringify(rm)))userCol('settings').doc('default').set({user_currencies:JSON.stringify(act),custom_currencies:JSON.stringify(cust),removed_currencies:JSON.stringify(rm)},{merge:true}).catch(function(){})};
+if(live())userCol('settings').doc('default').get().then(function(s){var v=s.exists?s.data():{},r=[],rc=[],rr=[];try{r=JSON.parse(v.user_currencies||'[]')}catch(e){}try{rc=JSON.parse(v.custom_currencies||'[]')}catch(e){}try{rr=JSON.parse(v.removed_currencies||'[]')}catch(e){}finish(r,rc,rr)}).catch(function(){finish(null,null,null)});else finish(null,null,null)}catch(e){}}
 setTimeout(sync,3000);setTimeout(sync,12000);window.addEventListener('focus',function(){setTimeout(sync,500)});window.melSyncCurrencies=sync;})();
+(function(){var st=document.createElement('style');st.textContent='#currency-manager-content>div{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .5s}';document.head.appendChild(st);
+var T=null,P=null,sx=0,sy=0;function stop(){if(T){clearTimeout(T);T=null}if(P)P.style.transform='';P=null}
+document.addEventListener('pointerdown',function(e){var p=e.target.closest&&e.target.closest('#currency-manager-content>div');if(!p)return;stop();P=p;sx=e.clientX;sy=e.clientY;p.style.transform='scale(0.93)';T=setTimeout(function(){T=null;var s=p.querySelectorAll('span'),code=s.length>1?s[1].textContent.trim():'';stop();removeFlow(code)},600)},true);
+document.addEventListener('pointerup',stop,true);document.addEventListener('pointercancel',stop,true);
+document.addEventListener('pointermove',function(e){if(T&&(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10))stop()},true);
+document.addEventListener('contextmenu',function(e){if(e.target.closest&&e.target.closest('#currency-manager-content>div'))e.preventDefault()},true);
+function ask(m){return window.melAsk?melAsk(m):Promise.resolve(confirm(m))}
+function same(i,code){return String(i.currency||'').toUpperCase().trim()===code}
+async function removeFlow(code){if(!code)return;if(DEFAULT_CURRENCIES.indexOf(code)!==-1){showToast(code+' is a default currency and cannot be removed');return}
+var sym=(window.SYMS&&SYMS[code])||'';if(!await ask('Remove '+code+(sym&&sym!==code?' '+sym:'')+' from your currencies?'))return;
+var exp=loadData(),inc=[];try{inc=loadIncomeData()}catch(e){}var ex=exp.filter(function(i){return same(i,code)}),ix=inc.filter(function(i){return same(i,code)}),n=ex.length+ix.length,w=n===1?'entry':'entries';
+if(n){if(!await ask(code+' has '+n+' '+w+' ('+ex.length+' expenses, '+ix.length+' income). They must be deleted to remove '+code+'. Delete them?'))return;
+if(!await ask('⚠️ '+n+' '+w+' will move to the ♻️ Recycle Bin, where you can restore them. Continue?'))return;
+var saveInc=['saveIncomeData','saveIncData','saveIncome'].find(function(f){return typeof window[f]==='function'});if(ix.length&&!saveInc){showToast('Income save function not found. Nothing changed.');return}
+if(ex.length){addToTrash(ex,'deleted');try{pushTrashToFirebase()}catch(e){}saveData(exp.filter(function(i){return ex.indexOf(i)===-1}))}
+if(ix.length){var k=getTrashKey(),tmp=ix.map(function(i){var c=JSON.parse(JSON.stringify(i));c._melTmp=1;return c});addToTrash(tmp,'deleted');var all=JSON.parse(localStorage.getItem(k)||'[]'),moved=all.filter(function(t){return t._melTmp});localStorage.setItem(k,JSON.stringify(all.filter(function(t){return !t._melTmp})));moved.forEach(function(t){delete t._melTmp});
+var ik=getIncTrashKey();localStorage.setItem(ik,JSON.stringify(JSON.parse(localStorage.getItem(ik)||'[]').concat(moved)));try{pushIncTrashToFirebase()}catch(e){}window[saveInc](inc.filter(function(i){return ix.indexOf(i)===-1}))}
+try{await syncPushNow()}catch(e){}var pf=Object.keys(window).filter(function(k){return typeof window[k]==='function'&&/inc/i.test(k)&&/push/i.test(k)&&!/trash/i.test(k)});var pn=pf.find(function(k){return /now/i.test(k)})||pf[0];try{pn&&await window[pn]()}catch(e){}}
+var rm=melCurRemoved.get();if(rm.indexOf(code)===-1){rm.push(code);melCurRemoved.set(rm)}saveUserCurrencies(loadUserCurrencies().filter(function(c){return c!==code}));melCurRemoved.push();
+try{renderCurrencyManager()}catch(e){}try{renderDashboard()}catch(e){}try{renderIncomeDashboard()}catch(e){}showToast(code+' removed'+(n?' · '+n+' '+w+' in the Recycle Bin':''))}
+window.melRemoveCurrency=removeFlow;})();
+(function(){var unsub=null,uid=null,t=null;
+function run(){clearTimeout(t);t=setTimeout(function(){(window.requestIdleCallback||setTimeout)(function(){try{melSyncCurrencies()}catch(e){}})},800)}
+function attach(){try{var live=typeof _db!=='undefined'&&_db&&typeof _userId!=='undefined'&&_userId;if(!live){if(unsub){unsub();unsub=null;uid=null}return}if(uid===_userId&&unsub)return;if(unsub)unsub();uid=_userId;unsub=userCol('settings').doc('default').onSnapshot(function(s){if(s.metadata&&s.metadata.hasPendingWrites)return;run()},function(){unsub=null;uid=null})}catch(e){}}
+setTimeout(attach,2000);setInterval(attach,5000);})();
 </script>
 </body>
 </html>
