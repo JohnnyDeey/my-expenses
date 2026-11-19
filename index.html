@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.17.7')) {
+          if (!key.startsWith('mel-v2.17.8')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -1886,6 +1886,12 @@ main button:not(.month-btn):not(.bmenu-item):not(.cat-dropdown-item):not(.year-n
   box-shadow: 0 0 0 rgba(0,0,0,0.25) !important;
 }
 .cb-action-btn { font-family:'DM Mono',monospace !important; font-size:0.72rem !important; font-weight:700 !important; letter-spacing:1px !important; text-transform:uppercase; border-radius:3px !important; border:none !important; }
+</style>
+<style>
+#currency-add-select,
+input[placeholder^="Code e.g"],
+input[placeholder^="Symbol e.g"],
+input[placeholder^="Symbol e.g"] ~ button{display:none!important}
 </style>
 </head>
 <body>
@@ -5410,6 +5416,161 @@ var CURRENCY_STORAGE_KEY = 'expense_user_currencies';
 
 // Master list of world currencies available to pick from
 var ALL_WORLD_CURRENCIES = [
+  {code:'AFN', sym:'؋', name:'Afghan Afghani'},
+  {code:'ALL', sym:'Lek', name:'Albanian Lek'},
+  {code:'DZD', sym:'DA', name:'Algerian Dinar'},
+  {code:'AOA', sym:'Kz', name:'Angolan Kwanza'},
+  {code:'ARS', sym:'AR$', name:'Argentine Peso'},
+  {code:'AMD', sym:'֏', name:'Armenian Dram'},
+  {code:'AWG', sym:'ƒ', name:'Aruban Florin'},
+  {code:'AUD', sym:'A$', name:'Australian Dollar'},
+  {code:'AZN', sym:'₼', name:'Azerbaijani Manat'},
+  {code:'BSD', sym:'BS$', name:'Bahamian Dollar'},
+  {code:'BHD', sym:'BD', name:'Bahraini Dinar'},
+  {code:'BDT', sym:'৳', name:'Bangladeshi Taka'},
+  {code:'BBD', sym:'Bds$', name:'Barbadian Dollar'},
+  {code:'BYN', sym:'BYN', name:'Belarusian Ruble'},
+  {code:'BZD', sym:'BZ$', name:'Belize Dollar'},
+  {code:'BMD', sym:'BD$', name:'Bermudian Dollar'},
+  {code:'BTN', sym:'Nu.', name:'Bhutanese Ngultrum'},
+  {code:'BOB', sym:'Bs', name:'Bolivian Boliviano'},
+  {code:'BAM', sym:'KM', name:'Bosnia-Herzegovina Convertible Mark'},
+  {code:'BWP', sym:'BWP', name:'Botswana Pula'},
+  {code:'BRL', sym:'R$', name:'Brazilian Real'},
+  {code:'GBP', sym:'£', name:'British Pound'},
+  {code:'BND', sym:'B$', name:'Brunei Dollar'},
+  {code:'BIF', sym:'FBu', name:'Burundian Franc'},
+  {code:'XPF', sym:'CFP', name:'CFP Franc'},
+  {code:'KHR', sym:'៛', name:'Cambodian Riel'},
+  {code:'CAD', sym:'CA$', name:'Canadian Dollar'},
+  {code:'CVE', sym:'CVE', name:'Cape Verdean Escudo'},
+  {code:'XCG', sym:'Cg', name:'Caribbean Guilder'},
+  {code:'KYD', sym:'CI$', name:'Cayman Islands Dollar'},
+  {code:'XAF', sym:'FCFA', name:'Central African CFA Franc'},
+  {code:'CLP', sym:'CL$', name:'Chilean Peso'},
+  {code:'CNY', sym:'CN¥', name:'Chinese Yuan'},
+  {code:'COP', sym:'COL$', name:'Colombian Peso'},
+  {code:'KMF', sym:'CF', name:'Comorian Franc'},
+  {code:'CDF', sym:'FC', name:'Congolese Franc'},
+  {code:'CRC', sym:'₡', name:'Costa Rican Colón'},
+  {code:'CUP', sym:'CU$', name:'Cuban Peso'},
+  {code:'CZK', sym:'Kč', name:'Czech Koruna'},
+  {code:'DKK', sym:'Dkr', name:'Danish Krone'},
+  {code:'DJF', sym:'Fdj', name:'Djiboutian Franc'},
+  {code:'DOP', sym:'RD$', name:'Dominican Peso'},
+  {code:'XCD', sym:'EC$', name:'East Caribbean Dollar'},
+  {code:'EGP', sym:'E£', name:'Egyptian Pound'},
+  {code:'ERN', sym:'Nfk', name:'Eritrean Nakfa'},
+  {code:'ETB', sym:'Br', name:'Ethiopian Birr'},
+  {code:'EUR', sym:'€', name:'Euro'},
+  {code:'FKP', sym:'FK£', name:'Falkland Islands Pound'},
+  {code:'FJD', sym:'FJ$', name:'Fijian Dollar'},
+  {code:'GMD', sym:'GMD', name:'Gambian Dalasi'},
+  {code:'GEL', sym:'₾', name:'Georgian Lari'},
+  {code:'GHS', sym:'₵', name:'Ghanaian Cedi'},
+  {code:'GIP', sym:'GI£', name:'Gibraltar Pound'},
+  {code:'GTQ', sym:'GTQ', name:'Guatemalan Quetzal'},
+  {code:'GNF', sym:'FG', name:'Guinean Franc'},
+  {code:'GYD', sym:'G$', name:'Guyanese Dollar'},
+  {code:'HTG', sym:'HTG', name:'Haitian Gourde'},
+  {code:'HNL', sym:'HNL', name:'Honduran Lempira'},
+  {code:'HKD', sym:'HK$', name:'Hong Kong Dollar'},
+  {code:'HUF', sym:'Ft', name:'Hungarian Forint'},
+  {code:'ISK', sym:'Ikr', name:'Icelandic Króna'},
+  {code:'INR', sym:'₹', name:'Indian Rupee'},
+  {code:'IDR', sym:'Rp', name:'Indonesian Rupiah'},
+  {code:'IRR', sym:'﷼', name:'Iranian Rial'},
+  {code:'IQD', sym:'ID', name:'Iraqi Dinar'},
+  {code:'ILS', sym:'₪', name:'Israeli New Shekel'},
+  {code:'JMD', sym:'J$', name:'Jamaican Dollar'},
+  {code:'JPY', sym:'¥', name:'Japanese Yen'},
+  {code:'JOD', sym:'JD', name:'Jordanian Dinar'},
+  {code:'KZT', sym:'₸', name:'Kazakhstani Tenge'},
+  {code:'KES', sym:'KSh', name:'Kenyan Shilling'},
+  {code:'KWD', sym:'KD', name:'Kuwaiti Dinar'},
+  {code:'KGS', sym:'сом', name:'Kyrgyz Som'},
+  {code:'LAK', sym:'₭', name:'Lao Kip'},
+  {code:'LBP', sym:'LL', name:'Lebanese Pound'},
+  {code:'LSL', sym:'LSL', name:'Lesotho Loti'},
+  {code:'LRD', sym:'L$', name:'Liberian Dollar'},
+  {code:'LYD', sym:'LD', name:'Libyan Dinar'},
+  {code:'MOP', sym:'MOP$', name:'Macanese Pataca'},
+  {code:'MKD', sym:'den', name:'Macedonian Denar'},
+  {code:'MGA', sym:'Ar', name:'Malagasy Ariary'},
+  {code:'MWK', sym:'MK', name:'Malawian Kwacha'},
+  {code:'MYR', sym:'RM', name:'Malaysian Ringgit'},
+  {code:'MVR', sym:'Rf', name:'Maldivian Rufiyaa'},
+  {code:'MRU', sym:'UM', name:'Mauritanian Ouguiya'},
+  {code:'MUR', sym:'MUR', name:'Mauritian Rupee'},
+  {code:'MXN', sym:'MX$', name:'Mexican Peso'},
+  {code:'MDL', sym:'MDL', name:'Moldovan Leu'},
+  {code:'MNT', sym:'₮', name:'Mongolian Tögrög'},
+  {code:'MAD', sym:'DH', name:'Moroccan Dirham'},
+  {code:'MZN', sym:'MT', name:'Mozambican Metical'},
+  {code:'MMK', sym:'Ks', name:'Myanmar Kyat'},
+  {code:'NAD', sym:'N$', name:'Namibian Dollar'},
+  {code:'NPR', sym:'रु', name:'Nepalese Rupee'},
+  {code:'TWD', sym:'NT$', name:'New Taiwan Dollar'},
+  {code:'NZD', sym:'NZ$', name:'New Zealand Dollar'},
+  {code:'NIO', sym:'C$', name:'Nicaraguan Córdoba'},
+  {code:'NGN', sym:'₦', name:'Nigerian Naira'},
+  {code:'KPW', sym:'KPW', name:'North Korean Won'},
+  {code:'NOK', sym:'Nkr', name:'Norwegian Krone'},
+  {code:'OMR', sym:'R.O.', name:'Omani Rial'},
+  {code:'PKR', sym:'Rs', name:'Pakistani Rupee'},
+  {code:'PAB', sym:'B/.', name:'Panamanian Balboa'},
+  {code:'PGK', sym:'PGK', name:'Papua New Guinean Kina'},
+  {code:'PYG', sym:'₲', name:'Paraguayan Guaraní'},
+  {code:'PEN', sym:'S/', name:'Peruvian Sol'},
+  {code:'PHP', sym:'₱', name:'Philippine Peso'},
+  {code:'PLN', sym:'zł', name:'Polish Złoty'},
+  {code:'QAR', sym:'QR', name:'Qatari Riyal'},
+  {code:'RON', sym:'lei', name:'Romanian Leu'},
+  {code:'RUB', sym:'₽', name:'Russian Ruble'},
+  {code:'RWF', sym:'FRw', name:'Rwandan Franc'},
+  {code:'SHP', sym:'SH£', name:'Saint Helena Pound'},
+  {code:'WST', sym:'WS$', name:'Samoan Tālā'},
+  {code:'SAR', sym:'SR', name:'Saudi Riyal'},
+  {code:'RSD', sym:'din', name:'Serbian Dinar'},
+  {code:'SCR', sym:'SCR', name:'Seychellois Rupee'},
+  {code:'SLE', sym:'Le', name:'Sierra Leonean Leone'},
+  {code:'SGD', sym:'S$', name:'Singapore Dollar'},
+  {code:'SBD', sym:'SI$', name:'Solomon Islands Dollar'},
+  {code:'SOS', sym:'Sh.So.', name:'Somali Shilling'},
+  {code:'ZAR', sym:'R', name:'South African Rand'},
+  {code:'KRW', sym:'₩', name:'South Korean Won'},
+  {code:'SSP', sym:'SS£', name:'South Sudanese Pound'},
+  {code:'LKR', sym:'LKR', name:'Sri Lankan Rupee'},
+  {code:'SDG', sym:'SD£', name:'Sudanese Pound'},
+  {code:'SRD', sym:'SR$', name:'Surinamese Dollar'},
+  {code:'SZL', sym:'SZL', name:'Swazi Lilangeni'},
+  {code:'SEK', sym:'Skr', name:'Swedish Krona'},
+  {code:'CHF', sym:'Fr.', name:'Swiss Franc'},
+  {code:'SYP', sym:'LS', name:'Syrian Pound'},
+  {code:'STN', sym:'Db', name:'São Tomé and Príncipe Dobra'},
+  {code:'TJS', sym:'SM', name:'Tajikistani Somoni'},
+  {code:'TZS', sym:'TSh', name:'Tanzanian Shilling'},
+  {code:'THB', sym:'฿', name:'Thai Baht'},
+  {code:'TOP', sym:'T$', name:'Tongan Paʻanga'},
+  {code:'TTD', sym:'TT$', name:'Trinidad and Tobago Dollar'},
+  {code:'TND', sym:'DT', name:'Tunisian Dinar'},
+  {code:'TRY', sym:'₺', name:'Turkish Lira'},
+  {code:'TMT', sym:'TMT', name:'Turkmenistani Manat'},
+  {code:'AED', sym:'د.إ', name:'UAE Dirham'},
+  {code:'USD', sym:'$', name:'US Dollar'},
+  {code:'UGX', sym:'USh', name:'Ugandan Shilling'},
+  {code:'UAH', sym:'₴', name:'Ukrainian Hryvnia'},
+  {code:'UYU', sym:'$U', name:'Uruguayan Peso'},
+  {code:'UZS', sym:'UZS', name:'Uzbekistani Sum'},
+  {code:'VUV', sym:'VT', name:'Vanuatu Vatu'},
+  {code:'VES', sym:'Bs.S', name:'Venezuelan Bolívar'},
+  {code:'VED', sym:'Bs.D', name:'Venezuelan Digital Bolívar'},
+  {code:'VND', sym:'₫', name:'Vietnamese Đồng'},
+  {code:'XOF', sym:'CFA', name:'West African CFA Franc'},
+  {code:'YER', sym:'YER', name:'Yemeni Rial'},
+  {code:'ZMW', sym:'ZK', name:'Zambian Kwacha'},
+  {code:'ZWG', sym:'ZiG', name:'Zimbabwe Gold'}
+]; [
   {code:'NGN', sym:'₦', name:'Nigerian Naira'},
   {code:'EUR', sym:'€', name:'Euro'},
   {code:'USD', sym:'$', name:'US Dollar'},
@@ -6254,7 +6415,7 @@ function parseInput() {
   var SYM_MAP = buildSymMap();
   // Build regex from all known symbols (escape special chars)
   var symList = Object.keys(SYM_MAP).map(function(s){
-    return s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+    return (/^[A-Za-z]/.test(s)?'(?<![A-Za-z])':'') + s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
   }).join('|');
   var curAmtRe = new RegExp('^(.*?)\\s*[:\\.\\u2026;]?\\s*('+symList+')\\s*([\\d,]+\\.?\\d*)\\s*$');
 
@@ -17022,7 +17183,7 @@ function syncPushNow() {
   window._knownFirebaseMonths = localMonths;
   batch.set(userCol('settings').doc('default'), {
     custom_categories: cats, custom_cat_rules: rules, user_currencies: localStorage.getItem(CURRENCY_STORAGE_KEY) || '',
-    display_name: _userName, updated: Date.now()
+    display_name: _userName, updated: Date.now(), removed_currencies: localStorage.getItem('mel_cur_removed') || '[]', custom_currencies: localStorage.getItem('expense_custom_currencies') || '[]'
   });
   batch.commit()
     .then(function(){
@@ -18854,7 +19015,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.17.7';
+var APP_VERSION = '2.17.8';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -26547,7 +26708,7 @@ input[placeholder^="Search name"]{ flex:1 1 160px; min-width:0 !important; width
       batch.commit()
         .then(function(){ try { localStorage.setItem(hk(), JSON.stringify(nh)); } catch(e) {} syncSetStatus('live'); console.log('Synced ' + changed.length + ' of ' + months.length + ' months'); })
         .catch(function(e){ console.error('Push error:', e); syncSetStatus('error'); });
-    }, 1500);
+    }, (window._melSyncNow ? 0 : 1500));
   };
 })();
 </script>
@@ -27467,6 +27628,32 @@ window.melRemoveCurrency=removeFlow;})();
 function run(){clearTimeout(t);t=setTimeout(function(){(window.requestIdleCallback||setTimeout)(function(){try{melSyncCurrencies()}catch(e){}})},800)}
 function attach(){try{var live=typeof _db!=='undefined'&&_db&&typeof _userId!=='undefined'&&_userId;if(!live){if(unsub){unsub();unsub=null;uid=null}return}if(uid===_userId&&unsub)return;if(unsub)unsub();uid=_userId;unsub=userCol('settings').doc('default').onSnapshot(function(s){if(s.metadata&&s.metadata.hasPendingWrites)return;run()},function(){unsub=null;uid=null})}catch(e){}}
 setTimeout(attach,2000);setInterval(attach,5000);})();
+(function(){var st=document.createElement('style');st.textContent='.mel-cur-row{display:flex!important;gap:8px;align-items:stretch;flex-wrap:nowrap!important}.mel-cur-box{position:relative;flex:3;min-width:0}.mel-cur-box input{width:100%;box-sizing:border-box;height:100%;min-height:38px;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--paper2);color:var(--ink);font-family:"DM Mono",monospace;font-size:.8rem}.mel-cur-add{flex:1!important;min-width:0;width:auto!important}.mel-cur-list{position:absolute;left:0;right:0;top:calc(100% + 4px);max-height:240px;overflow-y:auto;background:var(--paper2);border:1.5px solid var(--border);border-radius:10px;z-index:9999;box-shadow:0 6px 18px rgba(0,0,0,.2);display:none}.mel-cur-list div{padding:9px 10px;font-family:"DM Mono",monospace;font-size:.78rem;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--border)}.mel-cur-list div.on{background:rgba(127,127,127,.18)}';document.head.appendChild(st);
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function hit(t,q){t=t.toLowerCase();if(!q)return true;if(q.length>=3&&t.indexOf(q)!==-1)return true;return t.split(/[\s—\-()]+/).some(function(w){return w.indexOf(q)===0})}
+function enhance(){var sel=document.getElementById('currency-add-select');if(!sel)return;var row=sel.parentElement,scope=row.parentElement||row;
+[].forEach.call(scope.querySelectorAll('input,button'),function(el){if(el.closest('.mel-cur-box'))return;var p=(el.placeholder||'')+' '+(el.tagName==='BUTTON'?el.textContent:'');if(/Code e\.g|Symbol e\.g|\bOwn\b/.test(p))el.style.display='none'});
+if(sel._melInp)return;sel.style.display='none';
+var box=document.createElement('div');box.className='mel-cur-box';var inp=document.createElement('input');inp.type='search';inp.placeholder='Search currency…';inp.autocomplete='off';inp.spellcheck=false;
+var list=document.createElement('div');list.className='mel-cur-list';box.appendChild(inp);box.appendChild(list);sel.parentNode.insertBefore(box,sel);sel._melInp=inp;row.classList.add('mel-cur-row');
+var add=[].find.call(row.querySelectorAll('button'),function(b){return /Add/.test(b.textContent)});if(add)add.classList.add('mel-cur-add');
+var hi=0;function rows(){return list.querySelectorAll('div[data-v]')}
+function draw(){var q=inp.value.trim().toLowerCase();var it=[].filter.call(sel.options,function(o){return o.value&&hit(o.textContent,q)});hi=0;
+list.innerHTML=it.length?it.map(function(o,i){return '<div data-v="'+o.value+'"'+(i?'':' class="on"')+'>'+esc(o.textContent)+'</div>'}).join(''):'<div style="cursor:default;opacity:.6">No match</div>';list.style.display='block';list.scrollTop=0}
+function pick(v){var o=[].find.call(sel.options,function(x){return x.value===v});if(!o)return;sel.value=v;inp.value=o.textContent;list.style.display='none'}
+inp.addEventListener('focus',draw);inp.addEventListener('input',function(){sel.value='';draw()});
+inp.addEventListener('keydown',function(e){var r=rows();if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(list.style.display!=='block')draw();hi=Math.max(0,Math.min(r.length-1,hi+(e.key==='ArrowDown'?1:-1)));r.forEach(function(x,i){x.classList.toggle('on',i===hi)});r[hi]&&r[hi].scrollIntoView({block:'nearest'})}else if(e.key==='Enter'){e.preventDefault();if(sel.value){add&&add.click()}else if(r[hi]){pick(r[hi].dataset.v);add&&add.click()}}else if(e.key==='Escape')list.style.display='none'});
+list.addEventListener('click',function(e){var d=e.target.closest('div[data-v]');if(d)pick(d.dataset.v)});
+document.addEventListener('pointerdown',function(e){if(!box.contains(e.target))list.style.display='none'},true)}
+var oR=window.renderCurrencyManager;if(oR)window.renderCurrencyManager=function(){var r=oR.apply(this,arguments);try{enhance();var s=document.getElementById('currency-add-select');if(s&&s._melInp&&!s.value)s._melInp.value=''}catch(e){}return r};
+enhance();setTimeout(enhance,1500);})();
+(function(){var o=window.syncPush;if(!o)return;var pend=false;window.syncPush=function(){pend=true;return o.apply(this,arguments)};
+var oS=window.syncSetStatus;if(oS)window.syncSetStatus=function(s){if(s==='live'&&!window._isMerging)pend=false;return oS.apply(this,arguments)};
+function flush(){if(!pend)return;pend=false;window._melSyncNow=true;try{o()}finally{window._melSyncNow=false}}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{try{_db&&_db.enableNetwork&&_db.enableNetwork().catch(function(){})}catch(e){}try{melSyncCurrencies()}catch(e){}}});
+window.addEventListener('pagehide',flush);})();
+(function(){var st=document.createElement('style');st.textContent='body{-webkit-touch-callout:none}input,textarea,[contenteditable="true"]{-webkit-touch-callout:default}';document.head.appendChild(st);
+document.addEventListener('contextmenu',function(e){if(e.shiftKey)return;var t=e.target;if(t&&t.closest&&t.closest('input,textarea,select,[contenteditable="true"]'))return;e.preventDefault()},true);})();
 </script>
 </body>
 </html>
