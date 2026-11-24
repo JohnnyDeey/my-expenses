@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.18.2')) {
+          if (!key.startsWith('mel-v2.18.3')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -18345,7 +18345,7 @@ function confirmCode() {
   _saveRegEmail();
   // Save account creation date locally for Member Since display
   if (!localStorage.getItem('expense_joined_' + _userId)) {
-    localStorage.setItem('expense_joined_' + _userId, String(Date.now()));
+    /* no placeholder: real date comes from the registration record */
   }
   // Ensure phone confirm key uses correct uid (may have been stored as _pending_uid)
   localStorage.setItem(PHONE_CONFIRM_KEY + '_' + _userId, '1');
@@ -19015,7 +19015,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.18.2';
+var APP_VERSION = '2.18.3';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
