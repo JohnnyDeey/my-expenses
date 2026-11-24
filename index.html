@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.18.1')) {
+          if (!key.startsWith('mel-v2.18.2')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -19015,7 +19015,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.18.1';
+var APP_VERSION = '2.18.2';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -23254,7 +23254,8 @@ syncInit();
     }
     function rollToday(){
       var today = iso(new Date()), A = ST && ST.periods && ST.periods[0];
-      if (A && ST.liveTo === undefined && A.to < today && A.to.slice(0, 7) === today.slice(0, 7)) ST.liveTo = A.to;
+      if (A && A.from && A.from.slice(8) === '01' && ST.liveTo && ST.liveTo === A.to && A.from.slice(0, 7) < today.slice(0, 7)) { var k = (+today.slice(0, 4) - +A.from.slice(0, 4)) * 12 + (+today.slice(5, 7) - +A.from.slice(5, 7)), dd = +today.slice(8); var mv = function(p){ if (!p || !p.from || p.from.slice(8) !== '01') return; var m = +p.from.slice(5, 7) - 1 + k, Y = +p.from.slice(0, 4) + Math.floor(m / 12), M = m % 12 + 1, L = new Date(Y, M, 0).getDate(), pd = function(n){ return (n < 10 ? '0' : '') + n; }; p.from = Y + '-' + pd(M) + '-01'; p.to = Y + '-' + pd(M) + '-' + pd(Math.min(dd, L)); }; ST.periods.forEach(mv); if (ST.prev) ST.prev.forEach(mv); ST.liveTo = today; save(); return; }
+      if (A && !ST.liveTo && A.from && A.from.slice(8) === '01' && A.to < today && A.to.slice(0, 7) === today.slice(0, 7)) ST.liveTo = A.to;
       if (!A || !ST.liveTo || ST.liveTo !== A.to || A.to >= today) return;
       var d = span(A.to, today) - 1;
       ST.periods.forEach(function(p){ p.to = shiftDays(p.to, d); });
