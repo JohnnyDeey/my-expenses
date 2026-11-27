@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.18.5')) {
+          if (!key.startsWith('mel-v2.18.6')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -19015,7 +19015,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.18.5';
+var APP_VERSION = '2.18.6';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -27650,8 +27650,8 @@ var oR=window.renderCurrencyManager;if(oR)window.renderCurrencyManager=function(
 enhance();setTimeout(enhance,1500);})();
 (function(){var o=window.syncPush;if(!o)return;var pend=false;window.syncPush=function(){pend=true;return o.apply(this,arguments)};
 var oS=window.syncSetStatus;if(oS)window.syncSetStatus=function(s){if(s==='live'&&!window._isMerging)pend=false;return oS.apply(this,arguments)};
-function flush(){if(!pend)return;pend=false;window._melSyncNow=true;try{o()}finally{window._melSyncNow=false}}
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{try{_db&&_db.enableNetwork&&_db.enableNetwork().catch(function(){})}catch(e){}try{melSyncCurrencies()}catch(e){}}});
+function flush(){try{window.melMergeIncome&&window.melMergeIncome()}catch(e){}if(window.melMergePush){window.melMergePush();return}if(!pend)return;pend=false;window._melSyncNow=true;try{o()}finally{window._melSyncNow=false}}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();else{try{melSyncCurrencies()}catch(e){}}});
 window.addEventListener('pagehide',flush);})();
 (function(){var st=document.createElement('style');st.textContent='body{-webkit-touch-callout:none}input,textarea,[contenteditable="true"]{-webkit-touch-callout:default}';document.head.appendChild(st);
 document.addEventListener('contextmenu',function(e){if(e.shiftKey)return;var t=e.target;if(t&&t.closest&&t.closest('input,textarea,select,[contenteditable="true"]'))return;e.preventDefault()},true);})();
@@ -27825,6 +27825,40 @@ window.melMergePush=run;
 window.syncPush=function(){if(window._melMergeSaving)return;clearTimeout(timer);timer=setTimeout(run,window._melSyncNow?0:1500)};
 window.syncPushNow=function(){if(window._melMergeSaving)return Promise.resolve();clearTimeout(timer);return run()};
 })();
+(function(){
+var busy=false,again=false,timer=null;
+function uid(){return (typeof _userId!=='undefined'&&_userId)||''}
+function live(){return typeof _db!=='undefined'&&_db&&uid()&&typeof userCol==='function'}
+function LK(){try{return getIncKey()}catch(e){return 'income_ledger_'+uid()}}
+function key(e){return (e&&e.id!=null&&e.id!=='')?'id:'+e.id:'k:'+[e.date,String(e.desc||'').trim().toLowerCase(),e.amount,e.currency].join('|')}
+function h(s){var x=5381;for(var i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))|0;return String(x>>>0)}
+function canon(a){return a.map(function(e){return JSON.stringify(e)}).sort().join('\n')}
+function jget(k,d){try{return JSON.parse(localStorage.getItem(k)||'null')||d}catch(e){return d}}
+function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){console.warn('merge store',e)}}
+function readLocal(){try{return JSON.parse(localStorage.getItem(LK())||'[]')}catch(e){return[]}}
+function byMonth(a){var m={};a.forEach(function(e){var k=e.date?String(e.date).slice(0,7):'unknown';(m[k]=m[k]||[]).push(e)});return m}
+function trashKeys(){var s={};try{JSON.parse(localStorage.getItem(getIncTrashKey())||'[]').forEach(function(e){s[key(e)]=1})}catch(e){}return s}
+async function month(m,mine,ids,trash,out){var doc=userCol('income_months').doc(m),snap=await doc.get(),remote=(snap.exists&&snap.data().entries)||[],had={},mk={};(ids[m]||[]).forEach(function(k){had[k]=1});mine.forEach(function(e){mk[key(e)]=1});
+var extra=remote.filter(function(e){var k=key(e);return !mk[k]&&!had[k]&&!trash[k]}),merged=mine.concat(extra);
+if(canon(merged)!==canon(remote)){if(merged.length)await doc.set({entries:merged,updated:Date.now()});else if(snap.exists)await doc.delete();out.w++}
+if(extra.length)out.pulled=out.pulled.concat(extra);out.ids[m]=merged.map(key);out.hs[m]=h(JSON.stringify(merged))}
+async function run(){if(!live())return;if(busy){again=true;return}busy=true;window._incDeletePending=true;
+try{var HK='mel_imerge_hash_'+uid(),IK='mel_imerge_ids_'+uid(),hs=jget(HK,{}),ids=jget(IK,{}),bm=byMonth(readLocal()),changed=Object.keys(bm).filter(function(m){return hs[m]!==h(JSON.stringify(bm[m]))});
+Object.keys(ids).forEach(function(m){if(!bm[m]&&ids[m]&&ids[m].length&&changed.indexOf(m)===-1)changed.push(m)});
+var trash=trashKeys(),out={w:0,pulled:[],ids:ids,hs:hs};
+for(var i=0;i<changed.length;i+=8)await Promise.all(changed.slice(i,i+8).map(function(m){return month(m,bm[m]||[],ids,trash,out)}));
+if(out.pulled.length){var all=readLocal().concat(out.pulled).sort(function(a,b){return (a.date||'').localeCompare(b.date||'')});localStorage.setItem(LK(),JSON.stringify(all));var bm2=byMonth(all);changed.forEach(function(m){if(bm2[m])hs[m]=h(JSON.stringify(bm2[m]))});
+setTimeout(function(){try{if(_appMode==='income'){updateIncomeHeaderContext();renderIncomeMonthPicker();var a=document.querySelector('#income-main .panel.active');if(a){if(a.id==='panel-inc-ledger')renderIncomeLedger();if(a.id==='panel-inc-dashboard')renderIncomeDashboard()}}}catch(e){}},50)}
+jset(HK,hs);jset(IK,ids);
+try{var ns={},b3=byMonth(readLocal());Object.keys(b3).forEach(function(m){ns[m]=_melHash(_melCanon(b3[m]))});_incSetSig(ns)}catch(e){}
+console.log('Merged income sync: checked '+changed.length+', wrote '+out.w+' month(s)'+(out.pulled.length?', kept '+out.pulled.length+' from other devices':''))}
+catch(e){console.error('Merged income sync error',e)}
+finally{busy=false;setTimeout(function(){window._incDeletePending=false},3000);if(again){again=false;setTimeout(run,300)}}}
+window.melMergeIncome=run;
+window.syncIncomeToFirebase=function(){clearTimeout(timer);timer=setTimeout(run,window._melSyncNow?0:800)};
+})();
+(function(){try{var RX=/(_backup(_\d+)?$)|^bs_trf_backup$|^trf_merge_backup$/,K='mel_bk_seen',now=Date.now(),seen={};try{seen=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}var used=0;Object.keys(localStorage).forEach(function(k){used+=(localStorage.getItem(k)||'').length});var full=used>3500000;
+Object.keys(localStorage).forEach(function(k){if(!RX.test(k))return;if(!seen[k])seen[k]=now;if(full||now-seen[k]>3*864e5){localStorage.removeItem(k);delete seen[k];console.log('Auto-removed old backup:',k)}});Object.keys(seen).forEach(function(k){if(localStorage.getItem(k)===null)delete seen[k]});localStorage.setItem(K,JSON.stringify(seen))}catch(e){}})();
 </script>
 </body>
 </html>
