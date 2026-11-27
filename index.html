@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.18.4')) {
+          if (!key.startsWith('mel-v2.18.5')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -19015,7 +19015,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.18.4';
+var APP_VERSION = '2.18.5';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -27792,6 +27792,39 @@ P+' .trf-add input,'+P+' .trf-add select,'+P+' input:not([type=checkbox]):not([t
 P+' .section-title{letter-spacing:.5px}';document.head.appendChild(st);})();
 
 (function(){var st=document.createElement('style');st.textContent='#trf-r-search{min-height:30px!important;padding-top:5px!important;padding-bottom:10px!important;font-size:.9rem!important;border-radius:12px!important;box-sizing:border-box!important}#trf-r-search::placeholder{font-size:.82rem}#trf-r-search:focus{outline:none!important;border-color:#c8962e!important;box-shadow:inset 0 2px 4px rgba(0,0,0,.08),0 0 0 3px rgba(200,150,46,.18)!important}';document.head.appendChild(st);})();
+(function(){
+var LK='expense_ledger',busy=false,again=false,timer=null;
+function uid(){return (typeof _userId!=='undefined'&&_userId)||''}
+function live(){return typeof _db!=='undefined'&&_db&&uid()&&typeof userCol==='function'}
+function key(e){return (e&&e.id!=null&&e.id!=='')?'id:'+e.id:'k:'+[e.date,String(e.desc||'').trim().toLowerCase(),e.amount,e.currency].join('|')}
+function h(s){var x=5381;for(var i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))|0;return String(x>>>0)}
+function canon(a){return a.map(function(e){return JSON.stringify(e)}).sort().join('\n')}
+function jget(k,d){try{return JSON.parse(localStorage.getItem(k)||'null')||d}catch(e){return d}}
+function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){console.warn('merge store',e)}}
+function readLocal(){try{return JSON.parse(localStorage.getItem(LK)||'[]')}catch(e){return[]}}
+function byMonth(a){var m={};a.forEach(function(e){var k=e.date?String(e.date).slice(0,7):'unknown';(m[k]=m[k]||[]).push(e)});return m}
+function trashKeys(){var s={};try{JSON.parse(localStorage.getItem(getTrashKey())||'[]').forEach(function(e){s[key(e)]=1})}catch(e){}return s}
+function status(s){try{syncSetStatus(s)}catch(e){}}
+async function month(m,mine,ids,trash,out){var doc=userCol('expense_months').doc(m),snap=await doc.get(),remote=(snap.exists&&snap.data().entries)||[],had={},mk={};(ids[m]||[]).forEach(function(k){had[k]=1});mine.forEach(function(e){mk[key(e)]=1});
+var extra=remote.filter(function(e){var k=key(e);return !mk[k]&&!had[k]&&!trash[k]}),merged=mine.concat(extra);
+if(canon(merged)!==canon(remote)){if(merged.length)await doc.set({entries:merged,updated:Date.now()});else if(snap.exists)await doc.delete();out.w++}
+if(extra.length)out.pulled=out.pulled.concat(extra);out.ids[m]=merged.map(key);out.hs[m]=h(JSON.stringify(merged))}
+async function run(){if(!live()){status('live');return}if(busy){again=true;return}busy=true;status('syncing');
+try{var HK='mel_merge_hash_'+uid(),IK='mel_merge_ids_'+uid(),hs=jget(HK,{}),ids=jget(IK,{}),local=readLocal(),bm=byMonth(local),changed=Object.keys(bm).filter(function(m){return hs[m]!==h(JSON.stringify(bm[m]))});
+Object.keys(ids).forEach(function(m){if(!bm[m]&&ids[m]&&ids[m].length&&changed.indexOf(m)===-1)changed.push(m)});
+var trash=trashKeys(),out={w:0,pulled:[],ids:ids,hs:hs};
+for(var i=0;i<changed.length;i+=8)await Promise.all(changed.slice(i,i+8).map(function(m){return month(m,bm[m]||[],ids,trash,out)}));
+if(out.pulled.length){var all=readLocal().concat(out.pulled);window._melMergeSaving=true;try{if(typeof saveData==='function')saveData(all);else localStorage.setItem(LK,JSON.stringify(all))}finally{window._melMergeSaving=false}
+var bm2=byMonth(readLocal());changed.forEach(function(m){if(bm2[m])hs[m]=h(JSON.stringify(bm2[m]))});setTimeout(function(){try{loadMonthIntoTextarea()}catch(e){}try{renderDashboard()}catch(e){}},50)}
+jset(HK,hs);jset(IK,ids);
+try{await userCol('settings').doc('default').set({custom_categories:localStorage.getItem('custom_categories')||'[]',custom_cat_rules:localStorage.getItem('custom_cat_rules')||'[]',user_currencies:localStorage.getItem('expense_user_currencies')||'',updated:Date.now()},{merge:true})}catch(e){}
+console.log('Merged sync: checked '+changed.length+', wrote '+out.w+' month(s)'+(out.pulled.length?', kept '+out.pulled.length+' entr'+(out.pulled.length===1?'y':'ies')+' from other devices':''));status('live')}
+catch(e){console.error('Merged sync error',e);status('error')}
+finally{busy=false;if(again){again=false;setTimeout(run,300)}}}
+window.melMergePush=run;
+window.syncPush=function(){if(window._melMergeSaving)return;clearTimeout(timer);timer=setTimeout(run,window._melSyncNow?0:1500)};
+window.syncPushNow=function(){if(window._melMergeSaving)return Promise.resolve();clearTimeout(timer);return run()};
+})();
 </script>
 </body>
 </html>
