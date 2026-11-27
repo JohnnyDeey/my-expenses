@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.18.7')) {
+          if (!key.startsWith('mel-v2.18.8')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -19015,7 +19015,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.18.7';
+var APP_VERSION = '2.18.8';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -27860,6 +27860,13 @@ window.syncIncomeToFirebase=function(){clearTimeout(timer);timer=setTimeout(run,
 (function(){try{var RX=/(_backup(_\d+)?$)|^bs_trf_backup$|^trf_merge_backup$/,K='mel_bk_seen',now=Date.now(),seen={};try{seen=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}var used=0;Object.keys(localStorage).forEach(function(k){used+=(localStorage.getItem(k)||'').length});var full=used>3500000;
 Object.keys(localStorage).forEach(function(k){if(!RX.test(k))return;if(!seen[k])seen[k]=now;if(full||now-seen[k]>3*864e5){localStorage.removeItem(k);delete seen[k];console.log('Auto-removed old backup:',k)}});Object.keys(seen).forEach(function(k){if(localStorage.getItem(k)===null)delete seen[k]});localStorage.setItem(K,JSON.stringify(seen))}catch(e){}})();
 (function(){var st=document.createElement('style');st.textContent='#big-header-wrap{border-bottom:none!important}#main-header{border-bottom:2px solid rgb(200,150,46)!important}';document.head.appendChild(st);})();
+(function(){if(!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))return;var last=0;
+function zi(e){return parseInt(getComputedStyle(e).zIndex)||0}
+function overlays(){var A=innerWidth*innerHeight;return [].filter.call(document.querySelectorAll('body *'),function(e){var c=getComputedStyle(e);if(c.position!=='fixed'||c.display==='none'||c.visibility==='hidden'||+c.opacity===0||e.id==='main-header')return false;var r=e.getBoundingClientRect();return r.width*r.height>A*0.25&&zi(e)>=50})}
+function closeTop(){var o=overlays();if(!o.length)return false;var top=o.sort(function(a,b){return zi(b)-zi(a)})[0];var x=top.querySelector('[onclick*="lose"],[onclick*="Cancel"],.close,[title="Close"],[aria-label="Close"]')||[].filter.call(top.querySelectorAll('button'),function(b){return /^\s*(✕|×|x|close|cancel|done)\s*$/i.test(b.textContent)})[0];if(x)x.click();else{document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));if(overlays().indexOf(top)!==-1)top.style.display='none'}return true}
+function handle(){if(closeTop())return 'stay';if(Date.now()-last<2000)return 'exit';last=Date.now();try{showToast('Press back again to exit')}catch(e){}return 'stay'}
+var App=Capacitor.Plugins&&Capacitor.Plugins.App;if(App&&App.addListener){App.addListener('backButton',function(){if(handle()==='exit')App.exitApp()});return}
+history.pushState({mel:1},'');window.addEventListener('popstate',function(){if(handle()==='exit'){history.back();return}history.pushState({mel:1},'')});})();
 </script>
 </body>
 </html>
