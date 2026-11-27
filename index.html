@@ -101,7 +101,7 @@ if ('serviceWorker' in navigator) {
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (!key.startsWith('mel-v2.18.6')) {
+          if (!key.startsWith('mel-v2.18.7')) {
             caches.delete(key);
             console.log('Deleted old cache:', key);
           }
@@ -19015,7 +19015,7 @@ function toggleAppTheme() {
   }
 })();
 
-var APP_VERSION = '2.18.6';
+var APP_VERSION = '2.18.7';
 // Dynamically update all version displays
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('#app-version-display').forEach(function(el) {
@@ -27859,6 +27859,7 @@ window.syncIncomeToFirebase=function(){clearTimeout(timer);timer=setTimeout(run,
 })();
 (function(){try{var RX=/(_backup(_\d+)?$)|^bs_trf_backup$|^trf_merge_backup$/,K='mel_bk_seen',now=Date.now(),seen={};try{seen=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}var used=0;Object.keys(localStorage).forEach(function(k){used+=(localStorage.getItem(k)||'').length});var full=used>3500000;
 Object.keys(localStorage).forEach(function(k){if(!RX.test(k))return;if(!seen[k])seen[k]=now;if(full||now-seen[k]>3*864e5){localStorage.removeItem(k);delete seen[k];console.log('Auto-removed old backup:',k)}});Object.keys(seen).forEach(function(k){if(localStorage.getItem(k)===null)delete seen[k]});localStorage.setItem(K,JSON.stringify(seen))}catch(e){}})();
+(function(){var st=document.createElement('style');st.textContent='#big-header-wrap{border-bottom:none!important}#main-header{border-bottom:2px solid rgb(200,150,46)!important}';document.head.appendChild(st);})();
 </script>
 </body>
 </html>
